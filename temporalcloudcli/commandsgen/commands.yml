@@ -1,0 +1,158 @@
+# Temporal Cloud CLI commands
+commands:
+  - name: cloud
+    summary: Temporal Cloud command-line interface
+    description: |
+      The Temporal Cloud CLI provides management and operations for Temporal Cloud.
+
+      Example:
+
+      ```
+      cloud namespace
+      ```
+    has-init: true
+    options:
+      - name: config-file
+        type: string
+        description: |
+          File path to read TOML config from, defaults to
+          `$CONFIG_PATH/temporal/temporal.toml` where `$CONFIG_PATH` is defined
+          as `$HOME/.config` on Unix, "$HOME/Library/Application Support" on
+          macOS, and %AppData% on Windows.
+        experimental: true
+        implied-env: TEMPORAL_CONFIG_FILE
+      - name: profile
+        type: string
+        description: Profile to use for config file.
+        experimental: true
+        implied-env: TEMPORAL_PROFILE
+      - name: disable-config-file
+        type: bool
+        description: |
+          If set, disables loading environment config from config file.
+        experimental: true
+      - name: disable-config-env
+        type: bool
+        description: |
+          If set, disables loading environment config from environment
+          variables.
+        experimental: true
+      - name: log-level
+        type: string-enum
+        enum-values:
+          - debug
+          - info
+          - warn
+          - error
+          - never
+        description: |
+          Log level.
+          Default is "info" for most commands and "warn" for `server start-dev`.
+        default: info
+      - name: log-format
+        type: string-enum
+        description: Log format.
+        enum-values:
+          - text
+          - json
+        hidden-legacy-values:
+          - pretty
+        default: text
+      - name: output
+        type: string-enum
+        short: o
+        description: Non-logging data output format.
+        enum-values:
+          - text
+          - json
+          - jsonl
+          - none
+        default: text
+      - name: time-format
+        type: string-enum
+        description: Time format.
+        enum-values:
+          - relative
+          - iso
+          - raw
+        default: relative
+      - name: color
+        type: string-enum
+        description: Output coloring.
+        enum-values:
+          - always
+          - never
+          - auto
+        default: auto
+      - name: no-json-shorthand-payloads
+        type: bool
+        description: Raw payload output, even if the JSON option was used.
+      - name: command-timeout
+        type: duration
+        description: |
+          The command execution timeout. 0s means no timeout.
+      - name: client-connect-timeout
+        type: duration
+        description: |
+          The client connection timeout. 0s means no timeout.
+      - name: domain
+        type: string
+        description: The domain to log into.
+        default: login.tmprl.cloud
+      - name: audience
+        type: string
+        default: https://saas-api.tmprl.cloud
+        description: Used for login.
+      - name: client-id
+        type: string
+        description: Used for login.
+      - name: config-dir
+        type: string
+        description: The directory to store the config into.
+      - name: disable-pop-up
+        type: bool
+        description: Disable browser pop-up.
+      - name: api-key
+        type: string
+        description: The api key to use for auth.
+  - name: cloud login
+    summary: Log into temporal cloud
+    description: |
+      Log into temporal cloud.
+    has-init: false
+    docs:
+      keywords:
+        - login
+      description-header: Login
+      tags:
+        - login
+  - name: cloud namespace
+    summary: Manage namespaces
+    description: |
+      Commands for managing namespaces.
+    has-init: false
+    docs:
+      keywords:
+        - namespace
+        - management
+      description-header: Namespace Management Commands
+      tags:
+        - namespaces
+  - name: cloud namespace get
+    summary: Manage namespaces
+    description: |
+      Get a namespace from temporal cloud.
+    has-init: false
+    docs:
+      keywords:
+        - namespace
+        - management
+      description-header: Retrieve a namespace.
+      tags:
+        - namespaces
+    options:
+      - name: namespace
+        required: true
+        type: string
+        description: The namespace to get.
+        short: n

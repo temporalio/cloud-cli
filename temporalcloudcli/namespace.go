@@ -1,0 +1,72 @@
+package temporalcloudcli
+
+import (
+	"context"
+	"fmt"
+
+	"go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	namespace "go.temporal.io/cloud-sdk/api/namespace/v1"
+	"go.temporal.io/cloud-sdk/api/operation/v1"
+	"go.temporal.io/cloud-sdk/cloudclient"
+)
+
+type namespaceClient struct {
+	client *cloudclient.Client
+}
+
+type namespaceOpt func(*namespaceClient)
+
+func withCloudClient(cloudClient *cloudclient.Client) namespaceOpt {
+	return func(nc *namespaceClient) {
+		nc.client = cloudClient
+	}
+}
+
+func newNamespaceClient(opts ...namespaceOpt) *namespaceClient {
+	namespaceClient := &namespaceClient{}
+
+	for _, opt := range opts {
+		opt(namespaceClient)
+	}
+
+	return namespaceClient
+}
+
+func (c *namespaceClient) getNamespace(ctx context.Context, namespace string) (*namespace.Namespace, error) {
+	res, err := c.client.CloudService().GetNamespace(ctx, &cloudservice.GetNamespaceRequest{
+		Namespace: namespace,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if res.Namespace == nil || res.Namespace.Namespace == "" {
+		// this should never happen, the server should return an error when the namespace is not found
+		return nil, fmt.Errorf("invalid namespace returned by server")
+	}
+	return res.Namespace, nil
+}
+
+type updateNamespaceParams struct {
+	asyncOperationID string
+	idempotent       bool
+	resourceVersion  string
+}
+
+func (c *namespaceClient) updateNamespace(ctx context.Context, n *namespace.Namespace, params updateNamespaceParams) (*operation.AsyncOperation, error) {
+	res, err := c.client.CloudService().UpdateNamespace(ctx, &cloudservice.UpdateNamespaceRequest{
+		AsyncOperationId: params.asyncOperationID,
+		Namespace:        n.Namespace,
+		ResourceVersion:  params.resourceVersion,
+		Spec:             n.Spec,
+	})
+	if err != nil {
+		if isNothingChangedErr(params.idempotent, err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return res.AsyncOperation, nil
+}
