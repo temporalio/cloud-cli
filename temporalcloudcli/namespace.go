@@ -52,14 +52,16 @@ type updateNamespaceParams struct {
 	asyncOperationID string
 	idempotent       bool
 	resourceVersion  string
+	// namespace is the full name of the namespace including the account
+	namespace string
 }
 
-func (c *namespaceClient) updateNamespace(ctx context.Context, n *namespace.Namespace, params updateNamespaceParams) (*operation.AsyncOperation, error) {
+func (c *namespaceClient) updateNamespace(ctx context.Context, n *namespace.NamespaceSpec, params updateNamespaceParams) (*operation.AsyncOperation, error) {
 	res, err := c.client.CloudService().UpdateNamespace(ctx, &cloudservice.UpdateNamespaceRequest{
 		AsyncOperationId: params.asyncOperationID,
-		Namespace:        n.Namespace,
+		Namespace:        params.namespace,
 		ResourceVersion:  params.resourceVersion,
-		Spec:             n.Spec,
+		Spec:             n,
 	})
 	if err != nil {
 		if isNothingChangedErr(params.idempotent, err) {
@@ -69,4 +71,70 @@ func (c *namespaceClient) updateNamespace(ctx context.Context, n *namespace.Name
 	}
 
 	return res.AsyncOperation, nil
+}
+
+type applyNamespaceParams struct {
+	asyncOperationID string
+	idempotent       bool
+}
+
+func (c *namespaceClient) createNamespace(ctx context.Context, n *namespace.NamespaceSpec, params applyNamespaceParams) (*operation.AsyncOperation, error) {
+	res, err := c.client.CloudService().CreateNamespace(ctx, &cloudservice.CreateNamespaceRequest{
+		AsyncOperationId: params.asyncOperationID,
+		Spec:             n,
+	})
+	if err != nil {
+		if isNothingChangedErr(params.idempotent, err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return res.AsyncOperation, nil
+}
+
+func (c *namespaceClient) applyNamespace(ctx context.Context, n *namespace.NamespaceSpec, params applyNamespaceParams) (*operation.AsyncOperation, error) {
+	// Try to get the existing namespace
+	namespaces, err := c.listNamespacesWithName(ctx, n.GetName())
+	if err != nil {
+		return nil, err
+	} else if len(namespaces) > 1 {
+		return nil, fmt.Errorf("multiple namespaces match namespace name: %s", n.GetName())
+	} else if len(namespaces) == 0 {
+		return c.createNamespace(ctx, n, params)
+	}
+
+	existing := namespaces[0]
+
+	// update
+	// Namespace exists, update it using the current resource version
+	updateParams := updateNamespaceParams{
+		asyncOperationID: params.asyncOperationID,
+		idempotent:       params.idempotent,
+		resourceVersion:  existing.ResourceVersion,
+		namespace:        existing.Namespace,
+	}
+
+	return c.updateNamespace(ctx, n, updateParams)
+}
+
+func (c *namespaceClient) listNamespacesWithName(ctx context.Context, name string) ([]*namespace.Namespace, error) {
+	namespaces := []*namespace.Namespace{}
+	pageToken := ""
+	for {
+		res, err := c.client.CloudService().GetNamespaces(ctx, &cloudservice.GetNamespacesRequest{
+			Name:      name,
+			PageToken: pageToken,
+		})
+		if err != nil {
+			return nil, err
+		}
+		namespaces = append(namespaces, res.Namespaces...)
+		// Check if we should continue paging
+		pageToken = res.NextPageToken
+		if len(pageToken) == 0 {
+			break
+		}
+	}
+	return namespaces, nil
 }

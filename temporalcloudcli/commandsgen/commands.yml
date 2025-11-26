@@ -154,5 +154,69 @@ commands:
       - name: namespace
         required: true
         type: string
-        description: The namespace to get.
+        description: The namespace to get, including the account. For example my-namespace.my-account.
         short: n
+  - name: cloud namespace apply
+    summary: Create or update a namespace
+    description: |
+      Apply a namespace configuration to Temporal Cloud. This command creates a
+      new namespace or updates an existing one based on the provided specification.
+
+      You can specify the namespace configuration using a JSON specification,
+      provided either inline or as a file path.
+
+      Example with inline JSON:
+
+      ```
+      cloud namespace apply --spec '{"name": "namespace-name", "region": "us-west-2", "retention_days": 7}'
+      ```
+
+      Example with file path:
+
+      ```
+      cloud namespace apply --spec @namespace-spec.json
+      ```
+    has-init: false
+    options:
+      - name: spec
+        type: string
+        description: JSON specification for the namespace configuration. Can be provided as inline JSON or as a file path. If the value starts with '@', it will be treated as a file path (e.g., '@config.json').
+        short: s
+        required: true
+      - name: dry-run
+        type: bool
+        description: Validate the configuration without applying changes. Shows what would be created or updated.
+      - name: async-operation-id
+        type: string
+        short: a
+        description: The async operation id to use for the request, optional.
+      - name: idemptotent
+        type: bool
+        short: i
+        description: Determines whether the command should error if there's nothing that has changed.
+  - name: cloud namespace edit
+    summary: Edit a namespace
+    description: |
+      Edit a namespace spec on Temporal Cloud. This command updates a namespace with changes
+      specified by the user in an edit operation.
+
+      Example:
+
+      ```
+      cloud namespace edit --namespace my-namespace.my-account
+      ```
+    has-init: false
+    options:
+      - name: namespace
+        type: string
+        description: The namespace to get, including the account. For example my-namespace.my-account.
+        short: n
+        required: true
+      - name: async-operation-id
+        type: string
+        short: a
+        description: The async operation id to use for the request, optional.
+      - name: idemptotent
+        type: bool
+        short: i
+        description: Determines whether the command should error if there's nothing that has changed.

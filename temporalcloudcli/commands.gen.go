@@ -108,7 +108,75 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.Short = "Manage namespaces"
 	s.Command.Long = "Commands for managing namespaces."
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceApplyCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceEditCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceGetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceApplyCommand struct {
+	Parent           *CloudNamespaceCommand
+	Command          cobra.Command
+	Spec             string
+	DryRun           bool
+	AsyncOperationId string
+	Idemptotent      bool
+}
+
+func NewCloudNamespaceApplyCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceApplyCommand {
+	var s CloudNamespaceApplyCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "apply [flags]"
+	s.Command.Short = "Create or update a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Apply a namespace configuration to Temporal Cloud. This command creates a\nnew namespace or updates an existing one based on the provided specification.\n\nYou can specify the namespace configuration using a JSON specification,\nprovided either inline or as a file path.\n\nExample with inline JSON:\n\n\x1b[1mcloud namespace apply --spec '{\"name\": \"namespace-name\", \"region\": \"us-west-2\", \"retention_days\": 7}'\x1b[0m\n\nExample with file path:\n\n\x1b[1mcloud namespace apply --spec @namespace-spec.json\x1b[0m"
+	} else {
+		s.Command.Long = "Apply a namespace configuration to Temporal Cloud. This command creates a\nnew namespace or updates an existing one based on the provided specification.\n\nYou can specify the namespace configuration using a JSON specification,\nprovided either inline or as a file path.\n\nExample with inline JSON:\n\n```\ncloud namespace apply --spec '{\"name\": \"namespace-name\", \"region\": \"us-west-2\", \"retention_days\": 7}'\n```\n\nExample with file path:\n\n```\ncloud namespace apply --spec @namespace-spec.json\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Spec, "spec", "s", "", "JSON specification for the namespace configuration. Can be provided as inline JSON or as a file path. If the value starts with '@', it will be treated as a file path (e.g., '@config.json'). Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "spec")
+	s.Command.Flags().BoolVar(&s.DryRun, "dry-run", false, "Validate the configuration without applying changes. Shows what would be created or updated.")
+	s.Command.Flags().StringVarP(&s.AsyncOperationId, "async-operation-id", "a", "", "The async operation id to use for the request, optional.")
+	s.Command.Flags().BoolVarP(&s.Idemptotent, "idemptotent", "i", false, "Determines whether the command should error if there's nothing that has changed.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceEditCommand struct {
+	Parent           *CloudNamespaceCommand
+	Command          cobra.Command
+	Namespace        string
+	AsyncOperationId string
+	Idemptotent      bool
+}
+
+func NewCloudNamespaceEditCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceEditCommand {
+	var s CloudNamespaceEditCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "edit [flags]"
+	s.Command.Short = "Edit a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Edit a namespace spec on Temporal Cloud. This command updates a namespace with changes\nspecified by the user in an edit operation.\n\nExample:\n\n\x1b[1mcloud namespace edit --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Edit a namespace spec on Temporal Cloud. This command updates a namespace with changes\nspecified by the user in an edit operation.\n\nExample:\n\n```\ncloud namespace edit --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The namespace to get, including the account. For example my-namespace.my-account. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
+	s.Command.Flags().StringVarP(&s.AsyncOperationId, "async-operation-id", "a", "", "The async operation id to use for the request, optional.")
+	s.Command.Flags().BoolVarP(&s.Idemptotent, "idemptotent", "i", false, "Determines whether the command should error if there's nothing that has changed.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
@@ -126,7 +194,7 @@ func NewCloudNamespaceGetCommand(cctx *CommandContext, parent *CloudNamespaceCom
 	s.Command.Short = "Manage namespaces"
 	s.Command.Long = "Get a namespace from temporal cloud."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The namespace to get. Required.")
+	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The namespace to get, including the account. For example my-namespace.my-account. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
