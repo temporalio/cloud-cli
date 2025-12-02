@@ -121,6 +121,7 @@ type CloudNamespaceApplyCommand struct {
 	DryRun           bool
 	AsyncOperationId string
 	Idemptotent      bool
+	Async            bool
 }
 
 func NewCloudNamespaceApplyCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceApplyCommand {
@@ -140,6 +141,7 @@ func NewCloudNamespaceApplyCommand(cctx *CommandContext, parent *CloudNamespaceC
 	s.Command.Flags().BoolVar(&s.DryRun, "dry-run", false, "Validate the configuration without applying changes. Shows what would be created or updated.")
 	s.Command.Flags().StringVarP(&s.AsyncOperationId, "async-operation-id", "a", "", "The async operation id to use for the request, optional.")
 	s.Command.Flags().BoolVarP(&s.Idemptotent, "idemptotent", "i", false, "Determines whether the command should error if there's nothing that has changed.")
+	s.Command.Flags().BoolVarP(&s.Async, "async", "c", false, "Determines whether the command should return immediately with the async operation or wait until it completes.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -154,6 +156,7 @@ type CloudNamespaceEditCommand struct {
 	Namespace        string
 	AsyncOperationId string
 	Idemptotent      bool
+	Async            bool
 }
 
 func NewCloudNamespaceEditCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceEditCommand {
@@ -172,6 +175,7 @@ func NewCloudNamespaceEditCommand(cctx *CommandContext, parent *CloudNamespaceCo
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
 	s.Command.Flags().StringVarP(&s.AsyncOperationId, "async-operation-id", "a", "", "The async operation id to use for the request, optional.")
 	s.Command.Flags().BoolVarP(&s.Idemptotent, "idemptotent", "i", false, "Determines whether the command should error if there's nothing that has changed.")
+	s.Command.Flags().BoolVarP(&s.Async, "async", "c", false, "Determines whether the command should return immediately with the async operation or wait until it completes.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

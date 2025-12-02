@@ -139,7 +139,7 @@ commands:
       tags:
         - namespaces
   - name: cloud namespace get
-    summary: Manage namespaces
+    summary: Get a namespace
     description: |
       Get a namespace from temporal cloud.
     has-init: false
@@ -194,6 +194,10 @@ commands:
         type: bool
         short: i
         description: Determines whether the command should error if there's nothing that has changed.
+      - name: async
+        type: bool
+        short: c
+        description: Determines whether the command should return immediately with the async operation or wait until it completes.
   - name: cloud namespace edit
     summary: Edit a namespace
     description: |
@@ -220,3 +224,7 @@ commands:
         type: bool
         short: i
         description: Determines whether the command should error if there's nothing that has changed.
+      - name: async
+        type: bool
+        short: c
+        description: Determines whether the command should return immediately with the async operation or wait until it completes.

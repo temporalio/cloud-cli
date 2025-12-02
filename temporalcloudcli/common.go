@@ -8,12 +8,17 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
+	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
 func isNothingChangedErr(idempotent bool, e error) bool {
@@ -109,4 +114,59 @@ func runEditor(existing []byte) ([]byte, error) {
 		return nil, fmt.Errorf("no changes detected")
 	}
 	return updated, nil
+}
+
+// pollAsyncOperation polls an async operation until it reaches a terminal state.
+// It prints status updates every second and returns the final AsyncOperation.
+func pollAsyncOperation(
+	cctx *CommandContext,
+	operationID string,
+) error {
+	cloudClient, err := newCloudClient(cctx)
+	if err != nil {
+		return err
+	}
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-cctx.Context.Done():
+			return fmt.Errorf("operation polling cancelled: %w", cctx.Context.Err())
+		case <-ticker.C:
+			// Get the current state of the operation
+			resp, err := cloudClient.CloudService().GetAsyncOperation(cctx.Context, &cloudservice.GetAsyncOperationRequest{
+				AsyncOperationId: operationID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to get async operation status: %w", err)
+			}
+
+			asyncOp := resp.GetAsyncOperation()
+			if asyncOp == nil {
+				return fmt.Errorf("async operation not found")
+			}
+
+			// Print current state
+			switch asyncOp.State {
+			case operation.AsyncOperation_STATE_PENDING:
+				fmt.Fprintf(cctx.Printer.Output, "[%s] Operation pending...\n", time.Now().Format("15:04:05"))
+			case operation.AsyncOperation_STATE_IN_PROGRESS:
+				fmt.Fprintf(cctx.Printer.Output, "[%s] Operation in progress...\n", time.Now().Format("15:04:05"))
+			case operation.AsyncOperation_STATE_FULFILLED:
+				fmt.Fprintf(cctx.Printer.Output, "[%s] Operation completed successfully\n", time.Now().Format("15:04:05"))
+				return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+			case operation.AsyncOperation_STATE_FAILED:
+				fmt.Fprintf(cctx.Printer.Output, "[%s] Operation failed: %s\n", time.Now().Format("15:04:05"), asyncOp.FailureReason)
+				return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+			case operation.AsyncOperation_STATE_CANCELLED:
+				fmt.Fprintf(cctx.Printer.Output, "[%s] Operation cancelled\n", time.Now().Format("15:04:05"))
+				return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+			case operation.AsyncOperation_STATE_REJECTED:
+				fmt.Fprintf(cctx.Printer.Output, "[%s] Operation rejected\n", time.Now().Format("15:04:05"))
+				return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+			}
+		}
+	}
 }

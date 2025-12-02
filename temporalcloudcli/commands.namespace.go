@@ -65,7 +65,14 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, args []string) err
 		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 	}
 
-	return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+	// Handle async flag
+	if c.Async {
+		// Return immediately with the async operation
+		return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+	}
+
+	// Poll for completion
+	return pollAsyncOperation(cctx, asyncOp.Id)
 }
 
 func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, args []string) error {
@@ -123,11 +130,14 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, args []string) er
 		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 	}
 
-	// Step 8: Print async operation using PrintStructured
-	// The asyncOp is a proto message, so PrintStructured will handle it correctly
-	// This will output the async operation details including the operation ID
-	// We do NOT wait for the operation to complete
-	return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+	// Step 8: Handle async flag
+	if c.Async {
+		// Return immediately with the async operation
+		return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+	}
+
+	// Step 9: Poll for completion
+	return pollAsyncOperation(cctx, asyncOp.Id)
 }
 
 func (c *CloudNamespaceApplyCommand) performDryRun(cctx *CommandContext, client *namespaceClient, spec *namespace.NamespaceSpec) error {
