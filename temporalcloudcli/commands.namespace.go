@@ -53,6 +53,7 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, args []string) err
 		return err
 	}
 
+	// TODO: (gmankes) remove this -- clean up and make shareable
 	if asyncOp == nil {
 		// Nothing changed (idempotent case)
 		result := struct {
@@ -140,6 +141,7 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, args []string) er
 	return pollAsyncOperation(cctx, asyncOp.Id)
 }
 
+// TODO: (gmankes) make this --diff and have a diff, also make it shareable
 func (c *CloudNamespaceApplyCommand) performDryRun(cctx *CommandContext, client *namespaceClient, spec *namespace.NamespaceSpec) error {
 	// Try to get existing namespace
 	namespaces, err := client.listNamespacesWithName(cctx.Context, spec.Name)

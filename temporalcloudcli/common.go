@@ -166,6 +166,8 @@ func pollAsyncOperation(
 			case operation.AsyncOperation_STATE_REJECTED:
 				fmt.Fprintf(cctx.Printer.Output, "[%s] Operation rejected\n", time.Now().Format("15:04:05"))
 				return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+			default:
+				fmt.Fprintf(cctx.Printer.Output, "[%s] Operation pending...\n", time.Now().Format("15:04:05"))
 			}
 		}
 	}

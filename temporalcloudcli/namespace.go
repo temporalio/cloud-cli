@@ -73,11 +73,6 @@ func (c *namespaceClient) updateNamespace(ctx context.Context, n *namespace.Name
 	return res.AsyncOperation, nil
 }
 
-type applyNamespaceParams struct {
-	asyncOperationID string
-	idempotent       bool
-}
-
 func (c *namespaceClient) createNamespace(ctx context.Context, n *namespace.NamespaceSpec, params applyNamespaceParams) (*operation.AsyncOperation, error) {
 	res, err := c.client.CloudService().CreateNamespace(ctx, &cloudservice.CreateNamespaceRequest{
 		AsyncOperationId: params.asyncOperationID,
@@ -91,6 +86,11 @@ func (c *namespaceClient) createNamespace(ctx context.Context, n *namespace.Name
 	}
 
 	return res.AsyncOperation, nil
+}
+
+type applyNamespaceParams struct {
+	asyncOperationID string
+	idempotent       bool
 }
 
 func (c *namespaceClient) applyNamespace(ctx context.Context, n *namespace.NamespaceSpec, params applyNamespaceParams) (*operation.AsyncOperation, error) {
@@ -118,6 +118,7 @@ func (c *namespaceClient) applyNamespace(ctx context.Context, n *namespace.Names
 	return c.updateNamespace(ctx, n, updateParams)
 }
 
+// TODO: (gmankes) short circuit after one page and if there are more than one namespace
 func (c *namespaceClient) listNamespacesWithName(ctx context.Context, name string) ([]*namespace.Namespace, error) {
 	namespaces := []*namespace.Namespace{}
 	pageToken := ""
