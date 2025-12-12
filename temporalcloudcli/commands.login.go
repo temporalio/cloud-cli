@@ -55,7 +55,7 @@ func loadSSOToken(cctx *CommandContext) (string, error) {
 	}
 
 	// check if we have had a valid token in the past
-	if loadProfileResult.Profile == nil && loadProfileResult.Profile.OAuth == nil {
+	if loadProfileResult.Profile == nil || loadProfileResult.Profile.OAuth == nil {
 		return "", fmt.Errorf("no login configurations found, please run `temporal cloud login`")
 	}
 
