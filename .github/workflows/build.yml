@@ -17,8 +17,8 @@ jobs:
         run: make gen 
       - name: Verify no changes were generated
         run: |
-          # Check if the working directory is dirty
-          if git diff-index --quiet HEAD --; then
+          # Check if there are any uncommitted changes in the working directory
+          if [ -z "$(git status --porcelain)" ]; then
             echo "::notice::Generated files are up to date. No changes detected."
           else
             echo "::error::Detected uncommitted changes after running the generation command. Please run the generator and commit the changes."
