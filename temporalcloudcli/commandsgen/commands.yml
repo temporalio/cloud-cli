@@ -198,7 +198,7 @@ commands:
         type: string
         short: a
         description: The async operation id to use for the request, optional.
-      - name: idemptotent
+      - name: idempotent
         type: bool
         short: i
         description: Determines whether the command should error if there's nothing that has changed.
@@ -228,7 +228,7 @@ commands:
         type: string
         short: a
         description: The async operation id to use for the request, optional.
-      - name: idemptotent
+      - name: idempotent
         type: bool
         short: i
         description: Determines whether the command should error if there's nothing that has changed.

@@ -47,7 +47,7 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, args []string) err
 		asyncOperationID: c.AsyncOperationId,
 		resourceVersion:  ns.ResourceVersion,
 		namespace:        c.Namespace,
-		idempotent:       c.Idemptotent,
+		idempotent:       c.Idempotent,
 	})
 	if err != nil {
 		return err
@@ -110,7 +110,7 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, args []string) er
 	// Step 6: Apply the namespace (create or update)
 	params := applyNamespaceParams{
 		asyncOperationID: c.AsyncOperationId, // Use the flag value if provided
-		idempotent:       c.Idemptotent,      // Use the flag value
+		idempotent:       c.Idempotent,       // Use the flag value
 	}
 
 	asyncOp, err := client.applyNamespace(cctx.Context, spec, params)

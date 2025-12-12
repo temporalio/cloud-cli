@@ -132,7 +132,7 @@ type CloudNamespaceApplyCommand struct {
 	Spec             string
 	DryRun           bool
 	AsyncOperationId string
-	Idemptotent      bool
+	Idempotent       bool
 	Async            bool
 }
 
@@ -152,7 +152,7 @@ func NewCloudNamespaceApplyCommand(cctx *CommandContext, parent *CloudNamespaceC
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "spec")
 	s.Command.Flags().BoolVar(&s.DryRun, "dry-run", false, "Validate the configuration without applying changes. Shows what would be created or updated.")
 	s.Command.Flags().StringVarP(&s.AsyncOperationId, "async-operation-id", "a", "", "The async operation id to use for the request, optional.")
-	s.Command.Flags().BoolVarP(&s.Idemptotent, "idemptotent", "i", false, "Determines whether the command should error if there's nothing that has changed.")
+	s.Command.Flags().BoolVarP(&s.Idempotent, "idempotent", "i", false, "Determines whether the command should error if there's nothing that has changed.")
 	s.Command.Flags().BoolVarP(&s.Async, "async", "c", false, "Determines whether the command should return immediately with the async operation or wait until it completes.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -167,7 +167,7 @@ type CloudNamespaceEditCommand struct {
 	Command          cobra.Command
 	Namespace        string
 	AsyncOperationId string
-	Idemptotent      bool
+	Idempotent       bool
 	Async            bool
 }
 
@@ -186,7 +186,7 @@ func NewCloudNamespaceEditCommand(cctx *CommandContext, parent *CloudNamespaceCo
 	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The namespace to get, including the account. For example my-namespace.my-account. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
 	s.Command.Flags().StringVarP(&s.AsyncOperationId, "async-operation-id", "a", "", "The async operation id to use for the request, optional.")
-	s.Command.Flags().BoolVarP(&s.Idemptotent, "idemptotent", "i", false, "Determines whether the command should error if there's nothing that has changed.")
+	s.Command.Flags().BoolVarP(&s.Idempotent, "idempotent", "i", false, "Determines whether the command should error if there's nothing that has changed.")
 	s.Command.Flags().BoolVarP(&s.Async, "async", "c", false, "Determines whether the command should return immediately with the async operation or wait until it completes.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
