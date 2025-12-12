@@ -9,11 +9,11 @@ func newCloudClient(cctx *CommandContext) (*cloudclient.Client, error) {
 	if cctx.RootCommand.ApiKey != "" {
 		opts.APIKey = cctx.RootCommand.ApiKey
 	} else {
-		tokenConfig, err := loadTokenConfig(cctx)
+		ssoToken, err := loadSSOToken(cctx)
 		if err != nil {
 			return nil, err
 		}
-		opts.APIKeyReader = tokenConfig
+		opts.APIKey = ssoToken
 	}
 
 	cloudClient, err := cloudclient.New(opts)

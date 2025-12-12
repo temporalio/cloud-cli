@@ -26,9 +26,6 @@ type CloudCommand struct {
 	NoJsonShorthandPayloads bool
 	CommandTimeout          Duration
 	ClientConnectTimeout    Duration
-	Domain                  string
-	Audience                string
-	ClientId                string
 	ConfigDir               string
 	DisablePopUp            bool
 	ApiKey                  string
@@ -65,9 +62,6 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.Command.PersistentFlags().Var(&s.CommandTimeout, "command-timeout", "The command execution timeout. 0s means no timeout.")
 	s.ClientConnectTimeout = 0
 	s.Command.PersistentFlags().Var(&s.ClientConnectTimeout, "client-connect-timeout", "The client connection timeout. 0s means no timeout.")
-	s.Command.PersistentFlags().StringVar(&s.Domain, "domain", "login.tmprl.cloud", "The domain to log into.")
-	s.Command.PersistentFlags().StringVar(&s.Audience, "audience", "https://saas-api.tmprl.cloud", "Used for login.")
-	s.Command.PersistentFlags().StringVar(&s.ClientId, "client-id", "", "Used for login.")
 	s.Command.PersistentFlags().StringVar(&s.ConfigDir, "config-dir", "", "The directory to store the config into.")
 	s.Command.PersistentFlags().BoolVar(&s.DisablePopUp, "disable-pop-up", false, "Disable browser pop-up.")
 	s.Command.PersistentFlags().StringVar(&s.ApiKey, "api-key", "", "The api key to use for auth.")
@@ -76,8 +70,12 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 }
 
 type CloudLoginCommand struct {
-	Parent  *CloudCommand
-	Command cobra.Command
+	Parent   *CloudCommand
+	Command  cobra.Command
+	Domain   string
+	Audience string
+	ClientId string
+	Reset    bool
 }
 
 func NewCloudLoginCommand(cctx *CommandContext, parent *CloudCommand) *CloudLoginCommand {
@@ -88,6 +86,10 @@ func NewCloudLoginCommand(cctx *CommandContext, parent *CloudCommand) *CloudLogi
 	s.Command.Short = "Log into temporal cloud"
 	s.Command.Long = "Log into temporal cloud."
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Domain, "domain", "login.tmprl-test.cloud", "The domain to log into.")
+	s.Command.Flags().StringVar(&s.Audience, "audience", "https://saas-api.tmprl-test.cloud", "Used for login.")
+	s.Command.Flags().StringVar(&s.ClientId, "client-id", "CKpwBvLaP1nScTHfNip3smJMkzXzJsur", "Used for login.")
+	s.Command.Flags().BoolVar(&s.Reset, "reset", false, "Reset stored login configuration.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -195,7 +197,7 @@ func NewCloudNamespaceGetCommand(cctx *CommandContext, parent *CloudNamespaceCom
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "get [flags]"
-	s.Command.Short = "Manage namespaces"
+	s.Command.Short = "Get a namespace"
 	s.Command.Long = "Get a namespace from temporal cloud."
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The namespace to get, including the account. For example my-namespace.my-account. Required.")

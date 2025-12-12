@@ -2,9 +2,7 @@
 
 all: gen build
 
-gen: temporalcloudcli/commands.gen.go
-
-temporalcloudcli/commands.gen.go: temporalcloudcli/commandsgen/commands.yml
+gen: 
 	go run ./temporalcloudcli/internal/cmd/gen-commands
 
 build:

@@ -95,17 +95,6 @@ commands:
         type: duration
         description: |
           The client connection timeout. 0s means no timeout.
-      - name: domain
-        type: string
-        description: The domain to log into.
-        default: login.tmprl.cloud
-      - name: audience
-        type: string
-        default: https://saas-api.tmprl.cloud
-        description: Used for login.
-      - name: client-id
-        type: string
-        description: Used for login.
       - name: config-dir
         type: string
         description: The directory to store the config into.
@@ -126,6 +115,25 @@ commands:
       description-header: Login
       tags:
         - login
+    options:
+      - name: domain
+        type: string
+        hidden: true
+        description: The domain to log into.
+        default: login.tmprl-test.cloud
+      - name: audience
+        type: string
+        hidden: true
+        default: https://saas-api.tmprl-test.cloud
+        description: Used for login.
+      - name: client-id
+        type: string
+        hidden: true
+        default: CKpwBvLaP1nScTHfNip3smJMkzXzJsur
+        description: Used for login.
+      - name: reset
+        type: bool
+        description: Reset stored login configuration.
   - name: cloud namespace
     summary: Manage namespaces
     description: |
