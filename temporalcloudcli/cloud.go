@@ -6,6 +6,9 @@ import (
 
 func newCloudClient(cctx *CommandContext) (*cloudclient.Client, error) {
 	opts := cloudclient.Options{}
+	if cctx.RootCommand.Server != "" {
+		opts.HostPort = cctx.RootCommand.Server
+	}
 	if cctx.RootCommand.ApiKey != "" {
 		opts.APIKey = cctx.RootCommand.ApiKey
 	} else {

@@ -45,9 +45,7 @@ commands:
           - warn
           - error
           - never
-        description: |
-          Log level.
-          Default is "info" for most commands and "warn" for `server start-dev`.
+        description: Log level. Default is "info".
         default: info
       - name: log-format
         type: string-enum
@@ -104,6 +102,10 @@ commands:
       - name: api-key
         type: string
         description: The api key to use for auth.
+      - name: server
+        type: string
+        description: The temporal cloud ops api server address to use.
+        hidden: true
   - name: cloud login
     summary: Log into temporal cloud
     description: |

@@ -39,6 +39,7 @@ type CloudCommand struct {
 	ConfigDir               string
 	DisablePopUp            bool
 	ApiKey                  string
+	Server                  string
 }
 
 func NewCloudCommand(cctx *CommandContext) *CloudCommand {
@@ -58,7 +59,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.Command.PersistentFlags().BoolVar(&s.DisableConfigFile, "disable-config-file", false, "If set, disables loading environment config from config file. EXPERIMENTAL.")
 	s.Command.PersistentFlags().BoolVar(&s.DisableConfigEnv, "disable-config-env", false, "If set, disables loading environment config from environment variables. EXPERIMENTAL.")
 	s.LogLevel = NewStringEnum([]string{"debug", "info", "warn", "error", "never"}, "info")
-	s.Command.PersistentFlags().Var(&s.LogLevel, "log-level", "Log level. Default is \"info\" for most commands and \"warn\" for `server start-dev`. Accepted values: debug, info, warn, error, never.")
+	s.Command.PersistentFlags().Var(&s.LogLevel, "log-level", "Log level. Default is \"info\". Accepted values: debug, info, warn, error, never.")
 	s.LogFormat = NewStringEnum([]string{"text", "json", "pretty"}, "text")
 	s.Command.PersistentFlags().Var(&s.LogFormat, "log-format", "Log format. Accepted values: text, json.")
 	s.Output = NewStringEnum([]string{"text", "json", "jsonl", "none"}, "text")
@@ -75,6 +76,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.Command.PersistentFlags().StringVar(&s.ConfigDir, "config-dir", "", "The directory to store the config into.")
 	s.Command.PersistentFlags().BoolVar(&s.DisablePopUp, "disable-pop-up", false, "Disable browser pop-up.")
 	s.Command.PersistentFlags().StringVar(&s.ApiKey, "api-key", "", "The api key to use for auth.")
+	s.Command.PersistentFlags().StringVar(&s.Server, "server", "", "The temporal cloud ops api server address to use.")
 	s.initCommand(cctx)
 	return &s
 }
