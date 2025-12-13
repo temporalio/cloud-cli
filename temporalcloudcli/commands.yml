@@ -1,0 +1,366 @@
+# Temporal Cloud CLI commands
+commands:
+  - name: cloud
+    summary: Temporal Cloud command-line interface
+    description: |
+      The Temporal Cloud CLI provides commands for managing and operating Temporal Cloud resources,
+      including namespaces, users, and account settings.
+
+      Example:
+
+      ```
+      cloud namespace get --namespace my-namespace.my-account
+      ```
+    has-init: true
+    options:
+      - name: config-file
+        type: string
+        description: |
+          Path to the TOML configuration file. Defaults to
+          `$CONFIG_PATH/temporal/temporal.toml` where `$CONFIG_PATH` is
+          `$HOME/.config` on Linux, `$HOME/Library/Application Support` on
+          macOS, and `%AppData%` on Windows.
+        experimental: true
+        implied-env: TEMPORAL_CONFIG_FILE
+      - name: profile
+        type: string
+        description: |
+          Name of the configuration profile to use from the config file.
+          Profiles allow you to maintain multiple sets of settings.
+        experimental: true
+        implied-env: TEMPORAL_PROFILE
+      - name: disable-config-file
+        type: bool
+        description: |
+          Disable loading configuration from the config file. When set, only
+          command-line flags and environment variables are used.
+        experimental: true
+      - name: disable-config-env
+        type: bool
+        description: |
+          Disable loading configuration from environment variables. When set,
+          only command-line flags and the config file are used.
+        experimental: true
+      - name: log-level
+        type: string-enum
+        enum-values:
+          - debug
+          - info
+          - warn
+          - error
+          - never
+        description: |
+          Set the logging verbosity level. Use 'debug' for troubleshooting,
+          'never' to suppress all logs.
+        default: info
+      - name: log-format
+        type: string-enum
+        description: |
+          Format for log output. Use 'json' for structured logging suitable
+          for log aggregation systems.
+        enum-values:
+          - text
+          - json
+        hidden-legacy-values:
+          - pretty
+        default: text
+      - name: output
+        type: string-enum
+        short: o
+        description: |
+          Format for command output (excludes log messages). Use 'json' for
+          scripting, 'jsonl' for streaming JSON, 'none' to suppress output.
+        enum-values:
+          - text
+          - json
+          - jsonl
+          - none
+        default: text
+      - name: time-format
+        type: string-enum
+        description: |
+          Format for displaying timestamps. 'relative' shows human-readable
+          durations (e.g., "2 hours ago"), 'iso' shows ISO 8601 format,
+          'raw' shows Unix timestamps.
+        enum-values:
+          - relative
+          - iso
+          - raw
+        default: relative
+      - name: color
+        type: string-enum
+        description: |
+          Control colored output. 'auto' enables color when outputting to a
+          terminal and disables it otherwise.
+        enum-values:
+          - always
+          - never
+          - auto
+        default: auto
+      - name: no-json-shorthand-payloads
+        type: bool
+        description: |
+          Display payloads in their raw binary format instead of attempting
+          to decode them as JSON. Useful when payloads contain non-JSON data.
+      - name: command-timeout
+        type: duration
+        description: |
+          Maximum time to wait for a command to complete. Use '0s' for no
+          timeout. Example: '30s', '5m'.
+      - name: client-connect-timeout
+        type: duration
+        description: |
+          Maximum time to wait when establishing a connection to Temporal
+          Cloud. Use '0s' for no timeout. Example: '10s', '1m'.
+      - name: config-dir
+        type: string
+        description: |
+          Directory path where CLI configuration files are stored, including
+          authentication tokens and settings.
+      - name: disable-pop-up
+        type: bool
+        description: |
+          Prevent the CLI from opening a browser window during authentication.
+          Useful for headless environments or when using alternative auth methods.
+      - name: api-key
+        type: string
+        description: |
+          API key for authenticating with Temporal Cloud. Can be used instead
+          of interactive login for automation and CI/CD pipelines.
+      - name: server
+        type: string
+        description: |
+          Override the Temporal Cloud API server address. Used for connecting
+          to non-production environments.
+        hidden: true
+  - name: cloud login
+    summary: Authenticate with Temporal Cloud
+    description: |
+      Authenticate with Temporal Cloud using browser-based OAuth login.
+
+      This command opens your default browser to complete authentication. Once
+      logged in, your credentials are stored locally for subsequent commands.
+
+      Example:
+
+      ```
+      cloud login
+      ```
+
+      For headless environments, use --disable-pop-up and follow the printed URL.
+    has-init: false
+    docs:
+      keywords:
+        - login
+        - authentication
+        - auth
+      description-header: Login
+      tags:
+        - login
+    options:
+      - name: domain
+        type: string
+        hidden: true
+        description: |
+          Authentication domain for the OAuth provider.
+        default: login.tmprl-test.cloud
+      - name: audience
+        type: string
+        hidden: true
+        default: https://saas-api.tmprl-test.cloud
+        description: |
+          OAuth audience parameter for token generation.
+      - name: client-id
+        type: string
+        hidden: true
+        default: CKpwBvLaP1nScTHfNip3smJMkzXzJsur
+        description: |
+          OAuth client identifier for authentication.
+      - name: reset
+        type: bool
+        description: |
+          Clear stored login credentials and configuration, then re-authenticate.
+          Use this if you need to switch accounts or fix authentication issues.
+  - name: cloud namespace
+    summary: Manage Temporal Cloud namespaces
+    description: |
+      Commands for creating, updating, and managing Temporal Cloud namespaces.
+
+      Namespaces provide isolation for workflows and activities. Each namespace
+      has its own configuration including retention period, region, and access
+      controls.
+    has-init: false
+    docs:
+      keywords:
+        - namespace
+        - management
+      description-header: Namespace Management Commands
+      tags:
+        - namespaces
+  - name: cloud namespace get
+    summary: Retrieve namespace details
+    description: |
+      Retrieve the configuration and status of a Temporal Cloud namespace.
+
+      Returns details including region, retention period, endpoints, and
+      certificate information.
+
+      Example:
+
+      ```
+      cloud namespace get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    docs:
+      keywords:
+        - namespace
+        - management
+      description-header: Retrieve a namespace.
+      tags:
+        - namespaces
+    options:
+      - name: namespace
+        required: true
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+  - name: cloud namespace diff
+    summary: Show differences between current and specified namespace configuration
+    description: |
+      Compare the current configuration of a Temporal Cloud namespace with a
+      provided specification. Displays the differences without applying any
+      changes.
+
+      The specification can be provided as inline JSON or loaded from a file
+      by prefixing the path with '@'.
+
+      Example with inline JSON:
+
+      ```
+      cloud namespace diff --spec '{"name": "namespace-name", "region": "us-west-2", "retention_days": 7}'
+      ```
+
+      Example with file path:
+
+      ```
+      cloud namespace diff --spec @namespace-spec.json
+      ```
+    has-init: false
+    options:
+      - name: namespace
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+        required: true
+      - name: spec
+        type: string
+        description: |
+          Namespace configuration in JSON format. Provide inline JSON directly,
+          or use '@path/to/file.json' to load from a file.
+        short: s
+        required: true
+      - name: verbose
+        type: bool
+        short: v
+        description: |
+          Show detailed differences including unchanged fields. By default, only changed fields are shown.
+  - name: cloud namespace apply
+    summary: Create or update a namespace from a specification
+    description: |
+      Apply a namespace configuration to Temporal Cloud. Creates a new namespace
+      if it doesn't exist, or updates an existing one to match the specification.
+
+      The specification can be provided as inline JSON or loaded from a file
+      by prefixing the path with '@'.
+
+      Example with inline JSON:
+
+      ```
+      cloud namespace apply --spec '{"name": "namespace-name", "region": "us-west-2", "retention_days": 7}'
+      ```
+
+      Example with file path:
+
+      ```
+      cloud namespace apply --spec @namespace-spec.json
+      ```
+    has-init: false
+    options:
+      - name: namespace
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+        required: true
+      - name: spec
+        type: string
+        description: |
+          Namespace configuration in JSON format. Provide inline JSON directly,
+          or use '@path/to/file.json' to load from a file.
+        short: s
+        required: true
+      - name: async-operation-id
+        type: string
+        short: a
+        description: |
+          Custom identifier for tracking this async operation. If not provided,
+          a unique ID is generated automatically.
+      - name: idempotent
+        type: bool
+        short: i
+        description: |
+          Succeed silently if the namespace already matches the specification.
+          Without this flag, the command errors when no changes are needed.
+      - name: async
+        type: bool
+        short: c
+        description: |
+          Return immediately after initiating the operation instead of waiting
+          for completion. Use the returned operation ID to check status later.
+  - name: cloud namespace edit
+    summary: Interactively edit a namespace configuration
+    description: |
+      Open a namespace configuration in your default editor for interactive
+      modification. After saving and closing the editor, the changes are
+      applied to Temporal Cloud.
+
+      The editor is determined by the EDITOR environment variable, falling
+      back to 'vi' if not set.
+
+      Example:
+
+      ```
+      cloud namespace edit --namespace my-namespace.my-account
+      ```
+    has-init: false
+    options:
+      - name: namespace
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+        required: true
+      - name: async-operation-id
+        type: string
+        short: a
+        description: |
+          Custom identifier for tracking this async operation. If not provided,
+          a unique ID is generated automatically.
+      - name: idempotent
+        type: bool
+        short: i
+        description: |
+          Succeed silently if no changes were made in the editor. Without this
+          flag, the command errors when the configuration is unchanged.
+      - name: async
+        type: bool
+        short: c
+        description: |
+          Return immediately after initiating the operation instead of waiting
+          for completion. Use the returned operation ID to check status later.

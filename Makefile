@@ -3,7 +3,7 @@
 all: gen build
 
 gen: 
-	go tool gen-commands -input ./temporalcloudcli/commandsgen/commands.yml -pkg temporalcloudcli > ./temporalcloudcli/commands.gen.go
+	go tool gen-commands -input ./temporalcloudcli/commands.yml -pkg temporalcloudcli > ./temporalcloudcli/commands.gen.go
 
 build:
 	go build ./cmd/temporal-cloud

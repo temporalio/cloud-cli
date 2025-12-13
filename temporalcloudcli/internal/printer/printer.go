@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/kylelemons/godebug/diff"
 	"github.com/olekukonko/tablewriter"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/temporalproto"
@@ -608,4 +609,49 @@ func deriveColFromField(f reflect.StructField) *col {
 		}
 	}
 	return col
+}
+
+type DiffOptions struct {
+	// If true print all lines, otherwise only print changed lines
+	Verbose bool
+	// Disable color output
+	NoColor bool
+}
+
+func (p *Printer) PrintDiff(a, b any, options DiffOptions) error {
+	if reflect.TypeOf(a) != reflect.TypeOf(b) {
+		return fmt.Errorf("cannot diff different types: %v vs %v", reflect.TypeOf(a), reflect.TypeOf(b))
+	}
+	var atext, btext []byte
+	atext, err := p.jsonVal(a, "  ", true)
+	if err != nil {
+		return fmt.Errorf("unable to convert a to text for diff: %w", err)
+	}
+	btext, err = p.jsonVal(b, "  ", true)
+	if err != nil {
+		return fmt.Errorf("unable to convert b to text for diff: %w", err)
+	}
+
+	diff := diff.Diff(string(atext), string(btext))
+	for line := range strings.SplitSeq(diff, "\n") {
+		switch {
+		case strings.HasPrefix(line, "+"):
+			if options.NoColor {
+				p.writef("%s\n", line)
+			} else {
+				p.writef("%s\n", color.GreenString(line))
+			}
+		case strings.HasPrefix(line, "-"):
+			if options.NoColor {
+				p.writef("%s\n", line)
+			} else {
+				p.writef("%s\n", color.RedString(line))
+			}
+		case options.Verbose:
+			p.writef("%s\n", line)
+		default:
+			// Skip unchanged line
+		}
+	}
+	return nil
 }

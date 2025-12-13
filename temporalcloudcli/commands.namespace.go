@@ -8,7 +8,7 @@ import (
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
-func (c *CloudNamespaceGetCommand) run(cctx *CommandContext, args []string) error {
+func (c *CloudNamespaceGetCommand) run(cctx *CommandContext, _ []string) error {
 	cloudClient, err := newCloudClient(cctx)
 	if err != nil {
 		return err
@@ -24,7 +24,7 @@ func (c *CloudNamespaceGetCommand) run(cctx *CommandContext, args []string) erro
 	return cctx.Printer.PrintStructured(n, printer.StructuredOptions{})
 }
 
-func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, args []string) error {
+func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error {
 	cloudClient, err := newCloudClient(cctx)
 	if err != nil {
 		return err
@@ -76,7 +76,61 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, args []string) err
 	return pollAsyncOperation(cctx, asyncOp.Id)
 }
 
-func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, args []string) error {
+func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error {
+	// Step 1: Load spec from file or inline
+	specData, err := loadJSONSpec(c.Spec)
+	if err != nil {
+		return err
+	}
+
+	// Step 2: Parse JSON into NamespaceSpec using protobuf JSON unmarshaling
+	spec := &namespace.NamespaceSpec{}
+	if err := cctx.UnmarshalProtoJSON(specData, spec); err != nil {
+		return fmt.Errorf("failed to parse JSON spec: %w", err)
+	}
+
+	// Step 3: Create cloud and namespace clients
+	cloudClient, err := newCloudClient(cctx)
+	if err != nil {
+		return err
+	}
+	client := newNamespaceClient(withCloudClient(cloudClient))
+
+	// Step 4: Apply the namespace (create or update)
+	params := applyNamespaceParams{
+		asyncOperationID: c.AsyncOperationId, // Use the flag value if provided
+		idempotent:       c.Idempotent,       // Use the flag value
+	}
+
+	asyncOp, err := client.applyNamespace(cctx.Context, c.Namespace, spec, params)
+	if err != nil {
+		return fmt.Errorf("failed to apply namespace: %w", err)
+	}
+
+	// Step 5: Handle result
+	if asyncOp == nil {
+		// Nothing changed (idempotent case)
+		result := struct {
+			Status    string
+			Namespace string
+		}{
+			Status:    "unchanged",
+			Namespace: spec.Name,
+		}
+		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+	}
+
+	// Step 6: Handle async flag
+	if c.Async {
+		// Return immediately with the async operation
+		return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+	}
+
+	// Step 7: Poll for completion
+	return pollAsyncOperation(cctx, asyncOp.Id)
+}
+
+func (c *CloudNamespaceDiffCommand) run(cctx *CommandContext, _ []string) error {
 	// Step 1: Load spec from file or inline
 	specData, err := loadJSONSpec(c.Spec)
 	if err != nil {
@@ -99,87 +153,15 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, args []string) er
 	if err != nil {
 		return err
 	}
-
 	client := newNamespaceClient(withCloudClient(cloudClient))
 
-	// Step 5: Handle dry-run mode
-	if c.DryRun {
-		return c.performDryRun(cctx, client, spec)
-	}
-
-	// Step 6: Apply the namespace (create or update)
-	params := applyNamespaceParams{
-		asyncOperationID: c.AsyncOperationId, // Use the flag value if provided
-		idempotent:       c.Idempotent,       // Use the flag value
-	}
-
-	asyncOp, err := client.applyNamespace(cctx.Context, spec, params)
-	if err != nil {
-		return fmt.Errorf("failed to apply namespace: %w", err)
-	}
-
-	// Step 7: Handle result
-	if asyncOp == nil {
-		// Nothing changed (idempotent case)
-		result := struct {
-			Status    string
-			Namespace string
-		}{
-			Status:    "unchanged",
-			Namespace: spec.Name,
-		}
-		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
-	}
-
-	// Step 8: Handle async flag
-	if c.Async {
-		// Return immediately with the async operation
-		return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
-	}
-
-	// Step 9: Poll for completion
-	return pollAsyncOperation(cctx, asyncOp.Id)
-}
-
-// TODO: (gmankes) make this --diff and have a diff, also make it shareable
-func (c *CloudNamespaceApplyCommand) performDryRun(cctx *CommandContext, client *namespaceClient, spec *namespace.NamespaceSpec) error {
-	// Try to get existing namespace
-	namespaces, err := client.listNamespacesWithName(cctx.Context, spec.Name)
+	// Step 5: Retrieve existing namespace
+	existing, err := client.getNamespace(cctx.Context, c.Namespace)
 	if err != nil {
 		return err
-	} else if len(namespaces) > 1 {
-		return fmt.Errorf("multiple namespaces match namespace name: %s", spec.GetName())
-	} else if len(namespaces) == 0 {
-		// Namespace doesn't exist - would create
-		result := struct {
-			DryRun    bool
-			Action    string
-			Namespace string
-			Spec      *namespace.NamespaceSpec
-		}{
-			DryRun:    true,
-			Action:    "create",
-			Namespace: spec.Name,
-			Spec:      spec,
-		}
-		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 	}
-
-	existing := namespaces[0]
-
-	// Namespace exists - would update
-	result := struct {
-		DryRun          bool
-		Action          string
-		Namespace       string
-		ResourceVersion string
-		Spec            *namespace.NamespaceSpec
-	}{
-		DryRun:          true,
-		Action:          "update",
-		Namespace:       spec.Name,
-		ResourceVersion: existing.ResourceVersion,
-		Spec:            spec,
-	}
-	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+	// Step 6: Compute and print diff
+	return cctx.Printer.PrintDiff(existing.Spec, spec, printer.DiffOptions{
+		Verbose: c.Verbose,
+	})
 }

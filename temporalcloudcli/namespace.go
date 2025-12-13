@@ -36,7 +36,6 @@ func (c *namespaceClient) getNamespace(ctx context.Context, namespace string) (*
 	res, err := c.client.CloudService().GetNamespace(ctx, &cloudservice.GetNamespaceRequest{
 		Namespace: namespace,
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -93,18 +92,12 @@ type applyNamespaceParams struct {
 	idempotent       bool
 }
 
-func (c *namespaceClient) applyNamespace(ctx context.Context, n *namespace.NamespaceSpec, params applyNamespaceParams) (*operation.AsyncOperation, error) {
+func (c *namespaceClient) applyNamespace(ctx context.Context, namespace string, n *namespace.NamespaceSpec, params applyNamespaceParams) (*operation.AsyncOperation, error) {
 	// Try to get the existing namespace
-	namespaces, err := c.listNamespacesWithName(ctx, n.GetName())
+	existing, err := c.getNamespace(ctx, namespace)
 	if err != nil {
 		return nil, err
-	} else if len(namespaces) > 1 {
-		return nil, fmt.Errorf("multiple namespaces match namespace name: %s", n.GetName())
-	} else if len(namespaces) == 0 {
-		return c.createNamespace(ctx, n, params)
 	}
-
-	existing := namespaces[0]
 
 	// update
 	// Namespace exists, update it using the current resource version
@@ -116,26 +109,4 @@ func (c *namespaceClient) applyNamespace(ctx context.Context, n *namespace.Names
 	}
 
 	return c.updateNamespace(ctx, n, updateParams)
-}
-
-// TODO: (gmankes) short circuit after one page and if there are more than one namespace
-func (c *namespaceClient) listNamespacesWithName(ctx context.Context, name string) ([]*namespace.Namespace, error) {
-	namespaces := []*namespace.Namespace{}
-	pageToken := ""
-	for {
-		res, err := c.client.CloudService().GetNamespaces(ctx, &cloudservice.GetNamespacesRequest{
-			Name:      name,
-			PageToken: pageToken,
-		})
-		if err != nil {
-			return nil, err
-		}
-		namespaces = append(namespaces, res.Namespaces...)
-		// Check if we should continue paging
-		pageToken = res.NextPageToken
-		if len(pageToken) == 0 {
-			break
-		}
-	}
-	return namespaces, nil
 }

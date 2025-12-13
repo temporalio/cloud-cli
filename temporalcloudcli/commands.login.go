@@ -48,33 +48,6 @@ func (c *CloudLoginCommand) run(cctx *CommandContext, _ []string) error {
 	return nil
 }
 
-func loadSSOToken(cctx *CommandContext) (string, error) {
-	loadProfileResult, err := cliext.LoadProfile(cliext.LoadProfileOptions{})
-	if err != nil {
-		return "", fmt.Errorf("failed to load login configuration: %w, please run `temporal cloud login`", err)
-	}
-
-	// check if we have had a valid token in the past
-	if loadProfileResult.Profile == nil || loadProfileResult.Profile.OAuth == nil {
-		return "", fmt.Errorf("no login configurations found, please run `temporal cloud login`")
-	}
-
-	oauthClient, err := cliext.NewOAuthClient(loadProfileResult.Profile.OAuth.OAuthClientConfig)
-	if err != nil {
-		return "", fmt.Errorf("failed to create OAuth client: %w", err)
-	}
-
-	token, err := oauthClient.Token(cctx, loadProfileResult.Profile.OAuth)
-	if err != nil {
-		return "", fmt.Errorf("failed to retrieve access token: %w, please run `temporal cloud login`", err)
-	}
-	loadProfileResult.Config.Profiles[loadProfileResult.ProfileName] = loadProfileResult.Profile
-	if err := cliext.WriteConfig(loadProfileResult.Config, ""); err != nil {
-		return "", fmt.Errorf("failed to write config file: %w", err)
-	}
-	return token.AccessToken, nil
-}
-
 func parseURL(s string) (*url.URL, error) {
 	// Without a scheme, url.Parse would interpret the path as a relative file path.
 	if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
