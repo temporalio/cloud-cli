@@ -29,12 +29,7 @@ func (c *CloudLoginCommand) run(cctx *CommandContext, _ []string) error {
 		}
 	}
 
-	oauthClient, err := cliext.NewOAuthClient(oauth.OAuthClientConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create OAuth client: %w", err)
-	}
-
-	oauthToken, err := oauthClient.Login(cctx)
+	oauthToken, err := cliext.NewOAuthClient(oauth.OAuthClientConfig).Login(cctx)
 	if err != nil {
 		return fmt.Errorf("failed to login: %w", err)
 	}
@@ -42,7 +37,9 @@ func (c *CloudLoginCommand) run(cctx *CommandContext, _ []string) error {
 	oauth.OAuthToken = oauthToken
 	loadProfileResult.Profile.OAuth = &oauth
 	loadProfileResult.Config.Profiles[loadProfileResult.ProfileName] = loadProfileResult.Profile
-	if err := cliext.WriteConfig(loadProfileResult.Config, ""); err != nil {
+	if err := cliext.WriteConfig(cliext.WriteConfigOptions{
+		Config: loadProfileResult.Config,
+	}); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 	return nil
@@ -74,8 +71,7 @@ func (c *CloudLoginCommand) generateClientConfig() (cliext.OAuthClientConfig, er
 
 	return cliext.OAuthClientConfig{
 		ClientID: c.ClientId,
-		// AuthURL:  domainURL.JoinPath("authorize").String(),
-		AuthURL:  domainURL.JoinPath("oauth", "device", "code").String(),
+		AuthURL:  domainURL.JoinPath("authorize").String(),
 		TokenURL: domainURL.JoinPath("oauth", "token").String(),
 		RequestParams: map[string]string{
 			"audience": c.Audience,

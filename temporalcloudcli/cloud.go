@@ -19,18 +19,19 @@ func (c *CloudCommand) GetAPIKey(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("no login configurations found, please run `temporal cloud login`")
 	}
 
-	oauthClient, err := cliext.NewOAuthClient(loadProfileResult.Profile.OAuth.OAuthClientConfig)
-	if err != nil {
-		return "", fmt.Errorf("failed to create OAuth client: %w", err)
-	}
-
-	token, err := oauthClient.Token(ctx, loadProfileResult.Profile.OAuth)
+	token, err := cliext.NewOAuthClient(loadProfileResult.Profile.OAuth.OAuthClientConfig).Token(ctx, loadProfileResult.Profile.OAuth)
 	if err != nil {
 		return "", fmt.Errorf("failed to retrieve access token: %w, please run `temporal cloud login`", err)
 	}
-	loadProfileResult.Config.Profiles[loadProfileResult.ProfileName] = loadProfileResult.Profile
-	if err := cliext.WriteConfig(loadProfileResult.Config, ""); err != nil {
-		return "", fmt.Errorf("failed to write config file: %w", err)
+	if token.AccessTokenRefreshed {
+		token.AccessTokenRefreshed = false // reset the flag before saving
+		loadProfileResult.Profile.OAuth.OAuthToken = token
+		loadProfileResult.Config.Profiles[loadProfileResult.ProfileName] = loadProfileResult.Profile
+		if err := cliext.WriteConfig(cliext.WriteConfigOptions{
+			Config: loadProfileResult.Config,
+		}); err != nil {
+			return "", fmt.Errorf("failed to write config file: %w", err)
+		}
 	}
 	return token.AccessToken, nil
 }
