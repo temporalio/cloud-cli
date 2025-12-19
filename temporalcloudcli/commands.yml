@@ -226,6 +226,11 @@ commands:
           The fully qualified namespace name in the format 'namespace.account'
           (e.g., 'my-namespace.my-account').
         short: n
+      - name: spec
+        type: bool
+        description: |
+          Output only the namespace specification in JSON format, omitting
+          metadata and status information.
   - name: cloud namespace diff
     summary: Show differences between current and specified namespace configuration
     description: |

@@ -241,6 +241,7 @@ type CloudNamespaceGetCommand struct {
 	Parent    *CloudNamespaceCommand
 	Command   cobra.Command
 	Namespace string
+	Spec      bool
 }
 
 func NewCloudNamespaceGetCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceGetCommand {
@@ -257,6 +258,7 @@ func NewCloudNamespaceGetCommand(cctx *CommandContext, parent *CloudNamespaceCom
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
+	s.Command.Flags().BoolVar(&s.Spec, "spec", false, "Output only the namespace specification in JSON format, omitting metadata and status information.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
