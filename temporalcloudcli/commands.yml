@@ -177,6 +177,12 @@ commands:
         default: XBimMwn90eAnjsiGVbAJ3Hgd9z06jjJB
         description: |
           OAuth client identifier for authentication.
+      - name: redirect-url
+        type: string
+        hidden: true
+        default: http://127.0.0.1:56628/callback
+        description: |
+          Redirect URL for OAuth authentication flow. 
       - name: reset
         type: bool
         description: |

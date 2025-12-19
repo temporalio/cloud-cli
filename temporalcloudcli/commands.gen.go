@@ -83,12 +83,13 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 }
 
 type CloudLoginCommand struct {
-	Parent   *CloudCommand
-	Command  cobra.Command
-	Domain   string
-	Audience string
-	ClientId string
-	Reset    bool
+	Parent      *CloudCommand
+	Command     cobra.Command
+	Domain      string
+	Audience    string
+	ClientId    string
+	RedirectUrl string
+	Reset       bool
 }
 
 func NewCloudLoginCommand(cctx *CommandContext, parent *CloudCommand) *CloudLoginCommand {
@@ -106,6 +107,7 @@ func NewCloudLoginCommand(cctx *CommandContext, parent *CloudCommand) *CloudLogi
 	s.Command.Flags().StringVar(&s.Domain, "domain", "login.tmprl-test.cloud", "Authentication domain for the OAuth provider.")
 	s.Command.Flags().StringVar(&s.Audience, "audience", "https://saas-api.tmprl-test.cloud", "OAuth audience parameter for token generation.")
 	s.Command.Flags().StringVar(&s.ClientId, "client-id", "XBimMwn90eAnjsiGVbAJ3Hgd9z06jjJB", "OAuth client identifier for authentication.")
+	s.Command.Flags().StringVar(&s.RedirectUrl, "redirect-url", "http://127.0.0.1:56628/callback", "Redirect URL for OAuth authentication flow.")
 	s.Command.Flags().BoolVar(&s.Reset, "reset", false, "Clear stored login credentials and configuration, then re-authenticate. Use this if you need to switch accounts or fix authentication issues.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {

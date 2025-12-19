@@ -11,12 +11,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const (
-	// A redirectURI that points to a local server for OAuth callbacks. The port had been picked up arbitrarily.
-	// This url must be configured on auth0 client as allowed as a callback url.
-	redirectURI = "http://127.0.0.1:56628/callback"
-)
-
 func (c *CloudLoginCommand) run(cctx *CommandContext, _ []string) error {
 	var oauthConfig cliext.OAuthConfig
 	// First load the config to see if we have an existing config
@@ -49,6 +43,7 @@ func (c *CloudLoginCommand) run(cctx *CommandContext, _ []string) error {
 	}); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
+	fmt.Println("Login successful!")
 	return nil
 }
 
@@ -83,7 +78,7 @@ func (c *CloudLoginCommand) generateOauthClientConfig() (*oauth2.Config, error) 
 			TokenURL:  domainURL.JoinPath("oauth", "token").String(),
 			AuthStyle: oauth2.AuthStyleInParams,
 		},
-		RedirectURL: redirectURI,
+		RedirectURL: c.RedirectUrl,
 		Scopes:      []string{"openid", "profile", "user", "offline_access"},
 	}, nil
 }
