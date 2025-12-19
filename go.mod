@@ -10,7 +10,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
-	github.com/temporalio/cli/cliext v0.0.0-20251213031832-42855c9559bc
+	github.com/temporalio/cli/cliext v0.0.0-20251219173740-f3565da5c390
 	github.com/temporalio/ui-server/v2 v2.42.1
 	go.temporal.io/api v1.59.0
 	go.temporal.io/cloud-sdk v0.6.0

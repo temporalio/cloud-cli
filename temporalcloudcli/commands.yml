@@ -133,6 +133,7 @@ commands:
           Override the Temporal Cloud API server address. Used for connecting
           to non-production environments.
         hidden: true
+        default: saas-api.tmprl-test.cloud:443
   - name: cloud login
     summary: Authenticate with Temporal Cloud
     description: |
@@ -173,7 +174,7 @@ commands:
       - name: client-id
         type: string
         hidden: true
-        default: CKpwBvLaP1nScTHfNip3smJMkzXzJsur
+        default: XBimMwn90eAnjsiGVbAJ3Hgd9z06jjJB
         description: |
           OAuth client identifier for authentication.
       - name: reset
@@ -181,6 +182,33 @@ commands:
         description: |
           Clear stored login credentials and configuration, then re-authenticate.
           Use this if you need to switch accounts or fix authentication issues.
+  - name: cloud logout
+    summary: Clear Temporal Cloud authentication credentials
+    description: |
+      Log out from Temporal Cloud by clearing stored authentication tokens
+      and credentials from the local configuration.
+
+      Example:
+
+      ```
+      cloud logout
+      ```
+    has-init: false
+    docs:
+      keywords:
+        - logout
+        - authentication
+        - auth
+      description-header: Logout
+      tags:
+        - login
+    options:
+      - name: domain
+        type: string
+        hidden: true
+        description: |
+          Authentication domain for the OAuth provider.
+        default: login.tmprl-test.cloud
   - name: cloud namespace
     summary: Manage Temporal Cloud namespaces
     description: |

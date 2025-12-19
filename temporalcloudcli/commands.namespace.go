@@ -21,7 +21,7 @@ func (c *CloudNamespaceGetCommand) run(cctx *CommandContext, _ []string) error {
 		return err
 	}
 
-	if c.SpecOnly {
+	if c.Spec {
 		return cctx.Printer.PrintStructured(n.Spec, printer.StructuredOptions{})
 	}
 	return cctx.Printer.PrintStructured(n, printer.StructuredOptions{})

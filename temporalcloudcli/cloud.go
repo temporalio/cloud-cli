@@ -2,6 +2,7 @@ package temporalcloudcli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/temporalio/cli/cliext"
@@ -9,26 +10,27 @@ import (
 )
 
 func (c *CloudCommand) GetAPIKey(ctx context.Context) (string, error) {
-	loadProfileResult, err := cliext.LoadProfile(cliext.LoadProfileOptions{})
+	loadClientOauthRes, err := cliext.LoadClientOAuth(cliext.LoadClientOAuthOptions{})
 	if err != nil {
-		return "", fmt.Errorf("failed to load login configuration: %w, please run `temporal cloud login`", err)
+		return "", fmt.Errorf("failed to load login configuration: %w, please run `temporal cloud login --reset`", err)
 	}
 
 	// check if we have had a valid token in the past
-	if loadProfileResult.Profile == nil || loadProfileResult.Profile.OAuth == nil {
-		return "", fmt.Errorf("no login configurations found, please run `temporal cloud login`")
+	if loadClientOauthRes.OAuth == nil || loadClientOauthRes.OAuth.ClientConfig == nil {
+		return "", fmt.Errorf("no login session found, please run `temporal cloud login`")
 	}
 
-	token, err := cliext.NewOAuthClient(loadProfileResult.Profile.OAuth.OAuthClientConfig).Token(ctx, loadProfileResult.Profile.OAuth)
+	token, refreshed, err := GetToken(ctx, loadClientOauthRes.OAuth.ClientConfig, loadClientOauthRes.OAuth.Token)
 	if err != nil {
-		return "", fmt.Errorf("failed to retrieve access token: %w, please run `temporal cloud login`", err)
+		if errors.Is(err, ErrLoginRequired) {
+			return "", fmt.Errorf("login session expired, please run `temporal cloud login`", err)
+		}
+		return "", fmt.Errorf("failed to get access token: %w", err)
 	}
-	if token.AccessTokenRefreshed {
-		token.AccessTokenRefreshed = false // reset the flag before saving
-		loadProfileResult.Profile.OAuth.OAuthToken = token
-		loadProfileResult.Config.Profiles[loadProfileResult.ProfileName] = loadProfileResult.Profile
-		if err := cliext.WriteConfig(cliext.WriteConfigOptions{
-			Config: loadProfileResult.Config,
+	if refreshed {
+		loadClientOauthRes.OAuth.Token = token
+		if err := cliext.StoreClientOAuth(cliext.StoreClientOAuthOptions{
+			OAuth: loadClientOauthRes.OAuth,
 		}); err != nil {
 			return "", fmt.Errorf("failed to write config file: %w", err)
 		}

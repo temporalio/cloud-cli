@@ -53,6 +53,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudLoginCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudLogoutCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCommand(cctx, &s).Command)
 	s.Command.PersistentFlags().StringVar(&s.ConfigFile, "config-file", "", "Path to the TOML configuration file. Defaults to `$CONFIG_PATH/temporal/temporal.toml` where `$CONFIG_PATH` is `$HOME/.config` on Linux, `$HOME/Library/Application Support` on macOS, and `%AppData%` on Windows. EXPERIMENTAL.")
 	s.Command.PersistentFlags().StringVar(&s.Profile, "profile", "", "Name of the configuration profile to use from the config file. Profiles allow you to maintain multiple sets of settings. EXPERIMENTAL.")
@@ -76,7 +77,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.Command.PersistentFlags().StringVar(&s.ConfigDir, "config-dir", "", "Directory path where CLI configuration files are stored, including authentication tokens and settings.")
 	s.Command.PersistentFlags().BoolVar(&s.DisablePopUp, "disable-pop-up", false, "Prevent the CLI from opening a browser window during authentication. Useful for headless environments or when using alternative auth methods.")
 	s.Command.PersistentFlags().StringVar(&s.ApiKey, "api-key", "", "API key for authenticating with Temporal Cloud. Can be used instead of interactive login for automation and CI/CD pipelines.")
-	s.Command.PersistentFlags().StringVar(&s.Server, "server", "", "Override the Temporal Cloud API server address. Used for connecting to non-production environments.")
+	s.Command.PersistentFlags().StringVar(&s.Server, "server", "saas-api.tmprl-test.cloud:443", "Override the Temporal Cloud API server address. Used for connecting to non-production environments.")
 	s.initCommand(cctx)
 	return &s
 }
@@ -104,8 +105,35 @@ func NewCloudLoginCommand(cctx *CommandContext, parent *CloudCommand) *CloudLogi
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Domain, "domain", "login.tmprl-test.cloud", "Authentication domain for the OAuth provider.")
 	s.Command.Flags().StringVar(&s.Audience, "audience", "https://saas-api.tmprl-test.cloud", "OAuth audience parameter for token generation.")
-	s.Command.Flags().StringVar(&s.ClientId, "client-id", "CKpwBvLaP1nScTHfNip3smJMkzXzJsur", "OAuth client identifier for authentication.")
+	s.Command.Flags().StringVar(&s.ClientId, "client-id", "XBimMwn90eAnjsiGVbAJ3Hgd9z06jjJB", "OAuth client identifier for authentication.")
 	s.Command.Flags().BoolVar(&s.Reset, "reset", false, "Clear stored login credentials and configuration, then re-authenticate. Use this if you need to switch accounts or fix authentication issues.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudLogoutCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+	Domain  string
+}
+
+func NewCloudLogoutCommand(cctx *CommandContext, parent *CloudCommand) *CloudLogoutCommand {
+	var s CloudLogoutCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "logout [flags]"
+	s.Command.Short = "Clear Temporal Cloud authentication credentials"
+	if hasHighlighting {
+		s.Command.Long = "Log out from Temporal Cloud by clearing stored authentication tokens\nand credentials from the local configuration.\n\nExample:\n\n\x1b[1mcloud logout\x1b[0m"
+	} else {
+		s.Command.Long = "Log out from Temporal Cloud by clearing stored authentication tokens\nand credentials from the local configuration.\n\nExample:\n\n```\ncloud logout\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Domain, "domain", "login.tmprl-test.cloud", "Authentication domain for the OAuth provider.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

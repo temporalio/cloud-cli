@@ -85,6 +85,8 @@ github.com/temporalio/cli/cliext v0.0.0-20251209225252-1d6c81a62357 h1:+pAuGYfey
 github.com/temporalio/cli/cliext v0.0.0-20251209225252-1d6c81a62357/go.mod h1:l9ElhzlkqSMfO+Xl7Bj4cmaBrHglAVT6cHP4Z/5V/Kw=
 github.com/temporalio/cli/cliext v0.0.0-20251213031832-42855c9559bc h1:6ODdtReKqUiuPSbK3F4Hh/GhpHpEsi8yuaEknMCUFqs=
 github.com/temporalio/cli/cliext v0.0.0-20251213031832-42855c9559bc/go.mod h1:M/wKd+b3692lkER6MHdl5X4w21Waw8Km9Tj97vKzHR0=
+github.com/temporalio/cli/cliext v0.0.0-20251219173740-f3565da5c390 h1:JPBxHfsAeJFy5uBrdNAe1GScQwcG8RzukLsq3O9QH8o=
+github.com/temporalio/cli/cliext v0.0.0-20251219173740-f3565da5c390/go.mod h1:A9EHuWgszyY1o70CwnJXLkgqfoGKKHXjkKlpE2fj3Uc=
 github.com/temporalio/ui-server/v2 v2.42.1 h1:ajeOxqCnUiCRQQhQYLxaT7wUgF/slqZJtdW4pLjVqCs=
 github.com/temporalio/ui-server/v2 v2.42.1/go.mod h1:lKTnn50t8yQvcrarxAOjX33YcfkomkiNB5BH06wQwEE=
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
