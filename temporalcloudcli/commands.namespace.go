@@ -5,7 +5,7 @@ import (
 
 	namespace "go.temporal.io/cloud-sdk/api/namespace/v1"
 
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
