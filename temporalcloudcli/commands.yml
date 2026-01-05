@@ -134,6 +134,11 @@ commands:
           to non-production environments.
         hidden: true
         default: saas-api.tmprl-test.cloud:443
+      - name: auto-confirm
+        type: bool
+        description: |
+          Automatically confirm prompts and actions that require user
+          confirmation. Useful for scripting and automation.
   - name: cloud login
     summary: Authenticate with Temporal Cloud
     description: |
@@ -265,48 +270,6 @@ commands:
         description: |
           Output only the namespace specification in JSON format, omitting
           metadata and status information.
-  - name: cloud namespace diff
-    summary: Show differences between current and specified namespace configuration
-    description: |
-      Compare the current configuration of a Temporal Cloud namespace with a
-      provided specification. Displays the differences without applying any
-      changes.
-
-      The specification can be provided as inline JSON or loaded from a file
-      by prefixing the path with '@'.
-
-      Example with inline JSON:
-
-      ```
-      cloud namespace diff --spec '{"name": "namespace-name", "region": "us-west-2", "retention_days": 7}'
-      ```
-
-      Example with file path:
-
-      ```
-      cloud namespace diff --spec @namespace-spec.json
-      ```
-    has-init: false
-    options:
-      - name: namespace
-        type: string
-        description: |
-          The fully qualified namespace name in the format 'namespace.account'
-          (e.g., 'my-namespace.my-account').
-        short: n
-        required: true
-      - name: spec
-        type: string
-        description: |
-          Namespace configuration in JSON format. Provide inline JSON directly,
-          or use '@path/to/file.json' to load from a file.
-        short: s
-        required: true
-      - name: verbose
-        type: bool
-        short: v
-        description: |
-          Show detailed differences including unchanged fields. By default, only changed fields are shown.
   - name: cloud namespace apply
     summary: Create or update a namespace from a specification
     description: |
@@ -361,6 +324,11 @@ commands:
         description: |
           Return immediately after initiating the operation instead of waiting
           for completion. Use the returned operation ID to check status later.
+      - name: verbose-diff
+        type: bool
+        description: |
+          Show detailed differences between the current and desired namespace
+          configurations when changes are detected.
   - name: cloud namespace edit
     summary: Interactively edit a namespace configuration
     description: |
@@ -403,3 +371,108 @@ commands:
         description: |
           Return immediately after initiating the operation instead of waiting
           for completion. Use the returned operation ID to check status later.
+  - name: cloud namespace delete
+    summary: Delete a Temporal Cloud namespace
+    description: |
+      Delete a Temporal Cloud namespace and all associated data. This action is
+      irreversible and will permanently remove all workflows, activities, and
+      history within the namespace.
+
+      Example:
+
+      ```
+      cloud namespace delete --namespace my-namespace.my-account
+      ```
+    has-init: false
+    options:
+      - name: namespace
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+        required: true
+      - name: async-operation-id
+        type: string
+        short: a
+        description: |
+          Custom identifier for tracking this async operation. If not provided,
+          a unique ID is generated automatically.
+      - name: async
+        type: bool
+        short: c
+        description: |
+          Return immediately after initiating the operation instead of waiting
+          for completion. Use the returned operation ID to check status later.
+      - name: idempotent
+        type: bool
+        short: i
+        description: |
+          Succeed silently if the namespace does not exist. Without this flag,
+          the command errors if the namespace is not found.
+  - name: cloud namespace list
+    summary: List Temporal Cloud namespaces
+    description: |
+      List all Temporal Cloud namespaces accessible with the current
+      authentication credentials.
+
+      Example:
+
+      ```
+      cloud namespace list
+      ```
+    has-init: false
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of namespaces to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
+      - name: name
+        type: string
+        description: |
+          Filter namespaces by the name as defined in the specification of the namespace.
+  - name: cloud namespace update-retention-days
+    summary: Update namespace retention period
+    description: |
+      Update the data retention period for a Temporal Cloud namespace. The
+      retention period defines how long closed workflow history data are stored.
+      Example:
+
+      ```
+      cloud namespace update-retention-days --namespace my-namespace.my-account --retention-days 14
+      ```
+    has-init: false
+    options:
+      - name: namespace
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+        required: true
+      - name: async-operation-id
+        type: string
+        description: |
+          Custom identifier for tracking this async operation. If not provided,
+          a unique ID is generated automatically.
+      - name: async
+        type: bool
+        description: |
+          Return immediately after initiating the operation instead of waiting
+          for completion. Use the returned operation ID to check status later.
+      - name: idempotent
+        type: bool
+        description: |
+          Succeed silently if the retention period is already set to the
+          specified value. Without this flag, the command errors when no change
+          is needed.
+      - name: retention-days
+        type: int
+        description: |
+          New retention period in days for closed workflow history data.
+        short: r
+        required: true

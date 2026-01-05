@@ -47,20 +47,40 @@ func (c *namespaceClient) getNamespace(ctx context.Context, namespace string) (*
 	return res.Namespace, nil
 }
 
+type getNamespacesParams struct {
+	pageSize  int32
+	pageToken string
+	name      string // optional, if set, will filter by name
+}
+
+func (c *namespaceClient) getNamespaces(ctx context.Context, params getNamespacesParams) ([]*namespace.Namespace, string, error) {
+	res, err := c.client.CloudService().GetNamespaces(ctx, &cloudservice.GetNamespacesRequest{
+		PageSize:  params.pageSize,
+		PageToken: params.pageToken,
+		Name:      params.name,
+	})
+	if err != nil {
+		return nil, "", err
+	}
+
+	return res.Namespaces, res.NextPageToken, nil
+}
+
 type updateNamespaceParams struct {
+	namespace string
+	spec      *namespace.NamespaceSpec
+
 	asyncOperationID string
 	idempotent       bool
 	resourceVersion  string
-	// namespace is the full name of the namespace including the account
-	namespace string
 }
 
-func (c *namespaceClient) updateNamespace(ctx context.Context, n *namespace.NamespaceSpec, params updateNamespaceParams) (*operation.AsyncOperation, error) {
+func (c *namespaceClient) updateNamespace(ctx context.Context, params updateNamespaceParams) (*operation.AsyncOperation, error) {
 	res, err := c.client.CloudService().UpdateNamespace(ctx, &cloudservice.UpdateNamespaceRequest{
 		AsyncOperationId: params.asyncOperationID,
 		Namespace:        params.namespace,
 		ResourceVersion:  params.resourceVersion,
-		Spec:             n,
+		Spec:             params.spec,
 	})
 	if err != nil {
 		if isNothingChangedErr(params.idempotent, err) {
@@ -87,26 +107,58 @@ func (c *namespaceClient) createNamespace(ctx context.Context, n *namespace.Name
 	return res.AsyncOperation, nil
 }
 
-type applyNamespaceParams struct {
+type deleteNamespaceParams struct {
+	namespace string
+
+	resourceVersion  string // optional, if empty, will be fetched
 	asyncOperationID string
 	idempotent       bool
 }
 
-func (c *namespaceClient) applyNamespace(ctx context.Context, namespace string, n *namespace.NamespaceSpec, params applyNamespaceParams) (*operation.AsyncOperation, error) {
-	// Try to get the existing namespace
-	existing, err := c.getNamespace(ctx, namespace)
+func (c *namespaceClient) deleteNamespace(ctx context.Context, params deleteNamespaceParams) (*operation.AsyncOperation, error) {
+	res, err := c.client.CloudService().DeleteNamespace(ctx, &cloudservice.DeleteNamespaceRequest{
+		AsyncOperationId: params.asyncOperationID,
+		Namespace:        params.namespace,
+	})
 	if err != nil {
+		if isNotFoundErr(err) && params.idempotent {
+			return nil, nil
+		}
 		return nil, err
+	}
+
+	return res.AsyncOperation, nil
+}
+
+type applyNamespaceParams struct {
+	namespace string
+	spec      *namespace.NamespaceSpec
+
+	resourceVersion  string // optional, if empty, will be fetched
+	asyncOperationID string
+	idempotent       bool
+}
+
+func (c *namespaceClient) applyNamespace(ctx context.Context, params applyNamespaceParams) (*operation.AsyncOperation, error) {
+	if params.resourceVersion == "" {
+		// Try to get the existing namespace
+		existing, err := c.getNamespace(ctx, params.namespace)
+		if err != nil {
+			return nil, err
+		}
+		params.resourceVersion = existing.ResourceVersion
 	}
 
 	// update
 	// Namespace exists, update it using the current resource version
 	updateParams := updateNamespaceParams{
+		namespace: params.namespace,
+		spec:      params.spec,
+
 		asyncOperationID: params.asyncOperationID,
 		idempotent:       params.idempotent,
-		resourceVersion:  existing.ResourceVersion,
-		namespace:        existing.Namespace,
+		resourceVersion:  params.resourceVersion,
 	}
 
-	return c.updateNamespace(ctx, n, updateParams)
+	return c.updateNamespace(ctx, updateParams)
 }

@@ -34,6 +34,14 @@ func isNothingChangedErr(idempotent bool, e error) bool {
 	return s.Code() == codes.InvalidArgument && strings.Contains(s.Message(), "nothing to change")
 }
 
+func isNotFoundErr(e error) bool {
+	s, ok := status.FromError(e)
+	if !ok {
+		return false
+	}
+	return s.Code() == codes.NotFound
+}
+
 // loadJSONSpec loads a JSON specification from either a file path (prefixed with '@')
 // or treats the input as inline JSON. Returns the parsed data as a byte slice.
 func loadJSONSpec(spec string) ([]byte, error) {
