@@ -435,15 +435,44 @@ commands:
         type: string
         description: |
           Filter namespaces by the name as defined in the specification of the namespace.
-  - name: cloud namespace update-retention-days
-    summary: Update namespace retention period
+  - name: cloud namespace retention
+    summary: Manage namespace retention settings
     description: |
-      Update the data retention period for a Temporal Cloud namespace. The
-      retention period defines how long closed workflow history data are stored.
+      Commands for managing data retention settings of Temporal Cloud namespaces.
+
+      Retention determines how long closed workflow history data are stored before
+      being automatically deleted.
+    has-init: false
+  - name: cloud namespace retention get
+    summary: Get namespace retention period
+    description: |
+      Retrieve the current data retention period for a Temporal Cloud namespace.
+      The retention period defines how long closed workflow history data are stored.
+
       Example:
 
       ```
-      cloud namespace update-retention-days --namespace my-namespace.my-account --retention-days 14
+      cloud namespace retention get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    options:
+      - name: namespace
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+        required: true
+  - name: cloud namespace retention set
+    summary: Set namespace retention period
+    description: |
+      Set the data retention period for a Temporal Cloud namespace. The
+      retention period defines how long closed workflow history data are stored.
+
+      Example:
+
+      ```
+      cloud namespace retention set --namespace my-namespace.my-account --retention-days 14
       ```
     has-init: false
     options:
@@ -456,16 +485,19 @@ commands:
         required: true
       - name: async-operation-id
         type: string
+        short: a
         description: |
           Custom identifier for tracking this async operation. If not provided,
           a unique ID is generated automatically.
       - name: async
         type: bool
+        short: c
         description: |
           Return immediately after initiating the operation instead of waiting
           for completion. Use the returned operation ID to check status later.
       - name: idempotent
         type: bool
+        short: i
         description: |
           Succeed silently if the retention period is already set to the
           specified value. Without this flag, the command errors when no change

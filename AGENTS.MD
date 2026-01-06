@@ -128,3 +128,7 @@ w.RegisterActivityWithOptions(a, activity.RegisterOptions{Name: ActivityNamePref
 2. When a new `.go` file is created, git add it.
 3. Before saying that you're "done", ensure the following checks pass:
    - `make all`
+
+## Command Generation Guidelines
+1. All commands should have an `--async-operation-id` (`-a`) for mutations. For example, anything that is a create, update, or delete, or any command specific patch commands.
+2. All top level spec based commands (for example, namespace) that include a mutation should have an `apply` and `edit` subcommand. The only exception to this will be apikey.
