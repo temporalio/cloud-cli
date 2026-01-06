@@ -26,7 +26,7 @@ func (c *CloudNamespaceRetentionSetCommand) run(cctx *CommandContext, _ []string
 	newSpec.RetentionDays = int32(c.RetentionDays)
 
 	cctx.Printer.PrintDiff(ns.Spec, newSpec, printer.DiffOptions{})
-	// Step 5: Confirm apply if not forced
+	// Confirm apply if not forced
 	yes, err := cctx.promptYes("Apply (y/yes)?", cctx.RootCommand.AutoConfirm)
 	if err != nil {
 		return err
