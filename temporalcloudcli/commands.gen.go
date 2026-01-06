@@ -163,7 +163,7 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.AddCommand(&NewCloudNamespaceEditCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceListCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewCloudNamespaceUpdateRetentionDaysCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceRetentionCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -176,6 +176,7 @@ type CloudNamespaceApplyCommand struct {
 	Idempotent       bool
 	Async            bool
 	VerboseDiff      bool
+	ResourceVersion  string
 }
 
 func NewCloudNamespaceApplyCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceApplyCommand {
@@ -198,6 +199,7 @@ func NewCloudNamespaceApplyCommand(cctx *CommandContext, parent *CloudNamespaceC
 	s.Command.Flags().BoolVarP(&s.Idempotent, "idempotent", "i", false, "Succeed silently if the namespace already matches the specification. Without this flag, the command errors when no changes are needed.")
 	s.Command.Flags().BoolVarP(&s.Async, "async", "c", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
 	s.Command.Flags().BoolVar(&s.VerboseDiff, "verbose-diff", false, "Show detailed differences between the current and desired namespace configurations when changes are detected.")
+	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -213,6 +215,7 @@ type CloudNamespaceDeleteCommand struct {
 	AsyncOperationId string
 	Async            bool
 	Idempotent       bool
+	ResourceVersion  string
 }
 
 func NewCloudNamespaceDeleteCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceDeleteCommand {
@@ -232,6 +235,7 @@ func NewCloudNamespaceDeleteCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Command.Flags().StringVarP(&s.AsyncOperationId, "async-operation-id", "a", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
 	s.Command.Flags().BoolVarP(&s.Async, "async", "c", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
 	s.Command.Flags().BoolVarP(&s.Idempotent, "idempotent", "i", false, "Succeed silently if the namespace does not exist. Without this flag, the command errors if the namespace is not found.")
+	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -247,6 +251,7 @@ type CloudNamespaceEditCommand struct {
 	AsyncOperationId string
 	Idempotent       bool
 	Async            bool
+	ResourceVersion  string
 }
 
 func NewCloudNamespaceEditCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceEditCommand {
@@ -266,6 +271,7 @@ func NewCloudNamespaceEditCommand(cctx *CommandContext, parent *CloudNamespaceCo
 	s.Command.Flags().StringVarP(&s.AsyncOperationId, "async-operation-id", "a", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
 	s.Command.Flags().BoolVarP(&s.Idempotent, "idempotent", "i", false, "Succeed silently if no changes were made in the editor. Without this flag, the command errors when the configuration is unchanged.")
 	s.Command.Flags().BoolVarP(&s.Async, "async", "c", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
+	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -335,35 +341,82 @@ func NewCloudNamespaceListCommand(cctx *CommandContext, parent *CloudNamespaceCo
 	return &s
 }
 
-type CloudNamespaceUpdateRetentionDaysCommand struct {
-	Parent           *CloudNamespaceCommand
+type CloudNamespaceRetentionCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceRetentionCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceRetentionCommand {
+	var s CloudNamespaceRetentionCommand
+	s.Parent = parent
+	s.Command.Use = "retention"
+	s.Command.Short = "Manage namespace retention settings"
+	s.Command.Long = "Commands for managing data retention settings of Temporal Cloud namespaces.\n\nRetention determines how long closed workflow history data are stored before\nbeing automatically deleted."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceRetentionGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceRetentionSetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceRetentionGetCommand struct {
+	Parent    *CloudNamespaceRetentionCommand
+	Command   cobra.Command
+	Namespace string
+}
+
+func NewCloudNamespaceRetentionGetCommand(cctx *CommandContext, parent *CloudNamespaceRetentionCommand) *CloudNamespaceRetentionGetCommand {
+	var s CloudNamespaceRetentionGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get namespace retention period"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the current data retention period for a Temporal Cloud namespace.\nThe retention period defines how long closed workflow history data are stored.\n\nExample:\n\n\x1b[1mcloud namespace retention get --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the current data retention period for a Temporal Cloud namespace.\nThe retention period defines how long closed workflow history data are stored.\n\nExample:\n\n```\ncloud namespace retention get --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceRetentionSetCommand struct {
+	Parent           *CloudNamespaceRetentionCommand
 	Command          cobra.Command
 	Namespace        string
 	AsyncOperationId string
 	Async            bool
 	Idempotent       bool
 	RetentionDays    int
+	ResourceVersion  string
 }
 
-func NewCloudNamespaceUpdateRetentionDaysCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceUpdateRetentionDaysCommand {
-	var s CloudNamespaceUpdateRetentionDaysCommand
+func NewCloudNamespaceRetentionSetCommand(cctx *CommandContext, parent *CloudNamespaceRetentionCommand) *CloudNamespaceRetentionSetCommand {
+	var s CloudNamespaceRetentionSetCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "update-retention-days [flags]"
-	s.Command.Short = "Update namespace retention period"
+	s.Command.Use = "set [flags]"
+	s.Command.Short = "Set namespace retention period"
 	if hasHighlighting {
-		s.Command.Long = "Update the data retention period for a Temporal Cloud namespace. The\nretention period defines how long closed workflow history data are stored.\nExample:\n\n\x1b[1mcloud namespace update-retention-days --namespace my-namespace.my-account --retention-days 14\x1b[0m"
+		s.Command.Long = "Set the data retention period for a Temporal Cloud namespace. The\nretention period defines how long closed workflow history data are stored.\n\nExample:\n\n\x1b[1mcloud namespace retention set --namespace my-namespace.my-account --retention-days 14\x1b[0m"
 	} else {
-		s.Command.Long = "Update the data retention period for a Temporal Cloud namespace. The\nretention period defines how long closed workflow history data are stored.\nExample:\n\n```\ncloud namespace update-retention-days --namespace my-namespace.my-account --retention-days 14\n```"
+		s.Command.Long = "Set the data retention period for a Temporal Cloud namespace. The\nretention period defines how long closed workflow history data are stored.\n\nExample:\n\n```\ncloud namespace retention set --namespace my-namespace.my-account --retention-days 14\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
-	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
-	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
-	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if the retention period is already set to the specified value. Without this flag, the command errors when no change is needed.")
+	s.Command.Flags().StringVarP(&s.AsyncOperationId, "async-operation-id", "a", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
+	s.Command.Flags().BoolVarP(&s.Async, "async", "c", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
+	s.Command.Flags().BoolVarP(&s.Idempotent, "idempotent", "i", false, "Succeed silently if the retention period is already set to the specified value. Without this flag, the command errors when no change is needed.")
 	s.Command.Flags().IntVarP(&s.RetentionDays, "retention-days", "r", 0, "New retention period in days for closed workflow history data. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "retention-days")
+	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
