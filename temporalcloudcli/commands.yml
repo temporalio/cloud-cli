@@ -304,23 +304,19 @@ commands:
         description: |
           Namespace configuration in JSON format. Provide inline JSON directly,
           or use '@path/to/file.json' to load from a file.
-        short: s
         required: true
       - name: async-operation-id
         type: string
-        short: a
         description: |
           Custom identifier for tracking this async operation. If not provided,
           a unique ID is generated automatically.
       - name: idempotent
         type: bool
-        short: i
         description: |
           Succeed silently if the namespace already matches the specification.
           Without this flag, the command errors when no changes are needed.
       - name: async
         type: bool
-        short: c
         description: |
           Return immediately after initiating the operation instead of waiting
           for completion. Use the returned operation ID to check status later.
@@ -361,19 +357,16 @@ commands:
         required: true
       - name: async-operation-id
         type: string
-        short: a
         description: |
           Custom identifier for tracking this async operation. If not provided,
           a unique ID is generated automatically.
       - name: idempotent
         type: bool
-        short: i
         description: |
           Succeed silently if no changes were made in the editor. Without this
           flag, the command errors when the configuration is unchanged.
       - name: async
         type: bool
-        short: c
         description: |
           Return immediately after initiating the operation instead of waiting
           for completion. Use the returned operation ID to check status later.
@@ -406,19 +399,16 @@ commands:
         required: true
       - name: async-operation-id
         type: string
-        short: a
         description: |
           Custom identifier for tracking this async operation. If not provided,
           a unique ID is generated automatically.
       - name: async
         type: bool
-        short: c
         description: |
           Return immediately after initiating the operation instead of waiting
           for completion. Use the returned operation ID to check status later.
       - name: idempotent
         type: bool
-        short: i
         description: |
           Succeed silently if the namespace does not exist. Without this flag,
           the command errors if the namespace is not found.
@@ -503,19 +493,16 @@ commands:
         required: true
       - name: async-operation-id
         type: string
-        short: a
         description: |
           Custom identifier for tracking this async operation. If not provided,
           a unique ID is generated automatically.
       - name: async
         type: bool
-        short: c
         description: |
           Return immediately after initiating the operation instead of waiting
           for completion. Use the returned operation ID to check status later.
       - name: idempotent
         type: bool
-        short: i
         description: |
           Succeed silently if the retention period is already set to the
           specified value. Without this flag, the command errors when no change
@@ -526,6 +513,82 @@ commands:
           New retention period in days for closed workflow history data.
         short: r
         required: true
+      - name: resource-version
+        type: string
+        short: v
+        description: |
+          Resource version for optimistic concurrency control. If not provided,
+          the current version is fetched automatically.
+  - name: cloud namespace lifecycle
+    summary: Manage namespace lifecycle settings
+    description: |
+      Commands for managing lifecycle settings of Temporal Cloud namespaces.
+
+      Lifecycle settings control the behavior and protection of namespaces,
+      including delete protection to prevent accidental deletion.
+    has-init: false
+  - name: cloud namespace lifecycle get
+    summary: Get namespace lifecycle configuration
+    description: |
+      Retrieve the current lifecycle configuration for a Temporal Cloud namespace.
+      Lifecycle settings include delete protection status.
+
+      Example:
+
+      ```
+      cloud namespace lifecycle get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    options:
+      - name: namespace
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+        required: true
+  - name: cloud namespace lifecycle set
+    summary: Set namespace lifecycle configuration
+    description: |
+      Set the lifecycle configuration for a Temporal Cloud namespace.
+      Lifecycle settings include delete protection to prevent accidental deletion.
+
+      Example:
+
+      ```
+      cloud namespace lifecycle set --namespace my-namespace.my-account --enable-delete-protection true
+      ```
+    has-init: false
+    options:
+      - name: namespace
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+        required: true
+      - name: enable-delete-protection
+        type: bool
+        description: |
+          Enable or disable delete protection for the namespace. When enabled,
+          the namespace cannot be deleted until this flag is set to false.
+        required: true
+      - name: async-operation-id
+        type: string
+        description: |
+          Custom identifier for tracking this async operation. If not provided,
+          a unique ID is generated automatically.
+      - name: async
+        type: bool
+        description: |
+          Return immediately after initiating the operation instead of waiting
+          for completion. Use the returned operation ID to check status later.
+      - name: idempotent
+        type: bool
+        description: |
+          Succeed silently if the lifecycle configuration is already set to the
+          specified value. Without this flag, the command errors when no change
+          is needed.
       - name: resource-version
         type: string
         short: v
