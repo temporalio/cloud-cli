@@ -57,7 +57,7 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 		return nil
 	}
 
-	// Use provided resource version, or use fetched version
+	// Use provided resource version, or fall back to the fetched namespace's resource version.
 	resourceVersion := c.ResourceVersion
 	if resourceVersion == "" {
 		resourceVersion = ns.ResourceVersion
