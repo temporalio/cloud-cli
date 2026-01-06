@@ -57,11 +57,17 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 		return nil
 	}
 
+	// Use provided resource version, or use fetched version
+	resourceVersion := c.ResourceVersion
+	if resourceVersion == "" {
+		resourceVersion = ns.ResourceVersion
+	}
+
 	asyncOp, err := client.applyNamespace(cctx.Context, applyNamespaceParams{
 		namespace:        c.Namespace,
 		spec:             newSpec,
 		asyncOperationID: c.AsyncOperationId,
-		resourceVersion:  ns.ResourceVersion,
+		resourceVersion:  resourceVersion,
 		idempotent:       c.Idempotent,
 	})
 	if err != nil {
@@ -131,11 +137,17 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 	}
 
 	// Step 5: Apply the namespace (create or update)
+	// Use provided resource version, or use fetched version
+	resourceVersion := c.ResourceVersion
+	if resourceVersion == "" {
+		resourceVersion = existing.ResourceVersion
+	}
+
 	params := applyNamespaceParams{
 		namespace: c.Namespace,
 		spec:      spec,
 
-		resourceVersion:  existing.ResourceVersion,
+		resourceVersion:  resourceVersion,
 		asyncOperationID: c.AsyncOperationId, // Use the flag value if provided
 		idempotent:       c.Idempotent,       // Use the flag value
 	}
@@ -180,6 +192,7 @@ func (c *CloudNamespaceDeleteCommand) run(cctx *CommandContext, _ []string) erro
 		namespace:        c.Namespace,
 		idempotent:       c.Idempotent,
 		asyncOperationID: c.AsyncOperationId,
+		resourceVersion:  c.ResourceVersion,
 	})
 	if err != nil {
 		return err

@@ -36,11 +36,17 @@ func (c *CloudNamespaceRetentionSetCommand) run(cctx *CommandContext, _ []string
 		return nil
 	}
 
+	// Use provided resource version, or fetch from current namespace
+	resourceVersion := c.ResourceVersion
+	if resourceVersion == "" {
+		resourceVersion = ns.ResourceVersion
+	}
+
 	asyncOp, err := client.applyNamespace(cctx.Context, applyNamespaceParams{
 		namespace:        c.Namespace,
 		spec:             newSpec,
 		asyncOperationID: c.AsyncOperationId,
-		resourceVersion:  ns.ResourceVersion,
+		resourceVersion:  resourceVersion,
 		idempotent:       c.Idempotent,
 	})
 	if err != nil {
