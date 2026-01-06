@@ -162,6 +162,7 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.AddCommand(&NewCloudNamespaceDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceEditCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceLifecycleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceRetentionCommand(cctx, &s).Command)
 	return &s
@@ -193,11 +194,11 @@ func NewCloudNamespaceApplyCommand(cctx *CommandContext, parent *CloudNamespaceC
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
-	s.Command.Flags().StringVarP(&s.Spec, "spec", "s", "", "Namespace configuration in JSON format. Provide inline JSON directly, or use '@path/to/file.json' to load from a file. Required.")
+	s.Command.Flags().StringVar(&s.Spec, "spec", "", "Namespace configuration in JSON format. Provide inline JSON directly, or use '@path/to/file.json' to load from a file. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "spec")
-	s.Command.Flags().StringVarP(&s.AsyncOperationId, "async-operation-id", "a", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
-	s.Command.Flags().BoolVarP(&s.Idempotent, "idempotent", "i", false, "Succeed silently if the namespace already matches the specification. Without this flag, the command errors when no changes are needed.")
-	s.Command.Flags().BoolVarP(&s.Async, "async", "c", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
+	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
+	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if the namespace already matches the specification. Without this flag, the command errors when no changes are needed.")
+	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
 	s.Command.Flags().BoolVar(&s.VerboseDiff, "verbose-diff", false, "Show detailed differences between the current and desired namespace configurations when changes are detected.")
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -232,9 +233,9 @@ func NewCloudNamespaceDeleteCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
-	s.Command.Flags().StringVarP(&s.AsyncOperationId, "async-operation-id", "a", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
-	s.Command.Flags().BoolVarP(&s.Async, "async", "c", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
-	s.Command.Flags().BoolVarP(&s.Idempotent, "idempotent", "i", false, "Succeed silently if the namespace does not exist. Without this flag, the command errors if the namespace is not found.")
+	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
+	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
+	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if the namespace does not exist. Without this flag, the command errors if the namespace is not found.")
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -268,9 +269,9 @@ func NewCloudNamespaceEditCommand(cctx *CommandContext, parent *CloudNamespaceCo
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
-	s.Command.Flags().StringVarP(&s.AsyncOperationId, "async-operation-id", "a", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
-	s.Command.Flags().BoolVarP(&s.Idempotent, "idempotent", "i", false, "Succeed silently if no changes were made in the editor. Without this flag, the command errors when the configuration is unchanged.")
-	s.Command.Flags().BoolVarP(&s.Async, "async", "c", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
+	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
+	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if no changes were made in the editor. Without this flag, the command errors when the configuration is unchanged.")
+	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -302,6 +303,90 @@ func NewCloudNamespaceGetCommand(cctx *CommandContext, parent *CloudNamespaceCom
 	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
 	s.Command.Flags().BoolVar(&s.Spec, "spec", false, "Output only the namespace specification in JSON format, omitting metadata and status information.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceLifecycleCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceLifecycleCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceLifecycleCommand {
+	var s CloudNamespaceLifecycleCommand
+	s.Parent = parent
+	s.Command.Use = "lifecycle"
+	s.Command.Short = "Manage namespace lifecycle settings"
+	s.Command.Long = "Commands for managing lifecycle settings of Temporal Cloud namespaces.\n\nLifecycle settings control the behavior and protection of namespaces,\nincluding delete protection to prevent accidental deletion."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceLifecycleGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceLifecycleSetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceLifecycleGetCommand struct {
+	Parent    *CloudNamespaceLifecycleCommand
+	Command   cobra.Command
+	Namespace string
+}
+
+func NewCloudNamespaceLifecycleGetCommand(cctx *CommandContext, parent *CloudNamespaceLifecycleCommand) *CloudNamespaceLifecycleGetCommand {
+	var s CloudNamespaceLifecycleGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get namespace lifecycle configuration"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the current lifecycle configuration for a Temporal Cloud namespace.\nLifecycle settings include delete protection status.\n\nExample:\n\n\x1b[1mcloud namespace lifecycle get --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the current lifecycle configuration for a Temporal Cloud namespace.\nLifecycle settings include delete protection status.\n\nExample:\n\n```\ncloud namespace lifecycle get --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceLifecycleSetCommand struct {
+	Parent                 *CloudNamespaceLifecycleCommand
+	Command                cobra.Command
+	Namespace              string
+	EnableDeleteProtection bool
+	AsyncOperationId       string
+	Async                  bool
+	Idempotent             bool
+	ResourceVersion        string
+}
+
+func NewCloudNamespaceLifecycleSetCommand(cctx *CommandContext, parent *CloudNamespaceLifecycleCommand) *CloudNamespaceLifecycleSetCommand {
+	var s CloudNamespaceLifecycleSetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set [flags]"
+	s.Command.Short = "Set namespace lifecycle configuration"
+	if hasHighlighting {
+		s.Command.Long = "Set the lifecycle configuration for a Temporal Cloud namespace.\nLifecycle settings include delete protection to prevent accidental deletion.\n\nExample:\n\n\x1b[1mcloud namespace lifecycle set --namespace my-namespace.my-account --enable-delete-protection true\x1b[0m"
+	} else {
+		s.Command.Long = "Set the lifecycle configuration for a Temporal Cloud namespace.\nLifecycle settings include delete protection to prevent accidental deletion.\n\nExample:\n\n```\ncloud namespace lifecycle set --namespace my-namespace.my-account --enable-delete-protection true\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
+	s.Command.Flags().BoolVar(&s.EnableDeleteProtection, "enable-delete-protection", false, "Enable or disable delete protection for the namespace. When enabled, the namespace cannot be deleted until this flag is set to false. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "enable-delete-protection")
+	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
+	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
+	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if the lifecycle configuration is already set to the specified value. Without this flag, the command errors when no change is needed.")
+	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -411,9 +496,9 @@ func NewCloudNamespaceRetentionSetCommand(cctx *CommandContext, parent *CloudNam
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
-	s.Command.Flags().StringVarP(&s.AsyncOperationId, "async-operation-id", "a", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
-	s.Command.Flags().BoolVarP(&s.Async, "async", "c", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
-	s.Command.Flags().BoolVarP(&s.Idempotent, "idempotent", "i", false, "Succeed silently if the retention period is already set to the specified value. Without this flag, the command errors when no change is needed.")
+	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
+	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
+	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if the retention period is already set to the specified value. Without this flag, the command errors when no change is needed.")
 	s.Command.Flags().IntVarP(&s.RetentionDays, "retention-days", "r", 0, "New retention period in days for closed workflow history data. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "retention-days")
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
