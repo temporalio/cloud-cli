@@ -23,7 +23,7 @@ func (c *CloudCommand) GetAPIKey(ctx context.Context) (string, error) {
 	token, refreshed, err := GetToken(ctx, loadClientOauthRes.OAuth.ClientConfig, loadClientOauthRes.OAuth.Token)
 	if err != nil {
 		if errors.Is(err, ErrLoginRequired) {
-			return "", fmt.Errorf("login session expired, please run `temporal cloud login`", err)
+			return "", fmt.Errorf("login session expired, please run `temporal cloud login`: %w", err)
 		}
 		return "", fmt.Errorf("failed to get access token: %w", err)
 	}
