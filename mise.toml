@@ -1,0 +1,17 @@
+[tools]
+# Note: Keep in sync with `toolchain` directive in `go.mod`.
+go = "1.25.3"
+
+# needed for go backends
+[settings]
+experimental = true
+
+# Add .local/bin to PATH for sc binaries
+[env]
+_.path = [".local/bin"]
+GOPRIVATE = "go.temporal.io/temporal,go.temporal.io/temporal-proto,github.com/temporalio"
+
+[tasks]
+build = "make build"
+gen = "make gen"
+test = "make test"
