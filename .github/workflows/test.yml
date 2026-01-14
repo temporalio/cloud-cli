@@ -19,7 +19,7 @@ jobs:
     environment: CICD
 
     env:
-      TEMPORAL_SERVER: ${{ vars.TEMPORAL_SERVER }}
+      TEMPORAL_CLOUD_SERVER: ${{ vars.TEMPORAL_CLOUD_SERVER }}
       TEMPORAL_ACCOUNT: ${{ vars.TEMPORAL_ACCOUNT }}
       TEMPORAL_API_KEY: ${{ secrets.TEMPORAL_API_KEY }}
 
@@ -39,8 +39,8 @@ jobs:
 
           missing=0
 
-          if [[ -z "${TEMPORAL_SERVER:-}" ]]; then
-            echo "::error::TEMPORAL_SERVER is not set or is empty"
+          if [[ -z "${TEMPORAL_CLOUD_SERVER:-}" ]]; then
+            echo "::error::TEMPORAL_CLOUD_SERVER is not set or is empty"
             missing=1
           fi
 
