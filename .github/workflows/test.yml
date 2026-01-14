@@ -1,0 +1,68 @@
+name: test
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Unit + Integration (mise)
+    runs-on: ubuntu-latest
+
+    # GitHub Environment
+    environment: CICD
+
+    env:
+      TEMPORAL_SERVER: ${{ vars.TEMPORAL_SERVER }}
+      TEMPORAL_ACCOUNT: ${{ vars.TEMPORAL_ACCOUNT }}
+      TEMPORAL_API_KEY: ${{ secrets.TEMPORAL_API_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+        with:
+          install: true
+
+      - name: Validate required environment variables and secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          missing=0
+
+          if [[ -z "${TEMPORAL_SERVER:-}" ]]; then
+            echo "::error::TEMPORAL_SERVER is not set or is empty"
+            missing=1
+          fi
+
+          if [[ -z "${TEMPORAL_ACCOUNT:-}" ]]; then
+            echo "::error::TEMPORAL_ACCOUNT is not set or is empty"
+            missing=1
+          fi
+
+          # Secret: check presence ONLY, never print or echo
+          if [[ -z "${TEMPORAL_API_KEY:-}" ]]; then
+            echo "::error::TEMPORAL_API_KEY is not set or is empty"
+            missing=1
+          fi
+
+          if [[ "$missing" -ne 0 ]]; then
+            exit 1
+          fi
+
+      - name: Run unit tests
+        run: |
+          mise run test
+
+      - name: Run integration tests
+        run: |
+          mise run integration

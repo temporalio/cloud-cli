@@ -118,29 +118,32 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 	client := newNamespaceClient(withCloudClient(cloudClient))
 
 	// Step 4: Retrieve existing namespace
-	existing, err := client.getNamespace(cctx.Context, c.Namespace)
-	if err != nil {
+	var found bool
+	existing, err := client.getNamespaceByName(cctx.Context, spec.Name)
+	if err != nil && !isNotFoundErr(err) {
 		return err
+	} else if err == nil {
+		found = true
 	}
-	cctx.Printer.PrintDiff(existing.Spec, spec, printer.DiffOptions{
-		Verbose: c.VerboseDiff,
-	})
+
+	existingResourceVersion := ""
+	var existingSpec *namespace.NamespaceSpec
+	if found {
+		existingResourceVersion = existing.ResourceVersion
+		existingSpec = existing.Spec
+	}
 
 	// Step 5: Confirm apply if not forced
-	yes, err := cctx.promptYes("Apply (y/yes)?", cctx.RootCommand.AutoConfirm)
+	err = promptApplyResource(cctx, existingSpec, spec, c.VerboseDiff)
 	if err != nil {
 		return err
-	}
-	if !yes {
-		fmt.Fprintln(cctx.Printer.Output, "Aborting apply.")
-		return nil
 	}
 
 	// Step 5: Apply the namespace (create or update)
 	// Use provided resource version, or use fetched version
 	resourceVersion := c.ResourceVersion
 	if resourceVersion == "" {
-		resourceVersion = existing.ResourceVersion
+		resourceVersion = existingResourceVersion
 	}
 
 	params := applyNamespaceParams{
@@ -188,6 +191,15 @@ func (c *CloudNamespaceDeleteCommand) run(cctx *CommandContext, _ []string) erro
 
 	client := newNamespaceClient(withCloudClient(cloudClient))
 
+	yes, err := cctx.promptYes("Delete (y/yes)?", cctx.RootCommand.AutoConfirm)
+	if err != nil {
+		return err
+	}
+
+	if !yes {
+		return fmt.Errorf("Aborting delete.")
+	}
+
 	asyncOp, err := client.deleteNamespace(cctx.Context, deleteNamespaceParams{
 		namespace:        c.Namespace,
 		idempotent:       c.Idempotent,
@@ -197,6 +209,19 @@ func (c *CloudNamespaceDeleteCommand) run(cctx *CommandContext, _ []string) erro
 	if err != nil {
 		return err
 	}
+
+	if asyncOp == nil {
+		// deleted already (idempotent case)
+		result := struct {
+			Status    string
+			Namespace string
+		}{
+			Status:    "deleted",
+			Namespace: c.Namespace,
+		}
+		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+	}
+
 	// Handle async flag
 	if c.Async {
 		// Return immediately with the async operation
@@ -235,4 +260,3 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 		printer.StructuredOptions{},
 	)
 }
-

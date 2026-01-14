@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"regexp"
 	"strings"
@@ -13,6 +14,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
+	"go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	operation "go.temporal.io/cloud-sdk/api/operation/v1"
+	"go.temporal.io/cloud-sdk/cloudclient"
 )
 
 type CommandHarness struct {
@@ -167,12 +171,18 @@ type SharedServerSuite struct {
 
 	Suite suite.Suite
 
-	apiKey string
+	apiKey      string
+	server      string
+	testAccount string
 }
 
 func (s *SharedServerSuite) SetupSuite() {
-	s.apiKey = os.Getenv("TEMPORAL_CLOUD_API_KEY")
-	s.Suite.Require().NotEmpty(s.apiKey, "Could not load TEMPORAL_CLOUD_API_KEY are you running with `mise run test` and have you filled out your .env? See README.md for details.")
+	s.apiKey = os.Getenv("TEMPORAL_API_KEY")
+	s.Suite.Require().NotEmpty(s.apiKey, "Could not load TEMPORAL_API_KEY. Are you running with `mise run test` and have you filled out your .env? See README.md for details.")
+	s.server = os.Getenv("TEMPORAL_CLOUD_SERVER")
+	s.Suite.Require().NotEmpty(s.apiKey, "Could not load TEMPORAL_CLOUD_SERVER. Are you running with `mise run test` and have you filled out your .env? See README.md for details.")
+	s.testAccount = os.Getenv("TEMPORAL_ACCOUNT")
+	s.Suite.Require().NotEmpty(s.testAccount, "Could not load TEMPORAL_ACCOUNT. Are you running with `mise run test` and have you filled out your .env? See README.md for details.")
 }
 
 func (s *SharedServerSuite) TearDownSuite() {
@@ -193,3 +203,68 @@ func (s *SharedServerSuite) TearDownTest() {
 func (s *SharedServerSuite) T() *testing.T                 { return s.Suite.T() }
 func (s *SharedServerSuite) SetT(t *testing.T)             { s.Suite.SetT(t) }
 func (s *SharedServerSuite) SetS(suite suite.TestingSuite) { s.Suite.SetS(suite) }
+
+func (s *SharedServerSuite) generateRandomID() string {
+	letters := "abcdefghijklmnopqrstuvwxyz123456789"
+	b := make([]byte, 10)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
+
+func (s *SharedServerSuite) getCloudClient() *cloudclient.Client {
+	opts := cloudclient.Options{
+		APIKey:   s.apiKey,
+		HostPort: s.server,
+	}
+
+	cloudClient, err := cloudclient.New(opts)
+	s.Suite.Require().NoError(err)
+	return cloudClient
+}
+
+// pollAsyncOperation polls an async operation until it reaches a terminal state.
+// It prints status updates every second and returns the final AsyncOperation.
+func (s *SharedServerSuite) pollAsyncOperation(
+	cloudClient *cloudclient.Client,
+	operationID string,
+) error {
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-s.Context.Done():
+			return fmt.Errorf("operation polling cancelled: %w", s.Context.Err())
+		case <-ticker.C:
+			// Get the current state of the operation
+			resp, err := cloudClient.CloudService().GetAsyncOperation(s.Context, &cloudservice.GetAsyncOperationRequest{
+				AsyncOperationId: operationID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to get async operation status: %w", err)
+			}
+
+			asyncOp := resp.GetAsyncOperation()
+			if asyncOp == nil {
+				return fmt.Errorf("async operation not found")
+			}
+
+			// Print current state
+			switch asyncOp.State {
+			case operation.AsyncOperation_STATE_PENDING, operation.AsyncOperation_STATE_IN_PROGRESS:
+			case operation.AsyncOperation_STATE_FULFILLED:
+				return nil
+			case operation.AsyncOperation_STATE_FAILED:
+				return fmt.Errorf("async operation failed: %s", asyncOp.FailureReason)
+			case operation.AsyncOperation_STATE_CANCELLED:
+				return fmt.Errorf("async operation cancelled")
+			case operation.AsyncOperation_STATE_REJECTED:
+				return fmt.Errorf("async operation rejected")
+			default:
+			}
+		}
+	}
+}

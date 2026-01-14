@@ -15,3 +15,4 @@ GOPRIVATE = "go.temporal.io/temporal,go.temporal.io/temporal-proto,github.com/te
 build = "make build"
 gen = "make gen"
 test = "make test"
+integration = "make test-integration"

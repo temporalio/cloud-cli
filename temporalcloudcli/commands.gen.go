@@ -78,7 +78,9 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.Command.PersistentFlags().StringVar(&s.ConfigDir, "config-dir", "", "Directory path where CLI configuration files are stored, including authentication tokens and settings.")
 	s.Command.PersistentFlags().BoolVar(&s.DisablePopUp, "disable-pop-up", false, "Prevent the CLI from opening a browser window during authentication. Useful for headless environments or when using alternative auth methods.")
 	s.Command.PersistentFlags().StringVar(&s.ApiKey, "api-key", "", "API key for authenticating with Temporal Cloud. Can be used instead of interactive login for automation and CI/CD pipelines.")
+	cctx.BindFlagEnvVar(s.Command.PersistentFlags().Lookup("api-key"), "TEMPORAL_API_KEY")
 	s.Command.PersistentFlags().StringVar(&s.Server, "server", "saas-api.tmprl-test.cloud:443", "Override the Temporal Cloud API server address. Used for connecting to non-production environments.")
+	cctx.BindFlagEnvVar(s.Command.PersistentFlags().Lookup("server"), "TEMPORAL_CLOUD_SERVER")
 	s.Command.PersistentFlags().BoolVar(&s.AutoConfirm, "auto-confirm", false, "Automatically confirm prompts and actions that require user confirmation. Useful for scripting and automation.")
 	s.initCommand(cctx)
 	return &s

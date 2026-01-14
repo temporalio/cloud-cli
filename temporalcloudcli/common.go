@@ -124,6 +124,22 @@ func runEditor(existing []byte) ([]byte, error) {
 	return updated, nil
 }
 
+func promptApplyResource(cctx *CommandContext, existing, actual proto.Message, verboseDiff bool) error {
+	cctx.Printer.PrintDiff(existing, actual, printer.DiffOptions{
+		Verbose: verboseDiff,
+	})
+
+	yes, err := cctx.promptYes("Apply (y/yes)?", cctx.RootCommand.AutoConfirm)
+	if err != nil {
+		return err
+	}
+
+	if !yes {
+		return fmt.Errorf("Aborting apply.")
+	}
+	return nil
+}
+
 // pollAsyncOperation polls an async operation until it reaches a terminal state.
 // It prints status updates every second and returns the final AsyncOperation.
 func pollAsyncOperation(
