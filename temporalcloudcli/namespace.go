@@ -94,19 +94,30 @@ func (c *namespaceClient) updateNamespace(ctx context.Context, params updateName
 	return res.AsyncOperation, nil
 }
 
-func (c *namespaceClient) createNamespace(ctx context.Context, n *namespace.NamespaceSpec, params applyNamespaceParams) (*operation.AsyncOperation, error) {
+type createNamespaceParams struct {
+	spec *namespace.NamespaceSpec
+
+	asyncOperationID string
+}
+
+type createNamespaceResponse struct {
+	asyncOp   *operation.AsyncOperation
+	Namespace string
+}
+
+func (c *namespaceClient) createNamespace(ctx context.Context, params createNamespaceParams) (createNamespaceResponse, error) {
 	res, err := c.client.CloudService().CreateNamespace(ctx, &cloudservice.CreateNamespaceRequest{
 		AsyncOperationId: params.asyncOperationID,
-		Spec:             n,
+		Spec:             params.spec,
 	})
 	if err != nil {
-		if isNothingChangedErr(params.idempotent, err) {
-			return nil, nil
-		}
-		return nil, err
+		return createNamespaceResponse{}, err
 	}
 
-	return res.AsyncOperation, nil
+	return createNamespaceResponse{
+		asyncOp:   res.GetAsyncOperation(),
+		Namespace: res.GetNamespace(),
+	}, nil
 }
 
 type deleteNamespaceParams struct {
@@ -155,13 +166,28 @@ type applyNamespaceParams struct {
 	idempotent       bool
 }
 
-func (c *namespaceClient) applyNamespace(ctx context.Context, params applyNamespaceParams) (*operation.AsyncOperation, error) {
+type applyNamespaceResponse struct {
+	asyncOp   *operation.AsyncOperation
+	Namespace string
+}
+
+func (c *namespaceClient) applyNamespace(ctx context.Context, params applyNamespaceParams) (applyNamespaceResponse, error) {
 	existing, err := c.getNamespaceByName(ctx, params.spec.Name)
 	if err != nil && !isNotFoundErr(err) {
-		return nil, err
+		return applyNamespaceResponse{}, err
 	} else if err != nil && isNotFoundErr(err) {
 		// create the namespace
-		return c.createNamespace(ctx, params.spec, params)
+		res, err := c.createNamespace(ctx, createNamespaceParams{
+			spec:             params.spec,
+			asyncOperationID: params.asyncOperationID,
+		})
+		if err != nil {
+			return applyNamespaceResponse{}, err
+		}
+		return applyNamespaceResponse{
+			asyncOp:   res.asyncOp,
+			Namespace: res.Namespace,
+		}, nil
 	}
 
 	// update the namespace
@@ -180,7 +206,14 @@ func (c *namespaceClient) applyNamespace(ctx context.Context, params applyNamesp
 		resourceVersion:  params.resourceVersion,
 	}
 
-	return c.updateNamespace(ctx, updateParams)
+	res, err := c.updateNamespace(ctx, updateParams)
+	if err != nil {
+		return applyNamespaceResponse{}, err
+	}
+	return applyNamespaceResponse{
+		asyncOp:   res,
+		Namespace: existing.Namespace,
+	}, nil
 }
 
 func (c *namespaceClient) getNamespaceByName(ctx context.Context, name string) (*namespace.Namespace, error) {

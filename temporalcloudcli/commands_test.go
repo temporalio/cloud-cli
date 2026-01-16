@@ -174,9 +174,8 @@ type SharedServerSuite struct {
 
 	Suite suite.Suite
 
-	apiKey      string
-	server      string
-	testAccount string
+	apiKey string
+	server string
 }
 
 func (s *SharedServerSuite) SetupSuite() {
@@ -184,8 +183,6 @@ func (s *SharedServerSuite) SetupSuite() {
 	s.Suite.Require().NotEmpty(s.apiKey, "Could not load TEMPORAL_API_KEY. Are you running with `mise run test` and have you filled out your .env? See README.md for details.")
 	s.server = os.Getenv("TEMPORAL_CLOUD_SERVER")
 	s.Suite.Require().NotEmpty(s.apiKey, "Could not load TEMPORAL_CLOUD_SERVER. Are you running with `mise run test` and have you filled out your .env? See README.md for details.")
-	s.testAccount = os.Getenv("TEMPORAL_ACCOUNT")
-	s.Suite.Require().NotEmpty(s.testAccount, "Could not load TEMPORAL_ACCOUNT. Are you running with `mise run test` and have you filled out your .env? See README.md for details.")
 }
 
 func (s *SharedServerSuite) TearDownSuite() {
@@ -270,4 +267,9 @@ func (s *SharedServerSuite) pollAsyncOperation(
 			}
 		}
 	}
+}
+
+type mutationResult struct {
+	asyncOp *operation.AsyncOperation
+	ID      string
 }

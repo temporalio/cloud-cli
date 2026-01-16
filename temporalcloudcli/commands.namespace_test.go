@@ -4,10 +4,12 @@
 package temporalcloudcli_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
 
+	"github.com/temporalio/cloud-cli/temporalcloudcli"
 	"go.temporal.io/api/temporalproto"
 	"go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespace "go.temporal.io/cloud-sdk/api/namespace/v1"
@@ -50,17 +52,24 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 
 	res := s.Execute(
 		"namespace", "apply",
-		"-n", fmt.Sprintf("%s.%s", newNamespaceName, s.testAccount),
 		"--auto-confirm=true",
 		"--spec", fmt.Sprintf(`%s`, string(buf)),
+		"-o=json",
 	)
 
 	s.Suite.Require().NoError(res.Err)
+	buf, err = io.ReadAll(&res.Stdout)
+	s.Suite.Require().NoError(err)
+	result := &temporalcloudcli.MutationResult{}
+	err = json.Unmarshal(buf, result)
+	s.Suite.Require().NoError(err)
+
+	namespaceID := result.ID
 
 	// get the namespace
 	res = s.Execute(
 		"namespace", "get",
-		"-n", fmt.Sprintf("%s.%s", newNamespaceName, s.testAccount),
+		"-n", namespaceID,
 		"-o=json",
 	)
 	s.Suite.Require().NoError(err)
@@ -101,16 +110,16 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 
 	res = s.Execute(
 		"namespace", "apply",
-		"-n", fmt.Sprintf("%s.%s", newNamespaceName, s.testAccount),
 		"--auto-confirm=true",
 		"--spec", fmt.Sprintf(`%s`, string(buf)),
+		"-o=json",
 	)
 	s.Suite.Require().NoError(res.Err)
 
 	// get the namespace (after updating)
 	res = s.Execute(
 		"namespace", "get",
-		"-n", fmt.Sprintf("%s.%s", newNamespaceName, s.testAccount),
+		"-n", namespaceID,
 		"-o=json",
 	)
 	s.Suite.Require().NoError(err)
@@ -134,15 +143,17 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 	// delete the namespace
 	res = s.Execute(
 		"namespace", "delete",
-		"-n", fmt.Sprintf("%s.%s", newNamespaceName, s.testAccount),
-		"--idempotent", "--auto-confirm=true",
+		"-n", namespaceID,
+		"--idempotent",
+		"--auto-confirm=true",
+		"-o=json",
 	)
 	s.Suite.Require().NoError(err)
 
 	// try to get the namespace
 	res = s.Execute(
 		"namespace", "get",
-		"-n", fmt.Sprintf("%s.%s", newNamespaceName, s.testAccount),
+		"-n", namespaceID,
 	)
 
 	s.Suite.Require().NoError(err)

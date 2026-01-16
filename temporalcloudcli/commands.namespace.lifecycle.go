@@ -1,8 +1,6 @@
 package temporalcloudcli
 
 import (
-	"fmt"
-
 	namespace "go.temporal.io/cloud-sdk/api/namespace/v1"
 	"google.golang.org/protobuf/proto"
 
@@ -63,16 +61,9 @@ func (c *CloudNamespaceLifecycleSetCommand) run(cctx *CommandContext, _ []string
 	newSpec.Lifecycle.EnableDeleteProtection = c.EnableDeleteProtection
 
 	// Show diff
-	cctx.Printer.PrintDiff(ns.Spec, newSpec, printer.DiffOptions{})
-
-	// Confirm apply
-	yes, err := cctx.promptYes("Apply (y/yes)?", cctx.RootCommand.AutoConfirm)
+	err = promptApplyResource(cctx, ns.Spec, newSpec, cctx.RootCommand.AutoConfirm)
 	if err != nil {
 		return err
-	}
-	if !yes {
-		fmt.Fprintln(cctx.Printer.Output, "Aborting apply.")
-		return nil
 	}
 
 	// Use provided resource version, or fetch from current namespace
@@ -81,7 +72,7 @@ func (c *CloudNamespaceLifecycleSetCommand) run(cctx *CommandContext, _ []string
 		resourceVersion = ns.ResourceVersion
 	}
 
-	asyncOp, err := client.applyNamespace(cctx.Context, applyNamespaceParams{
+	res, err := client.applyNamespace(cctx.Context, applyNamespaceParams{
 		namespace:        c.Namespace,
 		spec:             newSpec,
 		asyncOperationID: c.AsyncOperationId,
@@ -92,7 +83,7 @@ func (c *CloudNamespaceLifecycleSetCommand) run(cctx *CommandContext, _ []string
 		return err
 	}
 
-	if asyncOp == nil {
+	if res.asyncOp == nil {
 		// Nothing changed (idempotent case)
 		result := struct {
 			Status    string
@@ -107,9 +98,12 @@ func (c *CloudNamespaceLifecycleSetCommand) run(cctx *CommandContext, _ []string
 	// Handle async flag
 	if c.Async {
 		// Return immediately with the async operation
-		return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+		return cctx.Printer.PrintStructured(MutationResult{
+			AsyncOp: res.asyncOp,
+			ID:      res.Namespace,
+		}, printer.StructuredOptions{})
 	}
 
 	// Poll for completion
-	return pollAsyncOperation(cctx, asyncOp.Id)
+	return pollAsyncOperation(cctx, res.asyncOp.Id, res.Namespace)
 }

@@ -6,7 +6,6 @@ In order to run the tests, you need a temporal cloud api key. Create one in the 
 ```
 TEMPORAL_API_KEY=<api key>
 TEMPORAL_CLOUD_SERVER=<server>
-TEMPORAL_ACCOUNT=<account>
 ```
 
 *NOTE* This will create and delete resources on the account. 
