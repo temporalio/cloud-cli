@@ -17,7 +17,6 @@ jobs:
 
     env:
       TEMPORAL_CLOUD_SERVER: ${{ vars.TEMPORAL_CLOUD_SERVER }}
-      TEMPORAL_ACCOUNT: ${{ vars.TEMPORAL_ACCOUNT }}
       TEMPORAL_API_KEY: ${{ secrets.TEMPORAL_API_KEY }}
 
     steps:
