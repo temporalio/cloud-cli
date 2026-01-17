@@ -40,10 +40,6 @@ jobs:
             missing=1
           fi
 
-          if [[ -z "${TEMPORAL_ACCOUNT:-}" ]]; then
-            echo "::error::TEMPORAL_ACCOUNT is not set or is empty"
-            missing=1
-          fi
 
           # Secret: check presence ONLY, never print or echo
           if [[ -z "${TEMPORAL_API_KEY:-}" ]]; then
