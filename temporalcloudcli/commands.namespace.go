@@ -46,15 +46,9 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 		return err
 	}
 
-	cctx.Printer.PrintDiff(ns.Spec, newSpec, printer.DiffOptions{})
-	// Step 5: Confirm apply if not forced
-	yes, err := cctx.promptYes("Apply (y/yes)?", cctx.RootCommand.AutoConfirm)
+	err = promptApplyResource(cctx, ns.Spec, newSpec, cctx.RootCommand.AutoConfirm)
 	if err != nil {
 		return err
-	}
-	if !yes {
-		fmt.Fprintln(cctx.Printer.Output, "Aborting apply.")
-		return nil
 	}
 
 	// Use provided resource version, or fall back to the fetched namespace's resource version.
@@ -63,7 +57,7 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 		resourceVersion = ns.ResourceVersion
 	}
 
-	asyncOp, err := client.applyNamespace(cctx.Context, applyNamespaceParams{
+	res, err := client.applyNamespace(cctx.Context, applyNamespaceParams{
 		namespace:        c.Namespace,
 		spec:             newSpec,
 		asyncOperationID: c.AsyncOperationId,
@@ -75,7 +69,7 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 	}
 
 	// TODO: (gmankes) remove this -- clean up and make shareable
-	if asyncOp == nil {
+	if res.asyncOp == nil {
 		// Nothing changed (idempotent case)
 		result := struct {
 			Status    string
@@ -90,11 +84,14 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 	// Handle async flag
 	if c.Async {
 		// Return immediately with the async operation
-		return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+		return cctx.Printer.PrintStructured(MutationResult{
+			AsyncOp: res.asyncOp,
+			ID:      res.Namespace,
+		}, printer.StructuredOptions{})
 	}
 
 	// Poll for completion
-	return pollAsyncOperation(cctx, asyncOp.Id)
+	return pollAsyncOperation(cctx, res.asyncOp.Id, res.Namespace)
 }
 
 func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error {
@@ -118,33 +115,38 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 	client := newNamespaceClient(withCloudClient(cloudClient))
 
 	// Step 4: Retrieve existing namespace
-	existing, err := client.getNamespace(cctx.Context, c.Namespace)
-	if err != nil {
+	var found bool
+	existing, err := client.getNamespaceByName(cctx.Context, spec.Name)
+	if err != nil && !isNotFoundErr(err) {
 		return err
+	} else if err == nil {
+		found = true
 	}
-	cctx.Printer.PrintDiff(existing.Spec, spec, printer.DiffOptions{
-		Verbose: c.VerboseDiff,
-	})
+
+	existingResourceVersion := ""
+	var existingSpec *namespace.NamespaceSpec
+	existingNamespaceIdentifier := ""
+	if found {
+		existingResourceVersion = existing.ResourceVersion
+		existingSpec = existing.Spec
+		existingNamespaceIdentifier = existing.Namespace
+	}
 
 	// Step 5: Confirm apply if not forced
-	yes, err := cctx.promptYes("Apply (y/yes)?", cctx.RootCommand.AutoConfirm)
+	err = promptApplyResource(cctx, existingSpec, spec, c.VerboseDiff)
 	if err != nil {
 		return err
-	}
-	if !yes {
-		fmt.Fprintln(cctx.Printer.Output, "Aborting apply.")
-		return nil
 	}
 
 	// Step 5: Apply the namespace (create or update)
 	// Use provided resource version, or use fetched version
 	resourceVersion := c.ResourceVersion
 	if resourceVersion == "" {
-		resourceVersion = existing.ResourceVersion
+		resourceVersion = existingResourceVersion
 	}
 
 	params := applyNamespaceParams{
-		namespace: c.Namespace,
+		namespace: existingNamespaceIdentifier,
 		spec:      spec,
 
 		resourceVersion:  resourceVersion,
@@ -152,20 +154,20 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 		idempotent:       c.Idempotent,       // Use the flag value
 	}
 
-	asyncOp, err := client.applyNamespace(cctx.Context, params)
+	res, err := client.applyNamespace(cctx.Context, params)
 	if err != nil {
 		return fmt.Errorf("failed to apply namespace: %w", err)
 	}
 
 	// Step 5: Handle result
-	if asyncOp == nil {
+	if res.asyncOp == nil {
 		// Nothing changed (idempotent case)
 		result := struct {
 			Status    string
 			Namespace string
 		}{
 			Status:    "unchanged",
-			Namespace: c.Namespace,
+			Namespace: existingNamespaceIdentifier,
 		}
 		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 	}
@@ -173,11 +175,14 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 	// Step 6: Handle async flag
 	if c.Async {
 		// Return immediately with the async operation
-		return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+		return cctx.Printer.PrintStructured(MutationResult{
+			AsyncOp: res.asyncOp,
+			ID:      res.Namespace,
+		}, printer.StructuredOptions{})
 	}
 
 	// Step 7: Poll for completion
-	return pollAsyncOperation(cctx, asyncOp.Id)
+	return pollAsyncOperation(cctx, res.asyncOp.Id, res.Namespace)
 }
 
 func (c *CloudNamespaceDeleteCommand) run(cctx *CommandContext, _ []string) error {
@@ -188,6 +193,15 @@ func (c *CloudNamespaceDeleteCommand) run(cctx *CommandContext, _ []string) erro
 
 	client := newNamespaceClient(withCloudClient(cloudClient))
 
+	yes, err := cctx.promptYes("Delete (y/yes)?", cctx.RootCommand.AutoConfirm)
+	if err != nil {
+		return err
+	}
+
+	if !yes {
+		return fmt.Errorf("Aborting delete.")
+	}
+
 	asyncOp, err := client.deleteNamespace(cctx.Context, deleteNamespaceParams{
 		namespace:        c.Namespace,
 		idempotent:       c.Idempotent,
@@ -197,14 +211,30 @@ func (c *CloudNamespaceDeleteCommand) run(cctx *CommandContext, _ []string) erro
 	if err != nil {
 		return err
 	}
+
+	if asyncOp == nil {
+		// deleted already (idempotent case)
+		result := struct {
+			Status    string
+			Namespace string
+		}{
+			Status:    "deleted",
+			Namespace: c.Namespace,
+		}
+		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+	}
+
 	// Handle async flag
 	if c.Async {
 		// Return immediately with the async operation
-		return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+		return cctx.Printer.PrintStructured(MutationResult{
+			AsyncOp: asyncOp,
+			ID:      c.Namespace,
+		}, printer.StructuredOptions{})
 	}
 
 	// Poll for completion
-	return pollAsyncOperation(cctx, asyncOp.Id)
+	return pollAsyncOperation(cctx, asyncOp.Id, c.Namespace)
 }
 
 func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error {
@@ -235,4 +265,3 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 		printer.StructuredOptions{},
 	)
 }
-

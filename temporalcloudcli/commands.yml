@@ -124,11 +124,13 @@ commands:
           Useful for headless environments or when using alternative auth methods.
       - name: api-key
         type: string
+        env: TEMPORAL_API_KEY
         description: |
           API key for authenticating with Temporal Cloud. Can be used instead
           of interactive login for automation and CI/CD pipelines.
       - name: server
         type: string
+        env: TEMPORAL_CLOUD_SERVER
         description: |
           Override the Temporal Cloud API server address. Used for connecting
           to non-production environments.
@@ -292,13 +294,6 @@ commands:
       ```
     has-init: false
     options:
-      - name: namespace
-        type: string
-        description: |
-          The fully qualified namespace name in the format 'namespace.account'
-          (e.g., 'my-namespace.my-account').
-        short: n
-        required: true
       - name: spec
         type: string
         description: |
@@ -511,11 +506,9 @@ commands:
         type: int
         description: |
           New retention period in days for closed workflow history data.
-        short: r
         required: true
       - name: resource-version
         type: string
-        short: v
         description: |
           Resource version for optimistic concurrency control. If not provided,
           the current version is fetched automatically.
@@ -591,7 +584,6 @@ commands:
           is needed.
       - name: resource-version
         type: string
-        short: v
         description: |
           Resource version for optimistic concurrency control. If not provided,
           the current version is fetched automatically.

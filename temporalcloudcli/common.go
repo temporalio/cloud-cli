@@ -124,11 +124,30 @@ func runEditor(existing []byte) ([]byte, error) {
 	return updated, nil
 }
 
+func promptApplyResource(cctx *CommandContext, existing, actual proto.Message, verboseDiff bool) error {
+	if !cctx.JSONOutput {
+		cctx.Printer.PrintDiff(existing, actual, printer.DiffOptions{
+			Verbose: verboseDiff,
+		})
+	}
+
+	yes, err := cctx.promptYes("Apply (y/yes)?", cctx.RootCommand.AutoConfirm)
+	if err != nil {
+		return err
+	}
+
+	if !yes {
+		return fmt.Errorf("Aborting apply.")
+	}
+	return nil
+}
+
 // pollAsyncOperation polls an async operation until it reaches a terminal state.
 // It prints status updates every second and returns the final AsyncOperation.
 func pollAsyncOperation(
 	cctx *CommandContext,
 	operationID string,
+	id string,
 ) error {
 	cloudClient, err := newCloudClient(cctx)
 	if err != nil {
@@ -157,26 +176,47 @@ func pollAsyncOperation(
 			}
 
 			// Print current state
+			var progressString string
 			switch asyncOp.State {
 			case operation.AsyncOperation_STATE_PENDING:
-				fmt.Fprintf(cctx.Printer.Output, "[%s] Operation pending...\n", time.Now().Format("15:04:05"))
+				progressString = fmt.Sprintf("[%s] Operation pending...\n", time.Now().Format("15:04:05"))
 			case operation.AsyncOperation_STATE_IN_PROGRESS:
-				fmt.Fprintf(cctx.Printer.Output, "[%s] Operation in progress...\n", time.Now().Format("15:04:05"))
+				progressString = fmt.Sprintf("[%s] Operation in progress...\n", time.Now().Format("15:04:05"))
 			case operation.AsyncOperation_STATE_FULFILLED:
-				fmt.Fprintf(cctx.Printer.Output, "[%s] Operation completed successfully\n", time.Now().Format("15:04:05"))
-				return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+				progressString = fmt.Sprintf("[%s] Operation completed successfully\n", time.Now().Format("15:04:05"))
+				return cctx.Printer.PrintStructured(MutationResult{
+					ID:      id,
+					AsyncOp: asyncOp,
+				}, printer.StructuredOptions{})
 			case operation.AsyncOperation_STATE_FAILED:
-				fmt.Fprintf(cctx.Printer.Output, "[%s] Operation failed: %s\n", time.Now().Format("15:04:05"), asyncOp.FailureReason)
-				return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+				progressString = fmt.Sprintf("[%s] Operation failed: %s\n", time.Now().Format("15:04:05"), asyncOp.FailureReason)
+				return cctx.Printer.PrintStructured(MutationResult{
+					ID:      id,
+					AsyncOp: asyncOp,
+				}, printer.StructuredOptions{})
 			case operation.AsyncOperation_STATE_CANCELLED:
-				fmt.Fprintf(cctx.Printer.Output, "[%s] Operation cancelled\n", time.Now().Format("15:04:05"))
-				return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+				progressString = fmt.Sprintf("[%s] Operation cancelled\n", time.Now().Format("15:04:05"))
+				return cctx.Printer.PrintStructured(MutationResult{
+					ID:      id,
+					AsyncOp: asyncOp,
+				}, printer.StructuredOptions{})
 			case operation.AsyncOperation_STATE_REJECTED:
-				fmt.Fprintf(cctx.Printer.Output, "[%s] Operation rejected\n", time.Now().Format("15:04:05"))
-				return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
+				progressString = fmt.Sprintf("[%s] Operation rejected\n", time.Now().Format("15:04:05"))
+				return cctx.Printer.PrintStructured(MutationResult{
+					ID:      id,
+					AsyncOp: asyncOp,
+				}, printer.StructuredOptions{})
 			default:
-				fmt.Fprintf(cctx.Printer.Output, "[%s] Operation pending...\n", time.Now().Format("15:04:05"))
+				progressString = fmt.Sprintf("[%s] Operation pending...\n", time.Now().Format("15:04:05"))
+			}
+			if !cctx.JSONOutput {
+				cctx.Printer.Print(progressString)
 			}
 		}
 	}
+}
+
+type MutationResult struct {
+	AsyncOp *operation.AsyncOperation `json:"asyncOperation"`
+	ID      string                    `json:"id"`
 }
