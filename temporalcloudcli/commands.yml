@@ -12,106 +12,10 @@ commands:
       cloud namespace get --namespace my-namespace.my-account
       ```
     has-init: true
+    option-sets:
+      - client
+      - common
     options:
-      - name: config-file
-        type: string
-        description: |
-          Path to the TOML configuration file. Defaults to
-          `$CONFIG_PATH/temporal/temporal.toml` where `$CONFIG_PATH` is
-          `$HOME/.config` on Linux, `$HOME/Library/Application Support` on
-          macOS, and `%AppData%` on Windows.
-        experimental: true
-        implied-env: TEMPORAL_CONFIG_FILE
-      - name: profile
-        type: string
-        description: |
-          Name of the configuration profile to use from the config file.
-          Profiles allow you to maintain multiple sets of settings.
-        experimental: true
-        implied-env: TEMPORAL_PROFILE
-      - name: disable-config-file
-        type: bool
-        description: |
-          Disable loading configuration from the config file. When set, only
-          command-line flags and environment variables are used.
-        experimental: true
-      - name: disable-config-env
-        type: bool
-        description: |
-          Disable loading configuration from environment variables. When set,
-          only command-line flags and the config file are used.
-        experimental: true
-      - name: log-level
-        type: string-enum
-        enum-values:
-          - debug
-          - info
-          - warn
-          - error
-          - never
-        description: |
-          Set the logging verbosity level. Use 'debug' for troubleshooting,
-          'never' to suppress all logs.
-        default: info
-      - name: log-format
-        type: string-enum
-        description: |
-          Format for log output. Use 'json' for structured logging suitable
-          for log aggregation systems.
-        enum-values:
-          - text
-          - json
-        hidden-legacy-values:
-          - pretty
-        default: text
-      - name: output
-        type: string-enum
-        short: o
-        description: |
-          Format for command output (excludes log messages). Use 'json' for
-          scripting, 'jsonl' for streaming JSON, 'none' to suppress output.
-        enum-values:
-          - text
-          - json
-          - jsonl
-          - none
-        default: text
-      - name: time-format
-        type: string-enum
-        description: |
-          Format for displaying timestamps. 'relative' shows human-readable
-          durations (e.g., "2 hours ago"), 'iso' shows ISO 8601 format,
-          'raw' shows Unix timestamps.
-        enum-values:
-          - relative
-          - iso
-          - raw
-        default: relative
-      - name: color
-        type: string-enum
-        description: |
-          Control colored output. 'auto' enables color when outputting to a
-          terminal and disables it otherwise.
-        enum-values:
-          - always
-          - never
-          - auto
-        default: auto
-      - name: no-json-shorthand-payloads
-        type: bool
-        description: |
-          Display payloads in their raw binary format instead of attempting
-          to decode them as JSON. Useful when payloads contain non-JSON data.
-      - name: command-timeout
-        type: duration
-        description: |
-          Maximum time to wait for a command to complete. Use '0s' for no
-          timeout. Example: '30s', '5m'.
-      - name: client-connect-timeout
-        type: duration
-        description: |
-          Maximum time to wait when establishing a connection to Temporal
-          Cloud. Use '0s' for no timeout. Example: '10s', '1m'.
       - name: config-dir
         type: string
         description: |
@@ -122,20 +26,6 @@ commands:
         description: |
           Prevent the CLI from opening a browser window during authentication.
           Useful for headless environments or when using alternative auth methods.
-      - name: api-key
-        type: string
-        env: TEMPORAL_API_KEY
-        description: |
-          API key for authenticating with Temporal Cloud. Can be used instead
-          of interactive login for automation and CI/CD pipelines.
-      - name: server
-        type: string
-        env: TEMPORAL_CLOUD_SERVER
-        description: |
-          Override the Temporal Cloud API server address. Used for connecting
-          to non-production environments.
-        hidden: true
-        default: saas-api.tmprl-test.cloud:443
       - name: auto-confirm
         type: bool
         description: |
@@ -587,3 +477,23 @@ commands:
         description: |
           Resource version for optimistic concurrency control. If not provided,
           the current version is fetched automatically.
+
+option-sets:
+  - name: client
+    options:
+      - name: api-key
+        type: string
+        env: TEMPORAL_API_KEY
+        description: |
+          API key for authenticating with Temporal Cloud. Can be used instead
+          of interactive login for automation and CI/CD pipelines.
+      - name: server
+        type: string
+        env: TEMPORAL_CLOUD_SERVER
+        description: |
+          Override the Temporal Cloud API server address. Used for connecting
+          to non-production environments.
+        hidden: true
+        default: saas-api.tmprl-test.cloud:443
+  - name: common
+    external-package: github.com/temporalio/cli/cliext
