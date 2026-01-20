@@ -7,12 +7,14 @@ import (
 
 	"github.com/temporalio/cli/cliext"
 	"go.temporal.io/cloud-sdk/cloudclient"
+	"go.temporal.io/sdk/contrib/envconfig"
 )
 
 func (c *CloudCommand) GetAPIKey(ctx context.Context) (string, error) {
 	loadClientOauthRes, err := cliext.LoadClientOAuth(cliext.LoadClientOAuthOptions{
 		ConfigFilePath: c.ConfigFile,
 		ProfileName:    c.Profile,
+		EnvLookup:      envconfig.EnvLookupOS,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to load login configuration: %w, please run `temporal cloud login --reset`", err)
@@ -36,6 +38,7 @@ func (c *CloudCommand) GetAPIKey(ctx context.Context) (string, error) {
 			OAuth:          loadClientOauthRes.OAuth,
 			ConfigFilePath: c.ConfigFile,
 			ProfileName:    c.Profile,
+			EnvLookup:      envconfig.EnvLookupOS,
 		}); err != nil {
 			return "", fmt.Errorf("failed to write config file: %w", err)
 		}
