@@ -10,7 +10,10 @@ import (
 )
 
 func (c *CloudCommand) GetAPIKey(ctx context.Context) (string, error) {
-	loadClientOauthRes, err := cliext.LoadClientOAuth(cliext.LoadClientOAuthOptions{})
+	loadClientOauthRes, err := cliext.LoadClientOAuth(cliext.LoadClientOAuthOptions{
+		ConfigFilePath: c.ConfigFile,
+		ProfileName:    c.Profile,
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to load login configuration: %w, please run `temporal cloud login --reset`", err)
 	}
@@ -30,7 +33,9 @@ func (c *CloudCommand) GetAPIKey(ctx context.Context) (string, error) {
 	if refreshed {
 		loadClientOauthRes.OAuth.Token = token
 		if err := cliext.StoreClientOAuth(cliext.StoreClientOAuthOptions{
-			OAuth: loadClientOauthRes.OAuth,
+			OAuth:          loadClientOauthRes.OAuth,
+			ConfigFilePath: c.ConfigFile,
+			ProfileName:    c.Profile,
 		}); err != nil {
 			return "", fmt.Errorf("failed to write config file: %w", err)
 		}
