@@ -92,6 +92,7 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 	// get the namespace via listing
 	res = s.Execute(
 		"namespace", "list",
+		"--name", newNamespaceName,
 		"-o=json",
 	)
 	s.Suite.Require().NoError(err)
