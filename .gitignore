@@ -9,6 +9,7 @@
 *.dylib
 /cloud-cli
 /temporal-cloud
+dist/
 
 # Test binary, built with `go test -c`
 *.test
