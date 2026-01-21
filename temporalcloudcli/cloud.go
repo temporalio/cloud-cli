@@ -40,7 +40,7 @@ func (c *CloudCommand) GetAPIKey(ctx context.Context) (string, error) {
 
 func newCloudClient(cctx *CommandContext) (*cloudclient.Client, error) {
 	opts := cloudclient.Options{
-		UserAgent: fmt.Sprintf("temporal-cloud/%s", VersionString()),
+		UserAgent: fmt.Sprintf("temporalio-cloud-cli/%s", VersionString()),
 	}
 	if cctx.RootCommand.Server != "" {
 		opts.HostPort = cctx.RootCommand.Server
