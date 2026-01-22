@@ -20,7 +20,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
-	"github.com/temporalio/ui-server/v2/server/version"
 	"go.temporal.io/api/common/v1"
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/failure/v1"
@@ -28,7 +27,6 @@ import (
 	"go.temporal.io/sdk/contrib/envconfig"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
-	"go.temporal.io/server/common/headers"
 	"golang.org/x/term"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
@@ -405,12 +403,12 @@ var buildInfo string
 
 func VersionString() string {
 	// To add build-time information to the version string, use
-	// go build -ldflags "-X github.com/temporalio/cli/temporalcli.buildInfo=<MyString>"
+	// go build -ldflags "-X github.com/temporalio/cloud-cli/temporalcloudcli.buildInfo=<MyString>"
 	var bi = buildInfo
 	if bi != "" {
 		bi = fmt.Sprintf(", %s", bi)
 	}
-	return fmt.Sprintf("%s (Server %s, UI %s%s)", Version, headers.ServerVersion, version.UIVersion, bi)
+	return fmt.Sprintf("%s%s", Version, bi)
 }
 
 func (c *CloudCommand) preRun(cctx *CommandContext) error {
