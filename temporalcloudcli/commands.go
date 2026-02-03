@@ -24,6 +24,7 @@ import (
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/temporalproto"
+	"go.temporal.io/cloud-sdk/cloudclient"
 	"go.temporal.io/sdk/contrib/envconfig"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
@@ -94,6 +95,58 @@ func NewCommandContext(ctx context.Context, options CommandOptions) (*CommandCon
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	cctx.Context = ctx
 	return cctx, stop, nil
+}
+
+// BuildCloudOptions creates CloudOptions from the command's ClientOptions.
+// It uses the RootCommand's CommonOptions and the CommandContext's logger.
+//
+// This method encapsulates the CloudOptionsBuilder pattern and should be used
+// by all commands that need CloudOptions.
+//
+// AIDEV-NOTE: This is the standard way for commands to create CloudOptions.
+// It automatically uses cctx.RootCommand.CommonOptions regardless of command depth.
+func (cctx *CommandContext) BuildCloudOptions(clientOpts ClientOptions) (*CloudOptions, error) {
+	builder := CloudOptionsBuilder{
+		ClientOptions: clientOpts,
+		CommonOptions: cctx.RootCommand.CommonOptions,
+		Logger:        cctx.Logger,
+		EnvLookup:     envconfig.EnvLookupOS,
+	}
+	return builder.Build(cctx.Context)
+}
+
+// BuildCloudClient creates a CloudClient from the command's ClientOptions.
+// It builds CloudOptions internally and then creates the client.
+//
+// This is a convenience method for commands that need the CloudClient directly
+// without needing to keep a reference to CloudOptions.
+//
+// AIDEV-NOTE: Use this method in command run functions instead of manually
+// creating CloudOptions and CloudClient separately.
+func (cctx *CommandContext) BuildCloudClient(clientOpts ClientOptions) (*cloudclient.Client, error) {
+	cloudOpts, err := cctx.BuildCloudOptions(clientOpts)
+	if err != nil {
+		return nil, err
+	}
+	opts := cloudclient.Options{
+		UserAgent: fmt.Sprintf("temporalio-cloud-cli/%s", VersionString()),
+	}
+	if cloudOpts.Server != "" {
+		opts.HostPort = cloudOpts.Server
+	}
+	if cloudOpts.ApiKey != "" {
+		// an explicit api key was provided, use it
+		opts.APIKey = cloudOpts.ApiKey
+	} else {
+		// fallaback to the oauth based sso token provider
+		opts.APIKeyReader = cloudOpts
+	}
+
+	cloudClient, err := cloudclient.New(opts)
+	if err != nil {
+		return nil, err
+	}
+	return cloudClient, nil
 }
 
 func (c *CommandContext) preprocessOptions() error {

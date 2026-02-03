@@ -142,6 +142,8 @@ commands:
       cloud namespace get --namespace my-namespace.my-account
       ```
     has-init: false
+    option-sets:
+      - client
     docs:
       keywords:
         - namespace
@@ -183,6 +185,8 @@ commands:
       cloud namespace apply --spec @namespace-spec.json
       ```
     has-init: false
+    option-sets:
+      - client
     options:
       - name: spec
         type: string
@@ -232,6 +236,8 @@ commands:
       cloud namespace edit --namespace my-namespace.my-account
       ```
     has-init: false
+    option-sets:
+      - client
     options:
       - name: namespace
         type: string
@@ -274,6 +280,8 @@ commands:
       cloud namespace delete --namespace my-namespace.my-account
       ```
     has-init: false
+    option-sets:
+      - client
     options:
       - name: namespace
         type: string
@@ -315,6 +323,8 @@ commands:
       cloud namespace list
       ```
     has-init: false
+    option-sets:
+      - client
     options:
       - name: page-size
         type: int
@@ -348,6 +358,8 @@ commands:
       cloud namespace retention get --namespace my-namespace.my-account
       ```
     has-init: false
+    option-sets:
+      - client
     options:
       - name: namespace
         type: string
@@ -368,6 +380,8 @@ commands:
       cloud namespace retention set --namespace my-namespace.my-account --retention-days 14
       ```
     has-init: false
+    option-sets:
+      - client
     options:
       - name: namespace
         type: string
@@ -422,6 +436,8 @@ commands:
       cloud namespace lifecycle get --namespace my-namespace.my-account
       ```
     has-init: false
+    option-sets:
+      - client
     options:
       - name: namespace
         type: string
@@ -442,6 +458,8 @@ commands:
       cloud namespace lifecycle set --namespace my-namespace.my-account --enable-delete-protection true
       ```
     has-init: false
+    option-sets:
+      - client
     options:
       - name: namespace
         type: string
@@ -483,13 +501,12 @@ option-sets:
     options:
       - name: api-key
         type: string
-        env: TEMPORAL_API_KEY
+        implied-env: TEMPORAL_API_KEY
         description: |
           API key for authenticating with Temporal Cloud. Can be used instead
           of interactive login for automation and CI/CD pipelines.
       - name: server
         type: string
-        env: TEMPORAL_CLOUD_SERVER
         description: |
           Override the Temporal Cloud API server address. Used for connecting
           to non-production environments.

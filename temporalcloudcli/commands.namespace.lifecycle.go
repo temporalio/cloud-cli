@@ -8,7 +8,7 @@ import (
 )
 
 func (c *CloudNamespaceLifecycleGetCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := newCloudClient(cctx)
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -39,7 +39,7 @@ func (c *CloudNamespaceLifecycleGetCommand) run(cctx *CommandContext, _ []string
 }
 
 func (c *CloudNamespaceLifecycleSetCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := newCloudClient(cctx)
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -105,5 +105,5 @@ func (c *CloudNamespaceLifecycleSetCommand) run(cctx *CommandContext, _ []string
 	}
 
 	// Poll for completion
-	return pollAsyncOperation(cctx, res.asyncOp.Id, res.Namespace)
+	return pollAsyncOperation(cctx, cloudClient, res.asyncOp.Id, res.Namespace)
 }

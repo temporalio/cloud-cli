@@ -9,7 +9,7 @@ import (
 )
 
 func (c *CloudNamespaceGetCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := newCloudClient(cctx)
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -28,7 +28,7 @@ func (c *CloudNamespaceGetCommand) run(cctx *CommandContext, _ []string) error {
 }
 
 func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := newCloudClient(cctx)
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 	}
 
 	// Poll for completion
-	return pollAsyncOperation(cctx, res.asyncOp.Id, res.Namespace)
+	return pollAsyncOperation(cctx, cloudClient, res.asyncOp.Id, res.Namespace)
 }
 
 func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error {
@@ -108,7 +108,7 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 	}
 
 	// Step 3: Create cloud and namespace clients
-	cloudClient, err := newCloudClient(cctx)
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -182,11 +182,11 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 	}
 
 	// Step 7: Poll for completion
-	return pollAsyncOperation(cctx, res.asyncOp.Id, res.Namespace)
+	return pollAsyncOperation(cctx, cloudClient, res.asyncOp.Id, res.Namespace)
 }
 
 func (c *CloudNamespaceDeleteCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := newCloudClient(cctx)
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -234,11 +234,11 @@ func (c *CloudNamespaceDeleteCommand) run(cctx *CommandContext, _ []string) erro
 	}
 
 	// Poll for completion
-	return pollAsyncOperation(cctx, asyncOp.Id, c.Namespace)
+	return pollAsyncOperation(cctx, cloudClient, asyncOp.Id, c.Namespace)
 }
 
 func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := newCloudClient(cctx)
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}

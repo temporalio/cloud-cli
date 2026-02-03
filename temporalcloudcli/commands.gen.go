@@ -150,8 +150,9 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 }
 
 type CloudNamespaceApplyCommand struct {
-	Parent           *CloudNamespaceCommand
-	Command          cobra.Command
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+	ClientOptions
 	Spec             string
 	AsyncOperationId string
 	Idempotent       bool
@@ -179,6 +180,7 @@ func NewCloudNamespaceApplyCommand(cctx *CommandContext, parent *CloudNamespaceC
 	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
 	s.Command.Flags().BoolVar(&s.VerboseDiff, "verbose-diff", false, "Show detailed differences between the current and desired namespace configurations when changes are detected.")
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -188,8 +190,9 @@ func NewCloudNamespaceApplyCommand(cctx *CommandContext, parent *CloudNamespaceC
 }
 
 type CloudNamespaceDeleteCommand struct {
-	Parent           *CloudNamespaceCommand
-	Command          cobra.Command
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+	ClientOptions
 	Namespace        string
 	AsyncOperationId string
 	Async            bool
@@ -215,6 +218,7 @@ func NewCloudNamespaceDeleteCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
 	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if the namespace does not exist. Without this flag, the command errors if the namespace is not found.")
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -224,8 +228,9 @@ func NewCloudNamespaceDeleteCommand(cctx *CommandContext, parent *CloudNamespace
 }
 
 type CloudNamespaceEditCommand struct {
-	Parent           *CloudNamespaceCommand
-	Command          cobra.Command
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+	ClientOptions
 	Namespace        string
 	AsyncOperationId string
 	Idempotent       bool
@@ -251,6 +256,7 @@ func NewCloudNamespaceEditCommand(cctx *CommandContext, parent *CloudNamespaceCo
 	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if no changes were made in the editor. Without this flag, the command errors when the configuration is unchanged.")
 	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -260,8 +266,9 @@ func NewCloudNamespaceEditCommand(cctx *CommandContext, parent *CloudNamespaceCo
 }
 
 type CloudNamespaceGetCommand struct {
-	Parent    *CloudNamespaceCommand
-	Command   cobra.Command
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+	ClientOptions
 	Namespace string
 	Spec      bool
 }
@@ -281,6 +288,7 @@ func NewCloudNamespaceGetCommand(cctx *CommandContext, parent *CloudNamespaceCom
 	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
 	s.Command.Flags().BoolVar(&s.Spec, "spec", false, "Output only the namespace specification in JSON format, omitting metadata and status information.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -307,8 +315,9 @@ func NewCloudNamespaceLifecycleCommand(cctx *CommandContext, parent *CloudNamesp
 }
 
 type CloudNamespaceLifecycleGetCommand struct {
-	Parent    *CloudNamespaceLifecycleCommand
-	Command   cobra.Command
+	Parent  *CloudNamespaceLifecycleCommand
+	Command cobra.Command
+	ClientOptions
 	Namespace string
 }
 
@@ -326,6 +335,7 @@ func NewCloudNamespaceLifecycleGetCommand(cctx *CommandContext, parent *CloudNam
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -335,8 +345,9 @@ func NewCloudNamespaceLifecycleGetCommand(cctx *CommandContext, parent *CloudNam
 }
 
 type CloudNamespaceLifecycleSetCommand struct {
-	Parent                 *CloudNamespaceLifecycleCommand
-	Command                cobra.Command
+	Parent  *CloudNamespaceLifecycleCommand
+	Command cobra.Command
+	ClientOptions
 	Namespace              string
 	EnableDeleteProtection bool
 	AsyncOperationId       string
@@ -365,6 +376,7 @@ func NewCloudNamespaceLifecycleSetCommand(cctx *CommandContext, parent *CloudNam
 	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
 	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if the lifecycle configuration is already set to the specified value. Without this flag, the command errors when no change is needed.")
 	s.Command.Flags().StringVar(&s.ResourceVersion, "resource-version", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -374,8 +386,9 @@ func NewCloudNamespaceLifecycleSetCommand(cctx *CommandContext, parent *CloudNam
 }
 
 type CloudNamespaceListCommand struct {
-	Parent    *CloudNamespaceCommand
-	Command   cobra.Command
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+	ClientOptions
 	PageSize  int
 	PageToken string
 	Name      string
@@ -396,6 +409,7 @@ func NewCloudNamespaceListCommand(cctx *CommandContext, parent *CloudNamespaceCo
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of namespaces to return per page. Use for paginated results.")
 	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results in a paginated list.")
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Filter namespaces by the name as defined in the specification of the namespace.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -422,8 +436,9 @@ func NewCloudNamespaceRetentionCommand(cctx *CommandContext, parent *CloudNamesp
 }
 
 type CloudNamespaceRetentionGetCommand struct {
-	Parent    *CloudNamespaceRetentionCommand
-	Command   cobra.Command
+	Parent  *CloudNamespaceRetentionCommand
+	Command cobra.Command
+	ClientOptions
 	Namespace string
 }
 
@@ -441,6 +456,7 @@ func NewCloudNamespaceRetentionGetCommand(cctx *CommandContext, parent *CloudNam
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -450,8 +466,9 @@ func NewCloudNamespaceRetentionGetCommand(cctx *CommandContext, parent *CloudNam
 }
 
 type CloudNamespaceRetentionSetCommand struct {
-	Parent           *CloudNamespaceRetentionCommand
-	Command          cobra.Command
+	Parent  *CloudNamespaceRetentionCommand
+	Command cobra.Command
+	ClientOptions
 	Namespace        string
 	AsyncOperationId string
 	Async            bool
@@ -480,6 +497,7 @@ func NewCloudNamespaceRetentionSetCommand(cctx *CommandContext, parent *CloudNam
 	s.Command.Flags().IntVar(&s.RetentionDays, "retention-days", 0, "New retention period in days for closed workflow history data. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "retention-days")
 	s.Command.Flags().StringVar(&s.ResourceVersion, "resource-version", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
