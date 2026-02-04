@@ -11,7 +11,7 @@ all: gen build test
 
 install:
 	rm -rf ./cli
-	git clone https://github.com/temporalio/cli && cd ./cli/cmd/gen-commands && go install && cd ../../..
+	git clone https://github.com/temporalio/cli && cd ./cli && go install ./cmd/gen-commands && cd ..
 	rm -rf ./cli
 
 gen: install
