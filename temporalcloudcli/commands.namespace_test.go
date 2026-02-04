@@ -51,7 +51,9 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 	s.Suite.Require().NoError(err)
 
 	res := s.Execute(
-		"namespace", "apply",
+		"namespace",
+		fmt.Sprintf("--server=%s", s.server), // TODO (gmankes): remove this when the server is defaulted back to prod
+		"apply",
 		"--auto-confirm=true",
 		"--spec", fmt.Sprintf(`%s`, string(buf)),
 		"-o=json",
@@ -68,11 +70,13 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 
 	// get the namespace
 	res = s.Execute(
-		"namespace", "get",
+		"namespace",
+		fmt.Sprintf("--server=%s", s.server), // TODO (gmankes): remove this when the server is defaulted back to prod
+		"get",
 		"-n", namespaceID,
 		"-o=json",
 	)
-	s.Suite.Require().NoError(err)
+	s.Suite.Require().NoError(res.Err)
 
 	buf, err = io.ReadAll(&res.Stdout)
 	s.Suite.Require().NoError(err)
@@ -91,11 +95,13 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 
 	// get the namespace via listing
 	res = s.Execute(
-		"namespace", "list",
-		"--name", newNamespaceName,
+		"namespace",
+		fmt.Sprintf("--server=%s", s.server), // TODO (gmankes): remove this when the server is defaulted back to prod
+		"list",
+		fmt.Sprintf("--name=%s", newNamespaceName),
 		"-o=json",
 	)
-	s.Suite.Require().NoError(err)
+	s.Suite.Require().NoError(res.Err)
 
 	buf, err = io.ReadAll(&res.Stdout)
 	s.Suite.Require().NoError(err)
@@ -110,7 +116,9 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 	s.Suite.Require().NoError(err)
 
 	res = s.Execute(
-		"namespace", "apply",
+		"namespace",
+		fmt.Sprintf("--server=%s", s.server), // TODO (gmankes): remove this when the server is defaulted back to prod
+		"apply",
 		"--auto-confirm=true",
 		"--spec", fmt.Sprintf(`%s`, string(buf)),
 		"-o=json",
@@ -119,15 +127,16 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 
 	// get the namespace (after updating)
 	res = s.Execute(
-		"namespace", "get",
+		"namespace",
+		fmt.Sprintf("--server=%s", s.server), // TODO (gmankes): remove this when the server is defaulted back to prod
+		"get",
 		"-n", namespaceID,
 		"-o=json",
 	)
-	s.Suite.Require().NoError(err)
+	s.Suite.Require().NoError(res.Err)
 
 	buf, err = io.ReadAll(&res.Stdout)
 	s.Suite.Require().NoError(err)
-	fmt.Println(string(buf))
 
 	readNamespace = &namespace.Namespace{}
 	err = protojson.Unmarshal(buf, readNamespace)
@@ -143,21 +152,25 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 
 	// delete the namespace
 	res = s.Execute(
-		"namespace", "delete",
+		"namespace",
+		fmt.Sprintf("--server=%s", s.server), // TODO (gmankes): remove this when the server is defaulted back to prod
+		"delete",
 		"-n", namespaceID,
 		"--idempotent",
 		"--auto-confirm=true",
 		"-o=json",
 	)
-	s.Suite.Require().NoError(err)
+	s.Suite.Require().NoError(res.Err)
 
 	// try to get the namespace
 	res = s.Execute(
-		"namespace", "get",
+		"namespace",
+		fmt.Sprintf("--server=%s", s.server), // TODO (gmankes): remove this when the server is defaulted back to prod
+		"get",
 		"-n", namespaceID,
 	)
 
-	s.Suite.Require().NoError(err)
+	s.Suite.Require().Error(res.Err)
 	// should say not found
 	stdOut, err := io.ReadAll(&res.Stdout)
 	s.Suite.Require().NoError(err)

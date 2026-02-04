@@ -78,8 +78,8 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/temporalio/cli v1.5.2-0.20251212213638-36bff7182259 h1:HB3j4k3hgg9fINQhIOnR5PDlbrHeuVFLuExDIs5RlOk=
 github.com/temporalio/cli v1.5.2-0.20251212213638-36bff7182259/go.mod h1:8lfULNGZ1Y2sobXSpY+2qQ4vgR4hYLuTLpqnCIl9Au4=
-github.com/temporalio/cli/cliext v0.0.0-20260107234359-aa925d353b8e h1:Aud45gx+HInyiTidP6N+LmG7yaayY3QYWN7hJlocNJQ=
-github.com/temporalio/cli/cliext v0.0.0-20260107234359-aa925d353b8e/go.mod h1:A9EHuWgszyY1o70CwnJXLkgqfoGKKHXjkKlpE2fj3Uc=
+github.com/temporalio/cli/cliext v0.0.0-20260112210410-f2d230be226c h1:E+NxnXPj6XeDN8uUTI3veXYt7PVqfZOrOMh7kRkAEI4=
+github.com/temporalio/cli/cliext v0.0.0-20260112210410-f2d230be226c/go.mod h1:A9EHuWgszyY1o70CwnJXLkgqfoGKKHXjkKlpE2fj3Uc=
 github.com/temporalio/ui-server/v2 v2.42.1 h1:ajeOxqCnUiCRQQhQYLxaT7wUgF/slqZJtdW4pLjVqCs=
 github.com/temporalio/ui-server/v2 v2.42.1/go.mod h1:lKTnn50t8yQvcrarxAOjX33YcfkomkiNB5BH06wQwEE=
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=

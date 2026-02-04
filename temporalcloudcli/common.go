@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"go.temporal.io/cloud-sdk/cloudclient"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 	"google.golang.org/grpc/codes"
@@ -144,16 +145,17 @@ func promptApplyResource(cctx *CommandContext, existing, actual proto.Message, v
 
 // pollAsyncOperation polls an async operation until it reaches a terminal state.
 // It prints status updates every second and returns the final AsyncOperation.
+//
+// The cloudClient should be pre-built using cctx.BuildCloudClient().
+//
+// AIDEV-NOTE: This function takes a pre-built cloudClient. Commands should
+// build the client using cctx.BuildCloudClient() and pass it directly.
 func pollAsyncOperation(
 	cctx *CommandContext,
+	cloudClient *cloudclient.Client,
 	operationID string,
 	id string,
 ) error {
-	cloudClient, err := newCloudClient(cctx)
-	if err != nil {
-		return err
-	}
-
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 

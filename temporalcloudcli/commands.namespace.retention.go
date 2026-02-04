@@ -8,7 +8,7 @@ import (
 )
 
 func (c *CloudNamespaceRetentionSetCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := newCloudClient(cctx)
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -66,11 +66,11 @@ func (c *CloudNamespaceRetentionSetCommand) run(cctx *CommandContext, _ []string
 	}
 
 	// Poll for completion
-	return pollAsyncOperation(cctx, res.asyncOp.Id, res.Namespace)
+	return pollAsyncOperation(cctx, cloudClient, res.asyncOp.Id, res.Namespace)
 }
 
 func (c *CloudNamespaceRetentionGetCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := newCloudClient(cctx)
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
