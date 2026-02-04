@@ -9,7 +9,12 @@ endif
 
 all: gen build test
 
-gen: 
+install:
+	rm -rf ./cli
+	git clone https://github.com/temporalio/cli && cd ./cli/cmd/gen-commands && go install && cd ../../..
+	rm -rf ./cli
+
+gen: install
 	gen-commands -input ./temporalcloudcli/commands.yml -pkg temporalcloudcli > ./temporalcloudcli/commands.gen.go
 
 build:

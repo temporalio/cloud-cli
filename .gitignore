@@ -10,6 +10,8 @@
 /cloud-cli
 /temporal-cloud
 dist/
+# the cli clone for installing gen-commands
+cli/ 
 
 # Test binary, built with `go test -c`
 *.test
