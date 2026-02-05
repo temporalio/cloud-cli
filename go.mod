@@ -12,12 +12,10 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/cli/cliext v0.0.0-20260112210410-f2d230be226c
-	github.com/temporalio/ui-server/v2 v2.42.1
 	go.temporal.io/api v1.59.0
 	go.temporal.io/cloud-sdk v0.6.0
 	go.temporal.io/sdk v1.38.0
 	go.temporal.io/sdk/contrib/envconfig v0.1.0
-	go.temporal.io/server v1.29.1
 	golang.org/x/oauth2 v0.34.0
 	golang.org/x/term v0.38.0
 	google.golang.org/grpc v1.78.0
@@ -25,7 +23,6 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
-	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
 	github.com/facebookgo/clock v0.0.0-20150410010913-600d898af40a // indirect
@@ -35,15 +32,9 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.4 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/labstack/echo/v4 v4.13.4 // indirect
-	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/nexus-rpc/sdk-go v0.5.1 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
-	github.com/temporalio/cli v1.5.2-0.20251212213638-36bff7182259 // indirect
-	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	github.com/valyala/fasttemplate v1.2.2 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
@@ -62,5 +53,3 @@ require (
 	golang.org/x/sys v0.39.0 // indirect
 	google.golang.org/protobuf v1.36.11
 )
-
-tool github.com/temporalio/cli/cmd/gen-commands

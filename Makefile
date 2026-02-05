@@ -1,4 +1,4 @@
-.PHONY: all gen build test
+.PHONY: all install gen build test
 
 # Load .env file if it exists (for local development)
 # In CI/CD, environment variables are provided by the environment
@@ -9,6 +9,8 @@ endif
 
 all: gen build test
 
+# we need to install gen-commands directly because gen-commands does not have its
+# own go.mod
 install:
 	rm -rf ./cli
 	git clone https://github.com/temporalio/cli && cd ./cli && go install ./cmd/gen-commands && cd ..
