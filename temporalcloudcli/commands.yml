@@ -494,6 +494,41 @@ commands:
         description: |
           Resource version for optimistic concurrency control. If not provided,
           the current version is fetched automatically.
+  - name: cloud namespace cert-ca 
+    summary: Manage client CA certificates for namespaces
+    description: |
+      Commands for managing the client CA certificates of Temporal Cloud namespaces.
+    has-init: false
+  - name: cloud namespace cert-ca list
+    summary: TODO
+    description: |
+      TODO
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace cert-ca add
+    summary: TODO
+    description: |
+      TODO
+    option-sets:
+      - client
+      - namespace
+      - resource-modify
+    options:
+      - name: ca-certificate-file
+        type: string
+        description: |
+          Path to a CA certificate PEM file.
+      
+  - name: cloud namespace cert-ca remove
+    summary: TODO
+    description: |
+      TODO
+    option-sets:
+      - client
+      - namespace
+      - resource-modify
 
 option-sets:
   - name: client
@@ -520,3 +555,35 @@ option-sets:
           configurations when changes are detected.
   - name: common
     external-package: github.com/temporalio/cli/cliext
+  - name: namespace
+    options:
+      - name: namespace
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+        required: true
+  - name: resource-modify
+    options:
+      - name: resource-version
+        type: string
+        short: v
+        description: |
+          Resource version for optimistic concurrency control. If not provided,
+          the current version is fetched automatically.
+      - name: idempotent
+        type: bool
+        description: |
+          Succeed silently if the namespace already matches the specification.
+          Without this flag, the command errors when no changes are needed.
+      - name: async-operation-id
+        type: string
+        description: |
+          Custom identifier for tracking this async operation. If not provided,
+          a unique ID is generated automatically.
+      - name: async
+        type: bool
+        description: |
+          Return immediately after initiating the operation instead of waiting
+          for completion. Use the returned operation ID to check status later.
