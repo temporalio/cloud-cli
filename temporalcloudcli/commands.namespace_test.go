@@ -31,6 +31,7 @@ func (s *SharedServerSuite) TestBasicNamespaceOperations() {
 }
 
 func (s *SharedServerSuite) testnamespaceCRUD() {
+	cloudClient := s.getCloudClient()
 	// create a new namespace
 	newNamespaceName := s.generateRandomNamespaceName()
 
@@ -67,6 +68,11 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 	s.Suite.Require().NoError(err)
 
 	namespaceID := result.ID
+
+	// make sure ns apply is completed
+	asyncOpID := result.AsyncOp.Id
+	err = s.pollAsyncOperation(cloudClient, asyncOpID)
+	s.Suite.Require().NoError(err)
 
 	// get the namespace
 	res = s.Execute(
@@ -124,6 +130,16 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 		"-o=json",
 	)
 	s.Suite.Require().NoError(res.Err)
+	buf, err = io.ReadAll(&res.Stdout)
+	s.Suite.Require().NoError(err)
+	result = &temporalcloudcli.MutationResult{}
+	err = json.Unmarshal(buf, result)
+	s.Suite.Require().NoError(err)
+
+	// make sure ns apply is completed
+	asyncOpID = result.AsyncOp.Id
+	err = s.pollAsyncOperation(cloudClient, asyncOpID)
+	s.Suite.Require().NoError(err)
 
 	// get the namespace (after updating)
 	res = s.Execute(
