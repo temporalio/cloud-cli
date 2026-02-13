@@ -268,8 +268,3 @@ func (s *SharedServerSuite) pollAsyncOperation(
 		}
 	}
 }
-
-type mutationResult struct {
-	asyncOp *operation.AsyncOperation
-	ID      string
-}
