@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -21,17 +20,13 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 	"go.temporal.io/api/common/v1"
-	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/temporalproto"
 	"go.temporal.io/cloud-sdk/cloudclient"
 	"go.temporal.io/sdk/contrib/envconfig"
-	"go.temporal.io/sdk/converter"
-	"go.temporal.io/sdk/temporal"
 	"golang.org/x/term"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Version is the value put as the default command version. This is often
@@ -546,15 +541,6 @@ func (c *CloudCommand) preRun(cctx *CommandContext) error {
 	return nil
 }
 
-func aliasNormalizer(aliases map[string]string) func(f *pflag.FlagSet, name string) pflag.NormalizedName {
-	return func(f *pflag.FlagSet, name string) pflag.NormalizedName {
-		if actual := aliases[name]; actual != "" {
-			name = actual
-		}
-		return pflag.NormalizedName(name)
-	}
-}
-
 func newNopLogger() *slog.Logger { return slog.New(discardLogHandler{}) }
 
 type discardLogHandler struct{}
@@ -564,61 +550,6 @@ func (discardLogHandler) Handle(context.Context, slog.Record) error { return nil
 func (d discardLogHandler) WithAttrs([]slog.Attr) slog.Handler      { return d }
 func (d discardLogHandler) WithGroup(string) slog.Handler           { return d }
 
-func timestampToTime(t *timestamppb.Timestamp) time.Time {
-	if t == nil {
-		return time.Time{}
-	}
-	return t.AsTime()
-}
-
 type nopWriter struct{}
 
 func (nopWriter) Write(b []byte) (int, error) { return len(b), nil }
-
-type structuredError struct {
-	Message string `json:"message"`
-	Type    string `json:"type,omitempty"`
-	Details any    `json:"details,omitempty"`
-}
-
-func fromApplicationError(err *temporal.ApplicationError) (*structuredError, error) {
-	var deets any
-	if err := err.Details(&deets); err != nil && !errors.Is(err, temporal.ErrNoData) {
-		return nil, err
-	}
-	return &structuredError{
-		Message: err.Error(),
-		Type:    err.Type(),
-		Details: deets,
-	}, nil
-}
-
-func encodeMapToPayloads(in map[string]any) (map[string]*commonpb.Payload, error) {
-	if len(in) == 0 {
-		return nil, nil
-	}
-	// search attributes always use default dataconverter
-	dc := converter.GetDefaultDataConverter()
-	out := make(map[string]*commonpb.Payload, len(in))
-	for key, val := range in {
-		payload, err := dc.ToPayload(val)
-		if err != nil {
-			return nil, err
-		}
-		out[key] = payload
-	}
-	return out, nil
-}
-
-type overrideDisplayTypeFlagValue struct {
-	pflag.Value
-	displayType string
-}
-
-func (o *overrideDisplayTypeFlagValue) Type() string {
-	return o.displayType
-}
-
-func overrideFlagDisplayType(flag *pflag.Flag, displayType string) {
-	flag.Value = &overrideDisplayTypeFlagValue{Value: flag.Value, displayType: displayType}
-}
