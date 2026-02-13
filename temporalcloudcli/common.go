@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"go.temporal.io/cloud-sdk/cloudclient"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
+	"go.temporal.io/cloud-sdk/cloudclient"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -95,6 +95,11 @@ func runEditor(existing []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to create temp file for editing: %v", err)
 	}
+
+	defer func() {
+		// Clean up temp file.
+		_ = os.Remove(f.Name())
+	}()
 
 	if _, err := f.Write(existing); err != nil {
 		return nil, fmt.Errorf("unable to write existing data to temp file for editing: %v", err)
