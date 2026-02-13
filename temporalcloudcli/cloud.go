@@ -51,7 +51,9 @@ func (b *CloudOptionsBuilder) Build(ctx context.Context) (*CloudOptions, error) 
 		}
 	}
 
-	cloudOpts := &CloudOptions{}
+	cloudOpts := &CloudOptions{
+		CommonOptions: common,
+	}
 
 	// Set logger if provided.
 	if b.Logger != nil {
