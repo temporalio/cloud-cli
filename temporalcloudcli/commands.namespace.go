@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	namespace "go.temporal.io/cloud-sdk/api/namespace/v1"
+	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
@@ -57,7 +58,7 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 		resourceVersion = ns.ResourceVersion
 	}
 
-	res, err := client.applyNamespace(cctx.Context, applyNamespaceParams{
+	asyncOp, err := client.updateNamespace(cctx.Context, updateNamespaceParams{
 		namespace:        c.Namespace,
 		spec:             newSpec,
 		asyncOperationID: c.AsyncOperationId,
@@ -69,14 +70,14 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 	}
 
 	// TODO: (gmankes) remove this -- clean up and make shareable
-	if res.asyncOp == nil {
+	if asyncOp == nil {
 		// Nothing changed (idempotent case)
 		result := struct {
 			Status    string
 			Namespace string
 		}{
 			Status:    "unchanged",
-			Namespace: newSpec.Name,
+			Namespace: c.Namespace,
 		}
 		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 	}
@@ -85,13 +86,13 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 	if c.Async {
 		// Return immediately with the async operation
 		return cctx.Printer.PrintStructured(MutationResult{
-			AsyncOp: res.asyncOp,
-			ID:      res.Namespace,
+			AsyncOp: asyncOp,
+			ID:      c.Namespace,
 		}, printer.StructuredOptions{})
 	}
 
 	// Poll for completion
-	return PollAsyncOperation(cctx, cloudClient, res.asyncOp.Id, res.Namespace)
+	return PollAsyncOperation(cctx, cloudClient, asyncOp.Id, c.Namespace)
 }
 
 func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error {
@@ -125,10 +126,12 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 
 	existingResourceVersion := ""
 	var existingSpec *namespace.NamespaceSpec
+	existingNamespaceIdentifier := ""
 
 	if found {
 		existingResourceVersion = existing.ResourceVersion
 		existingSpec = existing.Spec
+		existingNamespaceIdentifier = existing.Namespace
 	}
 
 	// Step 5: Confirm apply if not forced
@@ -137,51 +140,66 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 		return err
 	}
 
-	// Step 5: Apply the namespace (create or update)
+	// Step 6: Apply the namespace (create or update)
 	// Use provided resource version, or use fetched version
 	resourceVersion := c.ResourceVersion
 	if resourceVersion == "" {
 		resourceVersion = existingResourceVersion
 	}
 
-	params := applyNamespaceParams{
-		namespace: spec.Name,
-		spec:      spec,
+	var asyncOp *operation.AsyncOperation
+	var namespaceID string
 
-		resourceVersion:  resourceVersion,
-		asyncOperationID: c.AsyncOperationId, // Use the flag value if provided
-		idempotent:       c.Idempotent,       // Use the flag value
+	if found {
+		// Update existing namespace
+		asyncOp, err = client.updateNamespace(cctx.Context, updateNamespaceParams{
+			namespace:        existingNamespaceIdentifier,
+			spec:             spec,
+			asyncOperationID: c.AsyncOperationId,
+			idempotent:       c.Idempotent,
+			resourceVersion:  resourceVersion,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update namespace: %w", err)
+		}
+		namespaceID = existingNamespaceIdentifier
+	} else {
+		// Create new namespace
+		res, err := client.createNamespace(cctx.Context, createNamespaceParams{
+			spec:             spec,
+			asyncOperationID: c.AsyncOperationId,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create namespace: %w", err)
+		}
+		asyncOp = res.asyncOp
+		namespaceID = res.Namespace
 	}
 
-	res, err := client.applyNamespace(cctx.Context, params)
-	if err != nil {
-		return fmt.Errorf("failed to apply namespace: %w", err)
-	}
-
-	// Step 5: Handle result
-	if res.asyncOp == nil {
+	// Step 7: Handle result
+	if asyncOp == nil {
 		// Nothing changed (idempotent case)
 		result := struct {
 			Status    string
 			Namespace string
 		}{
 			Status:    "unchanged",
-			Namespace: spec.Name,
+			Namespace: namespaceID,
 		}
 		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 	}
 
-	// Step 6: Handle async flag
+	// Step 8: Handle async flag
 	if c.Async {
 		// Return immediately with the async operation
 		return cctx.Printer.PrintStructured(MutationResult{
-			AsyncOp: res.asyncOp,
-			ID:      res.Namespace,
+			AsyncOp: asyncOp,
+			ID:      namespaceID,
 		}, printer.StructuredOptions{})
 	}
 
-	// Step 7: Poll for completion
-	return PollAsyncOperation(cctx, cloudClient, res.asyncOp.Id, res.Namespace)
+	// Step 9: Poll for completion
+	return PollAsyncOperation(cctx, cloudClient, asyncOp.Id, namespaceID)
 }
 
 func (c *CloudNamespaceDeleteCommand) run(cctx *CommandContext, _ []string) error {

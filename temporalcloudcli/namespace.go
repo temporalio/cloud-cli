@@ -157,67 +157,6 @@ func (c *namespaceClient) deleteNamespace(ctx context.Context, params deleteName
 	return res.AsyncOperation, nil
 }
 
-type applyNamespaceParams struct {
-	namespace string
-	spec      *namespace.NamespaceSpec
-
-	resourceVersion  string // optional, if empty, will be fetched
-	asyncOperationID string
-	idempotent       bool
-}
-
-type applyNamespaceResponse struct {
-	asyncOp   *operation.AsyncOperation
-	Namespace string
-}
-
-func (c *namespaceClient) applyNamespace(ctx context.Context, params applyNamespaceParams) (applyNamespaceResponse, error) {
-	existing, err := c.getNamespaceByName(ctx, params.namespace)
-	if err != nil {
-		if isNotFoundErr(err) {
-			// create the namespace
-			res, err := c.createNamespace(ctx, createNamespaceParams{
-				spec:             params.spec,
-				asyncOperationID: params.asyncOperationID,
-			})
-			if err != nil {
-				return applyNamespaceResponse{}, err
-			}
-			return applyNamespaceResponse{
-				asyncOp:   res.asyncOp,
-				Namespace: res.Namespace,
-			}, nil
-		}
-
-		return applyNamespaceResponse{}, err
-	}
-
-	// update the namespace
-	if params.resourceVersion == "" {
-		params.resourceVersion = existing.ResourceVersion
-	}
-
-	// update
-	// Namespace exists, update it using the current resource version
-	updateParams := updateNamespaceParams{
-		namespace: params.namespace,
-		spec:      params.spec,
-
-		asyncOperationID: params.asyncOperationID,
-		idempotent:       params.idempotent,
-		resourceVersion:  params.resourceVersion,
-	}
-
-	res, err := c.updateNamespace(ctx, updateParams)
-	if err != nil {
-		return applyNamespaceResponse{}, err
-	}
-	return applyNamespaceResponse{
-		asyncOp:   res,
-		Namespace: existing.Namespace,
-	}, nil
-}
-
 func (c *namespaceClient) getNamespaceByName(ctx context.Context, name string) (*namespace.Namespace, error) {
 	namespaces, err := c.listNamespacesWithName(ctx, name, true)
 	if err != nil {
