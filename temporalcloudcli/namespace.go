@@ -172,22 +172,24 @@ type applyNamespaceResponse struct {
 }
 
 func (c *namespaceClient) applyNamespace(ctx context.Context, params applyNamespaceParams) (applyNamespaceResponse, error) {
-	existing, err := c.getNamespaceByName(ctx, params.spec.Name)
-	if err != nil && !isNotFoundErr(err) {
-		return applyNamespaceResponse{}, err
-	} else if err != nil && isNotFoundErr(err) {
-		// create the namespace
-		res, err := c.createNamespace(ctx, createNamespaceParams{
-			spec:             params.spec,
-			asyncOperationID: params.asyncOperationID,
-		})
-		if err != nil {
-			return applyNamespaceResponse{}, err
+	existing, err := c.getNamespaceByName(ctx, params.namespace)
+	if err != nil {
+		if isNotFoundErr(err) {
+			// create the namespace
+			res, err := c.createNamespace(ctx, createNamespaceParams{
+				spec:             params.spec,
+				asyncOperationID: params.asyncOperationID,
+			})
+			if err != nil {
+				return applyNamespaceResponse{}, err
+			}
+			return applyNamespaceResponse{
+				asyncOp:   res.asyncOp,
+				Namespace: res.Namespace,
+			}, nil
 		}
-		return applyNamespaceResponse{
-			asyncOp:   res.asyncOp,
-			Namespace: res.Namespace,
-		}, nil
+
+		return applyNamespaceResponse{}, err
 	}
 
 	// update the namespace
