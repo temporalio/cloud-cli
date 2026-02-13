@@ -279,7 +279,6 @@ commands:
     has-init: false
     option-sets:
       - client
-      - diff
     options:
       - name: namespace
         type: string
