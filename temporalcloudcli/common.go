@@ -150,7 +150,7 @@ func promptApplyResource(cctx *CommandContext, existing, actual proto.Message, v
 //
 // AIDEV-NOTE: This function takes a pre-built cloudClient. Commands should
 // build the client using cctx.BuildCloudClient() and pass it directly.
-func pollAsyncOperation(
+func PollAsyncOperation(
 	cctx *CommandContext,
 	cloudClient *cloudclient.Client,
 	operationID string,
