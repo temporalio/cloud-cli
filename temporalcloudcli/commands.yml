@@ -187,6 +187,7 @@ commands:
     has-init: false
     option-sets:
       - client
+      - diff
     options:
       - name: spec
         type: string
@@ -209,11 +210,6 @@ commands:
         description: |
           Return immediately after initiating the operation instead of waiting
           for completion. Use the returned operation ID to check status later.
-      - name: verbose-diff
-        type: bool
-        description: |
-          Show detailed differences between the current and desired namespace
-          configurations when changes are detected.
       - name: resource-version
         type: string
         short: v
@@ -238,6 +234,7 @@ commands:
     has-init: false
     option-sets:
       - client
+      - diff
     options:
       - name: namespace
         type: string
@@ -282,6 +279,7 @@ commands:
     has-init: false
     option-sets:
       - client
+      - diff
     options:
       - name: namespace
         type: string
@@ -382,6 +380,7 @@ commands:
     has-init: false
     option-sets:
       - client
+      - diff
     options:
       - name: namespace
         type: string
@@ -460,6 +459,7 @@ commands:
     has-init: false
     option-sets:
       - client
+      - diff
     options:
       - name: namespace
         type: string
@@ -512,5 +512,12 @@ option-sets:
           to non-production environments.
         hidden: true
         default: saas-api.tmprl-test.cloud:443
+  - name: diff
+    options:
+      - name: verbose-diff
+        type: bool
+        description: |
+          Show detailed differences between the current and desired namespace
+          configurations when changes are detected.
   - name: common
     external-package: github.com/temporalio/cli/cliext

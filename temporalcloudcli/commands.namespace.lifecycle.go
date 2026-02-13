@@ -61,7 +61,7 @@ func (c *CloudNamespaceLifecycleSetCommand) run(cctx *CommandContext, _ []string
 	newSpec.Lifecycle.EnableDeleteProtection = c.EnableDeleteProtection
 
 	// Show diff
-	err = promptApplyResource(cctx, ns.Spec, newSpec, cctx.RootCommand.AutoConfirm)
+	err = promptApplyResource(cctx, ns.Spec, newSpec, c.VerboseDiff)
 	if err != nil {
 		return err
 	}
