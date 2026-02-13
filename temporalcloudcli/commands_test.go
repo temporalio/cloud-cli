@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"regexp"
@@ -17,8 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
-	"go.temporal.io/cloud-sdk/api/cloudservice/v1"
-	operation "go.temporal.io/cloud-sdk/api/operation/v1"
+	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 	"go.temporal.io/cloud-sdk/cloudclient"
 )
 
@@ -225,46 +225,18 @@ func (s *SharedServerSuite) getCloudClient() *cloudclient.Client {
 }
 
 // pollAsyncOperation polls an async operation until it reaches a terminal state.
-// It prints status updates every second and returns the final AsyncOperation.
+// This is a test wrapper around the PollAsyncOperation function.
 func (s *SharedServerSuite) pollAsyncOperation(
 	cloudClient *cloudclient.Client,
 	operationID string,
 ) error {
-
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-s.Context.Done():
-			return fmt.Errorf("operation polling cancelled: %w", s.Context.Err())
-		case <-ticker.C:
-			// Get the current state of the operation
-			resp, err := cloudClient.CloudService().GetAsyncOperation(s.Context, &cloudservice.GetAsyncOperationRequest{
-				AsyncOperationId: operationID,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to get async operation status: %w", err)
-			}
-
-			asyncOp := resp.GetAsyncOperation()
-			if asyncOp == nil {
-				return fmt.Errorf("async operation not found")
-			}
-
-			// Print current state
-			switch asyncOp.State {
-			case operation.AsyncOperation_STATE_PENDING, operation.AsyncOperation_STATE_IN_PROGRESS:
-			case operation.AsyncOperation_STATE_FULFILLED:
-				return nil
-			case operation.AsyncOperation_STATE_FAILED:
-				return fmt.Errorf("async operation failed: %s", asyncOp.FailureReason)
-			case operation.AsyncOperation_STATE_CANCELLED:
-				return fmt.Errorf("async operation cancelled")
-			case operation.AsyncOperation_STATE_REJECTED:
-				return fmt.Errorf("async operation rejected")
-			default:
-			}
-		}
+	// Create a minimal CommandContext for testing (with discard printer to skip output)
+	cctx := &temporalcloudcli.CommandContext{
+		Context: s.Context,
+		Printer: &printer.Printer{
+			Output: io.Discard, // Discard all output for tests
+		},
 	}
+
+	return temporalcloudcli.PollAsyncOperation(cctx, cloudClient, operationID, "")
 }
