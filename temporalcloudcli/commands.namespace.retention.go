@@ -23,7 +23,7 @@ func (c *CloudNamespaceRetentionSetCommand) run(cctx *CommandContext, _ []string
 	newSpec := proto.Clone(ns.Spec).(*namespace.NamespaceSpec)
 	newSpec.RetentionDays = int32(c.RetentionDays)
 
-	err = promptApplyResource(cctx, ns.Spec, newSpec, cctx.RootCommand.AutoConfirm)
+	err = promptApplyResource(cctx, ns.Spec, newSpec, c.VerboseDiff)
 	if err != nil {
 		return err
 	}

@@ -46,7 +46,7 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 		return err
 	}
 
-	err = promptApplyResource(cctx, ns.Spec, newSpec, cctx.RootCommand.AutoConfirm)
+	err = promptApplyResource(cctx, ns.Spec, newSpec, c.VerboseDiff)
 	if err != nil {
 		return err
 	}
