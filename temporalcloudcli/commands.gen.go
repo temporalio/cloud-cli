@@ -203,7 +203,6 @@ type CloudNamespaceDeleteCommand struct {
 	Parent  *CloudNamespaceCommand
 	Command cobra.Command
 	ClientOptions
-	DiffOptions
 	Namespace        string
 	AsyncOperationId string
 	Async            bool
@@ -230,7 +229,6 @@ func NewCloudNamespaceDeleteCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if the namespace does not exist. Without this flag, the command errors if the namespace is not found.")
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
-	s.DiffOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
