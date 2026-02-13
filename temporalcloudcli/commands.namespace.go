@@ -125,11 +125,11 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 
 	existingResourceVersion := ""
 	var existingSpec *namespace.NamespaceSpec
-	existingNamespaceIdentifier := ""
+	namespaceIdentifier := spec.Name
 	if found {
 		existingResourceVersion = existing.ResourceVersion
 		existingSpec = existing.Spec
-		existingNamespaceIdentifier = existing.Namespace
+		namespaceIdentifier = existing.Namespace
 	}
 
 	// Step 5: Confirm apply if not forced
@@ -146,7 +146,7 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 	}
 
 	params := applyNamespaceParams{
-		namespace: existingNamespaceIdentifier,
+		namespace: namespaceIdentifier,
 		spec:      spec,
 
 		resourceVersion:  resourceVersion,
@@ -167,7 +167,7 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 			Namespace string
 		}{
 			Status:    "unchanged",
-			Namespace: existingNamespaceIdentifier,
+			Namespace: namespaceIdentifier,
 		}
 		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 	}
