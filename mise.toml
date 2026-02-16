@@ -2,6 +2,8 @@
 # Note: Keep in sync with `toolchain` directive in `go.mod`.
 go = "1.25.3"
 
+"ubi:vektra/mockery" = "v3.6.4"
+
 # needed for go backends
 [settings]
 experimental = true
@@ -16,3 +18,4 @@ build = "make build"
 gen = "make gen"
 test = "make test"
 integration = "make test-integration"
+mocks = "make mocks"

@@ -1,4 +1,4 @@
-.PHONY: all install gen build test
+.PHONY: all install gen build test mocks
 
 # Load .env file if it exists (for local development)
 # In CI/CD, environment variables are provided by the environment
@@ -25,3 +25,6 @@ test-integration:
 
 test:
 	go test ./...
+
+mocks:
+	mockery
