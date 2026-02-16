@@ -18,15 +18,20 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/temporalproto"
+	"go.temporal.io/cloud-sdk/api/operation/v1"
 	"go.temporal.io/cloud-sdk/cloudclient"
 	"go.temporal.io/sdk/contrib/envconfig"
 	"golang.org/x/term"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
+
+	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
+
+	"github.com/temporalio/cloud-cli/internal/namespace"
+	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
 // Version is the value put as the default command version. This is often
@@ -53,6 +58,18 @@ type CommandContext struct {
 	// Root/current command only set inside of pre-run
 	RootCommand    *CloudCommand
 	CurrentCommand *cobra.Command
+
+	NamespaceClient NamespaceClient
+	Poller          Poller
+}
+
+type NamespaceClient interface {
+	AddCACerts(context.Context, namespace.AddCACertsParams) (*operation.AsyncOperation, error)
+	GetNamespace(context.Context, string) (*namespacev1.Namespace, error)
+}
+
+type Poller interface {
+	Poll(context.Context, string, string) error
 }
 
 type CommandOptions struct {
