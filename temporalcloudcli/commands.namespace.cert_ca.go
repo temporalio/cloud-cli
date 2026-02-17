@@ -7,16 +7,18 @@ import (
 	"github.com/temporalio/cloud-cli/internal/namespace"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/async"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
+	"go.temporal.io/cloud-sdk/cloudclient"
 )
 
 func (c *CloudNamespaceCertCaAddCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-	if err != nil {
-		return err
-	}
-
+	var cloudClient *cloudclient.Client
 	namespaceClient := cctx.NamespaceClient
 	if namespaceClient == nil {
+		var err error
+		cloudClient, err = cctx.BuildCloudClient(c.ClientOptions)
+		if err != nil {
+			return err
+		}
 		namespaceClient = &namespace.Client{
 			Cloud: cloudClient.CloudService(),
 		}
@@ -63,6 +65,13 @@ func (c *CloudNamespaceCertCaAddCommand) run(cctx *CommandContext, _ []string) e
 
 	poller := cctx.Poller
 	if poller == nil {
+		if cloudClient == nil {
+			var err error
+			cloudClient, err = cctx.BuildCloudClient(c.ClientOptions)
+			if err != nil {
+				return err
+			}
+		}
 		poller = &async.Poller{
 			Cloud:      cloudClient.CloudService(),
 			Printer:    cctx.Printer,
