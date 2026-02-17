@@ -3,10 +3,17 @@ package temporalcloudcli_test
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
+	"math/big"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -23,10 +30,7 @@ import (
 )
 
 func TestCloudNamespaceCertCaAddCommand_Success(t *testing.T) {
-	validCertData, err := os.ReadFile("testdata/valid-cert.pem")
-	require.NoError(t, err)
-	parsedCerts, err := cert.ParseCACerts(validCertData)
-	require.NoError(t, err)
+	parsedCerts, certPath := setupTestCertFile(t)
 
 	expectedOp := &operation.AsyncOperation{
 		Id: "test-operation-id",
@@ -81,7 +85,7 @@ func TestCloudNamespaceCertCaAddCommand_Success(t *testing.T) {
 			name: "async",
 			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaAddCommand) {
 				cmd.Namespace = "test-namespace.test-account"
-				cmd.CaCertificateFile = "testdata/valid-cert.pem"
+				cmd.CaCertificateFile = certPath
 				cmd.ResourceVersion = "test-version"
 				cmd.AsyncOperationId = "custom-operation-id"
 				cmd.Async = true
@@ -103,7 +107,7 @@ func TestCloudNamespaceCertCaAddCommand_Success(t *testing.T) {
 			name: "sync",
 			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaAddCommand) {
 				cmd.Namespace = "test-namespace.test-account"
-				cmd.CaCertificateFile = "testdata/valid-cert.pem"
+				cmd.CaCertificateFile = certPath
 				cmd.Async = false
 			},
 			assertResult: func(t *testing.T, buf bytes.Buffer) {
@@ -126,65 +130,82 @@ func TestCloudNamespaceCertCaAddCommand_Success(t *testing.T) {
 				Poller:          mockPoller,
 			}
 
+			var capturedErr error
+			cctx.Options.Fail = func(err error) {
+				capturedErr = err
+			}
+
 			parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
 			cmd := temporalcloudcli.NewCloudNamespaceCertCaAddCommand(cctx, parent)
 			tt.setupCmd(cmd)
 
 			cmd.Command.Run(&cmd.Command, []string{})
-			require.NoError(t, err)
+			require.NoError(t, capturedErr)
 
 			tt.assertResult(t, buf)
 		})
 	}
 }
 
-func TestCloudNamespaceCertCaAddCommand_FileNotFound(t *testing.T) {
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-
-	var buf bytes.Buffer
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
+func TestCloudNamespaceCertCaAddCommand_InvalidInput(t *testing.T) {
+	tests := []struct {
+		name        string
+		setupCmd    func(*temporalcloudcli.CloudNamespaceCertCaAddCommand)
+		assertError func(*testing.T, error)
+	}{
+		{
+			name: "file not found",
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaAddCommand) {
+				cmd.Namespace = "test-namespace.test-account"
+				cmd.CaCertificateFile = "testdata/nonexistent-cert.pem"
+				cmd.Async = true
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.True(t, os.IsNotExist(err))
+			},
+		},
+		{
+			name: "invalid certificate",
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaAddCommand) {
+				cmd.Namespace = "test-namespace.test-account"
+				cmd.CaCertificateFile = "testdata/invalid-cert.pem"
+				cmd.Async = true
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.Contains(t, err.Error(), "invalid certificate")
+			},
+		},
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertCaAddCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.CaCertificateFile = "testdata/nonexistent-cert.pem"
-	cmd.Async = true
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := cmdmock.NewMockNamespaceClient(t)
 
-	err := cmd.Command.RunE(&cmd.Command, []string{})
-	require.Error(t, err)
-	assert.True(t, os.IsNotExist(err))
-}
+			var buf bytes.Buffer
+			var capturedErr error
+			cctx := &temporalcloudcli.CommandContext{
+				Context:         context.Background(),
+				Printer:         &printer.Printer{Output: &buf, JSON: true},
+				NamespaceClient: mockClient,
+			}
+			cctx.Options.Fail = func(err error) {
+				capturedErr = err
+			}
 
-func TestCloudNamespaceCertCaAddCommand_InvalidCertificate(t *testing.T) {
-	mockClient := cmdmock.NewMockNamespaceClient(t)
+			parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceCertCaAddCommand(cctx, parent)
+			tt.setupCmd(cmd)
 
-	var buf bytes.Buffer
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
+			cmd.Command.Run(&cmd.Command, []string{})
+
+			require.Error(t, capturedErr)
+			tt.assertError(t, capturedErr)
+		})
 	}
-
-	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertCaAddCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.CaCertificateFile = "testdata/invalid-cert.pem"
-	cmd.Async = true
-
-	err := cmd.Command.RunE(&cmd.Command, []string{})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse")
 }
 
 func TestCloudNamespaceCertCaAddCommand_AddCACertsError(t *testing.T) {
-	validCertData, err := os.ReadFile("testdata/valid-cert.pem")
-	require.NoError(t, err)
-	parsedCerts, err := cert.ParseCACerts(validCertData)
-	require.NoError(t, err)
+	parsedCerts, certPath := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
@@ -202,117 +223,106 @@ func TestCloudNamespaceCertCaAddCommand_AddCACertsError(t *testing.T) {
 		Return(nil, expectedErr)
 
 	var buf bytes.Buffer
+	var capturedErr error
 	cctx := &temporalcloudcli.CommandContext{
 		Context:         context.Background(),
 		Printer:         &printer.Printer{Output: &buf, JSON: true},
 		NamespaceClient: mockClient,
 	}
+	cctx.Options.Fail = func(err error) {
+		capturedErr = err
+	}
 
 	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
 	cmd := temporalcloudcli.NewCloudNamespaceCertCaAddCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
-	cmd.CaCertificateFile = "testdata/valid-cert.pem"
+	cmd.CaCertificateFile = certPath
 	cmd.Async = true
 	cmd.Idempotent = false
 
-	err = cmd.Command.RunE(&cmd.Command, []string{})
-	require.Error(t, err)
-	assert.Equal(t, expectedErr, err)
+	cmd.Command.Run(&cmd.Command, []string{})
+	require.Error(t, capturedErr)
+	assert.Equal(t, expectedErr, capturedErr)
 }
 
-func TestCloudNamespaceCertCaAddCommand_NothingToChange_Idempotent(t *testing.T) {
-	validCertData, err := os.ReadFile("testdata/valid-cert.pem")
-	require.NoError(t, err)
-	parsedCerts, err := cert.ParseCACerts(validCertData)
-	require.NoError(t, err)
-
-	mockClient := cmdmock.NewMockNamespaceClient(t)
+func TestCloudNamespaceCertCaAddCommand_NothingToChange(t *testing.T) {
+	parsedCerts, certPath := setupTestCertFile(t)
 
 	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
-	mockClient.EXPECT().
-		AddCACerts(
-			mock.Anything,
-			namespace.AddCACertsParams{
-				Namespace:        "test-namespace.test-account",
-				Certs:            parsedCerts,
-				ResourceVersion:  "",
-				AsyncOperationID: "",
+
+	tests := []struct {
+		name         string
+		idempotent   bool
+		assertResult func(*testing.T, error, bytes.Buffer)
+	}{
+		{
+			name:       "idempotent",
+			idempotent: true,
+			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
+				require.NoError(t, capturedErr)
+				var result struct {
+					Status    string `json:"Status"`
+					Namespace string `json:"Namespace"`
+				}
+				err := json.Unmarshal(buf.Bytes(), &result)
+				require.NoError(t, err)
+				assert.Equal(t, "unchanged", result.Status)
+				assert.Equal(t, "test-namespace.test-account", result.Namespace)
 			},
-		).
-		Return(nil, nothingToChangeErr)
-
-	var buf bytes.Buffer
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-	}
-
-	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertCaAddCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.CaCertificateFile = "testdata/valid-cert.pem"
-	cmd.Async = true
-	cmd.Idempotent = true
-
-	err = cmd.Command.RunE(&cmd.Command, []string{})
-	require.NoError(t, err)
-
-	var result struct {
-		Status    string `json:"Status"`
-		Namespace string `json:"Namespace"`
-	}
-	err = json.Unmarshal(buf.Bytes(), &result)
-	require.NoError(t, err)
-	assert.Equal(t, "unchanged", result.Status)
-	assert.Equal(t, "test-namespace.test-account", result.Namespace)
-}
-
-func TestCloudNamespaceCertCaAddCommand_NothingToChange_NotIdempotent(t *testing.T) {
-	validCertData, err := os.ReadFile("testdata/valid-cert.pem")
-	require.NoError(t, err)
-	parsedCerts, err := cert.ParseCACerts(validCertData)
-	require.NoError(t, err)
-
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-
-	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
-	mockClient.EXPECT().
-		AddCACerts(
-			mock.Anything,
-			namespace.AddCACertsParams{
-				Namespace:        "test-namespace.test-account",
-				Certs:            parsedCerts,
-				ResourceVersion:  "",
-				AsyncOperationID: "",
+		},
+		{
+			name:       "not idempotent",
+			idempotent: false,
+			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
+				require.Error(t, capturedErr)
+				assert.Equal(t, nothingToChangeErr, capturedErr)
 			},
-		).
-		Return(nil, nothingToChangeErr)
-
-	var buf bytes.Buffer
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
+		},
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertCaAddCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.CaCertificateFile = "testdata/valid-cert.pem"
-	cmd.Async = true
-	cmd.Idempotent = false
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := cmdmock.NewMockNamespaceClient(t)
 
-	err = cmd.Command.RunE(&cmd.Command, []string{})
-	require.Error(t, err)
-	assert.Equal(t, nothingToChangeErr, err)
+			mockClient.EXPECT().
+				AddCACerts(
+					mock.Anything,
+					namespace.AddCACertsParams{
+						Namespace:        "test-namespace.test-account",
+						Certs:            parsedCerts,
+						ResourceVersion:  "",
+						AsyncOperationID: "",
+					},
+				).
+				Return(nil, nothingToChangeErr)
+
+			var buf bytes.Buffer
+			var capturedErr error
+			cctx := &temporalcloudcli.CommandContext{
+				Context:         context.Background(),
+				Printer:         &printer.Printer{Output: &buf, JSON: true},
+				NamespaceClient: mockClient,
+			}
+			cctx.Options.Fail = func(err error) {
+				capturedErr = err
+			}
+
+			parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceCertCaAddCommand(cctx, parent)
+			cmd.Namespace = "test-namespace.test-account"
+			cmd.CaCertificateFile = certPath
+			cmd.Async = true
+			cmd.Idempotent = tt.idempotent
+
+			cmd.Command.Run(&cmd.Command, []string{})
+
+			tt.assertResult(t, capturedErr, buf)
+		})
+	}
 }
 
 func TestCloudNamespaceCertCaAddCommand_IdempotentWithOtherError(t *testing.T) {
-	validCertData, err := os.ReadFile("testdata/valid-cert.pem")
-	require.NoError(t, err)
-	parsedCerts, err := cert.ParseCACerts(validCertData)
-	require.NoError(t, err)
+	parsedCerts, certPath := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
@@ -330,29 +340,30 @@ func TestCloudNamespaceCertCaAddCommand_IdempotentWithOtherError(t *testing.T) {
 		Return(nil, otherErr)
 
 	var buf bytes.Buffer
+	var capturedErr error
 	cctx := &temporalcloudcli.CommandContext{
 		Context:         context.Background(),
 		Printer:         &printer.Printer{Output: &buf, JSON: true},
 		NamespaceClient: mockClient,
 	}
+	cctx.Options.Fail = func(err error) {
+		capturedErr = err
+	}
 
 	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
 	cmd := temporalcloudcli.NewCloudNamespaceCertCaAddCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
-	cmd.CaCertificateFile = "testdata/valid-cert.pem"
+	cmd.CaCertificateFile = certPath
 	cmd.Async = true
 	cmd.Idempotent = true
 
-	err = cmd.Command.RunE(&cmd.Command, []string{})
-	require.Error(t, err)
-	assert.Equal(t, otherErr, err)
+	cmd.Command.Run(&cmd.Command, []string{})
+	require.Error(t, capturedErr)
+	assert.Equal(t, otherErr, capturedErr)
 }
 
 func TestCloudNamespaceCertCaAddCommand_PollingError(t *testing.T) {
-	validCertData, err := os.ReadFile("testdata/valid-cert.pem")
-	require.NoError(t, err)
-	parsedCerts, err := cert.ParseCACerts(validCertData)
-	require.NoError(t, err)
+	parsedCerts, certPath := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 	mockPoller := cmdmock.NewMockPoller(t)
@@ -379,29 +390,30 @@ func TestCloudNamespaceCertCaAddCommand_PollingError(t *testing.T) {
 		Return(pollErr)
 
 	var buf bytes.Buffer
+	var capturedErr error
 	cctx := &temporalcloudcli.CommandContext{
 		Context:         context.Background(),
 		Printer:         &printer.Printer{Output: &buf, JSON: true},
 		NamespaceClient: mockClient,
 		Poller:          mockPoller,
 	}
+	cctx.Options.Fail = func(err error) {
+		capturedErr = err
+	}
 
 	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
 	cmd := temporalcloudcli.NewCloudNamespaceCertCaAddCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
-	cmd.CaCertificateFile = "testdata/valid-cert.pem"
+	cmd.CaCertificateFile = certPath
 	cmd.Async = false
 
-	err = cmd.Command.RunE(&cmd.Command, []string{})
-	require.Error(t, err)
-	assert.Equal(t, pollErr, err)
+	cmd.Command.Run(&cmd.Command, []string{})
+	require.Error(t, capturedErr)
+	assert.Equal(t, pollErr, capturedErr)
 }
 
 func TestCloudNamespaceCertCaAddCommand_GetNamespaceError(t *testing.T) {
-	validCertData, err := os.ReadFile("testdata/valid-cert.pem")
-	require.NoError(t, err)
-	parsedCerts, err := cert.ParseCACerts(validCertData)
-	require.NoError(t, err)
+	parsedCerts, certPath := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 	mockPoller := cmdmock.NewMockPoller(t)
@@ -432,20 +444,87 @@ func TestCloudNamespaceCertCaAddCommand_GetNamespaceError(t *testing.T) {
 		Return(nil, getNamespaceErr)
 
 	var buf bytes.Buffer
+	var capturedErr error
 	cctx := &temporalcloudcli.CommandContext{
 		Context:         context.Background(),
 		Printer:         &printer.Printer{Output: &buf, JSON: true},
 		NamespaceClient: mockClient,
 		Poller:          mockPoller,
 	}
+	cctx.Options.Fail = func(err error) {
+		capturedErr = err
+	}
 
 	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
 	cmd := temporalcloudcli.NewCloudNamespaceCertCaAddCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
-	cmd.CaCertificateFile = "testdata/valid-cert.pem"
+	cmd.CaCertificateFile = certPath
 	cmd.Async = false
 
-	err = cmd.Command.RunE(&cmd.Command, []string{})
-	require.Error(t, err)
-	assert.Equal(t, getNamespaceErr, err)
+	cmd.Command.Run(&cmd.Command, []string{})
+	require.Error(t, capturedErr)
+	assert.Equal(t, getNamespaceErr, capturedErr)
+}
+
+// generateTestCertificate creates a self-signed certificate for testing and returns the PEM-encoded bytes.
+func generateTestCertificate(t *testing.T) []byte {
+	t.Helper()
+
+	// Generate private key
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	// Create certificate template
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Country:      []string{"US"},
+			Province:     []string{"Washington"},
+			Locality:     []string{"Bellevue"},
+			Organization: []string{"Temporal"},
+			CommonName:   "test.temporal.io",
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(time.Hour),
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	// Create certificate
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
+	require.NoError(t, err)
+
+	// Encode to PEM
+	certPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certDER,
+	})
+
+	return certPEM
+}
+
+// setupTestCertFile creates a temporary certificate file for testing.
+// Returns the parsed certificates and the file path.
+// The file will be automatically cleaned up when the test completes.
+func setupTestCertFile(t *testing.T) ([]cert.CACert, string) {
+	t.Helper()
+
+	certData := generateTestCertificate(t)
+	parsedCerts, err := cert.ParseCACerts(certData)
+	require.NoError(t, err)
+
+	tmpFile, err := os.CreateTemp("", "test-cert-*.pem")
+	require.NoError(t, err)
+	certPath := tmpFile.Name()
+	t.Cleanup(func() {
+		os.Remove(certPath)
+	})
+
+	_, err = tmpFile.Write(certData)
+	require.NoError(t, err)
+	require.NoError(t, tmpFile.Close())
+
+	return parsedCerts, certPath
 }

@@ -1,21 +1,19 @@
 package temporalcloudcli
 
 import (
+	"errors"
 	"os"
 
 	"github.com/temporalio/cloud-cli/internal/cert"
 	"github.com/temporalio/cloud-cli/internal/namespace"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/async"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
-	"go.temporal.io/cloud-sdk/cloudclient"
 )
 
 func (c *CloudNamespaceCertCaAddCommand) run(cctx *CommandContext, _ []string) error {
-	var cloudClient *cloudclient.Client
 	namespaceClient := cctx.NamespaceClient
 	if namespaceClient == nil {
-		var err error
-		cloudClient, err = cctx.BuildCloudClient(c.ClientOptions)
+		cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 		if err != nil {
 			return err
 		}
@@ -33,6 +31,11 @@ func (c *CloudNamespaceCertCaAddCommand) run(cctx *CommandContext, _ []string) e
 	if err != nil {
 		return err
 	}
+
+	if len(newCerts) == 0 {
+		return errors.New("invalid certificate")
+	}
+
 	params := namespace.AddCACertsParams{
 		Namespace:        c.Namespace,
 		Certs:            newCerts,
@@ -65,12 +68,9 @@ func (c *CloudNamespaceCertCaAddCommand) run(cctx *CommandContext, _ []string) e
 
 	poller := cctx.Poller
 	if poller == nil {
-		if cloudClient == nil {
-			var err error
-			cloudClient, err = cctx.BuildCloudClient(c.ClientOptions)
-			if err != nil {
-				return err
-			}
+		cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+		if err != nil {
+			return err
 		}
 		poller = &async.Poller{
 			Cloud:      cloudClient.CloudService(),
