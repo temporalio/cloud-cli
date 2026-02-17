@@ -4,5 +4,8 @@ pkgname: mock
 packages:
   github.com/temporalio/cloud-cli/temporalcloudcli:
     interfaces:
-      Poller:      
+      Poller:
       NamespaceClient:
+  github.com/temporalio/cloud-cli/internal/namespace:
+    interfaces:
+      CloudService:

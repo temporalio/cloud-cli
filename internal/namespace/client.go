@@ -8,14 +8,22 @@ import (
 
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
+	"google.golang.org/grpc"
 )
+
+// CloudService defines the interface for cloud service operations needed by the namespace client.
+type CloudService interface {
+	GetNamespace(ctx context.Context, req *cloudservice.GetNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.GetNamespaceResponse, error)
+	GetNamespaces(ctx context.Context, req *cloudservice.GetNamespacesRequest, opts ...grpc.CallOption) (*cloudservice.GetNamespacesResponse, error)
+	UpdateNamespace(ctx context.Context, req *cloudservice.UpdateNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.UpdateNamespaceResponse, error)
+}
 
 func NewClient(cloudClient cloudservice.CloudServiceClient) *Client {
 	return &Client{Cloud: cloudClient}
 }
 
 type Client struct {
-	Cloud cloudservice.CloudServiceClient
+	Cloud CloudService
 }
 
 func (c *Client) GetNamespace(ctx context.Context, namespace string) (*namespacev1.Namespace, error) {

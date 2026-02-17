@@ -8,6 +8,7 @@ import (
 	"context"
 
 	mock "github.com/stretchr/testify/mock"
+	"github.com/temporalio/cloud-cli/internal/cert"
 	"github.com/temporalio/cloud-cli/internal/namespace"
 	namespace0 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	"go.temporal.io/cloud-sdk/api/operation/v1"
@@ -172,6 +173,74 @@ func (_c *MockNamespaceClient_GetNamespace_Call) Return(namespace1 *namespace0.N
 }
 
 func (_c *MockNamespaceClient_GetNamespace_Call) RunAndReturn(run func(context1 context.Context, s string) (*namespace0.Namespace, error)) *MockNamespaceClient_GetNamespace_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListCACerts provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) ListCACerts(context1 context.Context, s string) ([]cert.CACert, error) {
+	ret := _mock.Called(context1, s)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListCACerts")
+	}
+
+	var r0 []cert.CACert
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]cert.CACert, error)); ok {
+		return returnFunc(context1, s)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []cert.CACert); ok {
+		r0 = returnFunc(context1, s)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]cert.CACert)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(context1, s)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_ListCACerts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListCACerts'
+type MockNamespaceClient_ListCACerts_Call struct {
+	*mock.Call
+}
+
+// ListCACerts is a helper method to define mock.On call
+//   - context1 context.Context
+//   - s string
+func (_e *MockNamespaceClient_Expecter) ListCACerts(context1 interface{}, s interface{}) *MockNamespaceClient_ListCACerts_Call {
+	return &MockNamespaceClient_ListCACerts_Call{Call: _e.mock.On("ListCACerts", context1, s)}
+}
+
+func (_c *MockNamespaceClient_ListCACerts_Call) Run(run func(context1 context.Context, s string)) *MockNamespaceClient_ListCACerts_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_ListCACerts_Call) Return(cACerts []cert.CACert, err error) *MockNamespaceClient_ListCACerts_Call {
+	_c.Call.Return(cACerts, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_ListCACerts_Call) RunAndReturn(run func(context1 context.Context, s string) ([]cert.CACert, error)) *MockNamespaceClient_ListCACerts_Call {
 	_c.Call.Return(run)
 	return _c
 }
