@@ -11,15 +11,9 @@ import (
 )
 
 func (c *CloudNamespaceCertCaAddCommand) run(cctx *CommandContext, _ []string) error {
-	namespaceClient := cctx.NamespaceClient
-	if namespaceClient == nil {
-		cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-		if err != nil {
-			return err
-		}
-		namespaceClient = &namespace.Client{
-			Cloud: cloudClient.CloudService(),
-		}
+	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
+	if err != nil {
+		return err
 	}
 
 	certData, err := os.ReadFile(c.CaCertificateFile)
@@ -92,13 +86,9 @@ func (c *CloudNamespaceCertCaAddCommand) run(cctx *CommandContext, _ []string) e
 }
 
 func (c *CloudNamespaceCertCaListCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
 	if err != nil {
 		return err
-	}
-
-	namespaceClient := namespace.Client{
-		Cloud: cloudClient.CloudService(),
 	}
 
 	certs, err := namespaceClient.ListCACerts(cctx.Context, c.Namespace)

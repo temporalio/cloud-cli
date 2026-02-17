@@ -30,6 +30,7 @@ import (
 
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 
+	"github.com/temporalio/cloud-cli/internal/cert"
 	"github.com/temporalio/cloud-cli/internal/namespace"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
@@ -65,6 +66,7 @@ type CommandContext struct {
 
 type NamespaceClient interface {
 	AddCACerts(context.Context, namespace.AddCACertsParams) (*operation.AsyncOperation, error)
+	ListCACerts(context.Context, string) ([]cert.CACert, error)
 	GetNamespace(context.Context, string) (*namespacev1.Namespace, error)
 }
 

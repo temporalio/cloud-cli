@@ -3,9 +3,10 @@ package temporalcloudcli
 import (
 	"fmt"
 
-	namespace "go.temporal.io/cloud-sdk/api/namespace/v1"
+	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 
+	"github.com/temporalio/cloud-cli/internal/namespace"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
@@ -41,7 +42,7 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 		return err
 	}
 
-	newSpec := &namespace.NamespaceSpec{}
+	newSpec := &namespacev1.NamespaceSpec{}
 	err = runEditorForJSONEditForProtos(ns.Spec, newSpec)
 	if err != nil {
 		return err
@@ -103,7 +104,7 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 	}
 
 	// Step 2: Parse JSON into NamespaceSpec using protobuf JSON unmarshaling
-	spec := &namespace.NamespaceSpec{}
+	spec := &namespacev1.NamespaceSpec{}
 	if err := cctx.UnmarshalProtoJSON(specData, spec); err != nil {
 		return fmt.Errorf("failed to parse JSON spec: %w", err)
 	}
@@ -125,7 +126,7 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 	}
 
 	existingResourceVersion := ""
-	var existingSpec *namespace.NamespaceSpec
+	var existingSpec *namespacev1.NamespaceSpec
 	existingNamespaceIdentifier := ""
 
 	if found {
@@ -273,7 +274,7 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 
 	return cctx.Printer.PrintStructured(
 		struct {
-			Namespaces    []*namespace.Namespace
+			Namespaces    []*namespacev1.Namespace
 			NextPageToken string
 		}{
 			Namespaces:    namespaces,
@@ -281,4 +282,16 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 		},
 		printer.StructuredOptions{},
 	)
+}
+
+func getNamespaceClient(cctx *CommandContext, opts ClientOptions) (NamespaceClient, error) {
+	if cctx.NamespaceClient != nil {
+		return cctx.NamespaceClient, nil
+	}
+
+	cloudClient, err := cctx.BuildCloudClient(opts)
+	if err != nil {
+		return nil, err
+	}
+	return namespace.NewClient(cloudClient.CloudService()), nil
 }

@@ -10,6 +10,10 @@ import (
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 )
 
+func NewClient(cloudClient cloudservice.CloudServiceClient) *Client {
+	return &Client{Cloud: cloudClient}
+}
+
 type Client struct {
 	Cloud cloudservice.CloudServiceClient
 }
