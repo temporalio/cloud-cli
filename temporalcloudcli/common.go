@@ -140,7 +140,7 @@ func promptApplyResource(cctx *CommandContext, existing, actual proto.Message, v
 //
 // AIDEV-NOTE: This function takes a pre-built cloudClient. Commands should
 // build the client using cctx.BuildCloudClient() and pass it directly.
-func pollAsyncOperation(
+func PollAsyncOperation(
 	cctx *CommandContext,
 	cloudClient *cloudclient.Client,
 	operationID string,
@@ -182,22 +182,34 @@ func pollAsyncOperation(
 				}, printer.StructuredOptions{})
 			case operation.AsyncOperation_STATE_FAILED:
 				progressString = fmt.Sprintf("[%s] Operation failed: %s\n", time.Now().Format("15:04:05"), asyncOp.FailureReason)
-				return cctx.Printer.PrintStructured(MutationResult{
+				// Print the structured output first, then return error for proper exit code
+				if err := cctx.Printer.PrintStructured(MutationResult{
 					ID:      id,
 					AsyncOp: asyncOp,
-				}, printer.StructuredOptions{})
+				}, printer.StructuredOptions{}); err != nil {
+					return err
+				}
+				return fmt.Errorf("async operation failed: %s", asyncOp.FailureReason)
 			case operation.AsyncOperation_STATE_CANCELLED:
 				progressString = fmt.Sprintf("[%s] Operation cancelled\n", time.Now().Format("15:04:05"))
-				return cctx.Printer.PrintStructured(MutationResult{
+				// Print the structured output first, then return error for proper exit code
+				if err := cctx.Printer.PrintStructured(MutationResult{
 					ID:      id,
 					AsyncOp: asyncOp,
-				}, printer.StructuredOptions{})
+				}, printer.StructuredOptions{}); err != nil {
+					return err
+				}
+				return fmt.Errorf("async operation cancelled")
 			case operation.AsyncOperation_STATE_REJECTED:
 				progressString = fmt.Sprintf("[%s] Operation rejected\n", time.Now().Format("15:04:05"))
-				return cctx.Printer.PrintStructured(MutationResult{
+				// Print the structured output first, then return error for proper exit code
+				if err := cctx.Printer.PrintStructured(MutationResult{
 					ID:      id,
 					AsyncOp: asyncOp,
-				}, printer.StructuredOptions{})
+				}, printer.StructuredOptions{}); err != nil {
+					return err
+				}
+				return fmt.Errorf("async operation rejected")
 			default:
 				progressString = fmt.Sprintf("[%s] Operation pending...\n", time.Now().Format("15:04:05"))
 			}
