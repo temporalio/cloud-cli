@@ -185,6 +185,7 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.AddCommand(&NewCloudNamespaceLifecycleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceRetentionCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceSearchAttributeCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -757,6 +758,141 @@ func NewCloudNamespaceRetentionSetCommand(cctx *CommandContext, parent *CloudNam
 	s.Command.Flags().StringVar(&s.ResourceVersion, "resource-version", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceSearchAttributeCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceSearchAttributeCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceSearchAttributeCommand {
+	var s CloudNamespaceSearchAttributeCommand
+	s.Parent = parent
+	s.Command.Use = "search-attribute"
+	s.Command.Short = "Manage custom search attributes for namespaces"
+	s.Command.Long = "Commands for managing custom search attributes for Temporal Cloud namespaces.\nSearch attributes enable filtering and searching workflows by custom fields."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceSearchAttributeCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceSearchAttributeDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceSearchAttributeListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceSearchAttributeRenameCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceSearchAttributeCreateCommand struct {
+	Parent  *CloudNamespaceSearchAttributeCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	ResourceModifyOptions
+	Name string
+	Type string
+}
+
+func NewCloudNamespaceSearchAttributeCreateCommand(cctx *CommandContext, parent *CloudNamespaceSearchAttributeCommand) *CloudNamespaceSearchAttributeCreateCommand {
+	var s CloudNamespaceSearchAttributeCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a custom search attribute for a namespace"
+	s.Command.Long = "Create a new custom search attribute for a Temporal Cloud namespace.\nSearch attributes cannot be deleted once created, only renamed."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the search attribute to create.")
+	s.Command.Flags().StringVar(&s.Type, "type", "", "The type of the search attribute. Valid values: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.ResourceModifyOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceSearchAttributeDeleteCommand struct {
+	Parent  *CloudNamespaceSearchAttributeCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	ResourceModifyOptions
+	Name string
+}
+
+func NewCloudNamespaceSearchAttributeDeleteCommand(cctx *CommandContext, parent *CloudNamespaceSearchAttributeCommand) *CloudNamespaceSearchAttributeDeleteCommand {
+	var s CloudNamespaceSearchAttributeDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a custom search attribute from a namespace"
+	s.Command.Long = "Delete a custom search attribute from a Temporal Cloud namespace.\nNote: This removes the search attribute from the namespace configuration,\nbut historical data may still exist in the backend."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the search attribute to delete.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.ResourceModifyOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceSearchAttributeListCommand struct {
+	Parent  *CloudNamespaceSearchAttributeCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceSearchAttributeListCommand(cctx *CommandContext, parent *CloudNamespaceSearchAttributeCommand) *CloudNamespaceSearchAttributeListCommand {
+	var s CloudNamespaceSearchAttributeListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List custom search attributes for a namespace"
+	s.Command.Long = "List all custom search attributes configured for a Temporal Cloud namespace."
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceSearchAttributeRenameCommand struct {
+	Parent  *CloudNamespaceSearchAttributeCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	ResourceModifyOptions
+	ExistingName string
+	NewName      string
+}
+
+func NewCloudNamespaceSearchAttributeRenameCommand(cctx *CommandContext, parent *CloudNamespaceSearchAttributeCommand) *CloudNamespaceSearchAttributeRenameCommand {
+	var s CloudNamespaceSearchAttributeRenameCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "rename [flags]"
+	s.Command.Short = "Rename a custom search attribute"
+	s.Command.Long = "Rename an existing custom search attribute for a Temporal Cloud namespace.\nThis operation preserves all existing data associated with the search attribute."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ExistingName, "existing-name", "", "The current name of the search attribute to rename.")
+	s.Command.Flags().StringVar(&s.NewName, "new-name", "", "The new name for the search attribute.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.ResourceModifyOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

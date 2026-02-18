@@ -177,6 +177,74 @@ func (_c *MockNamespaceClient_AddCertFilters_Call) RunAndReturn(run func(context
 	return _c
 }
 
+// CreateSearchAttribute provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) CreateSearchAttribute(context1 context.Context, createSearchAttributeParams namespace.CreateSearchAttributeParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, createSearchAttributeParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateSearchAttribute")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.CreateSearchAttributeParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, createSearchAttributeParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.CreateSearchAttributeParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, createSearchAttributeParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.CreateSearchAttributeParams) error); ok {
+		r1 = returnFunc(context1, createSearchAttributeParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_CreateSearchAttribute_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateSearchAttribute'
+type MockNamespaceClient_CreateSearchAttribute_Call struct {
+	*mock.Call
+}
+
+// CreateSearchAttribute is a helper method to define mock.On call
+//   - context1 context.Context
+//   - createSearchAttributeParams namespace.CreateSearchAttributeParams
+func (_e *MockNamespaceClient_Expecter) CreateSearchAttribute(context1 interface{}, createSearchAttributeParams interface{}) *MockNamespaceClient_CreateSearchAttribute_Call {
+	return &MockNamespaceClient_CreateSearchAttribute_Call{Call: _e.mock.On("CreateSearchAttribute", context1, createSearchAttributeParams)}
+}
+
+func (_c *MockNamespaceClient_CreateSearchAttribute_Call) Run(run func(context1 context.Context, createSearchAttributeParams namespace.CreateSearchAttributeParams)) *MockNamespaceClient_CreateSearchAttribute_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.CreateSearchAttributeParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.CreateSearchAttributeParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_CreateSearchAttribute_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_CreateSearchAttribute_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_CreateSearchAttribute_Call) RunAndReturn(run func(context1 context.Context, createSearchAttributeParams namespace.CreateSearchAttributeParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_CreateSearchAttribute_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteCACerts provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) DeleteCACerts(context1 context.Context, deleteCACertsParams namespace.DeleteCACertsParams) (*operation.AsyncOperation, error) {
 	ret := _mock.Called(context1, deleteCACertsParams)
@@ -309,6 +377,74 @@ func (_c *MockNamespaceClient_DeleteCertFilters_Call) Return(asyncOperation *ope
 }
 
 func (_c *MockNamespaceClient_DeleteCertFilters_Call) RunAndReturn(run func(context1 context.Context, deleteCertFiltersParams namespace.DeleteCertFiltersParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_DeleteCertFilters_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteSearchAttribute provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) DeleteSearchAttribute(context1 context.Context, deleteSearchAttributeParams namespace.DeleteSearchAttributeParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, deleteSearchAttributeParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteSearchAttribute")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.DeleteSearchAttributeParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, deleteSearchAttributeParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.DeleteSearchAttributeParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, deleteSearchAttributeParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.DeleteSearchAttributeParams) error); ok {
+		r1 = returnFunc(context1, deleteSearchAttributeParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_DeleteSearchAttribute_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteSearchAttribute'
+type MockNamespaceClient_DeleteSearchAttribute_Call struct {
+	*mock.Call
+}
+
+// DeleteSearchAttribute is a helper method to define mock.On call
+//   - context1 context.Context
+//   - deleteSearchAttributeParams namespace.DeleteSearchAttributeParams
+func (_e *MockNamespaceClient_Expecter) DeleteSearchAttribute(context1 interface{}, deleteSearchAttributeParams interface{}) *MockNamespaceClient_DeleteSearchAttribute_Call {
+	return &MockNamespaceClient_DeleteSearchAttribute_Call{Call: _e.mock.On("DeleteSearchAttribute", context1, deleteSearchAttributeParams)}
+}
+
+func (_c *MockNamespaceClient_DeleteSearchAttribute_Call) Run(run func(context1 context.Context, deleteSearchAttributeParams namespace.DeleteSearchAttributeParams)) *MockNamespaceClient_DeleteSearchAttribute_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.DeleteSearchAttributeParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.DeleteSearchAttributeParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_DeleteSearchAttribute_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_DeleteSearchAttribute_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_DeleteSearchAttribute_Call) RunAndReturn(run func(context1 context.Context, deleteSearchAttributeParams namespace.DeleteSearchAttributeParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_DeleteSearchAttribute_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -513,6 +649,142 @@ func (_c *MockNamespaceClient_ListCertFilters_Call) Return(certFilters []namespa
 }
 
 func (_c *MockNamespaceClient_ListCertFilters_Call) RunAndReturn(run func(context1 context.Context, s string) ([]namespace.CertFilter, error)) *MockNamespaceClient_ListCertFilters_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListSearchAttributes provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) ListSearchAttributes(context1 context.Context, s string) ([]namespace.SearchAttribute, error) {
+	ret := _mock.Called(context1, s)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListSearchAttributes")
+	}
+
+	var r0 []namespace.SearchAttribute
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]namespace.SearchAttribute, error)); ok {
+		return returnFunc(context1, s)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []namespace.SearchAttribute); ok {
+		r0 = returnFunc(context1, s)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]namespace.SearchAttribute)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(context1, s)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_ListSearchAttributes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListSearchAttributes'
+type MockNamespaceClient_ListSearchAttributes_Call struct {
+	*mock.Call
+}
+
+// ListSearchAttributes is a helper method to define mock.On call
+//   - context1 context.Context
+//   - s string
+func (_e *MockNamespaceClient_Expecter) ListSearchAttributes(context1 interface{}, s interface{}) *MockNamespaceClient_ListSearchAttributes_Call {
+	return &MockNamespaceClient_ListSearchAttributes_Call{Call: _e.mock.On("ListSearchAttributes", context1, s)}
+}
+
+func (_c *MockNamespaceClient_ListSearchAttributes_Call) Run(run func(context1 context.Context, s string)) *MockNamespaceClient_ListSearchAttributes_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_ListSearchAttributes_Call) Return(searchAttributes []namespace.SearchAttribute, err error) *MockNamespaceClient_ListSearchAttributes_Call {
+	_c.Call.Return(searchAttributes, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_ListSearchAttributes_Call) RunAndReturn(run func(context1 context.Context, s string) ([]namespace.SearchAttribute, error)) *MockNamespaceClient_ListSearchAttributes_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RenameSearchAttribute provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) RenameSearchAttribute(context1 context.Context, renameSearchAttributeParams namespace.RenameSearchAttributeParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, renameSearchAttributeParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RenameSearchAttribute")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.RenameSearchAttributeParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, renameSearchAttributeParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.RenameSearchAttributeParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, renameSearchAttributeParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.RenameSearchAttributeParams) error); ok {
+		r1 = returnFunc(context1, renameSearchAttributeParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_RenameSearchAttribute_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RenameSearchAttribute'
+type MockNamespaceClient_RenameSearchAttribute_Call struct {
+	*mock.Call
+}
+
+// RenameSearchAttribute is a helper method to define mock.On call
+//   - context1 context.Context
+//   - renameSearchAttributeParams namespace.RenameSearchAttributeParams
+func (_e *MockNamespaceClient_Expecter) RenameSearchAttribute(context1 interface{}, renameSearchAttributeParams interface{}) *MockNamespaceClient_RenameSearchAttribute_Call {
+	return &MockNamespaceClient_RenameSearchAttribute_Call{Call: _e.mock.On("RenameSearchAttribute", context1, renameSearchAttributeParams)}
+}
+
+func (_c *MockNamespaceClient_RenameSearchAttribute_Call) Run(run func(context1 context.Context, renameSearchAttributeParams namespace.RenameSearchAttributeParams)) *MockNamespaceClient_RenameSearchAttribute_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.RenameSearchAttributeParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.RenameSearchAttributeParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_RenameSearchAttribute_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_RenameSearchAttribute_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_RenameSearchAttribute_Call) RunAndReturn(run func(context1 context.Context, renameSearchAttributeParams namespace.RenameSearchAttributeParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_RenameSearchAttribute_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -602,6 +602,72 @@ commands:
         type: string
         description: |
           The subject alternative name (SAN) from the certificate.
+  - name: cloud namespace search-attribute
+    summary: Manage custom search attributes for namespaces
+    description: |
+      Commands for managing custom search attributes for Temporal Cloud namespaces.
+      Search attributes enable filtering and searching workflows by custom fields.
+    has-init: false
+  - name: cloud namespace search-attribute list
+    summary: List custom search attributes for a namespace
+    description: |
+      List all custom search attributes configured for a Temporal Cloud namespace.
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace search-attribute create
+    summary: Create a custom search attribute for a namespace
+    description: |
+      Create a new custom search attribute for a Temporal Cloud namespace.
+      Search attributes cannot be deleted once created, only renamed.
+    option-sets:
+      - client
+      - namespace
+      - resource-modify
+    options:
+      - name: name
+        type: string
+        description: |
+          The name of the search attribute to create.
+      - name: type
+        type: string
+        description: |
+          The type of the search attribute. Valid values: Text, Keyword, Int, Double,
+          Bool, Datetime, KeywordList.
+  - name: cloud namespace search-attribute rename
+    summary: Rename a custom search attribute
+    description: |
+      Rename an existing custom search attribute for a Temporal Cloud namespace.
+      This operation preserves all existing data associated with the search attribute.
+    option-sets:
+      - client
+      - namespace
+      - resource-modify
+    options:
+      - name: existing-name
+        type: string
+        description: |
+          The current name of the search attribute to rename.
+      - name: new-name
+        type: string
+        description: |
+          The new name for the search attribute.
+  - name: cloud namespace search-attribute delete
+    summary: Delete a custom search attribute from a namespace
+    description: |
+      Delete a custom search attribute from a Temporal Cloud namespace.
+      Note: This removes the search attribute from the namespace configuration,
+      but historical data may still exist in the backend.
+    option-sets:
+      - client
+      - namespace
+      - resource-modify
+    options:
+      - name: name
+        type: string
+        description: |
+          The name of the search attribute to delete.
 
 option-sets:
   - name: client

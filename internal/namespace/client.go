@@ -16,6 +16,7 @@ type CloudService interface {
 	GetNamespace(ctx context.Context, req *cloudservice.GetNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.GetNamespaceResponse, error)
 	GetNamespaces(ctx context.Context, req *cloudservice.GetNamespacesRequest, opts ...grpc.CallOption) (*cloudservice.GetNamespacesResponse, error)
 	UpdateNamespace(ctx context.Context, req *cloudservice.UpdateNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.UpdateNamespaceResponse, error)
+	RenameCustomSearchAttribute(ctx context.Context, req *cloudservice.RenameCustomSearchAttributeRequest, opts ...grpc.CallOption) (*cloudservice.RenameCustomSearchAttributeResponse, error)
 }
 
 func NewClient(cloudClient cloudservice.CloudServiceClient) *Client {

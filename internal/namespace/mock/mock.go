@@ -205,6 +205,89 @@ func (_c *MockCloudService_GetNamespaces_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// RenameCustomSearchAttribute provides a mock function for the type MockCloudService
+func (_mock *MockCloudService) RenameCustomSearchAttribute(ctx context.Context, req *cloudservice.RenameCustomSearchAttributeRequest, opts ...grpc.CallOption) (*cloudservice.RenameCustomSearchAttributeResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, req, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, req)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for RenameCustomSearchAttribute")
+	}
+
+	var r0 *cloudservice.RenameCustomSearchAttributeResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.RenameCustomSearchAttributeRequest, ...grpc.CallOption) (*cloudservice.RenameCustomSearchAttributeResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.RenameCustomSearchAttributeRequest, ...grpc.CallOption) *cloudservice.RenameCustomSearchAttributeResponse); ok {
+		r0 = returnFunc(ctx, req, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.RenameCustomSearchAttributeResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.RenameCustomSearchAttributeRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, req, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudService_RenameCustomSearchAttribute_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RenameCustomSearchAttribute'
+type MockCloudService_RenameCustomSearchAttribute_Call struct {
+	*mock.Call
+}
+
+// RenameCustomSearchAttribute is a helper method to define mock.On call
+//   - ctx context.Context
+//   - req *cloudservice.RenameCustomSearchAttributeRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudService_Expecter) RenameCustomSearchAttribute(ctx interface{}, req interface{}, opts ...interface{}) *MockCloudService_RenameCustomSearchAttribute_Call {
+	return &MockCloudService_RenameCustomSearchAttribute_Call{Call: _e.mock.On("RenameCustomSearchAttribute",
+		append([]interface{}{ctx, req}, opts...)...)}
+}
+
+func (_c *MockCloudService_RenameCustomSearchAttribute_Call) Run(run func(ctx context.Context, req *cloudservice.RenameCustomSearchAttributeRequest, opts ...grpc.CallOption)) *MockCloudService_RenameCustomSearchAttribute_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.RenameCustomSearchAttributeRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.RenameCustomSearchAttributeRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudService_RenameCustomSearchAttribute_Call) Return(renameCustomSearchAttributeResponse *cloudservice.RenameCustomSearchAttributeResponse, err error) *MockCloudService_RenameCustomSearchAttribute_Call {
+	_c.Call.Return(renameCustomSearchAttributeResponse, err)
+	return _c
+}
+
+func (_c *MockCloudService_RenameCustomSearchAttribute_Call) RunAndReturn(run func(ctx context.Context, req *cloudservice.RenameCustomSearchAttributeRequest, opts ...grpc.CallOption) (*cloudservice.RenameCustomSearchAttributeResponse, error)) *MockCloudService_RenameCustomSearchAttribute_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateNamespace provides a mock function for the type MockCloudService
 func (_mock *MockCloudService) UpdateNamespace(ctx context.Context, req *cloudservice.UpdateNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.UpdateNamespaceResponse, error) {
 	var tmpRet mock.Arguments
