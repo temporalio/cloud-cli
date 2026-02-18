@@ -38,12 +38,7 @@ func (c *Client) AddCACerts(ctx context.Context, params AddCACertsParams) (*oper
 		return nil, err
 	}
 
-	existingBundle := ns.Spec.GetMtlsAuth().GetAcceptedClientCa()
-	existingData, err := base64.StdEncoding.DecodeString(string(existingBundle))
-	if err != nil {
-		return nil, err
-	}
-
+	existingData := ns.Spec.GetMtlsAuth().GetAcceptedClientCa()
 	existingCerts, err := cert.ParseCACerts(existingData)
 	if err != nil {
 		return nil, err
@@ -74,6 +69,70 @@ func (c *Client) AddCACerts(ctx context.Context, params AddCACertsParams) (*oper
 
 	spec := ns.Spec
 	spec.MtlsAuth.AcceptedClientCa = bytes.Join(out, []byte("\n"))
+
+	resourceVersion := ns.ResourceVersion
+	if params.ResourceVersion != "" {
+		resourceVersion = params.ResourceVersion
+	}
+
+	updateParams := UpdateNamespaceParams{
+		Namespace:        params.Namespace,
+		Spec:             spec,
+		ResourceVersion:  resourceVersion,
+		AsyncOperationID: params.AsyncOperationID,
+	}
+	return c.UpdateNamespace(ctx, updateParams)
+}
+
+type DeleteCACertsParams struct {
+	Namespace        string
+	Certs            []cert.CACert
+	ResourceVersion  string
+	AsyncOperationID string
+}
+
+func (c *Client) DeleteCACerts(ctx context.Context, params DeleteCACertsParams) (*operation.AsyncOperation, error) {
+	ns, err := c.GetNamespace(ctx, params.Namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	existingData := ns.Spec.GetMtlsAuth().GetAcceptedClientCa()
+	existingCerts, err := cert.ParseCACerts(existingData)
+	if err != nil {
+		return nil, err
+	}
+
+	fingerprintsToRemove := map[string]struct{}{}
+	for _, cert := range params.Certs {
+		fingerprintsToRemove[cert.Fingerprint] = struct{}{}
+	}
+
+	var newBundle []cert.CACert
+	for _, existing := range existingCerts {
+		if _, ok := fingerprintsToRemove[existing.Fingerprint]; ok {
+			continue
+		}
+
+		newBundle = append(newBundle, existing)
+	}
+
+	var out [][]byte
+	for _, cert := range newBundle {
+		data, err := base64.StdEncoding.DecodeString(cert.Base64EncodedData)
+		if err != nil {
+			return nil, err
+		}
+
+		out = append(out, data)
+	}
+
+	spec := ns.Spec
+	if len(out) == 0 {
+		spec.MtlsAuth = nil
+	} else {
+		spec.MtlsAuth.AcceptedClientCa = bytes.Join(out, []byte("\n"))
+	}
 
 	resourceVersion := ns.ResourceVersion
 	if params.ResourceVersion != "" {

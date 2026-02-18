@@ -528,3 +528,513 @@ func setupTestCertFile(t *testing.T) ([]cert.CACert, string) {
 
 	return parsedCerts, certPath
 }
+
+func TestCloudNamespaceCertCaDeleteCommand_Success(t *testing.T) {
+	parsedCerts, certPath := setupTestCertFile(t)
+
+	expectedOp := &operation.AsyncOperation{
+		Id: "test-operation-id",
+	}
+
+	mockClient := &cmdmock.MockNamespaceClient{}
+	mockClient.On(
+		"DeleteCACerts",
+		mock.Anything,
+		namespace.DeleteCACertsParams{
+			Namespace:        "test-namespace.test-account",
+			Certs:            parsedCerts,
+			ResourceVersion:  "test-version",
+			AsyncOperationID: "custom-operation-id",
+		},
+	).Return(expectedOp, nil)
+
+	mockClient.On(
+		"DeleteCACerts",
+		mock.Anything,
+		namespace.DeleteCACertsParams{
+			Namespace:        "test-namespace.test-account",
+			Certs:            parsedCerts,
+			ResourceVersion:  "",
+			AsyncOperationID: "",
+		},
+	).Return(expectedOp, nil)
+
+	mockPoller := &cmdmock.MockPoller{}
+	mockPoller.On("Poll", mock.Anything, "test-operation-id", "test-namespace.test-account").
+		Return(nil)
+
+	expectedCerts := []byte("cert-bundle-data")
+	expectedNamespace := &namespacev1.Namespace{
+		Namespace: "test-namespace.test-account",
+		Spec: &namespacev1.NamespaceSpec{
+			MtlsAuth: &namespacev1.MtlsAuthSpec{
+				AcceptedClientCa: expectedCerts,
+			},
+		},
+	}
+	mockClient.EXPECT().
+		GetNamespace(mock.Anything, "test-namespace.test-account").
+		Return(expectedNamespace, nil)
+
+	tests := []struct {
+		name         string
+		setupCmd     func(*temporalcloudcli.CloudNamespaceCertCaDeleteCommand)
+		assertResult func(*testing.T, bytes.Buffer)
+	}{
+		{
+			name: "async",
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+				cmd.Namespace = "test-namespace.test-account"
+				cmd.CaCertificateFile = certPath
+				cmd.ResourceVersion = "test-version"
+				cmd.AsyncOperationId = "custom-operation-id"
+				cmd.Async = true
+			},
+			assertResult: func(t *testing.T, buf bytes.Buffer) {
+				var result temporalcloudcli.MutationResult
+				err := json.Unmarshal(buf.Bytes(), &result)
+				require.NoError(t, err)
+				expected := temporalcloudcli.MutationResult{
+					AsyncOp: &operation.AsyncOperation{
+						Id: "test-operation-id",
+					},
+					ID: "test-namespace.test-account",
+				}
+				assert.Equal(t, expected, result)
+			},
+		},
+		{
+			name: "sync",
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+				cmd.Namespace = "test-namespace.test-account"
+				cmd.CaCertificateFile = certPath
+				cmd.Async = false
+			},
+			assertResult: func(t *testing.T, buf bytes.Buffer) {
+				expectedCerts := []byte("cert-bundle-data")
+				var result []byte
+				err := json.Unmarshal(buf.Bytes(), &result)
+				require.NoError(t, err)
+				assert.Equal(t, expectedCerts, result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			cctx := &temporalcloudcli.CommandContext{
+				Context:         context.Background(),
+				Printer:         &printer.Printer{Output: &buf, JSON: true},
+				NamespaceClient: mockClient,
+				Poller:          mockPoller,
+				RootCommand: &temporalcloudcli.CloudCommand{
+					AutoConfirm: true,
+				},
+			}
+
+			var capturedErr error
+			cctx.Options.Fail = func(err error) {
+				capturedErr = err
+			}
+
+			parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+			tt.setupCmd(cmd)
+
+			cmd.Command.Run(&cmd.Command, []string{})
+			require.NoError(t, capturedErr)
+
+			tt.assertResult(t, buf)
+		})
+	}
+}
+
+func TestCloudNamespaceCertCaDeleteCommand_InvalidInput(t *testing.T) {
+	tests := []struct {
+		name        string
+		setupCmd    func(*temporalcloudcli.CloudNamespaceCertCaDeleteCommand)
+		assertError func(*testing.T, error)
+	}{
+		{
+			name: "file not found",
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+				cmd.Namespace = "test-namespace.test-account"
+				cmd.CaCertificateFile = "testdata/nonexistent-cert.pem"
+				cmd.Async = true
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.True(t, os.IsNotExist(err))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := cmdmock.NewMockNamespaceClient(t)
+
+			var buf bytes.Buffer
+			var capturedErr error
+			cctx := &temporalcloudcli.CommandContext{
+				Context:         context.Background(),
+				Printer:         &printer.Printer{Output: &buf, JSON: true},
+				NamespaceClient: mockClient,
+				RootCommand: &temporalcloudcli.CloudCommand{
+					AutoConfirm: true,
+				},
+			}
+			cctx.Options.Fail = func(err error) {
+				capturedErr = err
+			}
+
+			parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+			tt.setupCmd(cmd)
+
+			cmd.Command.Run(&cmd.Command, []string{})
+
+			require.Error(t, capturedErr)
+			tt.assertError(t, capturedErr)
+		})
+	}
+}
+
+func TestCloudNamespaceCertCaDeleteCommand_DeleteCACertsError(t *testing.T) {
+	parsedCerts, certPath := setupTestCertFile(t)
+
+	mockClient := cmdmock.NewMockNamespaceClient(t)
+
+	expectedErr := errors.New("failed to remove certs")
+	mockClient.EXPECT().
+		DeleteCACerts(
+			mock.Anything,
+			namespace.DeleteCACertsParams{
+				Namespace:        "test-namespace.test-account",
+				Certs:            parsedCerts,
+				ResourceVersion:  "",
+				AsyncOperationID: "",
+			},
+		).
+		Return(nil, expectedErr)
+
+	var buf bytes.Buffer
+	var capturedErr error
+	cctx := &temporalcloudcli.CommandContext{
+		Context:         context.Background(),
+		Printer:         &printer.Printer{Output: &buf, JSON: true},
+		NamespaceClient: mockClient,
+		RootCommand: &temporalcloudcli.CloudCommand{
+			AutoConfirm: true,
+		},
+	}
+	cctx.Options.Fail = func(err error) {
+		capturedErr = err
+	}
+
+	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+	cmd.Namespace = "test-namespace.test-account"
+	cmd.CaCertificateFile = certPath
+	cmd.Async = true
+	cmd.Idempotent = false
+
+	cmd.Command.Run(&cmd.Command, []string{})
+	require.Error(t, capturedErr)
+	assert.Equal(t, expectedErr, capturedErr)
+}
+
+func TestCloudNamespaceCertCaDeleteCommand_NothingToChange(t *testing.T) {
+	parsedCerts, certPath := setupTestCertFile(t)
+
+	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
+
+	tests := []struct {
+		name         string
+		idempotent   bool
+		assertResult func(*testing.T, error, bytes.Buffer)
+	}{
+		{
+			name:       "idempotent",
+			idempotent: true,
+			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
+				require.NoError(t, capturedErr)
+				var result struct {
+					Status    string `json:"Status"`
+					Namespace string `json:"Namespace"`
+				}
+				err := json.Unmarshal(buf.Bytes(), &result)
+				require.NoError(t, err)
+				assert.Equal(t, "unchanged", result.Status)
+				assert.Equal(t, "test-namespace.test-account", result.Namespace)
+			},
+		},
+		{
+			name:       "not idempotent",
+			idempotent: false,
+			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
+				require.Error(t, capturedErr)
+				assert.Equal(t, nothingToChangeErr, capturedErr)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := cmdmock.NewMockNamespaceClient(t)
+
+			mockClient.EXPECT().
+				DeleteCACerts(
+					mock.Anything,
+					namespace.DeleteCACertsParams{
+						Namespace:        "test-namespace.test-account",
+						Certs:            parsedCerts,
+						ResourceVersion:  "",
+						AsyncOperationID: "",
+					},
+				).
+				Return(nil, nothingToChangeErr)
+
+			var buf bytes.Buffer
+			var capturedErr error
+			cctx := &temporalcloudcli.CommandContext{
+				Context:         context.Background(),
+				Printer:         &printer.Printer{Output: &buf, JSON: true},
+				NamespaceClient: mockClient,
+				RootCommand: &temporalcloudcli.CloudCommand{
+					AutoConfirm: true,
+				},
+			}
+			cctx.Options.Fail = func(err error) {
+				capturedErr = err
+			}
+
+			parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+			cmd.Namespace = "test-namespace.test-account"
+			cmd.CaCertificateFile = certPath
+			cmd.Async = true
+			cmd.Idempotent = tt.idempotent
+
+			cmd.Command.Run(&cmd.Command, []string{})
+
+			tt.assertResult(t, capturedErr, buf)
+		})
+	}
+}
+
+func TestCloudNamespaceCertCaDeleteCommand_IdempotentWithOtherError(t *testing.T) {
+	parsedCerts, certPath := setupTestCertFile(t)
+
+	mockClient := cmdmock.NewMockNamespaceClient(t)
+
+	otherErr := status.Error(codes.PermissionDenied, "permission denied")
+	mockClient.EXPECT().
+		DeleteCACerts(
+			mock.Anything,
+			namespace.DeleteCACertsParams{
+				Namespace:        "test-namespace.test-account",
+				Certs:            parsedCerts,
+				ResourceVersion:  "",
+				AsyncOperationID: "",
+			},
+		).
+		Return(nil, otherErr)
+
+	var buf bytes.Buffer
+	var capturedErr error
+	cctx := &temporalcloudcli.CommandContext{
+		Context:         context.Background(),
+		Printer:         &printer.Printer{Output: &buf, JSON: true},
+		NamespaceClient: mockClient,
+		RootCommand: &temporalcloudcli.CloudCommand{
+			AutoConfirm: true,
+		},
+	}
+	cctx.Options.Fail = func(err error) {
+		capturedErr = err
+	}
+
+	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+	cmd.Namespace = "test-namespace.test-account"
+	cmd.CaCertificateFile = certPath
+	cmd.Async = true
+	cmd.Idempotent = true
+
+	cmd.Command.Run(&cmd.Command, []string{})
+	require.Error(t, capturedErr)
+	assert.Equal(t, otherErr, capturedErr)
+}
+
+func TestCloudNamespaceCertCaDeleteCommand_PollingError(t *testing.T) {
+	parsedCerts, certPath := setupTestCertFile(t)
+
+	mockClient := cmdmock.NewMockNamespaceClient(t)
+	mockPoller := cmdmock.NewMockPoller(t)
+
+	expectedOp := &operation.AsyncOperation{
+		Id: "test-operation-id",
+	}
+
+	mockClient.EXPECT().
+		DeleteCACerts(
+			mock.Anything,
+			namespace.DeleteCACertsParams{
+				Namespace:        "test-namespace.test-account",
+				Certs:            parsedCerts,
+				ResourceVersion:  "",
+				AsyncOperationID: "",
+			},
+		).
+		Return(expectedOp, nil)
+
+	pollErr := errors.New("polling failed")
+	mockPoller.EXPECT().
+		Poll(mock.Anything, "test-operation-id", "test-namespace.test-account").
+		Return(pollErr)
+
+	var buf bytes.Buffer
+	var capturedErr error
+	cctx := &temporalcloudcli.CommandContext{
+		Context:         context.Background(),
+		Printer:         &printer.Printer{Output: &buf, JSON: true},
+		NamespaceClient: mockClient,
+		Poller:          mockPoller,
+		RootCommand: &temporalcloudcli.CloudCommand{
+			AutoConfirm: true,
+		},
+	}
+	cctx.Options.Fail = func(err error) {
+		capturedErr = err
+	}
+
+	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+	cmd.Namespace = "test-namespace.test-account"
+	cmd.CaCertificateFile = certPath
+	cmd.Async = false
+
+	cmd.Command.Run(&cmd.Command, []string{})
+	require.Error(t, capturedErr)
+	assert.Equal(t, pollErr, capturedErr)
+}
+
+func TestCloudNamespaceCertCaDeleteCommand_GetNamespaceError(t *testing.T) {
+	parsedCerts, certPath := setupTestCertFile(t)
+
+	mockClient := cmdmock.NewMockNamespaceClient(t)
+	mockPoller := cmdmock.NewMockPoller(t)
+
+	expectedOp := &operation.AsyncOperation{
+		Id: "test-operation-id",
+	}
+
+	mockClient.EXPECT().
+		DeleteCACerts(
+			mock.Anything,
+			namespace.DeleteCACertsParams{
+				Namespace:        "test-namespace.test-account",
+				Certs:            parsedCerts,
+				ResourceVersion:  "",
+				AsyncOperationID: "",
+			},
+		).
+		Return(expectedOp, nil)
+
+	mockPoller.EXPECT().
+		Poll(mock.Anything, "test-operation-id", "test-namespace.test-account").
+		Return(nil)
+
+	getNamespaceErr := errors.New("failed to get namespace")
+	mockClient.EXPECT().
+		GetNamespace(mock.Anything, "test-namespace.test-account").
+		Return(nil, getNamespaceErr)
+
+	var buf bytes.Buffer
+	var capturedErr error
+	cctx := &temporalcloudcli.CommandContext{
+		Context:         context.Background(),
+		Printer:         &printer.Printer{Output: &buf, JSON: true},
+		NamespaceClient: mockClient,
+		Poller:          mockPoller,
+		RootCommand: &temporalcloudcli.CloudCommand{
+			AutoConfirm: true,
+		},
+	}
+	cctx.Options.Fail = func(err error) {
+		capturedErr = err
+	}
+
+	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+	cmd.Namespace = "test-namespace.test-account"
+	cmd.CaCertificateFile = certPath
+	cmd.Async = false
+
+	cmd.Command.Run(&cmd.Command, []string{})
+	require.Error(t, capturedErr)
+	assert.Equal(t, getNamespaceErr, capturedErr)
+}
+
+func TestCloudNamespaceCertCaDeleteCommand_UserDeclinesPrompt(t *testing.T) {
+	_, certPath := setupTestCertFile(t)
+
+	mockClient := cmdmock.NewMockNamespaceClient(t)
+
+	var buf bytes.Buffer
+	var capturedErr error
+	cctx := &temporalcloudcli.CommandContext{
+		Context:         context.Background(),
+		Printer:         &printer.Printer{Output: &buf, JSON: false},
+		NamespaceClient: mockClient,
+		RootCommand: &temporalcloudcli.CloudCommand{
+			AutoConfirm: false,
+		},
+	}
+	cctx.Options.Fail = func(err error) {
+		capturedErr = err
+	}
+	// Simulate user declining the prompt by providing "n" as input
+	cctx.Options.Stdin = bytes.NewBufferString("n\n")
+
+	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+	cmd.Namespace = "test-namespace.test-account"
+	cmd.CaCertificateFile = certPath
+	cmd.Async = true
+
+	cmd.Command.Run(&cmd.Command, []string{})
+	require.Error(t, capturedErr)
+	assert.Contains(t, capturedErr.Error(), "Aborting delete")
+}
+
+func TestCloudNamespaceCertCaDeleteCommand_JSONOutputWithoutAutoConfirm(t *testing.T) {
+	_, certPath := setupTestCertFile(t)
+
+	mockClient := cmdmock.NewMockNamespaceClient(t)
+
+	var buf bytes.Buffer
+	var capturedErr error
+	cctx := &temporalcloudcli.CommandContext{
+		Context:         context.Background(),
+		Printer:         &printer.Printer{Output: &buf, JSON: true},
+		JSONOutput:      true,
+		NamespaceClient: mockClient,
+		RootCommand: &temporalcloudcli.CloudCommand{
+			AutoConfirm: false,
+		},
+	}
+	cctx.Options.Fail = func(err error) {
+		capturedErr = err
+	}
+
+	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+	cmd.Namespace = "test-namespace.test-account"
+	cmd.CaCertificateFile = certPath
+	cmd.Async = true
+
+	cmd.Command.Run(&cmd.Command, []string{})
+	require.Error(t, capturedErr)
+	assert.Contains(t, capturedErr.Error(), "must bypass prompts when using JSON output")
+}

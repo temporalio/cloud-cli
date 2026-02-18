@@ -1,6 +1,7 @@
 package namespace_test
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
@@ -32,16 +33,13 @@ func TestAddCACerts_Success(t *testing.T) {
 	existingCertPEM, existingCert := generateTestCert(t)
 	_, newCert := generateTestCert(t)
 
-	// Encode existing cert as base64 (as it would be stored)
-	existingCertBase64 := base64.StdEncoding.EncodeToString(existingCertPEM)
-
 	// Mock GetNamespace to return namespace with existing cert
 	existingNamespace := &namespacev1.Namespace{
 		Namespace:       "test-namespace",
 		ResourceVersion: "v1",
 		Spec: &namespacev1.NamespaceSpec{
 			MtlsAuth: &namespacev1.MtlsAuthSpec{
-				AcceptedClientCa: []byte(existingCertBase64),
+				AcceptedClientCa: existingCertPEM,
 			},
 		},
 	}
@@ -105,7 +103,6 @@ func TestAddCACerts_DuplicateCertificate(t *testing.T) {
 
 	// Generate test certificate
 	existingCertPEM, existingCert := generateTestCert(t)
-	existingCertBase64 := base64.StdEncoding.EncodeToString(existingCertPEM)
 
 	// Mock GetNamespace
 	existingNamespace := &namespacev1.Namespace{
@@ -113,7 +110,7 @@ func TestAddCACerts_DuplicateCertificate(t *testing.T) {
 		ResourceVersion: "v1",
 		Spec: &namespacev1.NamespaceSpec{
 			MtlsAuth: &namespacev1.MtlsAuthSpec{
-				AcceptedClientCa: []byte(existingCertBase64),
+				AcceptedClientCa: existingCertPEM,
 			},
 		},
 	}
@@ -168,14 +165,12 @@ func TestAddCACerts_UpdateNamespaceError(t *testing.T) {
 	existingCertPEM, _ := generateTestCert(t)
 	_, newCert := generateTestCert(t)
 
-	existingCertBase64 := base64.StdEncoding.EncodeToString(existingCertPEM)
-
 	existingNamespace := &namespacev1.Namespace{
 		Namespace:       "test-namespace",
 		ResourceVersion: "v1",
 		Spec: &namespacev1.NamespaceSpec{
 			MtlsAuth: &namespacev1.MtlsAuthSpec{
-				AcceptedClientCa: []byte(existingCertBase64),
+				AcceptedClientCa: existingCertPEM,
 			},
 		},
 	}
@@ -208,14 +203,12 @@ func TestAddCACerts_CustomResourceVersion(t *testing.T) {
 	existingCertPEM, _ := generateTestCert(t)
 	_, newCert := generateTestCert(t)
 
-	existingCertBase64 := base64.StdEncoding.EncodeToString(existingCertPEM)
-
 	existingNamespace := &namespacev1.Namespace{
 		Namespace:       "test-namespace",
 		ResourceVersion: "v1",
 		Spec: &namespacev1.NamespaceSpec{
 			MtlsAuth: &namespacev1.MtlsAuthSpec{
-				AcceptedClientCa: []byte(existingCertBase64),
+				AcceptedClientCa: existingCertPEM,
 			},
 		},
 	}
@@ -327,7 +320,335 @@ func TestListCACerts_EmptyBundle(t *testing.T) {
 	assert.Empty(t, result)
 }
 
+func TestDeleteCACerts_Success(t *testing.T) {
+	ctx := context.Background()
+	mockCloud := nsmock.NewMockCloudService(t)
+
+	// Generate test certificates
+	cert1PEM, _ := generateTestCert(t)
+	cert2PEM, cert2 := generateTestCert(t)
+	cert3PEM, _ := generateTestCert(t)
+
+	// Combine certificates into a bundle (all 3 exist initially)
+	certBundle := bytes.Join([][]byte{cert1PEM, cert2PEM, cert3PEM}, []byte{'\n'})
+
+	// Mock GetNamespace to return namespace with all 3 certs
+	existingNamespace := &namespacev1.Namespace{
+		Namespace:       "test-namespace",
+		ResourceVersion: "v1",
+		Spec: &namespacev1.NamespaceSpec{
+			MtlsAuth: &namespacev1.MtlsAuthSpec{
+				AcceptedClientCa: certBundle,
+			},
+		},
+	}
+
+	mockCloud.EXPECT().
+		GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: "test-namespace"}).
+		Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+
+	// Mock UpdateNamespace
+	expectedOp := &operation.AsyncOperation{
+		Id: "test-operation-id",
+	}
+
+	mockCloud.EXPECT().
+		UpdateNamespace(ctx, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
+			if req.Namespace != "test-namespace" ||
+				req.ResourceVersion != "v1" ||
+				req.AsyncOperationId != "test-async-op" {
+				return false
+			}
+			// Verify the cert bundle contains only cert1 and cert3 (cert2 was deleted)
+			if req.Spec == nil || req.Spec.MtlsAuth == nil {
+				return false
+			}
+			// Should have 2 certificates now (cert1 and cert3)
+			expected := bytes.Join([][]byte{cert1PEM, cert3PEM}, []byte{'\n'})
+			return bytes.Equal(expected, req.Spec.MtlsAuth.AcceptedClientCa)
+		})).
+		Return(&cloudservice.UpdateNamespaceResponse{
+			AsyncOperation: expectedOp,
+		}, nil)
+
+	client := &namespace.Client{Cloud: mockCloud}
+
+	result, err := client.DeleteCACerts(ctx, namespace.DeleteCACertsParams{
+		Namespace:        "test-namespace",
+		Certs:            []cert.CACert{cert2},
+		ResourceVersion:  "",
+		AsyncOperationID: "test-async-op",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, expectedOp, result)
+}
+
+func TestDeleteCACerts_NonExistentCertificate(t *testing.T) {
+	ctx := context.Background()
+	mockCloud := nsmock.NewMockCloudService(t)
+
+	// Generate test certificates
+	existingCertPEM, _ := generateTestCert(t)
+	_, nonExistentCert := generateTestCert(t)
+
+	// Mock GetNamespace
+	existingNamespace := &namespacev1.Namespace{
+		Namespace:       "test-namespace",
+		ResourceVersion: "v1",
+		Spec: &namespacev1.NamespaceSpec{
+			MtlsAuth: &namespacev1.MtlsAuthSpec{
+				AcceptedClientCa: existingCertPEM,
+			},
+		},
+	}
+
+	mockCloud.EXPECT().
+		GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: "test-namespace"}).
+		Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+
+	expectedOp := &operation.AsyncOperation{
+		Id: "test-operation-id",
+	}
+
+	// Verify the existing cert is still present
+	mockCloud.EXPECT().
+		UpdateNamespace(ctx, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
+			return bytes.Equal(existingCertPEM, req.GetSpec().GetMtlsAuth().GetAcceptedClientCa())
+		})).
+		Return(&cloudservice.UpdateNamespaceResponse{
+			AsyncOperation: expectedOp,
+		}, nil)
+
+	client := &namespace.Client{Cloud: mockCloud}
+
+	// Try to delete a certificate that doesn't exist - should succeed
+	result, err := client.DeleteCACerts(ctx, namespace.DeleteCACertsParams{
+		Namespace: "test-namespace",
+		Certs:     []cert.CACert{nonExistentCert},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, expectedOp, result)
+}
+
+func TestDeleteCACerts_GetNamespaceError(t *testing.T) {
+	ctx := context.Background()
+	mockCloud := nsmock.NewMockCloudService(t)
+
+	expectedErr := errors.New("namespace not found")
+
+	mockCloud.EXPECT().
+		GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: "test-namespace"}).
+		Return(nil, expectedErr)
+
+	client := &namespace.Client{Cloud: mockCloud}
+
+	_, certToDelete := generateTestCert(t)
+
+	result, err := client.DeleteCACerts(ctx, namespace.DeleteCACertsParams{
+		Namespace: "test-namespace",
+		Certs:     []cert.CACert{certToDelete},
+	})
+
+	require.Error(t, err)
+	assert.Nil(t, result)
+	assert.Equal(t, expectedErr, err)
+}
+
+func TestDeleteCACerts_UpdateNamespaceError(t *testing.T) {
+	ctx := context.Background()
+	mockCloud := nsmock.NewMockCloudService(t)
+
+	// Generate test certificates
+	existingCertPEM, existingCert := generateTestCert(t)
+	existingCertBase64 := base64.StdEncoding.EncodeToString(existingCertPEM)
+
+	existingNamespace := &namespacev1.Namespace{
+		Namespace:       "test-namespace",
+		ResourceVersion: "v1",
+		Spec: &namespacev1.NamespaceSpec{
+			MtlsAuth: &namespacev1.MtlsAuthSpec{
+				AcceptedClientCa: []byte(existingCertBase64),
+			},
+		},
+	}
+
+	mockCloud.EXPECT().
+		GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: "test-namespace"}).
+		Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+
+	expectedErr := errors.New("update failed")
+	mockCloud.EXPECT().
+		UpdateNamespace(ctx, mock.Anything).
+		Return(nil, expectedErr)
+
+	client := &namespace.Client{Cloud: mockCloud}
+
+	result, err := client.DeleteCACerts(ctx, namespace.DeleteCACertsParams{
+		Namespace: "test-namespace",
+		Certs:     []cert.CACert{existingCert},
+	})
+
+	require.Error(t, err)
+	assert.Nil(t, result)
+	assert.Equal(t, expectedErr, err)
+}
+
+func TestDeleteCACerts_CustomResourceVersion(t *testing.T) {
+	ctx := context.Background()
+	mockCloud := nsmock.NewMockCloudService(t)
+
+	existingCertPEM, existingCert := generateTestCert(t)
+	existingCertBase64 := base64.StdEncoding.EncodeToString(existingCertPEM)
+
+	existingNamespace := &namespacev1.Namespace{
+		Namespace:       "test-namespace",
+		ResourceVersion: "v1",
+		Spec: &namespacev1.NamespaceSpec{
+			MtlsAuth: &namespacev1.MtlsAuthSpec{
+				AcceptedClientCa: []byte(existingCertBase64),
+			},
+		},
+	}
+
+	mockCloud.EXPECT().
+		GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: "test-namespace"}).
+		Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+
+	expectedOp := &operation.AsyncOperation{
+		Id: "test-operation-id",
+	}
+
+	// Verify that custom resource version is used
+	mockCloud.EXPECT().
+		UpdateNamespace(ctx, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
+			return req.ResourceVersion == "custom-version"
+		})).
+		Return(&cloudservice.UpdateNamespaceResponse{
+			AsyncOperation: expectedOp,
+		}, nil)
+
+	client := &namespace.Client{Cloud: mockCloud}
+
+	result, err := client.DeleteCACerts(ctx, namespace.DeleteCACertsParams{
+		Namespace:       "test-namespace",
+		Certs:           []cert.CACert{existingCert},
+		ResourceVersion: "custom-version",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, expectedOp, result)
+}
+
+func TestDeleteCACerts_MultipleFromBundle(t *testing.T) {
+	ctx := context.Background()
+	mockCloud := nsmock.NewMockCloudService(t)
+
+	// Generate test certificates
+	cert1PEM, _ := generateTestCert(t)
+	cert2PEM, cert2 := generateTestCert(t)
+	cert3PEM, _ := generateTestCert(t)
+	cert4PEM, cert4 := generateTestCert(t)
+
+	// Combine certificates into a bundle (all 4 exist initially)
+	certBundle := bytes.Join([][]byte{cert1PEM, cert2PEM, cert3PEM, cert4PEM}, []byte{'\n'})
+
+	existingNamespace := &namespacev1.Namespace{
+		Namespace:       "test-namespace",
+		ResourceVersion: "v1",
+		Spec: &namespacev1.NamespaceSpec{
+			MtlsAuth: &namespacev1.MtlsAuthSpec{
+				AcceptedClientCa: certBundle,
+			},
+		},
+	}
+
+	mockCloud.EXPECT().
+		GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: "test-namespace"}).
+		Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+
+	expectedOp := &operation.AsyncOperation{
+		Id: "test-operation-id",
+	}
+
+	// Delete cert2 and cert4, keep cert1 and cert3
+	mockCloud.EXPECT().
+		UpdateNamespace(ctx, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
+			if req.Spec == nil || req.Spec.MtlsAuth == nil {
+				return false
+			}
+			expected := bytes.Join([][]byte{cert1PEM, cert3PEM}, []byte{'\n'})
+			return bytes.Equal(expected, req.Spec.MtlsAuth.AcceptedClientCa)
+		})).
+		Return(&cloudservice.UpdateNamespaceResponse{
+			AsyncOperation: expectedOp,
+		}, nil)
+
+	client := &namespace.Client{Cloud: mockCloud}
+
+	result, err := client.DeleteCACerts(ctx, namespace.DeleteCACertsParams{
+		Namespace: "test-namespace",
+		Certs:     []cert.CACert{cert2, cert4},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, expectedOp, result)
+}
+
+func TestDeleteCACerts_AllCertsDeleted(t *testing.T) {
+	ctx := context.Background()
+	mockCloud := nsmock.NewMockCloudService(t)
+
+	// Generate test certificate
+	existingCertPEM, existingCert := generateTestCert(t)
+
+	// Mock GetNamespace to return namespace with one cert
+	existingNamespace := &namespacev1.Namespace{
+		Namespace:       "test-namespace",
+		ResourceVersion: "v1",
+		Spec: &namespacev1.NamespaceSpec{
+			MtlsAuth: &namespacev1.MtlsAuthSpec{
+				AcceptedClientCa: existingCertPEM,
+			},
+		},
+	}
+
+	mockCloud.EXPECT().
+		GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: "test-namespace"}).
+		Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+
+	// Mock UpdateNamespace
+	expectedOp := &operation.AsyncOperation{
+		Id: "test-operation-id",
+	}
+
+	mockCloud.EXPECT().
+		UpdateNamespace(ctx, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
+			if req.Namespace != "test-namespace" ||
+				req.ResourceVersion != "v1" {
+				return false
+			}
+			// Verify that MtlsAuth is nil when all certs are deleted
+			return req.Spec != nil && req.Spec.MtlsAuth == nil
+		})).
+		Return(&cloudservice.UpdateNamespaceResponse{
+			AsyncOperation: expectedOp,
+		}, nil)
+
+	client := &namespace.Client{Cloud: mockCloud}
+
+	result, err := client.DeleteCACerts(ctx, namespace.DeleteCACertsParams{
+		Namespace: "test-namespace",
+		Certs:     []cert.CACert{existingCert},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, expectedOp, result)
+}
+
 // generateTestCert generates a test certificate and returns its PEM-encoded bytes and parsed representation.
+// The returned PEM bytes are trimmed to match the behavior of ParseCACerts, which trims whitespace.
 func generateTestCert(t *testing.T) ([]byte, cert.CACert) {
 	t.Helper()
 
@@ -358,6 +679,8 @@ func generateTestCert(t *testing.T) ([]byte, cert.CACert) {
 		Type:  "CERTIFICATE",
 		Bytes: certDER,
 	})
+
+	certPEM = bytes.TrimSpace(certPEM)
 
 	parsedCerts, err := cert.ParseCACerts(certPEM)
 	require.NoError(t, err)

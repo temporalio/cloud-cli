@@ -7,6 +7,7 @@ import (
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 
 	"github.com/temporalio/cloud-cli/internal/namespace"
+	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/async"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
@@ -294,4 +295,20 @@ func getNamespaceClient(cctx *CommandContext, opts ClientOptions) (NamespaceClie
 		return nil, err
 	}
 	return namespace.NewClient(cloudClient.CloudService()), nil
+}
+
+func getPoller(cctx *CommandContext, opts ClientOptions) (Poller, error) {
+	if cctx.Poller != nil {
+		return cctx.Poller, nil
+	}
+
+	cloudClient, err := cctx.BuildCloudClient(opts)
+	if err != nil {
+		return nil, err
+	}
+	return &async.Poller{
+		Cloud:      cloudClient.CloudService(),
+		Printer:    cctx.Printer,
+		JSONOutput: cctx.JSONOutput,
+	}, nil
 }

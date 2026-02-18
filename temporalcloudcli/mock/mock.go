@@ -109,6 +109,74 @@ func (_c *MockNamespaceClient_AddCACerts_Call) RunAndReturn(run func(context1 co
 	return _c
 }
 
+// DeleteCACerts provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) DeleteCACerts(context1 context.Context, deleteCACertsParams namespace.DeleteCACertsParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, deleteCACertsParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteCACerts")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.DeleteCACertsParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, deleteCACertsParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.DeleteCACertsParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, deleteCACertsParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.DeleteCACertsParams) error); ok {
+		r1 = returnFunc(context1, deleteCACertsParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_DeleteCACerts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteCACerts'
+type MockNamespaceClient_DeleteCACerts_Call struct {
+	*mock.Call
+}
+
+// DeleteCACerts is a helper method to define mock.On call
+//   - context1 context.Context
+//   - deleteCACertsParams namespace.DeleteCACertsParams
+func (_e *MockNamespaceClient_Expecter) DeleteCACerts(context1 interface{}, deleteCACertsParams interface{}) *MockNamespaceClient_DeleteCACerts_Call {
+	return &MockNamespaceClient_DeleteCACerts_Call{Call: _e.mock.On("DeleteCACerts", context1, deleteCACertsParams)}
+}
+
+func (_c *MockNamespaceClient_DeleteCACerts_Call) Run(run func(context1 context.Context, deleteCACertsParams namespace.DeleteCACertsParams)) *MockNamespaceClient_DeleteCACerts_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.DeleteCACertsParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.DeleteCACertsParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_DeleteCACerts_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_DeleteCACerts_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_DeleteCACerts_Call) RunAndReturn(run func(context1 context.Context, deleteCACertsParams namespace.DeleteCACertsParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_DeleteCACerts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetNamespace provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) GetNamespace(context1 context.Context, s string) (*namespace0.Namespace, error) {
 	ret := _mock.Called(context1, s)

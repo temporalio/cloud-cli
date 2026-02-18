@@ -240,8 +240,8 @@ func NewCloudNamespaceCertCaCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Command.Long = "Commands for managing the client CA certificates of Temporal Cloud namespaces."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudNamespaceCertCaAddCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCertCaDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCertCaListCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewCloudNamespaceCertCaRemoveCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -274,6 +274,35 @@ func NewCloudNamespaceCertCaAddCommand(cctx *CommandContext, parent *CloudNamesp
 	return &s
 }
 
+type CloudNamespaceCertCaDeleteCommand struct {
+	Parent  *CloudNamespaceCertCaCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	ResourceModifyOptions
+	CaCertificateFile string
+}
+
+func NewCloudNamespaceCertCaDeleteCommand(cctx *CommandContext, parent *CloudNamespaceCertCaCommand) *CloudNamespaceCertCaDeleteCommand {
+	var s CloudNamespaceCertCaDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "TODO"
+	s.Command.Long = "TODO"
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.CaCertificateFile, "ca-certificate-file", "", "Path to a CA certificate PEM file.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.ResourceModifyOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type CloudNamespaceCertCaListCommand struct {
 	Parent  *CloudNamespaceCertCaCommand
 	Command cobra.Command
@@ -291,33 +320,6 @@ func NewCloudNamespaceCertCaListCommand(cctx *CommandContext, parent *CloudNames
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type CloudNamespaceCertCaRemoveCommand struct {
-	Parent  *CloudNamespaceCertCaCommand
-	Command cobra.Command
-	ClientOptions
-	NamespaceOptions
-	ResourceModifyOptions
-}
-
-func NewCloudNamespaceCertCaRemoveCommand(cctx *CommandContext, parent *CloudNamespaceCertCaCommand) *CloudNamespaceCertCaRemoveCommand {
-	var s CloudNamespaceCertCaRemoveCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "remove [flags]"
-	s.Command.Short = "TODO"
-	s.Command.Long = "TODO"
-	s.Command.Args = cobra.NoArgs
-	s.ClientOptions.BuildFlags(s.Command.Flags())
-	s.NamespaceOptions.BuildFlags(s.Command.Flags())
-	s.ResourceModifyOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

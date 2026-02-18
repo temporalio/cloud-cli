@@ -521,7 +521,7 @@ commands:
         description: |
           Path to a CA certificate PEM file.
       
-  - name: cloud namespace cert-ca remove
+  - name: cloud namespace cert-ca delete
     summary: TODO
     description: |
       TODO
@@ -529,6 +529,11 @@ commands:
       - client
       - namespace
       - resource-modify
+    options:
+      - name: ca-certificate-file
+        type: string
+        description: |
+          Path to a CA certificate PEM file.
 
 option-sets:
   - name: client
