@@ -98,7 +98,7 @@ func (c *CloudLogoutCommand) run(cctx *CommandContext, _ []string) error {
 	}
 
 	logoutURL := domainURL.JoinPath("v2", "logout")
-	cctx.Printer.Println(fmt.Sprintf("Opening browser to logout. If it doesn't open, visit: %s\n", logoutURL.String()))
+	cctx.Printer.Println(fmt.Sprintf("Opening browser to logout. If it doesn't open, visit: %s", logoutURL.String()))
 	_ = browser.OpenURL(logoutURL.String())
 
 	return nil
