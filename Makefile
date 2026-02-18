@@ -3,9 +3,7 @@
 # Load .env file if it exists (for local development)
 # In CI/CD, environment variables are provided by the environment
 -include .env
-ifneq (,$(wildcard .env))
-export $(shell sed 's/=.*//' .env)
-endif
+export
 
 all: gen build test
 

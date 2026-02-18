@@ -13,6 +13,7 @@ import (
 	"go.temporal.io/api/temporalproto"
 	"go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespace "go.temporal.io/cloud-sdk/api/namespace/v1"
+	resource "go.temporal.io/cloud-sdk/api/resource/v1"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -215,6 +216,11 @@ func (s *SharedServerSuite) cleanupNamespaces() {
 		pageToken = res.NextPageToken
 	}
 	for _, ns := range namespacesToClean {
+		// AIDEV-NOTE: Only delete namespaces that are in ACTIVE state (value 3).
+		// Namespaces in other states (DELETING, DELETED, etc.) cannot be deleted.
+		if ns.State != resource.ResourceState_RESOURCE_STATE_ACTIVE {
+			continue
+		}
 		res, err := cloudClient.CloudService().DeleteNamespace(s.Context, &cloudservice.DeleteNamespaceRequest{
 			ResourceVersion: ns.ResourceVersion,
 			Namespace:       ns.Namespace,
