@@ -23,7 +23,8 @@ func TestCloudNamespaceSearchAttributeListCommand_Success(t *testing.T) {
 	ctx := context.Background()
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
-	expectedAttrs := []namespace.SearchAttribute{
+	// Internal representation uses enum types
+	internalAttrs := []namespace.SearchAttribute{
 		{
 			Name: "CustomField",
 			Type: namespacev1.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_TEXT,
@@ -34,9 +35,21 @@ func TestCloudNamespaceSearchAttributeListCommand_Success(t *testing.T) {
 		},
 	}
 
+	// Expected output uses user-friendly type names
+	expectedOutput := []temporalcloudcli.SearchAttributeOutput{
+		{
+			Name: "CustomField",
+			Type: "Text",
+		},
+		{
+			Name: "Priority",
+			Type: "Int",
+		},
+	}
+
 	mockClient.EXPECT().
 		ListSearchAttributes(ctx, "test-namespace.test-account").
-		Return(expectedAttrs, nil)
+		Return(internalAttrs, nil)
 
 	var buf bytes.Buffer
 	cctx := &temporalcloudcli.CommandContext{
@@ -57,10 +70,10 @@ func TestCloudNamespaceSearchAttributeListCommand_Success(t *testing.T) {
 	cmd.Command.Run(&cmd.Command, []string{})
 	require.NoError(t, capturedErr)
 
-	var result []namespace.SearchAttribute
+	var result []temporalcloudcli.SearchAttributeOutput
 	err := json.Unmarshal(buf.Bytes(), &result)
 	require.NoError(t, err)
-	assert.Equal(t, expectedAttrs, result)
+	assert.Equal(t, expectedOutput, result)
 }
 
 func TestCloudNamespaceSearchAttributeListCommand_Error(t *testing.T) {

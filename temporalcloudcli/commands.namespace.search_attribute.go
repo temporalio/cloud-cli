@@ -10,6 +10,12 @@ import (
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
+// SearchAttributeOutput represents a search attribute with user-friendly type name for display.
+type SearchAttributeOutput struct {
+	Name string
+	Type string
+}
+
 func (c *CloudNamespaceSearchAttributeListCommand) run(cctx *CommandContext, _ []string) error {
 	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
 	if err != nil {
@@ -21,7 +27,16 @@ func (c *CloudNamespaceSearchAttributeListCommand) run(cctx *CommandContext, _ [
 		return err
 	}
 
-	return cctx.Printer.PrintStructured(searchAttrs, printer.StructuredOptions{})
+	// Convert to output format with user-friendly type names
+	output := make([]SearchAttributeOutput, len(searchAttrs))
+	for i, attr := range searchAttrs {
+		output[i] = SearchAttributeOutput{
+			Name: attr.Name,
+			Type: formatSearchAttributeType(attr.Type),
+		}
+	}
+
+	return cctx.Printer.PrintStructured(output, printer.StructuredOptions{})
 }
 
 func (c *CloudNamespaceSearchAttributeCreateCommand) run(cctx *CommandContext, _ []string) error {
@@ -235,5 +250,29 @@ func parseSearchAttributeType(typeStr string) (namespacev1.NamespaceSpec_SearchA
 	default:
 		return namespacev1.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_UNSPECIFIED,
 			errors.New("invalid search attribute type: must be one of Text, Keyword, Int, Double, Bool, Datetime, KeywordList")
+	}
+}
+
+// formatSearchAttributeType converts an enum type to a user-friendly string for display.
+// AIDEV-NOTE: This provides the inverse of parseSearchAttributeType, converting enum values
+// back to the friendly names users specify when creating search attributes.
+func formatSearchAttributeType(attrType namespacev1.NamespaceSpec_SearchAttributeType) string {
+	switch attrType {
+	case namespacev1.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_TEXT:
+		return "Text"
+	case namespacev1.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_KEYWORD:
+		return "Keyword"
+	case namespacev1.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_INT:
+		return "Int"
+	case namespacev1.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_DOUBLE:
+		return "Double"
+	case namespacev1.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_BOOL:
+		return "Bool"
+	case namespacev1.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_DATETIME:
+		return "Datetime"
+	case namespacev1.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_KEYWORD_LIST:
+		return "KeywordList"
+	default:
+		return "Unspecified"
 	}
 }
