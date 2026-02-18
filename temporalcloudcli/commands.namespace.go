@@ -12,14 +12,12 @@ import (
 )
 
 func (c *CloudNamespaceGetCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	client := newNamespaceClient(withCloudClient(cloudClient))
-
-	n, err := client.getNamespace(cctx.Context, c.Namespace)
+	n, err := namespaceClient.GetNamespace(cctx.Context, c.Namespace)
 	if err != nil {
 		return err
 	}

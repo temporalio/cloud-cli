@@ -109,6 +109,74 @@ func (_c *MockNamespaceClient_AddCACerts_Call) RunAndReturn(run func(context1 co
 	return _c
 }
 
+// AddCertFilters provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) AddCertFilters(context1 context.Context, addCertFiltersParams namespace.AddCertFiltersParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, addCertFiltersParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddCertFilters")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.AddCertFiltersParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, addCertFiltersParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.AddCertFiltersParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, addCertFiltersParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.AddCertFiltersParams) error); ok {
+		r1 = returnFunc(context1, addCertFiltersParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_AddCertFilters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddCertFilters'
+type MockNamespaceClient_AddCertFilters_Call struct {
+	*mock.Call
+}
+
+// AddCertFilters is a helper method to define mock.On call
+//   - context1 context.Context
+//   - addCertFiltersParams namespace.AddCertFiltersParams
+func (_e *MockNamespaceClient_Expecter) AddCertFilters(context1 interface{}, addCertFiltersParams interface{}) *MockNamespaceClient_AddCertFilters_Call {
+	return &MockNamespaceClient_AddCertFilters_Call{Call: _e.mock.On("AddCertFilters", context1, addCertFiltersParams)}
+}
+
+func (_c *MockNamespaceClient_AddCertFilters_Call) Run(run func(context1 context.Context, addCertFiltersParams namespace.AddCertFiltersParams)) *MockNamespaceClient_AddCertFilters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.AddCertFiltersParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.AddCertFiltersParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_AddCertFilters_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_AddCertFilters_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_AddCertFilters_Call) RunAndReturn(run func(context1 context.Context, addCertFiltersParams namespace.AddCertFiltersParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_AddCertFilters_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteCACerts provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) DeleteCACerts(context1 context.Context, deleteCACertsParams namespace.DeleteCACertsParams) (*operation.AsyncOperation, error) {
 	ret := _mock.Called(context1, deleteCACertsParams)
@@ -173,6 +241,74 @@ func (_c *MockNamespaceClient_DeleteCACerts_Call) Return(asyncOperation *operati
 }
 
 func (_c *MockNamespaceClient_DeleteCACerts_Call) RunAndReturn(run func(context1 context.Context, deleteCACertsParams namespace.DeleteCACertsParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_DeleteCACerts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteCertFilters provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) DeleteCertFilters(context1 context.Context, deleteCertFiltersParams namespace.DeleteCertFiltersParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, deleteCertFiltersParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteCertFilters")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.DeleteCertFiltersParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, deleteCertFiltersParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.DeleteCertFiltersParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, deleteCertFiltersParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.DeleteCertFiltersParams) error); ok {
+		r1 = returnFunc(context1, deleteCertFiltersParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_DeleteCertFilters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteCertFilters'
+type MockNamespaceClient_DeleteCertFilters_Call struct {
+	*mock.Call
+}
+
+// DeleteCertFilters is a helper method to define mock.On call
+//   - context1 context.Context
+//   - deleteCertFiltersParams namespace.DeleteCertFiltersParams
+func (_e *MockNamespaceClient_Expecter) DeleteCertFilters(context1 interface{}, deleteCertFiltersParams interface{}) *MockNamespaceClient_DeleteCertFilters_Call {
+	return &MockNamespaceClient_DeleteCertFilters_Call{Call: _e.mock.On("DeleteCertFilters", context1, deleteCertFiltersParams)}
+}
+
+func (_c *MockNamespaceClient_DeleteCertFilters_Call) Run(run func(context1 context.Context, deleteCertFiltersParams namespace.DeleteCertFiltersParams)) *MockNamespaceClient_DeleteCertFilters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.DeleteCertFiltersParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.DeleteCertFiltersParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_DeleteCertFilters_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_DeleteCertFilters_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_DeleteCertFilters_Call) RunAndReturn(run func(context1 context.Context, deleteCertFiltersParams namespace.DeleteCertFiltersParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_DeleteCertFilters_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -309,6 +445,74 @@ func (_c *MockNamespaceClient_ListCACerts_Call) Return(cACerts []cert.CACert, er
 }
 
 func (_c *MockNamespaceClient_ListCACerts_Call) RunAndReturn(run func(context1 context.Context, s string) ([]cert.CACert, error)) *MockNamespaceClient_ListCACerts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListCertFilters provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) ListCertFilters(context1 context.Context, s string) ([]namespace.CertFilter, error) {
+	ret := _mock.Called(context1, s)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListCertFilters")
+	}
+
+	var r0 []namespace.CertFilter
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]namespace.CertFilter, error)); ok {
+		return returnFunc(context1, s)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []namespace.CertFilter); ok {
+		r0 = returnFunc(context1, s)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]namespace.CertFilter)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(context1, s)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_ListCertFilters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListCertFilters'
+type MockNamespaceClient_ListCertFilters_Call struct {
+	*mock.Call
+}
+
+// ListCertFilters is a helper method to define mock.On call
+//   - context1 context.Context
+//   - s string
+func (_e *MockNamespaceClient_Expecter) ListCertFilters(context1 interface{}, s interface{}) *MockNamespaceClient_ListCertFilters_Call {
+	return &MockNamespaceClient_ListCertFilters_Call{Call: _e.mock.On("ListCertFilters", context1, s)}
+}
+
+func (_c *MockNamespaceClient_ListCertFilters_Call) Run(run func(context1 context.Context, s string)) *MockNamespaceClient_ListCertFilters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_ListCertFilters_Call) Return(certFilters []namespace.CertFilter, err error) *MockNamespaceClient_ListCertFilters_Call {
+	_c.Call.Return(certFilters, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_ListCertFilters_Call) RunAndReturn(run func(context1 context.Context, s string) ([]namespace.CertFilter, error)) *MockNamespaceClient_ListCertFilters_Call {
 	_c.Call.Return(run)
 	return _c
 }

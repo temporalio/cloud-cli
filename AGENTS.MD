@@ -130,6 +130,15 @@ w.RegisterActivityWithOptions(a, activity.RegisterOptions{Name: ActivityNamePref
    - `make all`
 
 ## Command Generation Guidelines
+
+### Command Generation Process
+To add a new command to the CLI:
+
+1. **Add an entry in `commands.yml`** - Define your command structure, flags, and metadata in the YAML configuration file
+2. **Run `make gen`** - This generates the boilerplate command code in `commands.gen.go`
+3. **Implement the `run` function** - In the appropriate command file (e.g., `commands.namespace.go`), implement the `run` function for your generated command with the actual business logic
+
+### Command Requirements
 1. All commands should have an `--async-operation-id` for mutations. For example, anything that is a create, update, or delete, or any command specific patch commands.
 2. All top level spec based commands (for example, namespace) that include a mutation should have an `apply` and `edit` subcommand. The only exception to this will be apikey.
 3. All mutation commands should have a `--resource-version` flag that allows the user to specify a resource version for optimistic locking.

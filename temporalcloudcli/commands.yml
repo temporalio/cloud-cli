@@ -534,6 +534,74 @@ commands:
         type: string
         description: |
           Path to a CA certificate PEM file.
+  - name: cloud namespace cert-filter
+    summary: Manage certificate filters for namespaces
+    description: |
+      Commands for managing certificate filters for Temporal Cloud namespaces.
+      Certificate filters restrict mTLS connections to client certificates with
+      specific distinguished name properties.
+    has-init: false
+  - name: cloud namespace cert-filter list
+    summary: List certificate filters for a namespace
+    description: |
+      List all certificate filters configured for a Temporal Cloud namespace.
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace cert-filter create
+    summary: Add certificate filters to a namespace
+    description: |
+      Add new certificate filters to a Temporal Cloud namespace. Certificate
+      filters restrict mTLS connections to client certificates whose distinguished
+      name properties match at least one of the filters.
+    option-sets:
+      - client
+      - namespace
+      - resource-modify
+    options:
+      - name: common-name
+        type: string
+        description: |
+          The common name (CN) field from the certificate's distinguished name.
+      - name: organization
+        type: string
+        description: |
+          The organization (O) field from the certificate's distinguished name.
+      - name: organizational-unit
+        type: string
+        description: |
+          The organizational unit (OU) field from the certificate's distinguished name.
+      - name: subject-alternative-name
+        type: string
+        description: |
+          The subject alternative name (SAN) from the certificate.
+  - name: cloud namespace cert-filter delete
+    summary: Delete certificate filters from a namespace
+    description: |
+      Delete certificate filters from a Temporal Cloud namespace. Filters are
+      matched by exact field equality.
+    option-sets:
+      - client
+      - namespace
+      - resource-modify
+    options:
+      - name: common-name
+        type: string
+        description: |
+          The common name (CN) field from the certificate's distinguished name.
+      - name: organization
+        type: string
+        description: |
+          The organization (O) field from the certificate's distinguished name.
+      - name: organizational-unit
+        type: string
+        description: |
+          The organizational unit (OU) field from the certificate's distinguished name.
+      - name: subject-alternative-name
+        type: string
+        description: |
+          The subject alternative name (SAN) from the certificate.
 
 option-sets:
   - name: client

@@ -2,40 +2,59 @@ package temporalcloudcli
 
 import (
 	"errors"
-	"os"
 
-	"github.com/temporalio/cloud-cli/internal/cert"
 	"github.com/temporalio/cloud-cli/internal/namespace"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
-func (c *CloudNamespaceCertCaAddCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudNamespaceCertFilterListCommand) run(cctx *CommandContext, _ []string) error {
 	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	certData, err := os.ReadFile(c.CaCertificateFile)
+	filters, err := namespaceClient.ListCertFilters(cctx.Context, c.Namespace)
 	if err != nil {
 		return err
 	}
 
-	newCerts, err := cert.ParseCACerts(certData)
+	return cctx.Printer.PrintStructured(filters, printer.StructuredOptions{})
+}
+
+func (c *CloudNamespaceCertFilterCreateCommand) run(cctx *CommandContext, _ []string) error {
+	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	if len(newCerts) == 0 {
-		return errors.New("invalid certificate")
+	// At least one field must be specified
+	if c.CommonName == "" && c.Organization == "" && c.OrganizationalUnit == "" && c.SubjectAlternativeName == "" {
+		return errors.New("at least one filter field must be specified")
 	}
 
-	params := namespace.AddCACertsParams{
+	yes, err := cctx.promptYes("Create cert filter (y/yes)?", cctx.RootCommand.AutoConfirm)
+	if err != nil {
+		return err
+	}
+
+	if !yes {
+		return errors.New("Aborting create.")
+	}
+
+	filter := namespace.CertFilter{
+		CommonName:             c.CommonName,
+		Organization:           c.Organization,
+		OrganizationalUnit:     c.OrganizationalUnit,
+		SubjectAlternativeName: c.SubjectAlternativeName,
+	}
+
+	params := namespace.AddCertFiltersParams{
 		Namespace:        c.Namespace,
-		Certs:            newCerts,
+		Filters:          []namespace.CertFilter{filter},
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
 	}
-	op, err := namespaceClient.AddCACerts(cctx.Context, params)
+	op, err := namespaceClient.AddCertFilters(cctx.Context, params)
 	if err != nil {
 		if isNothingChangedErr(c.Idempotent, err) {
 			result := struct {
@@ -67,34 +86,22 @@ func (c *CloudNamespaceCertCaAddCommand) run(cctx *CommandContext, _ []string) e
 	return poller.Poll(cctx.Context, op.Id, c.Namespace)
 }
 
-func (c *CloudNamespaceCertCaListCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudNamespaceCertFilterDeleteCommand) run(cctx *CommandContext, _ []string) error {
 	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	certs, err := namespaceClient.ListCACerts(cctx.Context, c.Namespace)
-	if err != nil {
-		return err
+	// At least one field must be specified
+	if c.CommonName == "" && c.Organization == "" && c.OrganizationalUnit == "" && c.SubjectAlternativeName == "" {
+		return errors.New("at least one filter field must be specified")
 	}
 
-	return cctx.Printer.PrintStructured(certs, printer.StructuredOptions{})
-}
-
-func (c *CloudNamespaceCertCaDeleteCommand) run(cctx *CommandContext, _ []string) error {
-	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
-	if err != nil {
-		return err
-	}
-
-	certData, err := os.ReadFile(c.CaCertificateFile)
-	if err != nil {
-		return err
-	}
-
-	certsToRemove, err := cert.ParseCACerts(certData)
-	if err != nil {
-		return err
+	filter := namespace.CertFilter{
+		CommonName:             c.CommonName,
+		Organization:           c.Organization,
+		OrganizationalUnit:     c.OrganizationalUnit,
+		SubjectAlternativeName: c.SubjectAlternativeName,
 	}
 
 	yes, err := cctx.promptYes("Delete (y/yes)?", cctx.RootCommand.AutoConfirm)
@@ -106,13 +113,13 @@ func (c *CloudNamespaceCertCaDeleteCommand) run(cctx *CommandContext, _ []string
 		return errors.New("Aborting delete.")
 	}
 
-	params := namespace.DeleteCACertsParams{
+	params := namespace.DeleteCertFiltersParams{
 		Namespace:        c.Namespace,
-		Certs:            certsToRemove,
+		Filters:          []namespace.CertFilter{filter},
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
 	}
-	op, err := namespaceClient.DeleteCACerts(cctx.Context, params)
+	op, err := namespaceClient.DeleteCertFilters(cctx.Context, params)
 	if err != nil {
 		if isNothingChangedErr(c.Idempotent, err) {
 			result := struct {
