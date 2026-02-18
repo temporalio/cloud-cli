@@ -186,6 +186,7 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.AddCommand(&NewCloudNamespaceListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceRetentionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceSearchAttributeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceTagCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -890,6 +891,146 @@ func NewCloudNamespaceSearchAttributeRenameCommand(cctx *CommandContext, parent 
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.ExistingName, "existing-name", "", "The current name of the search attribute to rename.")
 	s.Command.Flags().StringVar(&s.NewName, "new-name", "", "The new name for the search attribute.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.ResourceModifyOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceTagCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceTagCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceTagCommand {
+	var s CloudNamespaceTagCommand
+	s.Parent = parent
+	s.Command.Use = "tag"
+	s.Command.Short = "Manage namespace tags"
+	s.Command.Long = "Commands for managing tags for Temporal Cloud namespaces.\nTags are key-value pairs used for organization and categorization of namespaces."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceTagCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceTagDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceTagListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceTagUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceTagCreateCommand struct {
+	Parent  *CloudNamespaceTagCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	ResourceModifyOptions
+	Key   string
+	Value string
+}
+
+func NewCloudNamespaceTagCreateCommand(cctx *CommandContext, parent *CloudNamespaceTagCommand) *CloudNamespaceTagCreateCommand {
+	var s CloudNamespaceTagCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create new tags for a namespace"
+	s.Command.Long = "Create new tags for a Temporal Cloud namespace. This operation will fail\nif any of the specified tag keys already exist."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Key, "key", "", "The key of the tag to create. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "key")
+	s.Command.Flags().StringVar(&s.Value, "value", "", "The value of the tag. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "value")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.ResourceModifyOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceTagDeleteCommand struct {
+	Parent  *CloudNamespaceTagCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	ResourceModifyOptions
+	Key string
+}
+
+func NewCloudNamespaceTagDeleteCommand(cctx *CommandContext, parent *CloudNamespaceTagCommand) *CloudNamespaceTagDeleteCommand {
+	var s CloudNamespaceTagDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete tags from a namespace"
+	s.Command.Long = "Delete tags from a Temporal Cloud namespace by their keys."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Key, "key", "", "The key of the tag to delete. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "key")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.ResourceModifyOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceTagListCommand struct {
+	Parent  *CloudNamespaceTagCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceTagListCommand(cctx *CommandContext, parent *CloudNamespaceTagCommand) *CloudNamespaceTagListCommand {
+	var s CloudNamespaceTagListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List tags for a namespace"
+	s.Command.Long = "List all tags configured for a Temporal Cloud namespace."
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceTagUpdateCommand struct {
+	Parent  *CloudNamespaceTagCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	ResourceModifyOptions
+	Key   string
+	Value string
+}
+
+func NewCloudNamespaceTagUpdateCommand(cctx *CommandContext, parent *CloudNamespaceTagCommand) *CloudNamespaceTagUpdateCommand {
+	var s CloudNamespaceTagUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update existing tags for a namespace"
+	s.Command.Long = "Update existing tags for a Temporal Cloud namespace. This operation will\nfail if any of the specified tag keys do not exist."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Key, "key", "", "The key of the tag to update. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "key")
+	s.Command.Flags().StringVar(&s.Value, "value", "", "The new value for the tag. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "value")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.ResourceModifyOptions.BuildFlags(s.Command.Flags())

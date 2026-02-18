@@ -370,3 +370,86 @@ func (_c *MockCloudService_UpdateNamespace_Call) RunAndReturn(run func(ctx conte
 	_c.Call.Return(run)
 	return _c
 }
+
+// UpdateNamespaceTags provides a mock function for the type MockCloudService
+func (_mock *MockCloudService) UpdateNamespaceTags(ctx context.Context, req *cloudservice.UpdateNamespaceTagsRequest, opts ...grpc.CallOption) (*cloudservice.UpdateNamespaceTagsResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, req, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, req)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateNamespaceTags")
+	}
+
+	var r0 *cloudservice.UpdateNamespaceTagsResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.UpdateNamespaceTagsRequest, ...grpc.CallOption) (*cloudservice.UpdateNamespaceTagsResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.UpdateNamespaceTagsRequest, ...grpc.CallOption) *cloudservice.UpdateNamespaceTagsResponse); ok {
+		r0 = returnFunc(ctx, req, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.UpdateNamespaceTagsResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.UpdateNamespaceTagsRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, req, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudService_UpdateNamespaceTags_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateNamespaceTags'
+type MockCloudService_UpdateNamespaceTags_Call struct {
+	*mock.Call
+}
+
+// UpdateNamespaceTags is a helper method to define mock.On call
+//   - ctx context.Context
+//   - req *cloudservice.UpdateNamespaceTagsRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudService_Expecter) UpdateNamespaceTags(ctx interface{}, req interface{}, opts ...interface{}) *MockCloudService_UpdateNamespaceTags_Call {
+	return &MockCloudService_UpdateNamespaceTags_Call{Call: _e.mock.On("UpdateNamespaceTags",
+		append([]interface{}{ctx, req}, opts...)...)}
+}
+
+func (_c *MockCloudService_UpdateNamespaceTags_Call) Run(run func(ctx context.Context, req *cloudservice.UpdateNamespaceTagsRequest, opts ...grpc.CallOption)) *MockCloudService_UpdateNamespaceTags_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.UpdateNamespaceTagsRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.UpdateNamespaceTagsRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudService_UpdateNamespaceTags_Call) Return(updateNamespaceTagsResponse *cloudservice.UpdateNamespaceTagsResponse, err error) *MockCloudService_UpdateNamespaceTags_Call {
+	_c.Call.Return(updateNamespaceTagsResponse, err)
+	return _c
+}
+
+func (_c *MockCloudService_UpdateNamespaceTags_Call) RunAndReturn(run func(ctx context.Context, req *cloudservice.UpdateNamespaceTagsRequest, opts ...grpc.CallOption) (*cloudservice.UpdateNamespaceTagsResponse, error)) *MockCloudService_UpdateNamespaceTags_Call {
+	_c.Call.Return(run)
+	return _c
+}

@@ -668,6 +668,74 @@ commands:
         type: string
         description: |
           The name of the search attribute to delete.
+  - name: cloud namespace tag
+    summary: Manage namespace tags
+    description: |
+      Commands for managing tags for Temporal Cloud namespaces.
+      Tags are key-value pairs used for organization and categorization of namespaces.
+    has-init: false
+  - name: cloud namespace tag list
+    summary: List tags for a namespace
+    description: |
+      List all tags configured for a Temporal Cloud namespace.
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace tag create
+    summary: Create new tags for a namespace
+    description: |
+      Create new tags for a Temporal Cloud namespace. This operation will fail
+      if any of the specified tag keys already exist.
+    option-sets:
+      - client
+      - namespace
+      - resource-modify
+    options:
+      - name: key
+        type: string
+        description: |
+          The key of the tag to create.
+        required: true
+      - name: value
+        type: string
+        description: |
+          The value of the tag.
+        required: true
+  - name: cloud namespace tag update
+    summary: Update existing tags for a namespace
+    description: |
+      Update existing tags for a Temporal Cloud namespace. This operation will
+      fail if any of the specified tag keys do not exist.
+    option-sets:
+      - client
+      - namespace
+      - resource-modify
+    options:
+      - name: key
+        type: string
+        description: |
+          The key of the tag to update.
+        required: true
+      - name: value
+        type: string
+        description: |
+          The new value for the tag.
+        required: true
+  - name: cloud namespace tag delete
+    summary: Delete tags from a namespace
+    description: |
+      Delete tags from a Temporal Cloud namespace by their keys.
+    option-sets:
+      - client
+      - namespace
+      - resource-modify
+    options:
+      - name: key
+        type: string
+        description: |
+          The key of the tag to delete.
+        required: true
 
 option-sets:
   - name: client

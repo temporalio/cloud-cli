@@ -78,6 +78,10 @@ type NamespaceClient interface {
 	RenameSearchAttribute(context.Context, namespace.RenameSearchAttributeParams) (*operation.AsyncOperation, error)
 	DeleteSearchAttribute(context.Context, namespace.DeleteSearchAttributeParams) (*operation.AsyncOperation, error)
 
+	ListTags(context.Context, string) ([]namespace.Tag, error)
+	SetTags(context.Context, namespace.SetTagsParams) (*operation.AsyncOperation, error)
+	DeleteTags(context.Context, namespace.DeleteTagsParams) (*operation.AsyncOperation, error)
+
 	GetNamespace(context.Context, string) (*namespacev1.Namespace, error)
 }
 

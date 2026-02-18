@@ -449,6 +449,74 @@ func (_c *MockNamespaceClient_DeleteSearchAttribute_Call) RunAndReturn(run func(
 	return _c
 }
 
+// DeleteTags provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) DeleteTags(context1 context.Context, deleteTagsParams namespace.DeleteTagsParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, deleteTagsParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteTags")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.DeleteTagsParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, deleteTagsParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.DeleteTagsParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, deleteTagsParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.DeleteTagsParams) error); ok {
+		r1 = returnFunc(context1, deleteTagsParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_DeleteTags_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteTags'
+type MockNamespaceClient_DeleteTags_Call struct {
+	*mock.Call
+}
+
+// DeleteTags is a helper method to define mock.On call
+//   - context1 context.Context
+//   - deleteTagsParams namespace.DeleteTagsParams
+func (_e *MockNamespaceClient_Expecter) DeleteTags(context1 interface{}, deleteTagsParams interface{}) *MockNamespaceClient_DeleteTags_Call {
+	return &MockNamespaceClient_DeleteTags_Call{Call: _e.mock.On("DeleteTags", context1, deleteTagsParams)}
+}
+
+func (_c *MockNamespaceClient_DeleteTags_Call) Run(run func(context1 context.Context, deleteTagsParams namespace.DeleteTagsParams)) *MockNamespaceClient_DeleteTags_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.DeleteTagsParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.DeleteTagsParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_DeleteTags_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_DeleteTags_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_DeleteTags_Call) RunAndReturn(run func(context1 context.Context, deleteTagsParams namespace.DeleteTagsParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_DeleteTags_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetNamespace provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) GetNamespace(context1 context.Context, s string) (*namespace0.Namespace, error) {
 	ret := _mock.Called(context1, s)
@@ -721,6 +789,74 @@ func (_c *MockNamespaceClient_ListSearchAttributes_Call) RunAndReturn(run func(c
 	return _c
 }
 
+// ListTags provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) ListTags(context1 context.Context, s string) ([]namespace.Tag, error) {
+	ret := _mock.Called(context1, s)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListTags")
+	}
+
+	var r0 []namespace.Tag
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]namespace.Tag, error)); ok {
+		return returnFunc(context1, s)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []namespace.Tag); ok {
+		r0 = returnFunc(context1, s)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]namespace.Tag)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(context1, s)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_ListTags_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListTags'
+type MockNamespaceClient_ListTags_Call struct {
+	*mock.Call
+}
+
+// ListTags is a helper method to define mock.On call
+//   - context1 context.Context
+//   - s string
+func (_e *MockNamespaceClient_Expecter) ListTags(context1 interface{}, s interface{}) *MockNamespaceClient_ListTags_Call {
+	return &MockNamespaceClient_ListTags_Call{Call: _e.mock.On("ListTags", context1, s)}
+}
+
+func (_c *MockNamespaceClient_ListTags_Call) Run(run func(context1 context.Context, s string)) *MockNamespaceClient_ListTags_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_ListTags_Call) Return(tags []namespace.Tag, err error) *MockNamespaceClient_ListTags_Call {
+	_c.Call.Return(tags, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_ListTags_Call) RunAndReturn(run func(context1 context.Context, s string) ([]namespace.Tag, error)) *MockNamespaceClient_ListTags_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RenameSearchAttribute provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) RenameSearchAttribute(context1 context.Context, renameSearchAttributeParams namespace.RenameSearchAttributeParams) (*operation.AsyncOperation, error) {
 	ret := _mock.Called(context1, renameSearchAttributeParams)
@@ -785,6 +921,74 @@ func (_c *MockNamespaceClient_RenameSearchAttribute_Call) Return(asyncOperation 
 }
 
 func (_c *MockNamespaceClient_RenameSearchAttribute_Call) RunAndReturn(run func(context1 context.Context, renameSearchAttributeParams namespace.RenameSearchAttributeParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_RenameSearchAttribute_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetTags provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) SetTags(context1 context.Context, setTagsParams namespace.SetTagsParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, setTagsParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetTags")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.SetTagsParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, setTagsParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.SetTagsParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, setTagsParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.SetTagsParams) error); ok {
+		r1 = returnFunc(context1, setTagsParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_SetTags_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetTags'
+type MockNamespaceClient_SetTags_Call struct {
+	*mock.Call
+}
+
+// SetTags is a helper method to define mock.On call
+//   - context1 context.Context
+//   - setTagsParams namespace.SetTagsParams
+func (_e *MockNamespaceClient_Expecter) SetTags(context1 interface{}, setTagsParams interface{}) *MockNamespaceClient_SetTags_Call {
+	return &MockNamespaceClient_SetTags_Call{Call: _e.mock.On("SetTags", context1, setTagsParams)}
+}
+
+func (_c *MockNamespaceClient_SetTags_Call) Run(run func(context1 context.Context, setTagsParams namespace.SetTagsParams)) *MockNamespaceClient_SetTags_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.SetTagsParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.SetTagsParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_SetTags_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_SetTags_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_SetTags_Call) RunAndReturn(run func(context1 context.Context, setTagsParams namespace.SetTagsParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_SetTags_Call {
 	_c.Call.Return(run)
 	return _c
 }
