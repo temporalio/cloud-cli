@@ -61,7 +61,7 @@ func (c *CloudNamespaceLifecycleSetCommand) run(cctx *CommandContext, _ []string
 	newSpec.Lifecycle.EnableDeleteProtection = c.EnableDeleteProtection
 
 	// Show diff
-	err = promptApplyResource(cctx, ns.Spec, newSpec, cctx.RootCommand.AutoConfirm)
+	err = promptApplyResource(cctx, ns.Spec, newSpec, c.VerboseDiff)
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func (c *CloudNamespaceLifecycleSetCommand) run(cctx *CommandContext, _ []string
 		resourceVersion = ns.ResourceVersion
 	}
 
-	res, err := client.applyNamespace(cctx.Context, applyNamespaceParams{
+	asyncOp, err := client.updateNamespace(cctx.Context, updateNamespaceParams{
 		namespace:        c.Namespace,
 		spec:             newSpec,
 		asyncOperationID: c.AsyncOperationId,
@@ -83,14 +83,14 @@ func (c *CloudNamespaceLifecycleSetCommand) run(cctx *CommandContext, _ []string
 		return err
 	}
 
-	if res.asyncOp == nil {
+	if asyncOp == nil {
 		// Nothing changed (idempotent case)
 		result := struct {
 			Status    string
 			Namespace string
 		}{
 			Status:    "unchanged",
-			Namespace: newSpec.Name,
+			Namespace: c.Namespace,
 		}
 		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 	}
@@ -99,11 +99,11 @@ func (c *CloudNamespaceLifecycleSetCommand) run(cctx *CommandContext, _ []string
 	if c.Async {
 		// Return immediately with the async operation
 		return cctx.Printer.PrintStructured(MutationResult{
-			AsyncOp: res.asyncOp,
-			ID:      res.Namespace,
+			AsyncOp: asyncOp,
+			ID:      c.Namespace,
 		}, printer.StructuredOptions{})
 	}
 
 	// Poll for completion
-	return PollAsyncOperation(cctx, cloudClient, res.asyncOp.Id, res.Namespace)
+	return PollAsyncOperation(cctx, cloudClient, asyncOp.Id, c.Namespace)
 }

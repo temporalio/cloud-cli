@@ -3,16 +3,15 @@ package temporalcloudcli
 import (
 	"bytes"
 	"cmp"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
-	"go.temporal.io/cloud-sdk/cloudclient"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
+	"go.temporal.io/cloud-sdk/cloudclient"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -47,9 +46,7 @@ func isNotFoundErr(e error) bool {
 // or treats the input as inline JSON. Returns the parsed data as a byte slice.
 func loadJSONSpec(spec string) ([]byte, error) {
 	// Check if spec starts with '@' indicating file path
-	if strings.HasPrefix(spec, "@") {
-		// Remove '@' prefix and read file
-		filePath := strings.TrimPrefix(spec, "@")
+	if filePath, ok := strings.CutPrefix(spec, "@"); ok {
 		data, err := os.ReadFile(filePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read spec file %q: %w", filePath, err)
@@ -59,18 +56,6 @@ func loadJSONSpec(spec string) ([]byte, error) {
 
 	// Treat as inline JSON
 	return []byte(spec), nil
-}
-
-func runEditorForJSONEdit(existing, valuePtr any) error {
-	existingBytes, err := json.MarshalIndent(existing, "", "    ")
-	if err != nil {
-		return fmt.Errorf("unable to convert existing object to json: %v", err)
-	}
-	updatedBytes, err := runEditor(existingBytes)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(updatedBytes, valuePtr)
 }
 
 func runEditorForJSONEditForProtos(existing, value proto.Message) error {
@@ -95,6 +80,11 @@ func runEditor(existing []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to create temp file for editing: %v", err)
 	}
+
+	defer func() {
+		// Clean up temp file.
+		_ = os.Remove(f.Name())
+	}()
 
 	if _, err := f.Write(existing); err != nil {
 		return nil, fmt.Errorf("unable to write existing data to temp file for editing: %v", err)

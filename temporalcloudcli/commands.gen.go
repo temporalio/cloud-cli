@@ -29,6 +29,16 @@ func (v *ClientOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = f.MarkHidden("server")
 }
 
+type DiffOptions struct {
+	VerboseDiff bool
+	FlagSet     *pflag.FlagSet
+}
+
+func (v *DiffOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.BoolVar(&v.VerboseDiff, "verbose-diff", false, "Show detailed differences between the current and desired namespace configurations when changes are detected.")
+}
+
 type CloudCommand struct {
 	Command cobra.Command
 	ClientOptions
@@ -153,11 +163,11 @@ type CloudNamespaceApplyCommand struct {
 	Parent  *CloudNamespaceCommand
 	Command cobra.Command
 	ClientOptions
+	DiffOptions
 	Spec             string
 	AsyncOperationId string
 	Idempotent       bool
 	Async            bool
-	VerboseDiff      bool
 	ResourceVersion  string
 }
 
@@ -178,9 +188,9 @@ func NewCloudNamespaceApplyCommand(cctx *CommandContext, parent *CloudNamespaceC
 	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
 	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if the namespace already matches the specification. Without this flag, the command errors when no changes are needed.")
 	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
-	s.Command.Flags().BoolVar(&s.VerboseDiff, "verbose-diff", false, "Show detailed differences between the current and desired namespace configurations when changes are detected.")
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.DiffOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -231,6 +241,7 @@ type CloudNamespaceEditCommand struct {
 	Parent  *CloudNamespaceCommand
 	Command cobra.Command
 	ClientOptions
+	DiffOptions
 	Namespace        string
 	AsyncOperationId string
 	Idempotent       bool
@@ -257,6 +268,7 @@ func NewCloudNamespaceEditCommand(cctx *CommandContext, parent *CloudNamespaceCo
 	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.DiffOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -348,6 +360,7 @@ type CloudNamespaceLifecycleSetCommand struct {
 	Parent  *CloudNamespaceLifecycleCommand
 	Command cobra.Command
 	ClientOptions
+	DiffOptions
 	Namespace              string
 	EnableDeleteProtection bool
 	AsyncOperationId       string
@@ -377,6 +390,7 @@ func NewCloudNamespaceLifecycleSetCommand(cctx *CommandContext, parent *CloudNam
 	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if the lifecycle configuration is already set to the specified value. Without this flag, the command errors when no change is needed.")
 	s.Command.Flags().StringVar(&s.ResourceVersion, "resource-version", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.DiffOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -469,6 +483,7 @@ type CloudNamespaceRetentionSetCommand struct {
 	Parent  *CloudNamespaceRetentionCommand
 	Command cobra.Command
 	ClientOptions
+	DiffOptions
 	Namespace        string
 	AsyncOperationId string
 	Async            bool
@@ -498,6 +513,7 @@ func NewCloudNamespaceRetentionSetCommand(cctx *CommandContext, parent *CloudNam
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "retention-days")
 	s.Command.Flags().StringVar(&s.ResourceVersion, "resource-version", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.DiffOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

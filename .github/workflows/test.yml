@@ -23,6 +23,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: "go.mod"
+          check-latest: true
+          cache: false
+
       - name: Setup mise
         uses: jdx/mise-action@v2
         with:
