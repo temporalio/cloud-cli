@@ -105,5 +105,5 @@ func (c *CloudNamespaceLifecycleSetCommand) run(cctx *CommandContext, _ []string
 	}
 
 	// Poll for completion
-	return PollAsyncOperation(cctx, cloudClient, res.asyncOp.Id, res.Namespace)
+	return PollAsyncOperation(cctx, cloudClient, asyncOp.Id, c.Namespace)
 }

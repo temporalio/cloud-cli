@@ -20,6 +20,7 @@ func (c *CloudLoginCommand) run(cctx *CommandContext, _ []string) error {
 	}
 	if loadClientOauthRes.OAuth != nil &&
 		loadClientOauthRes.OAuth.Token != nil &&
+		loadClientOauthRes.OAuth.ClientConfig != nil &&
 		!reflect.DeepEqual(*loadClientOauthRes.OAuth, cliext.OAuthConfig{}) &&
 		!reflect.DeepEqual(*loadClientOauthRes.OAuth.ClientConfig, oauth2.Config{}) &&
 		!c.Reset {

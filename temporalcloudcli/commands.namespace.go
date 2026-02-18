@@ -92,7 +92,7 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 	}
 
 	// Poll for completion
-	return PollAsyncOperation(cctx, cloudClient, res.asyncOp.Id, res.Namespace)
+	return PollAsyncOperation(cctx, cloudClient, asyncOp.Id, c.Namespace)
 }
 
 func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error {
@@ -199,7 +199,7 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 	}
 
 	// Step 7: Poll for completion
-	return PollAsyncOperation(cctx, cloudClient, res.asyncOp.Id, res.Namespace)
+	return PollAsyncOperation(cctx, cloudClient, asyncOp.Id, namespaceID)
 }
 
 func (c *CloudNamespaceDeleteCommand) run(cctx *CommandContext, _ []string) error {
