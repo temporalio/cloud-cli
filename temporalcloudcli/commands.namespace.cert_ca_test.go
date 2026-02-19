@@ -713,6 +713,17 @@ func TestCloudNamespaceCertCaDeleteCommand_InvalidInput(t *testing.T) {
 				assert.Contains(t, err.Error(), "invalid base64 encoded certificate data")
 			},
 		},
+		{
+			name: "invalid certificate",
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+				cmd.Namespace = "test-namespace.test-account"
+				cmd.CaCertificateFile = "testdata/invalid-cert.pem"
+				cmd.Async = true
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.Contains(t, err.Error(), "invalid certificate")
+			},
+		},
 	}
 
 	for _, tt := range tests {

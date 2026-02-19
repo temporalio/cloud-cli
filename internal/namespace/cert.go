@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 
 	"github.com/temporalio/cloud-cli/internal/cert"
@@ -74,6 +75,10 @@ func (c *Client) AddCACerts(ctx context.Context, params AddCACertsParams) (*oper
 	}
 
 	spec := ns.Spec
+	// Ensure MtlsAuth is initialized before accessing its fields
+	if spec.MtlsAuth == nil {
+		spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
+	}
 	spec.MtlsAuth.AcceptedClientCa = bytes.Join(out, []byte("\n"))
 
 	resourceVersion := ns.ResourceVersion
@@ -141,6 +146,10 @@ func (c *Client) DeleteCACerts(ctx context.Context, params DeleteCACertsParams) 
 	if len(out) == 0 {
 		spec.MtlsAuth = nil
 	} else {
+		// Ensure MtlsAuth is initialized before accessing its fields
+		if spec.MtlsAuth == nil {
+			spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
+		}
 		spec.MtlsAuth.AcceptedClientCa = bytes.Join(out, []byte("\n"))
 	}
 

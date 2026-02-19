@@ -103,6 +103,10 @@ func (c *CloudNamespaceCertCaDeleteCommand) run(cctx *CommandContext, _ []string
 		return err
 	}
 
+	if len(certsToRemove) == 0 {
+		return errors.New("invalid certificate")
+	}
+
 	yes, err := cctx.promptYes("Delete (y/yes)?", cctx.RootCommand.AutoConfirm)
 	if err != nil {
 		return err
