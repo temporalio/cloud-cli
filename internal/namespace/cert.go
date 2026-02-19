@@ -11,6 +11,8 @@ import (
 	"github.com/temporalio/cloud-cli/internal/cert"
 )
 
+// ListCACerts retrieves all CA certificates configured for mTLS authentication
+// on the specified namespace.
 func (c *Client) ListCACerts(ctx context.Context, name string) ([]cert.CACert, error) {
 	ns, err := c.GetNamespace(ctx, name)
 	if err != nil {
@@ -25,6 +27,7 @@ func (c *Client) ListCACerts(ctx context.Context, name string) ([]cert.CACert, e
 	return certs, nil
 }
 
+// AddCACertsParams contains parameters for adding CA certificates to a namespace.
 type AddCACertsParams struct {
 	Namespace        string
 	Certs            []cert.CACert
@@ -32,6 +35,9 @@ type AddCACertsParams struct {
 	AsyncOperationID string
 }
 
+// AddCACerts adds CA certificates to the namespace's mTLS authentication configuration.
+// It validates that none of the provided certificates already exist (by fingerprint)
+// before updating the namespace specification.
 func (c *Client) AddCACerts(ctx context.Context, params AddCACertsParams) (*operation.AsyncOperation, error) {
 	ns, err := c.GetNamespace(ctx, params.Namespace)
 	if err != nil {
@@ -84,6 +90,7 @@ func (c *Client) AddCACerts(ctx context.Context, params AddCACertsParams) (*oper
 	return c.UpdateNamespace(ctx, updateParams)
 }
 
+// DeleteCACertsParams contains parameters for deleting CA certificates from a namespace.
 type DeleteCACertsParams struct {
 	Namespace        string
 	Certs            []cert.CACert
@@ -91,6 +98,9 @@ type DeleteCACertsParams struct {
 	AsyncOperationID string
 }
 
+// DeleteCACerts removes CA certificates from the namespace's mTLS authentication configuration.
+// Certificates are matched by fingerprint. If removing all certificates, the mTLS configuration
+// is set to nil.
 func (c *Client) DeleteCACerts(ctx context.Context, params DeleteCACertsParams) (*operation.AsyncOperation, error) {
 	ns, err := c.GetNamespace(ctx, params.Namespace)
 	if err != nil {

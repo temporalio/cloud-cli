@@ -29,8 +29,8 @@ func (c *CloudNamespaceCertCaAddCommand) run(cctx *CommandContext, _ []string) e
 		return errors.New("invalid certificate")
 	}
 
-	f := wrapAsyncOperation(cctx, c.ResourceModifyOptions, c.Namespace, c.ClientOptions, namespaceClient.AddCACerts)
-	return f(namespace.AddCACertsParams{
+	addCACerts := wrapAsyncOperation(cctx, c.ResourceModifyOptions, c.Namespace, c.ClientOptions, namespaceClient.AddCACerts)
+	return addCACerts(namespace.AddCACertsParams{
 		Namespace:        c.Namespace,
 		Certs:            newCerts,
 		ResourceVersion:  c.ResourceVersion,
@@ -77,8 +77,8 @@ func (c *CloudNamespaceCertCaDeleteCommand) run(cctx *CommandContext, _ []string
 		return errors.New("Aborting delete.")
 	}
 
-	f := wrapAsyncOperation(cctx, c.ResourceModifyOptions, c.Namespace, c.ClientOptions, namespaceClient.DeleteCACerts)
-	return f(namespace.DeleteCACertsParams{
+	deleteCACerts := wrapAsyncOperation(cctx, c.ResourceModifyOptions, c.Namespace, c.ClientOptions, namespaceClient.DeleteCACerts)
+	return deleteCACerts(namespace.DeleteCACertsParams{
 		Namespace:        c.Namespace,
 		Certs:            certsToRemove,
 		ResourceVersion:  c.ResourceVersion,
