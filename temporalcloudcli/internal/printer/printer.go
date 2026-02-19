@@ -36,6 +36,9 @@ type Printer struct {
 	// Only used for non-JSON, defaults to color.Magenta
 	TableHeaderColorer Colorer
 
+	listMode          bool
+	listModeFirstJSON bool // True until first JSON printed
+
 	registeredTextConverters []func(t any) (string, bool)
 }
 
@@ -68,6 +71,42 @@ func (p *Printer) Print(s ...string) {
 func (p *Printer) Println(s ...string) {
 	p.Print(s...)
 	p.Print("\n")
+}
+
+// When called for JSON with indent, this will create an initial bracket and
+// make sure all [Printer.PrintStructured] calls get commas properly to appear
+// as a list (but the indention and multiline posture of the JSON remains). When
+// called for JSON without indent, this will make sure all
+// [Printer.PrintStructured] is on its own line (i.e. JSONL mode). When called
+// for non-JSON, this is a no-op.
+//
+// [Printer.EndList] must be called at the end. If this is called twice it will
+// panic. This and the end call are not safe for concurrent use.
+func (p *Printer) StartList() {
+	if p.listMode {
+		panic("already in list mode")
+	}
+	p.listMode, p.listModeFirstJSON = true, true
+	// Write initial bracket when non-jsonl
+	if p.JSON && p.JSONIndent != "" {
+		// Don't need newline, we count on initial object to do that
+		p.Output.Write([]byte("["))
+	}
+}
+
+// Must be called after [Printer.StartList] or will panic. See Godoc on that
+// function for more details.
+func (p *Printer) EndList() {
+	if !p.listMode {
+		panic("not in list mode")
+	}
+	p.listMode, p.listModeFirstJSON = false, false
+	// Write ending bracket when non-jsonl
+	if p.JSON && p.JSONIndent != "" {
+		// We prepend a newline because non-jsonl list mode doesn't do so after each
+		// line to help with commas
+		p.Output.Write([]byte("\n]\n"))
+	}
 }
 
 // Ignored during JSON output
@@ -133,6 +172,44 @@ func (p *Printer) PrintStructured(v any, options StructuredOptions) error {
 	return nil
 }
 
+type PrintStructuredIter interface {
+	// Nil when done
+	Next() (any, error)
+}
+
+// Fields must be present for table
+func (p *Printer) PrintStructuredTableIter(
+	typ reflect.Type,
+	iter PrintStructuredIter,
+	options StructuredOptions,
+) error {
+	if options.Table == nil {
+		return fmt.Errorf("must be table")
+	}
+	cols := options.toPredefinedCols()
+	if len(cols) == 0 {
+		var err error
+		if cols, err = deriveCols(typ); err != nil {
+			return fmt.Errorf("unable to derive columns: %w", err)
+		}
+	}
+	cols = adjustColsToOptions(cols, options)
+	// We're intentionally not calculating field lengths and only accepting them
+	// since this is streaming
+	p.printHeader(cols)
+	for {
+		v, err := iter.Next()
+		if v == nil || err != nil {
+			return err
+		}
+		row, err := p.tableRowData(cols, v)
+		if err != nil {
+			return err
+		}
+		p.printRow(cols, row)
+	}
+}
+
 func (p *Printer) write(b []byte) {
 	if _, err := p.Output.Write(b); err != nil {
 		panic(err)
@@ -150,6 +227,22 @@ func (p *Printer) writef(s string, v ...any) {
 }
 
 func (p *Printer) printJSON(v any, options StructuredOptions) error {
+	// Before printing, if we're in non-jsonl list mode, we must append a comma
+	// and a newline if we're not the first JSON seen.
+	nonJSONLListMode := p.listMode && p.JSON && p.JSONIndent != ""
+	if nonJSONLListMode {
+		var prepend string
+		if p.listModeFirstJSON {
+			p.listModeFirstJSON = false
+			prepend = "\n"
+		} else {
+			prepend = ",\n"
+		}
+		if _, err := p.Output.Write([]byte(prepend)); err != nil {
+			return err
+		}
+	}
+
 	shorthandPayloads := p.JSONPayloadShorthand
 	if options.OverrideJSONPayloadShorthand != nil {
 		shorthandPayloads = *options.OverrideJSONPayloadShorthand
@@ -159,8 +252,12 @@ func (p *Printer) printJSON(v any, options StructuredOptions) error {
 	} else if _, err := p.Output.Write(b); err != nil {
 		return err
 	}
-	if _, err := p.Output.Write([]byte("\n")); err != nil {
-		return err
+
+	// Do not print a newline if in non-jsonl list mode
+	if !nonJSONLListMode {
+		if _, err := p.Output.Write([]byte("\n")); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -428,6 +525,21 @@ func (p *Printer) tableData(predefinedCols []*col, v any) (cols []*col, rows []m
 		rows[i] = row
 	}
 	return
+}
+
+func (p *Printer) tableRowData(cols []*col, v any) (map[string]colVal, error) {
+	colValGetter, err := colValGetterForType(reflect.TypeOf(v))
+	if err != nil {
+		return nil, err
+	}
+	row := make(map[string]colVal, len(cols))
+	itemVal := reflect.ValueOf(v)
+	for _, col := range cols {
+		colVal := colVal{val: colValGetter(col, itemVal)}
+		colVal.text = p.textVal(colVal.val)
+		row[col.name] = colVal
+	}
+	return row, nil
 }
 
 func colValGetterForType(t reflect.Type) (func(col *col, v reflect.Value) any, error) {

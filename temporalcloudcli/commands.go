@@ -512,7 +512,7 @@ func (c *CloudCommand) preRun(cctx *CommandContext, timeoutCancel *context.Cance
 	}
 
 	// Configure printer if not already on context
-	cctx.JSONOutput = c.Output.Value == "json"
+	cctx.JSONOutput = c.Output.Value == "json" || c.Output.Value == "jsonl"
 	// Only indent JSON if not jsonl
 	var jsonIndent string
 	if c.Output.Value == "json" {
