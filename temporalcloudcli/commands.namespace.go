@@ -283,10 +283,6 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 			Fields:     []string{"Namespace", "State", "CreatedTime"},
 			SpecFields: []string{"Regions"},
 		},
-		printer.TableOptions{
-			FieldWidths: map[string]int{
-				"Namespace": 200,
-			},
-		},
+		printer.TableOptions{},
 	)
 }

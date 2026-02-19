@@ -785,6 +785,7 @@ func (p *Printer) PrintResourceList(
 		rows = append(rows, row)
 	}
 
+	cols = adjustColsToOptions(cols, StructuredOptions{Fields: options.Fields, Table: &tableOptions})
 	p.calculateUnsetColWidths(cols, rows)
 	p.printTable(&tableOptions, cols, rows)
 
