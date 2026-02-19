@@ -1,0 +1,11 @@
+dir: "{{ .InterfaceDir }}/mock"
+filename: mock.go
+pkgname: mock
+packages:
+  github.com/temporalio/cloud-cli/temporalcloudcli:
+    interfaces:
+      Poller:
+      NamespaceClient:
+  github.com/temporalio/cloud-cli/internal/namespace:
+    interfaces:
+      CloudService:

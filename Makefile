@@ -1,11 +1,11 @@
-.PHONY: all install gen build test
+.PHONY: all install gen build test mocks
 
 # Load .env file if it exists (for local development)
 # In CI/CD, environment variables are provided by the environment
 -include .env
 export
 
-all: gen build test
+all: gen build mocks test
 
 # we need to install gen-commands directly because gen-commands does not have its
 # own go.mod
@@ -25,3 +25,6 @@ test-integration:
 
 test:
 	go test ./...
+
+mocks:
+	mockery
