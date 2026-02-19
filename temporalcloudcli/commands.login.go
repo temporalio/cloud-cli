@@ -45,7 +45,7 @@ func (c *CloudLoginCommand) run(cctx *CommandContext, _ []string) error {
 	}); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
-	fmt.Println("Login successful!")
+	cctx.Printer.Println("Login successful!")
 	return nil
 }
 
@@ -98,7 +98,7 @@ func (c *CloudLogoutCommand) run(cctx *CommandContext, _ []string) error {
 	}
 
 	logoutURL := domainURL.JoinPath("v2", "logout")
-	fmt.Printf("Opening browser to logout. If it doesn't open, visit: %s\n", logoutURL.String())
+	cctx.Printer.Println(fmt.Sprintf("Opening browser to logout. If it doesn't open, visit: %s", logoutURL.String()))
 	_ = browser.OpenURL(logoutURL.String())
 
 	return nil
