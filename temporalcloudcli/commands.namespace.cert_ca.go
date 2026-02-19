@@ -10,7 +10,7 @@ import (
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
-func (c *CloudNamespaceCertCaAddCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudNamespaceCertCaCreateCommand) run(cctx *CommandContext, _ []string) error {
 	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
 	if err != nil {
 		return err

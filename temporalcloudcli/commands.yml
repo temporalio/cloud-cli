@@ -514,7 +514,7 @@ commands:
     option-sets:
       - client
       - namespace
-  - name: cloud namespace cert-ca add
+  - name: cloud namespace cert-ca create
     summary: Add CA certificates to a namespace
     description: |
       Add client CA certificates to a Temporal Cloud namespace from a PEM file
@@ -526,13 +526,13 @@ commands:
       Example with file:
 
       ```
-      cloud namespace cert-ca add --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem
+      cloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem
       ```
 
       Example with base64 encoded data:
 
       ```
-      cloud namespace cert-ca add --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>
+      cloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>
       ```
     has-init: false
     option-sets:

@@ -239,13 +239,13 @@ func NewCloudNamespaceCertCaCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Command.Short = "Manage client CA certificates for namespaces"
 	s.Command.Long = "Commands for managing the client CA certificates of Temporal Cloud namespaces."
 	s.Command.Args = cobra.NoArgs
-	s.Command.AddCommand(&NewCloudNamespaceCertCaAddCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCertCaCreateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCertCaDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCertCaListCommand(cctx, &s).Command)
 	return &s
 }
 
-type CloudNamespaceCertCaAddCommand struct {
+type CloudNamespaceCertCaCreateCommand struct {
 	Parent  *CloudNamespaceCertCaCommand
 	Command cobra.Command
 	ClientOptions
@@ -255,16 +255,16 @@ type CloudNamespaceCertCaAddCommand struct {
 	CaCertificate     string
 }
 
-func NewCloudNamespaceCertCaAddCommand(cctx *CommandContext, parent *CloudNamespaceCertCaCommand) *CloudNamespaceCertCaAddCommand {
-	var s CloudNamespaceCertCaAddCommand
+func NewCloudNamespaceCertCaCreateCommand(cctx *CommandContext, parent *CloudNamespaceCertCaCommand) *CloudNamespaceCertCaCreateCommand {
+	var s CloudNamespaceCertCaCreateCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "add [flags]"
+	s.Command.Use = "create [flags]"
 	s.Command.Short = "Add CA certificates to a namespace"
 	if hasHighlighting {
-		s.Command.Long = "Add client CA certificates to a Temporal Cloud namespace from a PEM file\nor base64 encoded string. These certificates are used to verify client\nconnections and enable mTLS authentication.\n\nSpecify either --ca-certificate-file or --ca-certificate, but not both.\n\nExample with file:\n\n\x1b[1mcloud namespace cert-ca add --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem\x1b[0m\n\nExample with base64 encoded data:\n\n\x1b[1mcloud namespace cert-ca add --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>\x1b[0m"
+		s.Command.Long = "Add client CA certificates to a Temporal Cloud namespace from a PEM file\nor base64 encoded string. These certificates are used to verify client\nconnections and enable mTLS authentication.\n\nSpecify either --ca-certificate-file or --ca-certificate, but not both.\n\nExample with file:\n\n\x1b[1mcloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem\x1b[0m\n\nExample with base64 encoded data:\n\n\x1b[1mcloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>\x1b[0m"
 	} else {
-		s.Command.Long = "Add client CA certificates to a Temporal Cloud namespace from a PEM file\nor base64 encoded string. These certificates are used to verify client\nconnections and enable mTLS authentication.\n\nSpecify either --ca-certificate-file or --ca-certificate, but not both.\n\nExample with file:\n\n```\ncloud namespace cert-ca add --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem\n```\n\nExample with base64 encoded data:\n\n```\ncloud namespace cert-ca add --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>\n```"
+		s.Command.Long = "Add client CA certificates to a Temporal Cloud namespace from a PEM file\nor base64 encoded string. These certificates are used to verify client\nconnections and enable mTLS authentication.\n\nSpecify either --ca-certificate-file or --ca-certificate, but not both.\n\nExample with file:\n\n```\ncloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem\n```\n\nExample with base64 encoded data:\n\n```\ncloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.CaCertificateFile, "ca-certificate-file", "", "Path to a CA certificate PEM file. Mutually exclusive with --ca-certificate.")
