@@ -35,7 +35,7 @@ func (c *CloudNamespaceLifecycleGetCommand) run(cctx *CommandContext, _ []string
 		EnableDeleteProtection: enableDeleteProtection,
 	}
 
-	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+	return cctx.Printer.PrintResource(result, printer.PrintResourceOptions{})
 }
 
 func (c *CloudNamespaceLifecycleSetCommand) run(cctx *CommandContext, _ []string) error {

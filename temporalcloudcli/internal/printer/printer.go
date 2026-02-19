@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"reflect"
 	"slices"
 	"strconv"
@@ -21,13 +22,13 @@ import (
 
 const NonJSONIndent = "  "
 
-type Colorer func(string, ...interface{}) string
+type Colorer func(string, ...any) string
 
 type Printer struct {
 	// Must always be present
 	Output io.Writer
 	JSON   bool
-	// This is unset/empty in JSONL mode
+	// Only used for JSON, defaults to no indent
 	JSONIndent           string
 	JSONPayloadShorthand bool
 	// Only used for non-JSON, defaults to RFC3339
@@ -35,8 +36,23 @@ type Printer struct {
 	// Only used for non-JSON, defaults to color.Magenta
 	TableHeaderColorer Colorer
 
-	listMode          bool
-	listModeFirstJSON bool // True until first JSON printed
+	registeredTextConverters []func(t any) (string, bool)
+}
+
+func (p *Printer) RegisterTextConverter(converter func(any) (string, bool)) {
+	p.registeredTextConverters = append(p.registeredTextConverters, converter)
+}
+
+func RegisterEnumToStringConverter[T ~int32](p *Printer, prefix string, resourceNameMap map[int32]string) {
+	p.RegisterTextConverter(func(r any) (string, bool) {
+		if v, ok := r.(T); ok {
+			if s, ok := resourceNameMap[int32(v)]; ok {
+				return s[len(prefix):], true
+			}
+			return "UNKNOWN", true
+		}
+		return "", false
+	})
 }
 
 // Ignored during JSON output
@@ -50,48 +66,13 @@ func (p *Printer) Print(s ...string) {
 
 // Ignored during JSON output
 func (p *Printer) Println(s ...string) {
-	p.Print(append(append([]string{}, s...), "\n")...)
+	p.Print(s...)
+	p.Print("\n")
 }
 
 // Ignored during JSON output
 func (p *Printer) Printlnf(s string, v ...any) {
 	p.Println(fmt.Sprintf(s, v...))
-}
-
-// When called for JSON with indent, this will create an initial bracket and
-// make sure all [Printer.PrintStructured] calls get commas properly to appear
-// as a list (but the indention and multiline posture of the JSON remains). When
-// called for JSON without indent, this will make sure all
-// [Printer.PrintStructured] is on its own line (i.e. JSONL mode). When called
-// for non-JSON, this is a no-op.
-//
-// [Printer.EndList] must be called at the end. If this is called twice it will
-// panic. This and the end call are not safe for concurrent use.
-func (p *Printer) StartList() {
-	if p.listMode {
-		panic("already in list mode")
-	}
-	p.listMode, p.listModeFirstJSON = true, true
-	// Write initial bracket when non-jsonl
-	if p.JSON && p.JSONIndent != "" {
-		// Don't need newline, we count on initial object to do that
-		p.Output.Write([]byte("["))
-	}
-}
-
-// Must be called after [Printer.StartList] or will panic. See Godoc on that
-// function for more details.
-func (p *Printer) EndList() {
-	if !p.listMode {
-		panic("not in list mode")
-	}
-	p.listMode, p.listModeFirstJSON = false, false
-	// Write ending bracket when non-jsonl
-	if p.JSON && p.JSONIndent != "" {
-		// We prepend a newline because non-jsonl list mode doesn't do so after each
-		// line to help with commas
-		p.Output.Write([]byte("\n]\n"))
-	}
 }
 
 type StructuredOptions struct {
@@ -152,44 +133,6 @@ func (p *Printer) PrintStructured(v any, options StructuredOptions) error {
 	return nil
 }
 
-type PrintStructuredIter interface {
-	// Nil when done
-	Next() (any, error)
-}
-
-// Fields must be present for table
-func (p *Printer) PrintStructuredTableIter(
-	typ reflect.Type,
-	iter PrintStructuredIter,
-	options StructuredOptions,
-) error {
-	if options.Table == nil {
-		return fmt.Errorf("must be table")
-	}
-	cols := options.toPredefinedCols()
-	if len(cols) == 0 {
-		var err error
-		if cols, err = deriveCols(typ); err != nil {
-			return fmt.Errorf("unable to derive columns: %w", err)
-		}
-	}
-	cols = adjustColsToOptions(cols, options)
-	// We're intentionally not calculating field lengths and only accepting them
-	// since this is streaming
-	p.printHeader(cols)
-	for {
-		v, err := iter.Next()
-		if v == nil || err != nil {
-			return err
-		}
-		row, err := p.tableRowData(cols, v)
-		if err != nil {
-			return err
-		}
-		p.printRow(cols, row)
-	}
-}
-
 func (p *Printer) write(b []byte) {
 	if _, err := p.Output.Write(b); err != nil {
 		panic(err)
@@ -207,23 +150,6 @@ func (p *Printer) writef(s string, v ...any) {
 }
 
 func (p *Printer) printJSON(v any, options StructuredOptions) error {
-	// Before printing, if we're in non-jsonl list mode, we must append a comma
-	// and a newline if we're not the first JSON seen.
-	nonJSONLListMode := p.listMode && p.JSON && p.JSONIndent != ""
-	if nonJSONLListMode {
-		var prepend string
-		if p.listModeFirstJSON {
-			p.listModeFirstJSON = false
-			prepend = "\n"
-		} else {
-			prepend = ",\n"
-		}
-		if _, err := p.Output.Write([]byte(prepend)); err != nil {
-			return err
-		}
-	}
-
-	// Print JSON
 	shorthandPayloads := p.JSONPayloadShorthand
 	if options.OverrideJSONPayloadShorthand != nil {
 		shorthandPayloads = *options.OverrideJSONPayloadShorthand
@@ -233,12 +159,8 @@ func (p *Printer) printJSON(v any, options StructuredOptions) error {
 	} else if _, err := p.Output.Write(b); err != nil {
 		return err
 	}
-
-	// Do not print a newline if in non-jsonl list mode
-	if !nonJSONLListMode {
-		if _, err := p.Output.Write([]byte("\n")); err != nil {
-			return err
-		}
+	if _, err := p.Output.Write([]byte("\n")); err != nil {
+		return err
 	}
 	return nil
 }
@@ -414,7 +336,22 @@ func (p *Printer) printCard(cols []*col, row map[string]colVal) {
 
 var jsonMarshalerType = reflect.TypeOf((*json.Marshaler)(nil)).Elem()
 
+func (p *Printer) applyConverters(v any) (string, bool) {
+	for _, converter := range p.registeredTextConverters {
+		if ifv, ok := converter(v); ok {
+			return ifv, true
+		}
+	}
+	return "", false
+}
+
 func (p *Printer) textVal(v any) string {
+	// Check converters first
+	if ifv, ok := p.applyConverters(v); ok {
+		return ifv
+	}
+
+	// Handle some special types that would be too verbose or not helpful to print as JSON. We check these after converters so that users can override them if they want.
 	if ref := reflect.Indirect(reflect.ValueOf(v)); ref.IsValid() {
 		if ref.Type() == reflect.TypeOf(time.Time{}) {
 			if ref.IsZero() {
@@ -447,6 +384,9 @@ func (p *Printer) textVal(v any) string {
 			sb.WriteString("]")
 			return sb.String()
 		}
+	}
+	if v == nil {
+		return ""
 	}
 	return fmt.Sprintf("%v", v)
 }
@@ -490,21 +430,6 @@ func (p *Printer) tableData(predefinedCols []*col, v any) (cols []*col, rows []m
 	return
 }
 
-func (p *Printer) tableRowData(cols []*col, v any) (map[string]colVal, error) {
-	colValGetter, err := colValGetterForType(reflect.TypeOf(v))
-	if err != nil {
-		return nil, err
-	}
-	row := make(map[string]colVal, len(cols))
-	itemVal := reflect.ValueOf(v)
-	for _, col := range cols {
-		colVal := colVal{val: colValGetter(col, itemVal)}
-		colVal.text = p.textVal(colVal.val)
-		row[col.name] = colVal
-	}
-	return row, nil
-}
-
 func colValGetterForType(t reflect.Type) (func(col *col, v reflect.Value) any, error) {
 	switch t.Kind() {
 	case reflect.Map:
@@ -524,6 +449,9 @@ func colValGetterForType(t reflect.Type) (func(col *col, v reflect.Value) any, e
 			return nil, fmt.Errorf("expected map, struct, or pointer to struct, got: %v", t)
 		}
 		return func(col *col, v reflect.Value) any {
+			if v.IsNil() {
+				return nil
+			}
 			return v.Elem().FieldByName(col.name).Interface()
 		}, nil
 	default:
@@ -602,7 +530,7 @@ func deriveColFromField(f reflect.StructField) *col {
 		}
 	}
 	// Also consider json tags to allow omitting empty cards if the json field would also be omitted
-	for _, tagPart := range strings.Split(f.Tag.Get("json"), ",") {
+	for tagPart := range strings.SplitSeq(f.Tag.Get("json"), ",") {
 		switch tagPart {
 		case "omitempty":
 			col.cardOmitEmpty = true
@@ -622,6 +550,25 @@ func (p *Printer) PrintDiff(a, b any, options DiffOptions) error {
 	if reflect.TypeOf(a) != reflect.TypeOf(b) {
 		return fmt.Errorf("cannot diff different types: %v vs %v", reflect.TypeOf(a), reflect.TypeOf(b))
 	}
+
+	// In JSON mode emit a structured {"before": ..., "after": ...} object.
+	// Each value is marshaled individually so proto messages are handled correctly,
+	// then embedded as RawMessage to preserve field order in the outer object.
+	if p.JSON {
+		beforeJSON, err := p.jsonVal(a, "", p.JSONPayloadShorthand)
+		if err != nil {
+			return fmt.Errorf("unable to convert before value for diff: %w", err)
+		}
+		afterJSON, err := p.jsonVal(b, "", p.JSONPayloadShorthand)
+		if err != nil {
+			return fmt.Errorf("unable to convert after value for diff: %w", err)
+		}
+		return p.printJSON(struct {
+			Before json.RawMessage `json:"before"`
+			After  json.RawMessage `json:"after"`
+		}{Before: beforeJSON, After: afterJSON}, StructuredOptions{})
+	}
+
 	var atext, btext []byte
 	atext, err := p.jsonVal(a, "  ", true)
 	if err != nil {
@@ -652,6 +599,197 @@ func (p *Printer) PrintDiff(a, b any, options DiffOptions) error {
 		default:
 			// Skip unchanged line
 		}
+	}
+	return nil
+}
+
+type PrintResourceOptions struct {
+	// Fields is a list of fields to print, if empty all fields are printed. This is ignored for JSON output.
+	Fields []string
+	// SpecFields is a list of fields to print from the "Spec" sub-object, if empty all fields are printed. This is ignored for JSON output.
+	SpecFields []string
+}
+
+func (p *Printer) PrintResource(resource any, options PrintResourceOptions) error {
+	// For JSON we can just print the whole thing, ignoring the field options
+	if p.JSON {
+		return p.PrintStructured(resource, StructuredOptions{})
+	}
+
+	// For text we want to print "metadata" fields at the top level, and then "spec" fields below that with an indent. We can achieve this by printing two separate cards.
+	resourceVal := reflect.ValueOf(resource)
+	if resourceVal.Kind() == reflect.Pointer {
+		resourceVal = resourceVal.Elem()
+	}
+	if resourceVal.Kind() != reflect.Struct {
+		return fmt.Errorf("expected struct or pointer to struct for PrintResource, got: %v", resourceVal.Kind())
+	}
+
+	// print all top-level fields except "Spec"
+	cols, row := p.parseFields(resourceVal, options.Fields, []string{"Spec"}, 1)
+	p.printCard(cols, row)
+
+	// now print "Spec" fields if present
+	specCols, specRow := p.parseFields(resourceVal.FieldByName("Spec"), options.SpecFields, nil, 2)
+	if len(specCols) > 0 {
+		p.writeStr(NonJSONIndent)
+		p.writeStr("Spec:\n")
+		p.printCard(specCols, specRow)
+	}
+	return nil
+}
+
+func (p *Printer) parseFields(
+	v reflect.Value,
+	allowList []string,
+	excludeList []string,
+	indent int,
+) (cols []*col, row map[string]colVal) {
+	if !v.IsValid() {
+		return
+	}
+	if v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return
+		}
+		v = v.Elem()
+	}
+	cols = make([]*col, 0, v.NumField())
+	row = make(map[string]colVal)
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Type().Field(i)
+		if !field.IsExported() {
+			continue
+		}
+		if len(allowList) > 0 && !slices.Contains(allowList, field.Name) {
+			continue
+		}
+		if slices.Contains(excludeList, field.Name) {
+			continue
+		}
+		if isZero(v.Field(i).Interface()) {
+			continue
+		}
+		cols = append(cols, &col{name: field.Name, indentAmount: indent})
+		row[field.Name] = colVal{val: v.Field(i).Interface(), text: p.textVal(v.Field(i).Interface())}
+	}
+	return
+}
+
+// colsFromType derives column definitions from a struct type, applying allowList
+// and excludeList filters. Unlike parseFields it does not inspect values, so
+// zero-value fields are always included. This is used for table column headers
+// where the set of columns must be stable across all rows.
+func colsFromType(t reflect.Type, allowList, excludeList []string, indent int) []*col {
+	if t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return nil
+	}
+	cols := make([]*col, 0, t.NumField())
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		if !field.IsExported() {
+			continue
+		}
+		if len(allowList) > 0 && !slices.Contains(allowList, field.Name) {
+			continue
+		}
+		if slices.Contains(excludeList, field.Name) {
+			continue
+		}
+		cols = append(cols, &col{name: field.Name, indentAmount: indent})
+	}
+	return cols
+}
+
+func isZero(v any) bool {
+	if v == nil {
+		return true
+	}
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Pointer {
+		if rv.IsNil() {
+			return true
+		}
+		rv = rv.Elem()
+	}
+	return reflect.DeepEqual(rv.Interface(), reflect.Zero(rv.Type()).Interface())
+}
+
+func (p *Printer) PrintResourceList(
+	resourceListResp any,
+	options PrintResourceOptions,
+	tableOptions TableOptions,
+) error {
+	if p.JSON {
+		return p.PrintStructured(resourceListResp, StructuredOptions{})
+	}
+
+	v := reflect.ValueOf(resourceListResp)
+	if v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return nil
+		}
+		v = v.Elem()
+	}
+	if v.Kind() != reflect.Struct {
+		return fmt.Errorf("expected struct or pointer to struct for PrintResourceList, got: %v", v.Kind())
+	}
+
+	// Find the slice field (resources) and optional NextPageToken string field.
+	var resourcesVal reflect.Value
+	var nextPageToken string
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Type().Field(i)
+		if field.Name == "NextPageToken" {
+			nextPageTokenVal := v.Field(i)
+			if nextPageTokenVal.Kind() == reflect.String {
+				nextPageToken = nextPageTokenVal.String()
+			}
+		}
+		if field.Type.Kind() == reflect.Slice {
+			if resourcesVal.IsValid() {
+				return fmt.Errorf("multiple slice fields found in response struct, unable to determine which one is the resources list")
+			}
+			resourcesVal = v.Field(i)
+		}
+	}
+	if !resourcesVal.IsValid() || resourcesVal.Kind() != reflect.Slice {
+		return fmt.Errorf("could not find resources field in response struct")
+	}
+
+	// Derive columns from the element type so the column set is stable
+	// regardless of which resources happen to have zero-value fields.
+	elemType := resourcesVal.Type().Elem()
+	if elemType.Kind() == reflect.Pointer {
+		elemType = elemType.Elem()
+	}
+	cols := colsFromType(elemType, options.Fields, []string{"Spec"}, 1)
+	if specField, ok := elemType.FieldByName("Spec"); ok {
+		cols = append(cols, colsFromType(specField.Type, options.SpecFields, nil, 1)...)
+	}
+
+	// Build rows; parseFields produces value maps (zero-value fields are absent,
+	// yielding empty cells — correct for table display).
+	var rows []map[string]colVal
+	for i := 0; i < resourcesVal.Len(); i++ {
+		resourceVal := resourcesVal.Index(i)
+		if resourceVal.Kind() == reflect.Pointer {
+			resourceVal = resourceVal.Elem()
+		}
+		_, row := p.parseFields(resourceVal, options.Fields, []string{"Spec"}, 1)
+		_, specRow := p.parseFields(resourceVal.FieldByName("Spec"), options.SpecFields, nil, 1)
+		maps.Copy(row, specRow)
+		rows = append(rows, row)
+	}
+
+	p.calculateUnsetColWidths(cols, rows)
+	p.printTable(&tableOptions, cols, rows)
+
+	if nextPageToken != "" {
+		p.writef("Next page token: %s\n", nextPageToken)
 	}
 	return nil
 }
