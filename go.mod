@@ -1,6 +1,6 @@
 module github.com/temporalio/cloud-cli
 
-go 1.25.5
+go 1.26.0
 
 require (
 	github.com/dustin/go-humanize v1.0.1
