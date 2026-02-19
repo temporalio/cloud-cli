@@ -43,8 +43,10 @@ func Login(ctx context.Context, config *oauth2.Config, options ...oauth2.AuthCod
 	}
 
 	// Start HTTP server to handle callback.
+	// AIDEV-NOTE: serverErrCh captures server startup errors to prevent silent failures
 	var once sync.Once
 	resultCh := make(chan oauthCallbackResult, 1)
+	serverErrCh := make(chan error, 1)
 	server := &http.Server{
 		Addr: url.Host,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -88,17 +90,24 @@ func Login(ctx context.Context, config *oauth2.Config, options ...oauth2.AuthCod
 			})
 		}),
 	}
-	go server.ListenAndServe()
+	// AIDEV-NOTE: Start server in goroutine and capture startup errors
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			serverErrCh <- fmt.Errorf("failed to start OAuth callback server: %w", err)
+		}
+	}()
 	defer func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		server.Shutdown(shutdownCtx)
 	}()
 
-	// Wait for callback result or context cancellation.
+	// Wait for callback result, server error, or context cancellation.
 	var result oauthCallbackResult
 	select {
 	case result = <-resultCh:
+	case err := <-serverErrCh:
+		return nil, err
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}

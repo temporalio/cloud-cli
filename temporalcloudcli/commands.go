@@ -417,6 +417,8 @@ func (c *CloudCommand) initCommand(cctx *CommandContext) {
 	// Unfortunately color is a global option, so we can set in pre-run but we
 	// must unset in post-run
 	origNoColor := color.NoColor
+	// AIDEV-NOTE: Store cancel function for command timeout context to prevent resource leak
+	var timeoutCancel context.CancelFunc
 	c.Command.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		// Set command
 		cctx.CurrentCommand = cmd
@@ -433,7 +435,7 @@ func (c *CloudCommand) initCommand(cctx *CommandContext) {
 			color.NoColor = c.Color.Value == "never"
 		}
 
-		res := c.preRun(cctx)
+		res := c.preRun(cctx, &timeoutCancel)
 
 		logCalls(cctx.Logger)
 
@@ -446,6 +448,10 @@ func (c *CloudCommand) initCommand(cctx *CommandContext) {
 		return res
 	}
 	c.Command.PersistentPostRun = func(*cobra.Command, []string) {
+		// AIDEV-NOTE: Clean up command timeout context to prevent resource leak
+		if timeoutCancel != nil {
+			timeoutCancel()
+		}
 		color.NoColor = origNoColor
 	}
 }
@@ -468,7 +474,7 @@ func registerKnownPrinterEnumToStringConverters(p *printer.Printer) {
 	printer.RegisterEnumToStringConverter[operation.AsyncOperation_State](p, "STATE_", operation.AsyncOperation_State_name)
 }
 
-func (c *CloudCommand) preRun(cctx *CommandContext) error {
+func (c *CloudCommand) preRun(cctx *CommandContext, timeoutCancel *context.CancelFunc) error {
 	// Set this command as the root
 	cctx.RootCommand = c
 
@@ -538,7 +544,8 @@ func (c *CloudCommand) preRun(cctx *CommandContext) error {
 	}
 	cctx.JSONShorthandPayloads = !c.NoJsonShorthandPayloads
 	if c.CommandTimeout.Duration() > 0 {
-		cctx.Context, _ = context.WithTimeoutCause(
+		// AIDEV-NOTE: Store cancel function to prevent timeout goroutine leak
+		cctx.Context, *timeoutCancel = context.WithTimeoutCause(
 			cctx.Context,
 			c.CommandTimeout.Duration(),
 			fmt.Errorf("command timed out after %v", c.CommandTimeout.Duration()),
