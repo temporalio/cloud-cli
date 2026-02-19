@@ -1,6 +1,6 @@
 [tools]
 # Note: Keep in sync with `toolchain` directive in `go.mod`.
-go = "1.25.5"
+go = "1.26.0"
 
 # needed for go backends
 [settings]
