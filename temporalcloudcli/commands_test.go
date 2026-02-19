@@ -238,5 +238,6 @@ func (s *SharedServerSuite) pollAsyncOperation(
 		},
 	}
 
-	return temporalcloudcli.PollAsyncOperation(cctx, cloudClient, operationID, "")
+	poller := temporalcloudcli.AsyncOperationPoller{CloudClient: cloudClient.CloudService()}
+	return poller.PollAsyncOperation(cctx, operationID, "")
 }

@@ -133,8 +133,8 @@ func promptApplyResource(cctx *CommandContext, existing, actual proto.Message, v
 	return nil
 }
 
-type asyncOperationPoller struct {
-	cloudClient cloudservice.CloudServiceClient
+type AsyncOperationPoller struct {
+	CloudClient cloudservice.CloudServiceClient
 }
 
 // pollAsyncOperation polls an async operation until it reaches a terminal state.
@@ -144,7 +144,7 @@ type asyncOperationPoller struct {
 //
 // AIDEV-NOTE: This function takes a pre-built cloudClient. Commands should
 // build the client using cctx.BuildCloudClient() and pass it directly.
-func (p *asyncOperationPoller) PollAsyncOperation(
+func (p *AsyncOperationPoller) PollAsyncOperation(
 	cctx *CommandContext,
 	operationID string,
 	id string,
@@ -158,7 +158,7 @@ func (p *asyncOperationPoller) PollAsyncOperation(
 			return fmt.Errorf("operation polling cancelled: %w", cctx.Context.Err())
 		case <-ticker.C:
 			// Get the current state of the operation
-			resp, err := p.cloudClient.GetAsyncOperation(cctx.Context, &cloudservice.GetAsyncOperationRequest{
+			resp, err := p.CloudClient.GetAsyncOperation(cctx.Context, &cloudservice.GetAsyncOperationRequest{
 				AsyncOperationId: operationID,
 			})
 			if err != nil {
@@ -249,8 +249,8 @@ func getPoller(cctx *CommandContext, opts ClientOptions) (Poller, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &asyncOperationPoller{
-		cloudClient: cloudClient.CloudService(),
+	return &AsyncOperationPoller{
+		CloudClient: cloudClient.CloudService(),
 	}, nil
 }
 
