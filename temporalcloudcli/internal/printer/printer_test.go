@@ -244,6 +244,53 @@ func TestPrinter_CustomTimeFormat(t *testing.T) {
 	require.Contains(t, buf.String(), "custom-2023")
 }
 
+func TestPrinter_JSONList(t *testing.T) {
+	var buf bytes.Buffer
+
+	// With indentation
+	p := Printer{Output: &buf, JSON: true, JSONIndent: "  "}
+	p.StartList()
+	p.Println("should not print")
+	require.NoError(t, p.PrintStructured(map[string]string{"foo": "bar"}, StructuredOptions{}))
+	require.NoError(t, p.PrintStructured(map[string]string{"baz": "qux"}, StructuredOptions{}))
+	p.EndList()
+	require.Equal(t, `[
+{
+  "foo": "bar"
+},
+{
+  "baz": "qux"
+}
+]
+`, buf.String())
+
+	// Without indentation
+	buf.Reset()
+	p = Printer{Output: &buf, JSON: true}
+	p.StartList()
+	p.Println("should not print")
+	require.NoError(t, p.PrintStructured(map[string]string{"foo": "bar"}, StructuredOptions{}))
+	require.NoError(t, p.PrintStructured(map[string]string{"baz": "qux"}, StructuredOptions{}))
+	p.EndList()
+	require.Equal(t, "{\"foo\":\"bar\"}\n{\"baz\":\"qux\"}\n", buf.String())
+
+	// Empty with indentation
+	buf.Reset()
+	p = Printer{Output: &buf, JSON: true, JSONIndent: "  "}
+	p.StartList()
+	p.Println("should not print")
+	p.EndList()
+	require.Equal(t, "[\n]\n", buf.String())
+
+	// Empty without indentation
+	buf.Reset()
+	p = Printer{Output: &buf, JSON: true}
+	p.StartList()
+	p.Println("should not print")
+	p.EndList()
+	require.Equal(t, "", buf.String())
+}
+
 func TestPrinter_PrintAndPrintln(t *testing.T) {
 	var buf bytes.Buffer
 	p := Printer{Output: &buf}
