@@ -1,0 +1,71 @@
+version: 2
+
+before:
+  hooks:
+    - go mod download
+
+release:
+  prerelease: auto
+  draft: false
+  name_template: "v{{.Version}}"
+
+archives:
+  - <<: &archive_defaults
+      name_template: "temporal_cloud_cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    id: nix
+    ids:
+      - nix
+    formats:
+      - tar.gz
+    files:
+      - LICENSE
+
+  - <<: *archive_defaults
+    id: windows-zip
+    ids:
+      - windows
+    formats:
+      - zip
+    files:
+      - LICENSE
+
+    # used by SDKs as zip cannot be used by rust https://github.com/zip-rs/zip/issues/108
+  - <<: *archive_defaults
+    id: windows-targz
+    ids:
+      - windows
+    files:
+      - LICENSE
+
+builds:
+  - <<: &build_defaults
+      dir: cmd/temporal-cloud
+      binary: temporal-cloud
+      ldflags:
+        - -s -w -X github.com/temporalio/cloud-cli/temporalcloudcli.Version={{.Version}}
+      goarch:
+        - amd64
+        - arm64
+      env:
+        - CGO_ENABLED=0
+    id: nix
+    goos:
+      - linux
+      - darwin
+
+  - <<: *build_defaults
+    id: windows
+    goos:
+      - windows
+    hooks:
+      post: # TODO sign Windows release
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  disable: true
+
+announce:
+  skip: "true"
