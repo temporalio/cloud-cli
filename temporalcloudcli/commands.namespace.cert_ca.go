@@ -64,7 +64,7 @@ func (c *CloudNamespaceCertCaAddCommand) run(cctx *CommandContext, _ []string) e
 		return err
 	}
 
-	return poller.Poll(cctx.Context, op.Id, c.Namespace)
+	return poller.PollAsyncOperation(cctx, op.Id, c.Namespace)
 }
 
 func (c *CloudNamespaceCertCaListCommand) run(cctx *CommandContext, _ []string) error {
@@ -141,5 +141,5 @@ func (c *CloudNamespaceCertCaDeleteCommand) run(cctx *CommandContext, _ []string
 		return err
 	}
 
-	return poller.Poll(cctx.Context, op.Id, c.Namespace)
+	return poller.PollAsyncOperation(cctx, op.Id, c.Namespace)
 }

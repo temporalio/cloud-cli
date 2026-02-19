@@ -66,7 +66,12 @@ func (c *CloudNamespaceRetentionSetCommand) run(cctx *CommandContext, _ []string
 	}
 
 	// Poll for completion
-	return PollAsyncOperation(cctx, cloudClient, asyncOp.Id, c.Namespace)
+	poller, err := getPoller(cctx, c.ClientOptions)
+	if err != nil {
+		return err
+	}
+
+	return poller.PollAsyncOperation(cctx, asyncOp.Id, c.Namespace)
 }
 
 func (c *CloudNamespaceRetentionGetCommand) run(cctx *CommandContext, _ []string) error {

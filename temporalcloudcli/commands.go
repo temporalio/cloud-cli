@@ -73,7 +73,7 @@ type NamespaceClient interface {
 }
 
 type Poller interface {
-	Poll(context.Context, string, string) error
+	PollAsyncOperation(*CommandContext, string, string) error
 }
 
 type CommandOptions struct {

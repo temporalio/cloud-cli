@@ -7,7 +7,6 @@ import (
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 
 	"github.com/temporalio/cloud-cli/internal/namespace"
-	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/async"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
@@ -94,7 +93,12 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 	}
 
 	// Poll for completion
-	return PollAsyncOperation(cctx, cloudClient, asyncOp.Id, c.Namespace)
+	poller, err := getPoller(cctx, c.ClientOptions)
+	if err != nil {
+		return err
+	}
+
+	return poller.PollAsyncOperation(cctx, asyncOp.Id, c.Namespace)
 }
 
 func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error {
@@ -201,7 +205,12 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 	}
 
 	// Step 7: Poll for completion
-	return PollAsyncOperation(cctx, cloudClient, asyncOp.Id, namespaceID)
+	poller, err := getPoller(cctx, c.ClientOptions)
+	if err != nil {
+		return err
+	}
+
+	return poller.PollAsyncOperation(cctx, asyncOp.Id, namespaceID)
 }
 
 func (c *CloudNamespaceDeleteCommand) run(cctx *CommandContext, _ []string) error {
@@ -252,8 +261,13 @@ func (c *CloudNamespaceDeleteCommand) run(cctx *CommandContext, _ []string) erro
 		}, printer.StructuredOptions{})
 	}
 
-	// Poll for completion
-	return PollAsyncOperation(cctx, cloudClient, asyncOp.Id, c.Namespace)
+	// Pollo for completion
+	poller, err := getPoller(cctx, c.ClientOptions)
+	if err != nil {
+		return err
+	}
+
+	return poller.PollAsyncOperation(cctx, asyncOp.Id, c.Namespace)
 }
 
 func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error {
@@ -310,9 +324,7 @@ func getPoller(cctx *CommandContext, opts ClientOptions) (Poller, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &async.Poller{
-		Cloud:      cloudClient.CloudService(),
-		Printer:    cctx.Printer,
-		JSONOutput: cctx.JSONOutput,
+	return &asyncOperationPoller{
+		cloudClient: cloudClient.CloudService(),
 	}, nil
 }

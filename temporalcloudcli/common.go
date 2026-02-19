@@ -11,7 +11,6 @@ import (
 
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
-	"go.temporal.io/cloud-sdk/cloudclient"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -133,6 +132,10 @@ func promptApplyResource(cctx *CommandContext, existing, actual proto.Message, v
 	return nil
 }
 
+type asyncOperationPoller struct {
+	cloudClient cloudservice.CloudServiceClient
+}
+
 // pollAsyncOperation polls an async operation until it reaches a terminal state.
 // It prints status updates every second and returns the final AsyncOperation.
 //
@@ -140,9 +143,8 @@ func promptApplyResource(cctx *CommandContext, existing, actual proto.Message, v
 //
 // AIDEV-NOTE: This function takes a pre-built cloudClient. Commands should
 // build the client using cctx.BuildCloudClient() and pass it directly.
-func PollAsyncOperation(
+func (p *asyncOperationPoller) PollAsyncOperation(
 	cctx *CommandContext,
-	cloudClient *cloudclient.Client,
 	operationID string,
 	id string,
 ) error {
@@ -155,7 +157,7 @@ func PollAsyncOperation(
 			return fmt.Errorf("operation polling cancelled: %w", cctx.Context.Err())
 		case <-ticker.C:
 			// Get the current state of the operation
-			resp, err := cloudClient.CloudService().GetAsyncOperation(cctx.Context, &cloudservice.GetAsyncOperationRequest{
+			resp, err := p.cloudClient.GetAsyncOperation(cctx.Context, &cloudservice.GetAsyncOperationRequest{
 				AsyncOperationId: operationID,
 			})
 			if err != nil {

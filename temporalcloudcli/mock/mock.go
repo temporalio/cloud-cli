@@ -10,6 +10,7 @@ import (
 	mock "github.com/stretchr/testify/mock"
 	"github.com/temporalio/cloud-cli/internal/cert"
 	"github.com/temporalio/cloud-cli/internal/namespace"
+	"github.com/temporalio/cloud-cli/temporalcloudcli"
 	namespace0 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	"go.temporal.io/cloud-sdk/api/operation/v1"
 )
@@ -340,41 +341,41 @@ func (_m *MockPoller) EXPECT() *MockPoller_Expecter {
 	return &MockPoller_Expecter{mock: &_m.Mock}
 }
 
-// Poll provides a mock function for the type MockPoller
-func (_mock *MockPoller) Poll(context1 context.Context, s string, s1 string) error {
-	ret := _mock.Called(context1, s, s1)
+// PollAsyncOperation provides a mock function for the type MockPoller
+func (_mock *MockPoller) PollAsyncOperation(commandContext *temporalcloudcli.CommandContext, s string, s1 string) error {
+	ret := _mock.Called(commandContext, s, s1)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Poll")
+		panic("no return value specified for PollAsyncOperation")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
-		r0 = returnFunc(context1, s, s1)
+	if returnFunc, ok := ret.Get(0).(func(*temporalcloudcli.CommandContext, string, string) error); ok {
+		r0 = returnFunc(commandContext, s, s1)
 	} else {
 		r0 = ret.Error(0)
 	}
 	return r0
 }
 
-// MockPoller_Poll_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Poll'
-type MockPoller_Poll_Call struct {
+// MockPoller_PollAsyncOperation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PollAsyncOperation'
+type MockPoller_PollAsyncOperation_Call struct {
 	*mock.Call
 }
 
-// Poll is a helper method to define mock.On call
-//   - context1 context.Context
+// PollAsyncOperation is a helper method to define mock.On call
+//   - commandContext *temporalcloudcli.CommandContext
 //   - s string
 //   - s1 string
-func (_e *MockPoller_Expecter) Poll(context1 interface{}, s interface{}, s1 interface{}) *MockPoller_Poll_Call {
-	return &MockPoller_Poll_Call{Call: _e.mock.On("Poll", context1, s, s1)}
+func (_e *MockPoller_Expecter) PollAsyncOperation(commandContext interface{}, s interface{}, s1 interface{}) *MockPoller_PollAsyncOperation_Call {
+	return &MockPoller_PollAsyncOperation_Call{Call: _e.mock.On("PollAsyncOperation", commandContext, s, s1)}
 }
 
-func (_c *MockPoller_Poll_Call) Run(run func(context1 context.Context, s string, s1 string)) *MockPoller_Poll_Call {
+func (_c *MockPoller_PollAsyncOperation_Call) Run(run func(commandContext *temporalcloudcli.CommandContext, s string, s1 string)) *MockPoller_PollAsyncOperation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
+		var arg0 *temporalcloudcli.CommandContext
 		if args[0] != nil {
-			arg0 = args[0].(context.Context)
+			arg0 = args[0].(*temporalcloudcli.CommandContext)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -393,12 +394,12 @@ func (_c *MockPoller_Poll_Call) Run(run func(context1 context.Context, s string,
 	return _c
 }
 
-func (_c *MockPoller_Poll_Call) Return(err error) *MockPoller_Poll_Call {
+func (_c *MockPoller_PollAsyncOperation_Call) Return(err error) *MockPoller_PollAsyncOperation_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *MockPoller_Poll_Call) RunAndReturn(run func(context1 context.Context, s string, s1 string) error) *MockPoller_Poll_Call {
+func (_c *MockPoller_PollAsyncOperation_Call) RunAndReturn(run func(commandContext *temporalcloudcli.CommandContext, s string, s1 string) error) *MockPoller_PollAsyncOperation_Call {
 	_c.Call.Return(run)
 	return _c
 }
