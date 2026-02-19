@@ -1,8 +1,10 @@
 package namespace
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
 
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
@@ -14,7 +16,7 @@ type Tag struct {
 	Value string
 }
 
-// ListTags returns the list of tags configured for the namespace.
+// ListTags returns the list of tags configured for the namespace, sorted by key.
 // AIDEV-NOTE: Tags are key-value pairs used for organization and categorization
 // of namespaces. They can be used for filtering and grouping namespaces. Tags are
 // stored on the Namespace object itself, not in the NamespaceSpec.
@@ -36,6 +38,10 @@ func (c *Client) ListTags(ctx context.Context, name string) ([]Tag, error) {
 			Value: value,
 		})
 	}
+
+	slices.SortFunc(result, func(a, b Tag) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
 
 	return result, nil
 }
