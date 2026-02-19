@@ -261,7 +261,7 @@ func (c *CloudNamespaceDeleteCommand) run(cctx *CommandContext, _ []string) erro
 		}, printer.StructuredOptions{})
 	}
 
-	// Pollo for completion
+	// Poll for completion
 	poller, err := getPoller(cctx, c.ClientOptions)
 	if err != nil {
 		return err
