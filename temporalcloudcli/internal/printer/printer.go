@@ -50,7 +50,7 @@ func RegisterEnumToStringConverter[T ~int32](p *Printer, prefix string, resource
 	p.RegisterTextConverter(func(r any) (string, bool) {
 		if v, ok := r.(T); ok {
 			if s, ok := resourceNameMap[int32(v)]; ok {
-				return s[len(prefix):], true
+				return strings.TrimPrefix(s, prefix), true
 			}
 			return "UNKNOWN", true
 		}
