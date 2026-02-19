@@ -1,6 +1,7 @@
 package temporalcloudcli
 
 import (
+	"encoding/base64"
 	"errors"
 	"os"
 
@@ -15,9 +16,26 @@ func (c *CloudNamespaceCertCaAddCommand) run(cctx *CommandContext, _ []string) e
 		return err
 	}
 
-	certData, err := os.ReadFile(c.CaCertificateFile)
-	if err != nil {
-		return err
+	// Validate that exactly one of the two flags is provided
+	if c.CaCertificateFile == "" && c.CaCertificate == "" {
+		return errors.New("either --ca-certificate-file or --ca-certificate must be provided")
+	}
+	if c.CaCertificateFile != "" && c.CaCertificate != "" {
+		return errors.New("cannot specify both --ca-certificate-file and --ca-certificate")
+	}
+
+	var certData []byte
+	if c.CaCertificateFile != "" {
+		certData, err = os.ReadFile(c.CaCertificateFile)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Decode base64 certificate data
+		certData, err = base64.StdEncoding.DecodeString(c.CaCertificate)
+		if err != nil {
+			return errors.New("invalid base64 encoded certificate data")
+		}
 	}
 
 	newCerts, err := cert.ParseCACerts(certData)
@@ -58,9 +76,26 @@ func (c *CloudNamespaceCertCaDeleteCommand) run(cctx *CommandContext, _ []string
 		return err
 	}
 
-	certData, err := os.ReadFile(c.CaCertificateFile)
-	if err != nil {
-		return err
+	// Validate that exactly one of the two flags is provided
+	if c.CaCertificateFile == "" && c.CaCertificate == "" {
+		return errors.New("either --ca-certificate-file or --ca-certificate must be provided")
+	}
+	if c.CaCertificateFile != "" && c.CaCertificate != "" {
+		return errors.New("cannot specify both --ca-certificate-file and --ca-certificate")
+	}
+
+	var certData []byte
+	if c.CaCertificateFile != "" {
+		certData, err = os.ReadFile(c.CaCertificateFile)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Decode base64 certificate data
+		certData, err = base64.StdEncoding.DecodeString(c.CaCertificate)
+		if err != nil {
+			return errors.New("invalid base64 encoded certificate data")
+		}
 	}
 
 	certsToRemove, err := cert.ParseCACerts(certData)

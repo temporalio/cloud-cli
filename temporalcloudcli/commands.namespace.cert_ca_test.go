@@ -7,6 +7,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -29,7 +30,8 @@ import (
 )
 
 func TestCloudNamespaceCertCaAddCommand_Success(t *testing.T) {
-	parsedCerts, certPath := setupTestCertFile(t)
+	parsedCerts, certPath, certData := setupTestCertFile(t)
+	base64Cert := base64.StdEncoding.EncodeToString(certData)
 
 	expectedOp := &operation.AsyncOperation{
 		Id: "test-operation-id",
@@ -59,7 +61,7 @@ func TestCloudNamespaceCertCaAddCommand_Success(t *testing.T) {
 	).Return(expectedOp, nil)
 
 	mockPoller := &cmdmock.MockPoller{}
-	mockPoller.On("Poll", mock.Anything, "test-operation-id", "test-namespace.test-account").
+	mockPoller.On("PollAsyncOperation", mock.Anything, "test-operation-id", "test-namespace.test-account").
 		Return(nil)
 
 	tests := []struct {
@@ -68,7 +70,7 @@ func TestCloudNamespaceCertCaAddCommand_Success(t *testing.T) {
 		assertResult func(*testing.T, bytes.Buffer)
 	}{
 		{
-			name: "async",
+			name: "async with file",
 			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaAddCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificateFile = certPath
@@ -90,10 +92,43 @@ func TestCloudNamespaceCertCaAddCommand_Success(t *testing.T) {
 			},
 		},
 		{
-			name: "sync",
+			name: "sync with file",
 			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaAddCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificateFile = certPath
+				cmd.Async = false
+			},
+			assertResult: func(t *testing.T, buf bytes.Buffer) {
+				assert.Empty(t, buf.String())
+			},
+		},
+		{
+			name: "async with base64",
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaAddCommand) {
+				cmd.Namespace = "test-namespace.test-account"
+				cmd.CaCertificate = base64Cert
+				cmd.ResourceVersion = "test-version"
+				cmd.AsyncOperationId = "custom-operation-id"
+				cmd.Async = true
+			},
+			assertResult: func(t *testing.T, buf bytes.Buffer) {
+				var result temporalcloudcli.MutationResult
+				err := json.Unmarshal(buf.Bytes(), &result)
+				require.NoError(t, err)
+				expected := temporalcloudcli.MutationResult{
+					AsyncOp: &operation.AsyncOperation{
+						Id: "test-operation-id",
+					},
+					ID: "test-namespace.test-account",
+				}
+				assert.Equal(t, expected, result)
+			},
+		},
+		{
+			name: "sync with base64",
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaAddCommand) {
+				cmd.Namespace = "test-namespace.test-account"
+				cmd.CaCertificate = base64Cert
 				cmd.Async = false
 			},
 			assertResult: func(t *testing.T, buf bytes.Buffer) {
@@ -157,6 +192,39 @@ func TestCloudNamespaceCertCaAddCommand_InvalidInput(t *testing.T) {
 				assert.Contains(t, err.Error(), "invalid certificate")
 			},
 		},
+		{
+			name: "both flags provided",
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaAddCommand) {
+				cmd.Namespace = "test-namespace.test-account"
+				cmd.CaCertificateFile = "testdata/cert.pem"
+				cmd.CaCertificate = "base64data"
+				cmd.Async = true
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.Contains(t, err.Error(), "cannot specify both")
+			},
+		},
+		{
+			name: "neither flag provided",
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaAddCommand) {
+				cmd.Namespace = "test-namespace.test-account"
+				cmd.Async = true
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.Contains(t, err.Error(), "either --ca-certificate-file or --ca-certificate must be provided")
+			},
+		},
+		{
+			name: "invalid base64",
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaAddCommand) {
+				cmd.Namespace = "test-namespace.test-account"
+				cmd.CaCertificate = "invalid!!!base64"
+				cmd.Async = true
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.Contains(t, err.Error(), "invalid base64 encoded certificate data")
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -187,7 +255,7 @@ func TestCloudNamespaceCertCaAddCommand_InvalidInput(t *testing.T) {
 }
 
 func TestCloudNamespaceCertCaAddCommand_AddCACertsError(t *testing.T) {
-	parsedCerts, certPath := setupTestCertFile(t)
+	parsedCerts, certPath, _ := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
@@ -228,7 +296,7 @@ func TestCloudNamespaceCertCaAddCommand_AddCACertsError(t *testing.T) {
 }
 
 func TestCloudNamespaceCertCaAddCommand_NothingToChange(t *testing.T) {
-	parsedCerts, certPath := setupTestCertFile(t)
+	parsedCerts, certPath, _ := setupTestCertFile(t)
 
 	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
 
@@ -243,13 +311,13 @@ func TestCloudNamespaceCertCaAddCommand_NothingToChange(t *testing.T) {
 			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
 				require.NoError(t, capturedErr)
 				var result struct {
-					Status    string `json:"Status"`
-					Namespace string `json:"Namespace"`
+					Status string `json:"status"`
+					ID     string `json:"id"`
 				}
 				err := json.Unmarshal(buf.Bytes(), &result)
 				require.NoError(t, err)
 				assert.Equal(t, "unchanged", result.Status)
-				assert.Equal(t, "test-namespace.test-account", result.Namespace)
+				assert.Equal(t, "test-namespace.test-account", result.ID)
 			},
 		},
 		{
@@ -304,7 +372,7 @@ func TestCloudNamespaceCertCaAddCommand_NothingToChange(t *testing.T) {
 }
 
 func TestCloudNamespaceCertCaAddCommand_IdempotentWithOtherError(t *testing.T) {
-	parsedCerts, certPath := setupTestCertFile(t)
+	parsedCerts, certPath, _ := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
@@ -345,7 +413,7 @@ func TestCloudNamespaceCertCaAddCommand_IdempotentWithOtherError(t *testing.T) {
 }
 
 func TestCloudNamespaceCertCaAddCommand_PollingError(t *testing.T) {
-	parsedCerts, certPath := setupTestCertFile(t)
+	parsedCerts, certPath, _ := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 	mockPoller := cmdmock.NewMockPoller(t)
@@ -368,7 +436,7 @@ func TestCloudNamespaceCertCaAddCommand_PollingError(t *testing.T) {
 
 	pollErr := errors.New("polling failed")
 	mockPoller.EXPECT().
-		Poll(mock.Anything, "test-operation-id", "test-namespace.test-account").
+		PollAsyncOperation(mock.Anything, "test-operation-id", "test-namespace.test-account").
 		Return(pollErr)
 
 	var buf bytes.Buffer
@@ -434,9 +502,9 @@ func generateTestCertificate(t *testing.T) []byte {
 }
 
 // setupTestCertFile creates a temporary certificate file for testing.
-// Returns the parsed certificates and the file path.
+// Returns the parsed certificates, the file path, and the raw cert data.
 // The file will be automatically cleaned up when the test completes.
-func setupTestCertFile(t *testing.T) ([]cert.CACert, string) {
+func setupTestCertFile(t *testing.T) ([]cert.CACert, string, []byte) {
 	t.Helper()
 
 	certData := generateTestCertificate(t)
@@ -454,11 +522,12 @@ func setupTestCertFile(t *testing.T) ([]cert.CACert, string) {
 	require.NoError(t, err)
 	require.NoError(t, tmpFile.Close())
 
-	return parsedCerts, certPath
+	return parsedCerts, certPath, certData
 }
 
 func TestCloudNamespaceCertCaDeleteCommand_Success(t *testing.T) {
-	parsedCerts, certPath := setupTestCertFile(t)
+	parsedCerts, certPath, certData := setupTestCertFile(t)
+	base64Cert := base64.StdEncoding.EncodeToString(certData)
 
 	expectedOp := &operation.AsyncOperation{
 		Id: "test-operation-id",
@@ -488,7 +557,7 @@ func TestCloudNamespaceCertCaDeleteCommand_Success(t *testing.T) {
 	).Return(expectedOp, nil)
 
 	mockPoller := &cmdmock.MockPoller{}
-	mockPoller.On("Poll", mock.Anything, "test-operation-id", "test-namespace.test-account").
+	mockPoller.On("PollAsyncOperation", mock.Anything, "test-operation-id", "test-namespace.test-account").
 		Return(nil)
 
 	tests := []struct {
@@ -497,7 +566,7 @@ func TestCloudNamespaceCertCaDeleteCommand_Success(t *testing.T) {
 		assertResult func(*testing.T, bytes.Buffer)
 	}{
 		{
-			name: "async",
+			name: "async with file",
 			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificateFile = certPath
@@ -519,10 +588,43 @@ func TestCloudNamespaceCertCaDeleteCommand_Success(t *testing.T) {
 			},
 		},
 		{
-			name: "sync",
+			name: "sync with file",
 			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificateFile = certPath
+				cmd.Async = false
+			},
+			assertResult: func(t *testing.T, buf bytes.Buffer) {
+				assert.Empty(t, buf.String())
+			},
+		},
+		{
+			name: "async with base64",
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+				cmd.Namespace = "test-namespace.test-account"
+				cmd.CaCertificate = base64Cert
+				cmd.ResourceVersion = "test-version"
+				cmd.AsyncOperationId = "custom-operation-id"
+				cmd.Async = true
+			},
+			assertResult: func(t *testing.T, buf bytes.Buffer) {
+				var result temporalcloudcli.MutationResult
+				err := json.Unmarshal(buf.Bytes(), &result)
+				require.NoError(t, err)
+				expected := temporalcloudcli.MutationResult{
+					AsyncOp: &operation.AsyncOperation{
+						Id: "test-operation-id",
+					},
+					ID: "test-namespace.test-account",
+				}
+				assert.Equal(t, expected, result)
+			},
+		},
+		{
+			name: "sync with base64",
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+				cmd.Namespace = "test-namespace.test-account"
+				cmd.CaCertificate = base64Cert
 				cmd.Async = false
 			},
 			assertResult: func(t *testing.T, buf bytes.Buffer) {
@@ -578,6 +680,39 @@ func TestCloudNamespaceCertCaDeleteCommand_InvalidInput(t *testing.T) {
 				assert.True(t, os.IsNotExist(err))
 			},
 		},
+		{
+			name: "both flags provided",
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+				cmd.Namespace = "test-namespace.test-account"
+				cmd.CaCertificateFile = "testdata/cert.pem"
+				cmd.CaCertificate = "base64data"
+				cmd.Async = true
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.Contains(t, err.Error(), "cannot specify both")
+			},
+		},
+		{
+			name: "neither flag provided",
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+				cmd.Namespace = "test-namespace.test-account"
+				cmd.Async = true
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.Contains(t, err.Error(), "either --ca-certificate-file or --ca-certificate must be provided")
+			},
+		},
+		{
+			name: "invalid base64",
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+				cmd.Namespace = "test-namespace.test-account"
+				cmd.CaCertificate = "invalid!!!base64"
+				cmd.Async = true
+			},
+			assertError: func(t *testing.T, err error) {
+				assert.Contains(t, err.Error(), "invalid base64 encoded certificate data")
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -611,7 +746,7 @@ func TestCloudNamespaceCertCaDeleteCommand_InvalidInput(t *testing.T) {
 }
 
 func TestCloudNamespaceCertCaDeleteCommand_DeleteCACertsError(t *testing.T) {
-	parsedCerts, certPath := setupTestCertFile(t)
+	parsedCerts, certPath, _ := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
@@ -655,7 +790,7 @@ func TestCloudNamespaceCertCaDeleteCommand_DeleteCACertsError(t *testing.T) {
 }
 
 func TestCloudNamespaceCertCaDeleteCommand_NothingToChange(t *testing.T) {
-	parsedCerts, certPath := setupTestCertFile(t)
+	parsedCerts, certPath, _ := setupTestCertFile(t)
 
 	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
 
@@ -670,13 +805,13 @@ func TestCloudNamespaceCertCaDeleteCommand_NothingToChange(t *testing.T) {
 			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
 				require.NoError(t, capturedErr)
 				var result struct {
-					Status    string `json:"Status"`
-					Namespace string `json:"Namespace"`
+					Status string `json:"status"`
+					ID     string `json:"id"`
 				}
 				err := json.Unmarshal(buf.Bytes(), &result)
 				require.NoError(t, err)
 				assert.Equal(t, "unchanged", result.Status)
-				assert.Equal(t, "test-namespace.test-account", result.Namespace)
+				assert.Equal(t, "test-namespace.test-account", result.ID)
 			},
 		},
 		{
@@ -734,7 +869,7 @@ func TestCloudNamespaceCertCaDeleteCommand_NothingToChange(t *testing.T) {
 }
 
 func TestCloudNamespaceCertCaDeleteCommand_IdempotentWithOtherError(t *testing.T) {
-	parsedCerts, certPath := setupTestCertFile(t)
+	parsedCerts, certPath, _ := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
@@ -778,7 +913,7 @@ func TestCloudNamespaceCertCaDeleteCommand_IdempotentWithOtherError(t *testing.T
 }
 
 func TestCloudNamespaceCertCaDeleteCommand_PollingError(t *testing.T) {
-	parsedCerts, certPath := setupTestCertFile(t)
+	parsedCerts, certPath, _ := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 	mockPoller := cmdmock.NewMockPoller(t)
@@ -801,7 +936,7 @@ func TestCloudNamespaceCertCaDeleteCommand_PollingError(t *testing.T) {
 
 	pollErr := errors.New("polling failed")
 	mockPoller.EXPECT().
-		Poll(mock.Anything, "test-operation-id", "test-namespace.test-account").
+		PollAsyncOperation(mock.Anything, "test-operation-id", "test-namespace.test-account").
 		Return(pollErr)
 
 	var buf bytes.Buffer
@@ -831,7 +966,7 @@ func TestCloudNamespaceCertCaDeleteCommand_PollingError(t *testing.T) {
 }
 
 func TestCloudNamespaceCertCaDeleteCommand_UserDeclinesPrompt(t *testing.T) {
-	_, certPath := setupTestCertFile(t)
+	_, certPath, _ := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
@@ -863,7 +998,7 @@ func TestCloudNamespaceCertCaDeleteCommand_UserDeclinesPrompt(t *testing.T) {
 }
 
 func TestCloudNamespaceCertCaDeleteCommand_JSONOutputWithoutAutoConfirm(t *testing.T) {
-	_, certPath := setupTestCertFile(t)
+	_, certPath, _ := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 

@@ -500,17 +500,41 @@ commands:
       Commands for managing the client CA certificates of Temporal Cloud namespaces.
     has-init: false
   - name: cloud namespace cert-ca list
-    summary: TODO
+    summary: List CA certificates for a namespace
     description: |
-      TODO
+      Retrieve the list of client CA certificates configured for a Temporal Cloud
+      namespace. These certificates are used for client authentication.
+
+      Example:
+
+      ```
+      cloud namespace cert-ca list --namespace my-namespace.my-account
+      ```
     has-init: false
     option-sets:
       - client
       - namespace
   - name: cloud namespace cert-ca add
-    summary: TODO
+    summary: Add CA certificates to a namespace
     description: |
-      TODO
+      Add client CA certificates to a Temporal Cloud namespace from a PEM file
+      or base64 encoded string. These certificates are used to verify client
+      connections and enable mTLS authentication.
+
+      Specify either --ca-certificate-file or --ca-certificate, but not both.
+
+      Example with file:
+
+      ```
+      cloud namespace cert-ca add --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem
+      ```
+
+      Example with base64 encoded data:
+
+      ```
+      cloud namespace cert-ca add --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>
+      ```
+    has-init: false
     option-sets:
       - client
       - namespace
@@ -519,12 +543,33 @@ commands:
       - name: ca-certificate-file
         type: string
         description: |
-          Path to a CA certificate PEM file.
+          Path to a CA certificate PEM file. Mutually exclusive with --ca-certificate.
+      - name: ca-certificate
+        type: string
+        description: |
+          Base64 encoded CA certificate data. Mutually exclusive with --ca-certificate-file.
 
   - name: cloud namespace cert-ca delete
-    summary: TODO
+    summary: Delete CA certificates from a namespace
     description: |
-      TODO
+      Delete client CA certificates from a Temporal Cloud namespace. This operation
+      requires confirmation and will remove the specified certificates from the
+      namespace configuration.
+
+      Specify either --ca-certificate-file or --ca-certificate, but not both.
+
+      Example with file:
+
+      ```
+      cloud namespace cert-ca delete --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem
+      ```
+
+      Example with base64 encoded data:
+
+      ```
+      cloud namespace cert-ca delete --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>
+      ```
+    has-init: false
     option-sets:
       - client
       - namespace
@@ -533,7 +578,11 @@ commands:
       - name: ca-certificate-file
         type: string
         description: |
-          Path to a CA certificate PEM file.
+          Path to a CA certificate PEM file. Mutually exclusive with --ca-certificate.
+      - name: ca-certificate
+        type: string
+        description: |
+          Base64 encoded CA certificate data. Mutually exclusive with --ca-certificate-file.
 
 option-sets:
   - name: client
