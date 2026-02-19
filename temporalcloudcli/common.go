@@ -3,6 +3,7 @@ package temporalcloudcli
 import (
 	"bytes"
 	"cmp"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -225,4 +226,71 @@ func (p *asyncOperationPoller) PollAsyncOperation(
 type MutationResult struct {
 	AsyncOp *operation.AsyncOperation `json:"asyncOperation"`
 	ID      string                    `json:"id"`
+}
+
+type Result struct {
+	Status string `json:"status"`
+	ID     string `json:"id"`
+}
+
+func newUnchangedResult(id string) Result {
+	return Result{
+		Status: "unchanged",
+		ID:     id,
+	}
+}
+
+func getPoller(cctx *CommandContext, opts ClientOptions) (Poller, error) {
+	if cctx.Poller != nil {
+		return cctx.Poller, nil
+	}
+
+	cloudClient, err := cctx.BuildCloudClient(opts)
+	if err != nil {
+		return nil, err
+	}
+	return &asyncOperationPoller{
+		cloudClient: cloudClient.CloudService(),
+	}, nil
+}
+
+// executeAsyncOperation executes a function that returns an AsyncOperation
+// and handles idempotent errors and async operation polling.
+// wrapAsyncOperation wraps an async operation function with standard error handling
+// and async operation polling. It returns a function that takes the operation parameters
+// and executes the operation with:
+//   - Idempotent error handling (returns unchanged result if appropriate)
+//   - Async mode support (returns operation ID immediately if async is true)
+//   - Automatic polling until completion (if async is false)
+func wrapAsyncOperation[P any](
+	cctx *CommandContext,
+	modifyOpts ResourceModifyOptions,
+	resourceID string,
+	clientOpts ClientOptions,
+	fn func(context.Context, P) (*operation.AsyncOperation, error),
+) func(P) error {
+	return func(params P) error {
+		op, err := fn(cctx.Context, params)
+		if err != nil {
+			if isNothingChangedErr(modifyOpts.Idempotent, err) {
+				return cctx.Printer.PrintStructured(newUnchangedResult(resourceID), printer.StructuredOptions{})
+			}
+			return err
+		}
+
+		if modifyOpts.Async {
+			// Return immediately with the async operation
+			return cctx.Printer.PrintStructured(MutationResult{
+				AsyncOp: op,
+				ID:      resourceID,
+			}, printer.StructuredOptions{})
+		}
+
+		poller, err := getPoller(cctx, clientOpts)
+		if err != nil {
+			return err
+		}
+
+		return poller.PollAsyncOperation(cctx, op.Id, resourceID)
+	}
 }

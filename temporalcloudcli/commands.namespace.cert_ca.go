@@ -29,42 +29,13 @@ func (c *CloudNamespaceCertCaAddCommand) run(cctx *CommandContext, _ []string) e
 		return errors.New("invalid certificate")
 	}
 
-	params := namespace.AddCACertsParams{
+	f := wrapAsyncOperation(cctx, c.ResourceModifyOptions, c.Namespace, c.ClientOptions, namespaceClient.AddCACerts)
+	return f(namespace.AddCACertsParams{
 		Namespace:        c.Namespace,
 		Certs:            newCerts,
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
-	}
-	op, err := namespaceClient.AddCACerts(cctx.Context, params)
-	if err != nil {
-		if isNothingChangedErr(c.Idempotent, err) {
-			result := struct {
-				Status    string
-				Namespace string
-			}{
-				Status:    "unchanged",
-				Namespace: c.Namespace,
-			}
-			return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
-		}
-
-		return err
-	}
-
-	if c.Async {
-		// Return immediately with the async operation
-		return cctx.Printer.PrintStructured(MutationResult{
-			AsyncOp: op,
-			ID:      c.Namespace,
-		}, printer.StructuredOptions{})
-	}
-
-	poller, err := getPoller(cctx, c.ClientOptions)
-	if err != nil {
-		return err
-	}
-
-	return poller.PollAsyncOperation(cctx, op.Id, c.Namespace)
+	})
 }
 
 func (c *CloudNamespaceCertCaListCommand) run(cctx *CommandContext, _ []string) error {
@@ -106,40 +77,11 @@ func (c *CloudNamespaceCertCaDeleteCommand) run(cctx *CommandContext, _ []string
 		return errors.New("Aborting delete.")
 	}
 
-	params := namespace.DeleteCACertsParams{
+	f := wrapAsyncOperation(cctx, c.ResourceModifyOptions, c.Namespace, c.ClientOptions, namespaceClient.DeleteCACerts)
+	return f(namespace.DeleteCACertsParams{
 		Namespace:        c.Namespace,
 		Certs:            certsToRemove,
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
-	}
-	op, err := namespaceClient.DeleteCACerts(cctx.Context, params)
-	if err != nil {
-		if isNothingChangedErr(c.Idempotent, err) {
-			result := struct {
-				Status    string
-				Namespace string
-			}{
-				Status:    "unchanged",
-				Namespace: c.Namespace,
-			}
-			return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
-		}
-
-		return err
-	}
-
-	if c.Async {
-		// Return immediately with the async operation
-		return cctx.Printer.PrintStructured(MutationResult{
-			AsyncOp: op,
-			ID:      c.Namespace,
-		}, printer.StructuredOptions{})
-	}
-
-	poller, err := getPoller(cctx, c.ClientOptions)
-	if err != nil {
-		return err
-	}
-
-	return poller.PollAsyncOperation(cctx, op.Id, c.Namespace)
+	})
 }

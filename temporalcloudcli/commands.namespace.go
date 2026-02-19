@@ -314,17 +314,3 @@ func getNamespaceClient(cctx *CommandContext, opts ClientOptions) (NamespaceClie
 	}
 	return namespace.NewClient(cloudClient.CloudService()), nil
 }
-
-func getPoller(cctx *CommandContext, opts ClientOptions) (Poller, error) {
-	if cctx.Poller != nil {
-		return cctx.Poller, nil
-	}
-
-	cloudClient, err := cctx.BuildCloudClient(opts)
-	if err != nil {
-		return nil, err
-	}
-	return &asyncOperationPoller{
-		cloudClient: cloudClient.CloudService(),
-	}, nil
-}
