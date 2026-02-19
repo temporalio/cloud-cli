@@ -16,35 +16,9 @@ func (c *CloudNamespaceCertCaCreateCommand) run(cctx *CommandContext, _ []string
 		return err
 	}
 
-	// Validate that exactly one of the two flags is provided
-	if c.CaCertificateFile == "" && c.CaCertificate == "" {
-		return errors.New("either --ca-certificate-file or --ca-certificate must be provided")
-	}
-	if c.CaCertificateFile != "" && c.CaCertificate != "" {
-		return errors.New("cannot specify both --ca-certificate-file and --ca-certificate")
-	}
-
-	var certData []byte
-	if c.CaCertificateFile != "" {
-		certData, err = os.ReadFile(c.CaCertificateFile)
-		if err != nil {
-			return err
-		}
-	} else {
-		// Decode base64 certificate data
-		certData, err = base64.StdEncoding.DecodeString(c.CaCertificate)
-		if err != nil {
-			return errors.New("invalid base64 encoded certificate data")
-		}
-	}
-
-	newCerts, err := cert.ParseCACerts(certData)
+	newCerts, err := readAndParseCACerts(c.CaCertificateFile, c.CaCertificate)
 	if err != nil {
 		return err
-	}
-
-	if len(newCerts) == 0 {
-		return errors.New("invalid certificate")
 	}
 
 	addCACerts := wrapAsyncOperation(cctx, c.ResourceModifyOptions, c.Namespace, c.ClientOptions, namespaceClient.AddCACerts)
@@ -76,35 +50,9 @@ func (c *CloudNamespaceCertCaDeleteCommand) run(cctx *CommandContext, _ []string
 		return err
 	}
 
-	// Validate that exactly one of the two flags is provided
-	if c.CaCertificateFile == "" && c.CaCertificate == "" {
-		return errors.New("either --ca-certificate-file or --ca-certificate must be provided")
-	}
-	if c.CaCertificateFile != "" && c.CaCertificate != "" {
-		return errors.New("cannot specify both --ca-certificate-file and --ca-certificate")
-	}
-
-	var certData []byte
-	if c.CaCertificateFile != "" {
-		certData, err = os.ReadFile(c.CaCertificateFile)
-		if err != nil {
-			return err
-		}
-	} else {
-		// Decode base64 certificate data
-		certData, err = base64.StdEncoding.DecodeString(c.CaCertificate)
-		if err != nil {
-			return errors.New("invalid base64 encoded certificate data")
-		}
-	}
-
-	certsToRemove, err := cert.ParseCACerts(certData)
+	certsToRemove, err := readAndParseCACerts(c.CaCertificateFile, c.CaCertificate)
 	if err != nil {
 		return err
-	}
-
-	if len(certsToRemove) == 0 {
-		return errors.New("invalid certificate")
 	}
 
 	yes, err := cctx.promptYes("Delete (y/yes)?", cctx.RootCommand.AutoConfirm)
@@ -123,4 +71,49 @@ func (c *CloudNamespaceCertCaDeleteCommand) run(cctx *CommandContext, _ []string
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
 	})
+}
+
+// readAndParseCACerts reads certificate data from either a file or base64 string,
+// validates the input, and parses the certificates. Returns an error if:
+// - Neither flag is provided
+// - Both flags are provided
+// - The file cannot be read
+// - The base64 data is invalid
+// - The certificate data cannot be parsed
+// - No valid certificates are found
+func readAndParseCACerts(certFile, certBase64 string) ([]cert.CACert, error) {
+	// Validate that exactly one of the two flags is provided
+	if certFile == "" && certBase64 == "" {
+		return nil, errors.New("either --ca-certificate-file or --ca-certificate must be provided")
+	}
+	if certFile != "" && certBase64 != "" {
+		return nil, errors.New("cannot specify both --ca-certificate-file and --ca-certificate")
+	}
+
+	var certData []byte
+	var err error
+
+	if certFile != "" {
+		certData, err = os.ReadFile(certFile)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Decode base64 certificate data
+		certData, err = base64.StdEncoding.DecodeString(certBase64)
+		if err != nil {
+			return nil, errors.New("invalid base64 encoded certificate data")
+		}
+	}
+
+	certs, err := cert.ParseCACerts(certData)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(certs) == 0 {
+		return nil, errors.New("invalid certificate")
+	}
+
+	return certs, nil
 }

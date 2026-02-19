@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"fmt"
 
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
@@ -37,8 +36,8 @@ type AddCACertsParams struct {
 }
 
 // AddCACerts adds CA certificates to the namespace's mTLS authentication configuration.
-// It validates that none of the provided certificates already exist (by fingerprint)
-// before updating the namespace specification.
+// Certificates that already exist (matched by fingerprint) are silently filtered out.
+// If all certificates already exist, the server will return a "nothing to change" error.
 func (c *Client) AddCACerts(ctx context.Context, params AddCACertsParams) (*operation.AsyncOperation, error) {
 	ns, err := c.GetNamespace(ctx, params.Namespace)
 	if err != nil {
@@ -51,18 +50,22 @@ func (c *Client) AddCACerts(ctx context.Context, params AddCACertsParams) (*oper
 		return nil, err
 	}
 
-	fingerprints := map[string]struct{}{}
+	// Build a map of existing certificate fingerprints
+	existingFingerprints := map[string]struct{}{}
 	for _, cert := range existingCerts {
-		fingerprints[cert.Fingerprint] = struct{}{}
+		existingFingerprints[cert.Fingerprint] = struct{}{}
 	}
 
+	// Filter out certificates that already exist (for idempotent behavior)
+	var certsToAdd []cert.CACert
 	for _, cert := range params.Certs {
-		if _, ok := fingerprints[cert.Fingerprint]; ok {
-			return nil, fmt.Errorf("certificate with fingerprint %q already exists", cert.Fingerprint)
+		if _, exists := existingFingerprints[cert.Fingerprint]; !exists {
+			certsToAdd = append(certsToAdd, cert)
 		}
 	}
 
-	newBundle := append(existingCerts, params.Certs...)
+	// Build the new certificate bundle
+	newBundle := append(existingCerts, certsToAdd...)
 
 	var out [][]byte
 	for _, cert := range newBundle {
