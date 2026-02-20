@@ -18,15 +18,18 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/temporalproto"
+	"go.temporal.io/cloud-sdk/api/operation/v1"
+	"go.temporal.io/cloud-sdk/api/resource/v1"
 	"go.temporal.io/cloud-sdk/cloudclient"
 	"go.temporal.io/sdk/contrib/envconfig"
 	"golang.org/x/term"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
 // Version is the value put as the default command version. This is often
@@ -458,11 +461,17 @@ var buildInfo string
 func VersionString() string {
 	// To add build-time information to the version string, use
 	// go build -ldflags "-X github.com/temporalio/cloud-cli/temporalcloudcli.buildInfo=<MyString>"
-	var bi = buildInfo
+	bi := buildInfo
 	if bi != "" {
 		bi = fmt.Sprintf(", %s", bi)
 	}
 	return fmt.Sprintf("%s%s", Version, bi)
+}
+
+func registerKnownPrinterEnumToStringConverters(p *printer.Printer) {
+	// Register any enum converters for known types here.
+	printer.RegisterEnumToStringConverter[resource.ResourceState](p, "RESOURCE_STATE_", resource.ResourceState_name)
+	printer.RegisterEnumToStringConverter[operation.AsyncOperation_State](p, "STATE_", operation.AsyncOperation_State_name)
 }
 
 func (c *CloudCommand) preRun(cctx *CommandContext, timeoutCancel *context.CancelFunc) error {
@@ -531,6 +540,7 @@ func (c *CloudCommand) preRun(cctx *CommandContext, timeoutCancel *context.Cance
 		default:
 			return fmt.Errorf("invalid time format %q", c.TimeFormat.Value)
 		}
+		registerKnownPrinterEnumToStringConverters(cctx.Printer)
 	}
 	cctx.JSONShorthandPayloads = !c.NoJsonShorthandPayloads
 	if c.CommandTimeout.Duration() > 0 {

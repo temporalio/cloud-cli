@@ -25,7 +25,7 @@ func (c *CloudNamespaceGetCommand) run(cctx *CommandContext, _ []string) error {
 	if c.Spec {
 		return cctx.Printer.PrintStructured(n.Spec, printer.StructuredOptions{})
 	}
-	return cctx.Printer.PrintStructured(n, printer.StructuredOptions{})
+	return cctx.Printer.PrintResource(n, printer.PrintResourceOptions{})
 }
 
 func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error {
@@ -271,7 +271,7 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 		return err
 	}
 
-	return cctx.Printer.PrintStructured(
+	return cctx.Printer.PrintResourceList(
 		struct {
 			Namespaces    []*namespace.Namespace
 			NextPageToken string
@@ -279,6 +279,10 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 			Namespaces:    namespaces,
 			NextPageToken: nextPageToken,
 		},
-		printer.StructuredOptions{},
+		printer.PrintResourceOptions{
+			Fields:     []string{"Namespace", "State", "CreatedTime"},
+			SpecFields: []string{"Regions"},
+		},
+		printer.TableOptions{},
 	)
 }
