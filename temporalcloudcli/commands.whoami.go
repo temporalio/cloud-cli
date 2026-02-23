@@ -19,6 +19,10 @@ func (c *CloudWhoamiCommand) run(cctx *CommandContext, _ []string) error {
 		return err
 	}
 
+	if cctx.Printer.JSON {
+		return cctx.Printer.PrintStructured(res, printer.StructuredOptions{})
+	}
+
 	switch res.GetPrincipal().(type) {
 	case *cloudservice.GetCurrentIdentityResponse_User:
 		cctx.Printer.Println("Authenticated as User:")

@@ -31,4 +31,7 @@ func (s *SharedServerSuite) TestWhoami() {
 		identity.GetUser() != nil || identity.GetServiceAccount() != nil,
 		"expected identity to be a user or service account",
 	)
+	if identity.GetServiceAccount() != nil {
+		s.Suite.NotNil(identity.GetPrincipalApiKey(), "expected service account to have a principal API key")
+	}
 }
