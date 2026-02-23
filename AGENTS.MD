@@ -327,6 +327,105 @@ func TestClient_ListCACerts(t *testing.T) {
 
 For simple commands, call `cloudClient.CloudService()` directly in the `run` method.
 
+### Best Practices and Common Patterns
+
+Follow these patterns to avoid rework and match existing code style:
+
+#### Server-side vs Client-side Responsibility
+- **Don't implement client-side validation that the server handles.** Examples:
+  - Duplicate detection (e.g., adding the same cert filter twice) — let the server return an error
+  - Complex business rules and constraints — trust the server's validation
+- **Do implement client-side validation for:**
+  - Required fields before making API calls
+  - Flag combinations that don't make sense (e.g., both `--file` and `--data` provided)
+  - Input format validation (e.g., valid base64, file exists)
+
+#### Prefer Standard Library Over Custom Helpers
+- Use Go standard library functions instead of writing custom helpers
+- **Good:** Use `slices.ContainsFunc()` for filtering
+- **Bad:** Write a custom `certFilterKey()` function to build map keys
+- **Example from cert_filter.go:**
+  ```go
+  // Good: simple loop with slices.ContainsFunc
+  var newFilters []*namespacev1.CertificateFilterSpec
+  for _, existing := range existingFilters {
+      shouldRemove := slices.ContainsFunc(params.Filters, func(toRemove *namespacev1.CertificateFilterSpec) bool {
+          return certFiltersEqual(existing, toRemove)
+      })
+      if shouldRemove {
+          continue
+      }
+      newFilters = append(newFilters, existing)
+  }
+  ```
+
+#### Choosing the Right Printer Method
+- **`PrintResourceList`** — for list commands returning collections (most common for list operations)
+  ```go
+  return cctx.Printer.PrintResourceList(
+      struct {
+          CertificateFilters []*namespacev1.CertificateFilterSpec
+      }{CertificateFilters: filters},
+      printer.PrintResourceOptions{},
+      printer.TableOptions{},
+  )
+  ```
+- **`PrintStructured`** — for single objects or simple data structures
+- **`PrintResource`** — for resources with metadata and spec fields
+
+#### Mutation Commands Must Prompt for Confirmation
+- **All create and delete commands** must prompt the user before making changes
+- Use `cctx.promptYes()` with `cctx.RootCommand.AutoConfirm` to allow bypass
+- **Pattern:**
+  ```go
+  yes, err := cctx.promptYes("Create (y/yes)?", cctx.RootCommand.AutoConfirm)
+  if err != nil {
+      return err
+  }
+  if !yes {
+      return errors.New("Aborting create.")
+  }
+  ```
+- Update commands typically don't need prompts (user explicitly provides new values)
+
+#### Testing Patterns
+
+**When to use table-driven tests:**
+- Use table-driven tests when test cases follow the **same flow** with simple variations
+- Good for: different flag combinations, different input values, same assertion pattern
+- **Avoid complex branching** in table-driven tests (nested ifs, different setup per case)
+- If you need conditional logic to handle different test cases, use individual test functions instead
+
+**Application Layer Tests (`internal/<resource>/<feature>_test.go`):**
+- Use **external test package** with `_test` suffix: `package namespace_test`
+- Write **individual test functions** (most application logic tests have unique setup/assertions)
+- Use **`proto.Equal()`** for comparing protobuf messages (not field-by-field comparison)
+- **Look at existing tests** like `internal/namespace/cert_test.go` for the pattern
+- Example naming: `TestClient_ListCertFilters_Success`, `TestClient_AddCertFilters_GetNamespaceError`
+
+**Command Layer Tests (`temporalcloudcli/commands.<name>_test.go`):**
+- Use **external test package**: `package temporalcloudcli_test`
+- **Table-driven tests** work well for success cases with simple variations:
+  - Example: async vs sync mode, different flag combinations, with/without resource version
+  - All cases follow same pattern: setup command → run → assert result
+  - See `TestCloudNamespaceCertCaCreateCommand_Success` in `cert_ca_test.go`
+- **Individual test functions** for cases requiring different logic:
+  - Validation errors (different error messages to check)
+  - API errors (different mock setup)
+  - Prompt scenarios (different stdin/AutoConfirm setup)
+  - Idempotent behavior (different assertion logic for success vs error)
+- **Look at existing tests** like `temporalcloudcli/commands.namespace.cert_ca_test.go` for the pattern
+- Always set `RootCommand.AutoConfirm: true` in tests to bypass prompts (unless testing prompt behavior)
+- Test prompt scenarios as individual functions:
+  - User declining prompt (`AutoConfirm: false`, provide `"n\n"` as stdin)
+  - JSON output without auto-confirm (should error)
+
+#### Code Simplicity
+- Keep code simple and readable over clever abstractions
+- **Good:** Simple loop with `continue` for filtering
+- **Bad:** Complex `slices.DeleteFunc` with nested logic
+- If logic is hard to understand at a glance, it's probably too complex
+
 ### Step 1 — Declare the command in `commands.yml`
 
 Every command is declared in `temporalcloudcli/commands.yml`. The name field is the full command path (e.g. `cloud whoami`, `cloud namespace get`). Key fields:
