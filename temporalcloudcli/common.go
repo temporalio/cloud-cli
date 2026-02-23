@@ -3,6 +3,7 @@ package temporalcloudcli
 import (
 	"bytes"
 	"cmp"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,7 +12,6 @@ import (
 
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
-	"go.temporal.io/cloud-sdk/cloudclient"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -133,6 +133,10 @@ func promptApplyResource(cctx *CommandContext, existing, actual proto.Message, v
 	return nil
 }
 
+type AsyncOperationPoller struct {
+	CloudClient cloudservice.CloudServiceClient
+}
+
 // pollAsyncOperation polls an async operation until it reaches a terminal state.
 // It prints status updates every second and returns the final AsyncOperation.
 //
@@ -140,9 +144,8 @@ func promptApplyResource(cctx *CommandContext, existing, actual proto.Message, v
 //
 // AIDEV-NOTE: This function takes a pre-built cloudClient. Commands should
 // build the client using cctx.BuildCloudClient() and pass it directly.
-func PollAsyncOperation(
+func (p *AsyncOperationPoller) PollAsyncOperation(
 	cctx *CommandContext,
-	cloudClient *cloudclient.Client,
 	operationID string,
 	id string,
 ) error {
@@ -155,7 +158,7 @@ func PollAsyncOperation(
 			return fmt.Errorf("operation polling cancelled: %w", cctx.Context.Err())
 		case <-ticker.C:
 			// Get the current state of the operation
-			resp, err := cloudClient.CloudService().GetAsyncOperation(cctx.Context, &cloudservice.GetAsyncOperationRequest{
+			resp, err := p.CloudClient.GetAsyncOperation(cctx.Context, &cloudservice.GetAsyncOperationRequest{
 				AsyncOperationId: operationID,
 			})
 			if err != nil {
@@ -223,4 +226,71 @@ func PollAsyncOperation(
 type MutationResult struct {
 	AsyncOp *operation.AsyncOperation `json:"asyncOperation"`
 	ID      string                    `json:"id"`
+}
+
+type Result struct {
+	Status string `json:"status"`
+	ID     string `json:"id"`
+}
+
+func newUnchangedResult(id string) Result {
+	return Result{
+		Status: "unchanged",
+		ID:     id,
+	}
+}
+
+func getPoller(cctx *CommandContext, opts ClientOptions) (Poller, error) {
+	if cctx.Poller != nil {
+		return cctx.Poller, nil
+	}
+
+	cloudClient, err := cctx.BuildCloudClient(opts)
+	if err != nil {
+		return nil, err
+	}
+	return &AsyncOperationPoller{
+		CloudClient: cloudClient.CloudService(),
+	}, nil
+}
+
+// executeAsyncOperation executes a function that returns an AsyncOperation
+// and handles idempotent errors and async operation polling.
+// wrapAsyncOperation wraps an async operation function with standard error handling
+// and async operation polling. It returns a function that takes the operation parameters
+// and executes the operation with:
+//   - Idempotent error handling (returns unchanged result if appropriate)
+//   - Async mode support (returns operation ID immediately if async is true)
+//   - Automatic polling until completion (if async is false)
+func wrapAsyncOperation[P any](
+	cctx *CommandContext,
+	modifyOpts ResourceModifyOptions,
+	resourceID string,
+	clientOpts ClientOptions,
+	fn func(context.Context, P) (*operation.AsyncOperation, error),
+) func(P) error {
+	return func(params P) error {
+		op, err := fn(cctx.Context, params)
+		if err != nil {
+			if isNothingChangedErr(modifyOpts.Idempotent, err) {
+				return cctx.Printer.PrintStructured(newUnchangedResult(resourceID), printer.StructuredOptions{})
+			}
+			return err
+		}
+
+		if modifyOpts.Async {
+			// Return immediately with the async operation
+			return cctx.Printer.PrintStructured(MutationResult{
+				AsyncOp: op,
+				ID:      resourceID,
+			}, printer.StructuredOptions{})
+		}
+
+		poller, err := getPoller(cctx, clientOpts)
+		if err != nil {
+			return err
+		}
+
+		return poller.PollAsyncOperation(cctx, op.Id, resourceID)
+	}
 }

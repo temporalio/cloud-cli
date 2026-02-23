@@ -494,6 +494,95 @@ commands:
         description: |
           Resource version for optimistic concurrency control. If not provided,
           the current version is fetched automatically.
+  - name: cloud namespace cert-ca
+    summary: Manage client CA certificates for namespaces
+    description: |
+      Commands for managing the client CA certificates of Temporal Cloud namespaces.
+    has-init: false
+  - name: cloud namespace cert-ca list
+    summary: List CA certificates for a namespace
+    description: |
+      Retrieve the list of client CA certificates configured for a Temporal Cloud
+      namespace. These certificates are used for client authentication.
+
+      Example:
+
+      ```
+      cloud namespace cert-ca list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace cert-ca create
+    summary: Add CA certificates to a namespace
+    description: |
+      Add client CA certificates to a Temporal Cloud namespace from a PEM file
+      or base64 encoded string. These certificates are used to verify client
+      connections and enable mTLS authentication.
+
+      Specify either --ca-certificate-file or --ca-certificate, but not both.
+
+      Example with file:
+
+      ```
+      cloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem
+      ```
+
+      Example with base64 encoded data:
+
+      ```
+      cloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - resource-modify
+    options:
+      - name: ca-certificate-file
+        type: string
+        description: |
+          Path to a CA certificate PEM file. Mutually exclusive with --ca-certificate.
+      - name: ca-certificate
+        type: string
+        description: |
+          Base64 encoded CA certificate data. Mutually exclusive with --ca-certificate-file.
+
+  - name: cloud namespace cert-ca delete
+    summary: Delete CA certificates from a namespace
+    description: |
+      Delete client CA certificates from a Temporal Cloud namespace. This operation
+      requires confirmation and will remove the specified certificates from the
+      namespace configuration.
+
+      Specify either --ca-certificate-file or --ca-certificate, but not both.
+
+      Example with file:
+
+      ```
+      cloud namespace cert-ca delete --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem
+      ```
+
+      Example with base64 encoded data:
+
+      ```
+      cloud namespace cert-ca delete --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - resource-modify
+    options:
+      - name: ca-certificate-file
+        type: string
+        description: |
+          Path to a CA certificate PEM file. Mutually exclusive with --ca-certificate.
+      - name: ca-certificate
+        type: string
+        description: |
+          Base64 encoded CA certificate data. Mutually exclusive with --ca-certificate-file.
 
 option-sets:
   - name: client
@@ -520,3 +609,35 @@ option-sets:
           configurations when changes are detected.
   - name: common
     external-package: github.com/temporalio/cli/cliext
+  - name: namespace
+    options:
+      - name: namespace
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+        required: true
+  - name: resource-modify
+    options:
+      - name: resource-version
+        type: string
+        short: v
+        description: |
+          Resource version for optimistic concurrency control. If not provided,
+          the current version is fetched automatically.
+      - name: idempotent
+        type: bool
+        description: |
+          Succeed silently if the namespace already matches the specification.
+          Without this flag, the command errors when no changes are needed.
+      - name: async-operation-id
+        type: string
+        description: |
+          Custom identifier for tracking this async operation. If not provided,
+          a unique ID is generated automatically.
+      - name: async
+        type: bool
+        description: |
+          Return immediately after initiating the operation instead of waiting
+          for completion. Use the returned operation ID to check status later.
