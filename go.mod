@@ -13,7 +13,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/cli/cliext v0.0.0-20260112210410-f2d230be226c
 	go.temporal.io/api v1.59.0
-	go.temporal.io/cloud-sdk v0.6.0
+	go.temporal.io/cloud-sdk v0.8.0
 	go.temporal.io/sdk v1.38.0
 	go.temporal.io/sdk/contrib/envconfig v0.1.0
 	golang.org/x/oauth2 v0.34.0

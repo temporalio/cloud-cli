@@ -85,6 +85,30 @@ commands:
         description: |
           Clear stored login credentials and configuration, then re-authenticate.
           Use this if you need to switch accounts or fix authentication issues.
+  - name: cloud whoami
+    summary: Display the current authenticated identity
+    description: |
+      Display information about the currently authenticated identity.
+
+      Shows whether you are authenticated as a user or service account, along
+      with the associated API key if one is in use.
+
+      Example:
+
+      ```
+      cloud whoami
+      ```
+    has-init: false
+    option-sets:
+      - client
+    docs:
+      keywords:
+        - whoami
+        - identity
+        - authentication
+      description-header: Who Am I
+      tags:
+        - authentication
   - name: cloud logout
     summary: Clear Temporal Cloud authentication credentials
     description: |
