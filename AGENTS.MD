@@ -138,6 +138,195 @@ w.RegisterActivityWithOptions(a, activity.RegisterOptions{Name: ActivityNamePref
 
 Adding a command is a four-step process. Read this section top-to-bottom before touching any file.
 
+### Layered Architecture Pattern
+
+**IMPORTANT:** All resource commands (namespace, apikey, etc.) follow a two-layer architecture for separation of concerns and testability:
+
+#### Layer 1: Command Layer (`temporalcloudcli/commands.<resource>.go`)
+Responsibilities:
+- Parse and validate user input (flags, arguments)
+- Handle user interactions (prompts, confirmations)
+- Call application layer methods
+- Format and print output using printer utilities
+- Should NOT contain business logic or direct API calls (except for simple one-off commands)
+
+#### Layer 2: Application Layer (`internal/<resource>/client.go`)
+Responsibilities:
+- Contains business logic and domain operations
+- Communicates with the cloud API
+- Defines mockable interfaces (e.g., `CloudService`) for all external dependencies
+- Returns domain objects, not command-specific types
+- Should be testable without CLI dependencies
+
+#### Testing Strategy
+
+**Application Layer Tests:**
+- Unit tests with mocks generated from interfaces
+- Tests live in `internal/<resource>/*_test.go`
+- Mock the `CloudService` interface to test business logic in isolation
+
+**Command Layer Tests:**
+- Integration tests in `temporalcloudcli/commands.<resource>_test.go`
+- Use real API calls (require live credentials)
+- Can inject mocked application client via `CommandContext.NamespaceClient` for unit testing command logic
+
+#### Setting Up Mocks
+
+When creating a new resource client with mockable interfaces:
+
+1. **Define the interface in the application layer:**
+```go
+// internal/myresource/client.go
+type CloudService interface {
+    GetResource(ctx context.Context, req *cloudservice.GetResourceRequest, opts ...grpc.CallOption) (*cloudservice.GetResourceResponse, error)
+    // ... other methods
+}
+
+type Client struct {
+    Cloud CloudService
+}
+
+func NewClient(cloudClient cloudservice.CloudServiceClient) *Client {
+    return &Client{Cloud: cloudClient}
+}
+```
+
+2. **Update `.mockery.yml` to generate mocks:**
+```yaml
+packages:
+  github.com/temporalio/cloud-cli/internal/myresource:
+    interfaces:
+      CloudService:
+```
+
+3. **Regenerate mocks:**
+```bash
+make mocks
+```
+
+This generates `internal/myresource/mock/mock.go` with a `MockCloudService` type.
+
+4. **Add the client interface to command context:**
+
+If the resource needs to be accessible across multiple commands, add it to `temporalcloudcli/commands.go`:
+```go
+type MyResourceClient interface {
+    GetResource(context.Context, string) (*resourcev1.Resource, error)
+    // ... other methods from internal/myresource/client.go
+}
+
+type CommandContext struct {
+    // ... existing fields
+    MyResourceClient MyResourceClient  // For testing, can inject mock
+}
+```
+
+Then add it to `.mockery.yml`:
+```yaml
+packages:
+  github.com/temporalio/cloud-cli/temporalcloudcli:
+    interfaces:
+      MyResourceClient:
+```
+
+And run `make mocks` again.
+
+#### Example Implementation
+
+**Command Layer (`temporalcloudcli/commands.namespace.cert_ca.go`):**
+```go
+func (c *CloudNamespaceCertCaListCommand) run(cctx *CommandContext, _ []string) error {
+    // 1. Get application client (real or mock for testing)
+    namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
+    if err != nil {
+        return err
+    }
+
+    // 2. Validate input
+    if c.Namespace == "" {
+        return errors.New("namespace is required")
+    }
+
+    // 3. Call application layer
+    certs, err := namespaceClient.ListCACerts(cctx.Context, c.Namespace)
+    if err != nil {
+        return err
+    }
+
+    // 4. Format and print output
+    return cctx.Printer.PrintStructured(certs, printer.StructuredOptions{})
+}
+
+// Helper to get client (allows mock injection for testing)
+func getNamespaceClient(cctx *CommandContext, opts ClientOptions) (NamespaceClient, error) {
+    if cctx.NamespaceClient != nil {
+        return cctx.NamespaceClient, nil  // Use mock if provided
+    }
+    cloudClient, err := cctx.BuildCloudClient(opts)
+    if err != nil {
+        return nil, err
+    }
+    return namespace.NewClient(cloudClient.CloudService()), nil
+}
+```
+
+**Application Layer (`internal/namespace/client.go`):**
+```go
+// CloudService defines mockable interface for cloud operations
+type CloudService interface {
+    GetNamespace(ctx context.Context, req *cloudservice.GetNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.GetNamespaceResponse, error)
+    UpdateNamespace(ctx context.Context, req *cloudservice.UpdateNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.UpdateNamespaceResponse, error)
+}
+
+type Client struct {
+    Cloud CloudService  // Mockable interface, not concrete type
+}
+
+func NewClient(cloudClient cloudservice.CloudServiceClient) *Client {
+    return &Client{Cloud: cloudClient}
+}
+
+func (c *Client) ListCACerts(ctx context.Context, namespace string) ([]cert.CACert, error) {
+    // Business logic: fetch namespace, parse certs, validate, etc.
+    res, err := c.Cloud.GetNamespace(ctx, &cloudservice.GetNamespaceRequest{
+        Namespace: namespace,
+    })
+    if err != nil {
+        return nil, err
+    }
+    // ... parse and return certs
+}
+```
+
+**Application Layer Unit Test (`internal/namespace/cert_test.go`):**
+```go
+func TestClient_ListCACerts(t *testing.T) {
+    mockCloud := mock.NewMockCloudService(t)
+    client := &Client{Cloud: mockCloud}
+
+    mockCloud.EXPECT().GetNamespace(mock.Anything, mock.Anything).Return(
+        &cloudservice.GetNamespaceResponse{/* ... */}, nil,
+    )
+
+    certs, err := client.ListCACerts(context.Background(), "my-namespace")
+    require.NoError(t, err)
+    require.NotEmpty(t, certs)
+}
+```
+
+#### When to Use This Pattern
+
+**Use the two-layer pattern when:**
+- The resource has multiple operations (namespace, apikey, identity, etc.)
+- Business logic is non-trivial and needs unit testing
+- The same logic might be reused across multiple commands
+
+**Skip the application layer for:**
+- Simple one-off commands (like `whoami`)
+- Commands with no business logic (direct API passthrough)
+
+For simple commands, call `cloudClient.CloudService()` directly in the `run` method.
+
 ### Step 1 — Declare the command in `commands.yml`
 
 Every command is declared in `temporalcloudcli/commands.yml`. The name field is the full command path (e.g. `cloud whoami`, `cloud namespace get`). Key fields:
