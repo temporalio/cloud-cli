@@ -60,10 +60,11 @@ func TestCloudNamespaceCertFilterListCommand_Success(t *testing.T) {
 	}
 	err := json.Unmarshal(buf.Bytes(), &result)
 	require.NoError(t, err)
-	assert.Len(t, result.CertificateFilters, 2)
-	assert.Equal(t, "test.temporal.io", result.CertificateFilters[0].CommonName)
-	assert.Equal(t, "Temporal", result.CertificateFilters[0].Organization)
-	assert.Equal(t, "*.temporal.io", result.CertificateFilters[1].SubjectAlternativeName)
+
+	expected := struct {
+		CertificateFilters []*namespacev1.CertificateFilterSpec `json:"certificateFilters"`
+	}{CertificateFilters: expectedFilters}
+	assert.Equal(t, expected, result)
 }
 
 func TestCloudNamespaceCertFilterListCommand_EmptyList(t *testing.T) {
@@ -354,8 +355,14 @@ func TestCloudNamespaceCertFilterCreateCommand_NothingToChange(t *testing.T) {
 				}
 				err := json.Unmarshal(buf.Bytes(), &result)
 				require.NoError(t, err)
-				assert.Equal(t, "unchanged", result.Status)
-				assert.Equal(t, "test-namespace.test-account", result.ID)
+				expected := struct {
+					Status string `json:"status"`
+					ID     string `json:"id"`
+				}{
+					Status: "unchanged",
+					ID:     "test-namespace.test-account",
+				}
+				assert.Equal(t, expected, result)
 			},
 		},
 		{
@@ -803,8 +810,14 @@ func TestCloudNamespaceCertFilterDeleteCommand_NothingToChange(t *testing.T) {
 				}
 				err := json.Unmarshal(buf.Bytes(), &result)
 				require.NoError(t, err)
-				assert.Equal(t, "unchanged", result.Status)
-				assert.Equal(t, "test-namespace.test-account", result.ID)
+				expected := struct {
+					Status string `json:"status"`
+					ID     string `json:"id"`
+				}{
+					Status: "unchanged",
+					ID:     "test-namespace.test-account",
+				}
+				assert.Equal(t, expected, result)
 			},
 		},
 		{
