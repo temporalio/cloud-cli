@@ -6,6 +6,7 @@ import (
 
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
+	"google.golang.org/protobuf/proto"
 )
 
 // ListCertFilters retrieves all certificate filters configured for mTLS authentication
@@ -89,7 +90,7 @@ func (c *Client) DeleteCertFilters(ctx context.Context, params DeleteCertFilters
 	var newFilters []*namespacev1.CertificateFilterSpec
 	for _, existing := range existingFilters {
 		shouldRemove := slices.ContainsFunc(params.Filters, func(toRemove *namespacev1.CertificateFilterSpec) bool {
-			return certFiltersEqual(existing, toRemove)
+			return proto.Equal(existing, toRemove)
 		})
 		if shouldRemove {
 			continue
@@ -116,13 +117,4 @@ func (c *Client) DeleteCertFilters(ctx context.Context, params DeleteCertFilters
 		AsyncOperationID: params.AsyncOperationID,
 	}
 	return c.UpdateNamespace(ctx, updateParams)
-}
-
-// certFiltersEqual compares two certificate filter specifications for equality.
-// Returns true if all fields match.
-func certFiltersEqual(a, b *namespacev1.CertificateFilterSpec) bool {
-	return a.GetCommonName() == b.GetCommonName() &&
-		a.GetOrganization() == b.GetOrganization() &&
-		a.GetOrganizationalUnit() == b.GetOrganizationalUnit() &&
-		a.GetSubjectAlternativeName() == b.GetSubjectAlternativeName()
 }
