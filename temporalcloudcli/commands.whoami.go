@@ -26,17 +26,23 @@ func (c *CloudWhoamiCommand) run(cctx *CommandContext, _ []string) error {
 	switch res.GetPrincipal().(type) {
 	case *cloudservice.GetCurrentIdentityResponse_User:
 		cctx.Printer.Println("Authenticated as User:")
-		cctx.Printer.PrintResource(res.GetUser(), printer.PrintResourceOptions{})
+		if err := cctx.Printer.PrintResource(res.GetUser(), printer.PrintResourceOptions{}); err != nil {
+			return err
+		}
 	case *cloudservice.GetCurrentIdentityResponse_ServiceAccount:
 		cctx.Printer.Println("Authenticated as Service Account:")
-		cctx.Printer.PrintResource(res.GetServiceAccount(), printer.PrintResourceOptions{})
+		if err := cctx.Printer.PrintResource(res.GetServiceAccount(), printer.PrintResourceOptions{}); err != nil {
+			return err
+		}
 	default:
 		cctx.Printer.Println("Authenticated with unknown principal type")
 	}
 
 	if res.GetPrincipalApiKey() != nil {
 		cctx.Printer.Println("Using API Key:")
-		cctx.Printer.PrintResource(res.GetPrincipalApiKey(), printer.PrintResourceOptions{})
+		if err := cctx.Printer.PrintResource(res.GetPrincipalApiKey(), printer.PrintResourceOptions{}); err != nil {
+			return err
+		}
 	}
 	return nil
 }
