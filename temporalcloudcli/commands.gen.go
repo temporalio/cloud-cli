@@ -88,6 +88,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.Command.AddCommand(&NewCloudLoginCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLogoutCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudWhoamiCommand(cctx, &s).Command)
 	s.Command.PersistentFlags().StringVar(&s.ConfigDir, "config-dir", "", "Directory path where CLI configuration files are stored, including authentication tokens and settings.")
 	s.Command.PersistentFlags().BoolVar(&s.DisablePopUp, "disable-pop-up", false, "Prevent the CLI from opening a browser window during authentication. Useful for headless environments or when using alternative auth methods.")
 	s.Command.PersistentFlags().BoolVar(&s.AutoConfirm, "auto-confirm", false, "Automatically confirm prompts and actions that require user confirmation. Useful for scripting and automation.")
@@ -659,6 +660,33 @@ func NewCloudNamespaceRetentionSetCommand(cctx *CommandContext, parent *CloudNam
 	s.Command.Flags().StringVar(&s.ResourceVersion, "resource-version", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudWhoamiCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+	ClientOptions
+}
+
+func NewCloudWhoamiCommand(cctx *CommandContext, parent *CloudCommand) *CloudWhoamiCommand {
+	var s CloudWhoamiCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "whoami [flags]"
+	s.Command.Short = "Display the current authenticated identity"
+	if hasHighlighting {
+		s.Command.Long = "Display information about the currently authenticated identity.\n\nShows whether you are authenticated as a user or service account, along\nwith the associated API key if one is in use.\n\nExample:\n\n\x1b[1mcloud whoami\x1b[0m"
+	} else {
+		s.Command.Long = "Display information about the currently authenticated identity.\n\nShows whether you are authenticated as a user or service account, along\nwith the associated API key if one is in use.\n\nExample:\n\n```\ncloud whoami\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

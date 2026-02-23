@@ -133,3 +133,149 @@ w.RegisterActivityWithOptions(a, activity.RegisterOptions{Name: ActivityNamePref
 1. All commands should have an `--async-operation-id` for mutations. For example, anything that is a create, update, or delete, or any command specific patch commands.
 2. All top level spec based commands (for example, namespace) that include a mutation should have an `apply` and `edit` subcommand. The only exception to this will be apikey.
 3. All mutation commands should have a `--resource-version` flag that allows the user to specify a resource version for optimistic locking.
+
+## How to Implement a New Command
+
+Adding a command is a four-step process. Read this section top-to-bottom before touching any file.
+
+### Step 1 — Declare the command in `commands.yml`
+
+Every command is declared in `temporalcloudcli/commands.yml`. The name field is the full command path (e.g. `cloud whoami`, `cloud namespace get`). Key fields:
+
+```yaml
+- name: cloud <subcommand>          # full dotted path; determines the cobra tree
+  summary: One-line description
+  description: |
+    Longer description shown in --help.
+    Include a usage example block.
+  has-init: false                   # true only for the root `cloud` command
+  option-sets:
+    - client                        # adds --api-key / --server flags
+  options:                          # command-specific flags
+    - name: my-flag
+      type: string                  # string | bool | int
+      required: true
+      short: f                      # optional single-char shorthand
+      description: |
+        Flag description.
+  docs:                             # optional; used for generated docs site
+    keywords: [...]
+    description-header: ...
+    tags: [...]
+```
+
+**Reusable option-sets** (defined at the bottom of `commands.yml`):
+- `client` — adds `--api-key` and `--server` (hidden); include this on every command that calls the API
+- `diff` — adds `--verbose-diff`; include on mutation commands that show a diff before applying
+- `common` — external package options; only on the root `cloud` command
+
+**Read-only commands** do not need `--async-operation-id` or `--resource-version`.
+
+### Step 2 — Regenerate `commands.gen.go`
+
+```bash
+make gen
+```
+
+This clones the `temporalio/cli` repo, builds the `gen-commands` tool, and regenerates `temporalcloudcli/commands.gen.go`. **Never edit `commands.gen.go` by hand.**
+
+The generator derives the Go struct name from the command path:
+`cloud namespace get` → `CloudNamespaceGetCommand`
+`cloud whoami`        → `CloudWhoamiCommand`
+
+Each generated struct embeds the option-set structs (e.g. `ClientOptions`) and a `cobra.Command`. The generator wires `s.Command.Run` to call `s.run(cctx, args)`, which you implement in Step 3.
+
+### Step 3 — Implement `commands.<name>.go`
+
+Create `temporalcloudcli/commands.<name>.go` and implement the `run` method on the generated struct.
+
+**Standard read command skeleton:**
+
+```go
+package temporalcloudcli
+
+import (
+    "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+    "github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
+)
+
+func (c *CloudMyCommand) run(cctx *CommandContext, _ []string) error {
+    cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+    if err != nil {
+        return err
+    }
+    res, err := cloudClient.CloudService().SomeRPCMethod(cctx.Context, &cloudservice.SomeRequest{})
+    if err != nil {
+        return err
+    }
+    return cctx.Printer.PrintStructured(res, printer.StructuredOptions{})
+}
+```
+
+**Printer methods:**
+- `PrintStructured(v, opts)` — single object; JSON or text table
+- `PrintResource(proto, opts)` — standard resource with metadata + spec fields
+- `PrintResourceList(list, printOpts, tableOpts)` — slice of resources as a table
+
+**Resource-layer client (for complex resources):** If the command belongs to a resource with multiple operations (like namespace), add a `<resource>.go` file with a thin client wrapper over `cloudclient.Client` — see `namespace.go` as the canonical example. For simple one-off calls (like `whoami`), call `cloudClient.CloudService()` directly in the `run` method.
+
+**Common helpers in `common.go`:**
+- `loadJSONSpec(spec string)` — loads JSON from inline string or `@file` path
+- `runEditorForJSONEditForProtos(current, target)` — opens `$EDITOR` for interactive editing
+- `promptApplyResource(cctx, old, new, verbose)` — shows diff and asks for confirmation
+- `PollAsyncOperation(cctx, client, opID, resourceID)` — polls until terminal state
+- `isNotFoundErr(err)` / `isNothingChangedErr(idempotent, err)` — gRPC error helpers
+
+After creating the file, run `git add temporalcloudcli/commands.<name>.go`.
+
+### Step 4 — Write integration tests in `commands.<name>_test.go`
+
+All tests are integration tests (require a live API key + server). Follow this template:
+
+```go
+//go:build integration
+// +build integration
+
+package temporalcloudcli_test
+
+import (
+    "fmt"
+    "io"
+
+    "google.golang.org/protobuf/encoding/protojson"
+    "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+)
+
+func (s *SharedServerSuite) TestMyCommand() {
+    res := s.Execute(
+        "<subcommand>",
+        fmt.Sprintf("--server=%s", s.server),
+        "-o=json",
+    )
+    s.Suite.Require().NoError(res.Err)
+
+    buf, err := io.ReadAll(&res.Stdout)
+    s.Suite.Require().NoError(err)
+
+    out := &cloudservice.MyResponse{}
+    err = protojson.Unmarshal(buf, out)
+    s.Suite.Require().NoError(err)
+
+    // assert fields on out
+}
+```
+
+Key test infrastructure (defined in `commands_test.go`):
+- `s.Execute(args...)` — runs the CLI with the given args, captures stdout/stderr
+- `s.getCloudClient()` — returns a raw `*cloudclient.Client` for direct SDK calls
+- `s.pollAsyncOperation(client, opID)` — polls an async op to completion
+- `s.generateRandomID()` — returns a random 10-char string for unique resource names
+- `s.ContainsOnSameLine(text, pieces...)` — asserts pieces appear in order on one line
+
+After creating the file, run `git add temporalcloudcli/commands.<name>_test.go`.
+
+### Step 5 — Verify
+
+```bash
+make all   # gen + build + test (unit tests only; integration tests need -tags=integration)
+```
