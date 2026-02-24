@@ -3,6 +3,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
@@ -27,12 +28,18 @@ func (c *Client) ListSearchAttributes(ctx context.Context, name string) ([]Searc
 		return []SearchAttribute{}, nil
 	}
 
-	result := make([]SearchAttribute, 0, len(searchAttrs))
-	for attrName, attrType := range searchAttrs {
-		result = append(result, SearchAttribute{
+	keys := make([]string, 0, len(searchAttrs))
+	for attrName := range searchAttrs {
+		keys = append(keys, attrName)
+	}
+	sort.Strings(keys)
+
+	result := make([]SearchAttribute, len(keys))
+	for i, attrName := range keys {
+		result[i] = SearchAttribute{
 			Name: attrName,
-			Type: attrType,
-		})
+			Type: searchAttrs[attrName],
+		}
 	}
 
 	return result, nil

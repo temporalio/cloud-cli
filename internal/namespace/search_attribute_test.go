@@ -40,15 +40,10 @@ func TestListSearchAttributes_Success(t *testing.T) {
 	result, err := client.ListSearchAttributes(ctx, "test-namespace")
 
 	require.NoError(t, err)
-	require.Len(t, result, 2)
-
-	// Map iteration order is non-deterministic, so compare via a map
-	resultMap := make(map[string]namespacev1.NamespaceSpec_SearchAttributeType)
-	for _, attr := range result {
-		resultMap[attr.Name] = attr.Type
-	}
-	assert.Equal(t, namespacev1.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_KEYWORD, resultMap["CustomKeyword"])
-	assert.Equal(t, namespacev1.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_TEXT, resultMap["CustomText"])
+	assert.Equal(t, []namespace.SearchAttribute{
+		{Name: "CustomKeyword", Type: namespacev1.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_KEYWORD},
+		{Name: "CustomText", Type: namespacev1.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_TEXT},
+	}, result)
 }
 
 func TestListSearchAttributes_EmptyList(t *testing.T) {
