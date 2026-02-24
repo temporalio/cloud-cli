@@ -95,7 +95,7 @@ func (c *CloudNamespaceSearchAttributeCreateCommand) run(cctx *CommandContext, _
 		return err
 	}
 
-	createSearchAttribute := wrapAsyncOperation(cctx, c.ResourceModifyOptions, c.Namespace, c.ClientOptions, namespaceClient.CreateSearchAttribute)
+	createSearchAttribute := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, namespaceClient.CreateSearchAttribute)
 	return createSearchAttribute(namespace.CreateSearchAttributeParams{
 		Namespace:        c.Namespace,
 		Name:             c.Name,
@@ -111,7 +111,7 @@ func (c *CloudNamespaceSearchAttributeRenameCommand) run(cctx *CommandContext, _
 		return err
 	}
 
-	renameSearchAttribute := wrapAsyncOperation(cctx, c.ResourceModifyOptions, c.Namespace, c.ClientOptions, namespaceClient.RenameSearchAttribute)
+	renameSearchAttribute := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, namespaceClient.RenameSearchAttribute)
 	return renameSearchAttribute(namespace.RenameSearchAttributeParams{
 		Namespace:                         c.Namespace,
 		ExistingCustomSearchAttributeName: c.ExistingName,
