@@ -686,6 +686,82 @@ commands:
         description: |
           The subject alternative name (SAN) from the certificate.
 
+  # Namespace search-attribute commands
+  - name: cloud namespace search-attribute
+    summary: Manage custom search attributes for namespaces
+    description: |
+      Commands for managing custom search attributes for Temporal Cloud namespaces.
+      Search attributes enable filtering and searching workflows by custom fields.
+    has-init: false
+  - name: cloud namespace search-attribute list
+    summary: List custom search attributes for a namespace
+    description: |
+      List all custom search attributes configured for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace search-attribute list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace search-attribute create
+    summary: Create a custom search attribute for a namespace
+    description: |
+      Create a new custom search attribute for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace search-attribute create --namespace my-namespace.my-account --name MyField --type Keyword
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - resource-modify
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the search attribute to create.
+      - name: type
+        type: string
+        required: true
+        description: |
+          The type of the search attribute. Valid values: Text, Keyword, Int, Double,
+          Bool, Datetime, KeywordList.
+  - name: cloud namespace search-attribute rename
+    summary: Rename a custom search attribute
+    description: |
+      Rename an existing custom search attribute for a Temporal Cloud namespace.
+      This operation preserves all existing data associated with the search attribute.
+
+      Example:
+
+      ```
+      cloud namespace search-attribute rename --namespace my-namespace.my-account --existing-name OldField --new-name NewField
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - resource-modify
+    options:
+      - name: existing-name
+        type: string
+        required: true
+        description: |
+          The current name of the search attribute to rename.
+      - name: new-name
+        type: string
+        required: true
+        description: |
+          The new name for the search attribute.
+
 option-sets:
   - name: client
     options:
