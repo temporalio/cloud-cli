@@ -570,7 +570,8 @@ commands:
     option-sets:
       - client
       - namespace
-      - resource-modify
+      - async-operation
+      - resource-version
     options:
       - name: ca-certificate-file
         type: string
@@ -605,7 +606,8 @@ commands:
     option-sets:
       - client
       - namespace
-      - resource-modify
+      - async-operation
+      - resource-version
     options:
       - name: ca-certificate-file
         type: string
@@ -641,7 +643,8 @@ commands:
     option-sets:
       - client
       - namespace
-      - resource-modify
+      - async-operation
+      - resource-version
     options:
       - name: common-name
         type: string
@@ -667,7 +670,8 @@ commands:
     option-sets:
       - client
       - namespace
-      - resource-modify
+      - async-operation
+      - resource-version
     options:
       - name: common-name
         type: string
@@ -721,7 +725,8 @@ commands:
     option-sets:
       - client
       - namespace
-      - resource-modify
+      - async-operation
+      - resource-version
     options:
       - name: name
         type: string
@@ -749,7 +754,8 @@ commands:
     option-sets:
       - client
       - namespace
-      - resource-modify
+      - async-operation
+      - resource-version
     options:
       - name: existing-name
         type: string
@@ -761,6 +767,104 @@ commands:
         required: true
         description: |
           The new name for the search attribute.
+
+  # Namespace tag commands
+  - name: cloud namespace tag
+    summary: Manage namespace tags
+    description: |
+      Commands for managing tags of Temporal Cloud namespaces.
+
+      Tags are key-value pairs used for organization and categorization of namespaces.
+    has-init: false
+  - name: cloud namespace tag list
+    summary: List tags for a namespace
+    description: |
+      List all tags configured for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace tag list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace tag create
+    summary: Create a tag for a namespace
+    description: |
+      Create a new tag for a Temporal Cloud namespace. Fails if a tag with
+      the specified key already exists.
+
+      Example:
+
+      ```
+      cloud namespace tag create --namespace my-namespace.my-account --key environment --value production
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+    options:
+      - name: key
+        type: string
+        required: true
+        description: |
+          The tag key.
+      - name: value
+        type: string
+        required: true
+        description: |
+          The tag value.
+  - name: cloud namespace tag update
+    summary: Update a tag for a namespace
+    description: |
+      Update the value of an existing tag for a Temporal Cloud namespace.
+      Fails if the specified tag key does not exist.
+
+      Example:
+
+      ```
+      cloud namespace tag update --namespace my-namespace.my-account --key environment --value staging
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+    options:
+      - name: key
+        type: string
+        required: true
+        description: |
+          The tag key to update.
+      - name: value
+        type: string
+        required: true
+        description: |
+          The new value for the tag.
+  - name: cloud namespace tag delete
+    summary: Delete a tag from a namespace
+    description: |
+      Delete a tag from a Temporal Cloud namespace by its key.
+
+      Example:
+
+      ```
+      cloud namespace tag delete --namespace my-namespace.my-account --key environment
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+    options:
+      - name: key
+        type: string
+        required: true
+        description: |
+          The tag key to delete.
 
 option-sets:
   - name: client
@@ -796,7 +900,7 @@ option-sets:
           (e.g., 'my-namespace.my-account').
         short: n
         required: true
-  - name: resource-modify
+  - name: resource-version
     options:
       - name: resource-version
         type: string
@@ -804,6 +908,8 @@ option-sets:
         description: |
           Resource version for optimistic concurrency control. If not provided,
           the current version is fetched automatically.
+  - name: async-operation
+    options:
       - name: idempotent
         type: bool
         description: |

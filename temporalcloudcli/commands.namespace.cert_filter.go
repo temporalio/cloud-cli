@@ -29,7 +29,7 @@ func (c *CloudNamespaceCertFilterCreateCommand) run(cctx *CommandContext, _ []st
 		return errors.New("Aborting create.")
 	}
 
-	addCertFilters := wrapAsyncOperation(cctx, c.ResourceModifyOptions, c.Namespace, c.ClientOptions, namespaceClient.AddCertFilters)
+	addCertFilters := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, namespaceClient.AddCertFilters)
 	return addCertFilters(namespace.AddCertFiltersParams{
 		Namespace:        c.Namespace,
 		Filters:          []*namespacev1.CertificateFilterSpec{filter},
@@ -80,7 +80,7 @@ func (c *CloudNamespaceCertFilterDeleteCommand) run(cctx *CommandContext, _ []st
 		return errors.New("Aborting delete.")
 	}
 
-	deleteCertFilters := wrapAsyncOperation(cctx, c.ResourceModifyOptions, c.Namespace, c.ClientOptions, namespaceClient.DeleteCertFilters)
+	deleteCertFilters := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, namespaceClient.DeleteCertFilters)
 	return deleteCertFilters(namespace.DeleteCertFiltersParams{
 		Namespace:        c.Namespace,
 		Filters:          []*namespacev1.CertificateFilterSpec{filter},

@@ -75,6 +75,9 @@ type NamespaceClient interface {
 	ListSearchAttributes(context.Context, string) ([]namespace.SearchAttribute, error)
 	CreateSearchAttribute(context.Context, namespace.CreateSearchAttributeParams) (*operation.AsyncOperation, error)
 	RenameSearchAttribute(context.Context, namespace.RenameSearchAttributeParams) (*operation.AsyncOperation, error)
+	ListTags(context.Context, string) ([]namespace.Tag, error)
+	SetTag(context.Context, namespace.SetTagParams) (*operation.AsyncOperation, error)
+	DeleteTags(context.Context, namespace.DeleteTagsParams) (*operation.AsyncOperation, error)
 	GetNamespace(context.Context, string) (*namespacev1.Namespace, error)
 }
 
