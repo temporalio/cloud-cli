@@ -72,6 +72,9 @@ type NamespaceClient interface {
 	AddCertFilters(context.Context, namespace.AddCertFiltersParams) (*operation.AsyncOperation, error)
 	ListCertFilters(context.Context, string) ([]*namespacev1.CertificateFilterSpec, error)
 	DeleteCertFilters(context.Context, namespace.DeleteCertFiltersParams) (*operation.AsyncOperation, error)
+	ListSearchAttributes(context.Context, string) ([]namespace.SearchAttribute, error)
+	CreateSearchAttribute(context.Context, namespace.CreateSearchAttributeParams) (*operation.AsyncOperation, error)
+	RenameSearchAttribute(context.Context, namespace.RenameSearchAttributeParams) (*operation.AsyncOperation, error)
 	GetNamespace(context.Context, string) (*namespacev1.Namespace, error)
 }
 
