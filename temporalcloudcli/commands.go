@@ -69,6 +69,9 @@ type NamespaceClient interface {
 	AddCACerts(context.Context, namespace.AddCACertsParams) (*operation.AsyncOperation, error)
 	ListCACerts(context.Context, string) ([]cert.CACert, error)
 	DeleteCACerts(context.Context, namespace.DeleteCACertsParams) (*operation.AsyncOperation, error)
+	AddCertFilters(context.Context, namespace.AddCertFiltersParams) (*operation.AsyncOperation, error)
+	ListCertFilters(context.Context, string) ([]*namespacev1.CertificateFilterSpec, error)
+	DeleteCertFilters(context.Context, namespace.DeleteCertFiltersParams) (*operation.AsyncOperation, error)
 	GetNamespace(context.Context, string) (*namespacev1.Namespace, error)
 }
 

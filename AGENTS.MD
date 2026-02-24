@@ -138,6 +138,294 @@ w.RegisterActivityWithOptions(a, activity.RegisterOptions{Name: ActivityNamePref
 
 Adding a command is a four-step process. Read this section top-to-bottom before touching any file.
 
+### Layered Architecture Pattern
+
+**IMPORTANT:** All resource commands (namespace, apikey, etc.) follow a two-layer architecture for separation of concerns and testability:
+
+#### Layer 1: Command Layer (`temporalcloudcli/commands.<resource>.go`)
+Responsibilities:
+- Parse and validate user input (flags, arguments)
+- Handle user interactions (prompts, confirmations)
+- Call application layer methods
+- Format and print output using printer utilities
+- Should NOT contain business logic or direct API calls (except for simple one-off commands)
+
+#### Layer 2: Application Layer (`internal/<resource>/client.go`)
+Responsibilities:
+- Contains business logic and domain operations
+- Communicates with the cloud API
+- Defines mockable interfaces (e.g., `CloudService`) for all external dependencies
+- Returns domain objects, not command-specific types
+- Should be testable without CLI dependencies
+
+#### Testing Strategy
+
+**Application Layer Tests:**
+- Unit tests with mocks generated from interfaces
+- Tests live in `internal/<resource>/*_test.go`
+- Mock the `CloudService` interface to test business logic in isolation
+
+**Command Layer Tests:**
+- Integration tests in `temporalcloudcli/commands.<resource>_test.go`
+- Use real API calls (require live credentials)
+- Can inject mocked application client via `CommandContext.NamespaceClient` for unit testing command logic
+
+#### Setting Up Mocks
+
+When creating a new resource client with mockable interfaces:
+
+1. **Define the interface in the application layer:**
+```go
+// internal/myresource/client.go
+type CloudService interface {
+    GetResource(ctx context.Context, req *cloudservice.GetResourceRequest, opts ...grpc.CallOption) (*cloudservice.GetResourceResponse, error)
+    // ... other methods
+}
+
+type Client struct {
+    Cloud CloudService
+}
+
+func NewClient(cloudClient cloudservice.CloudServiceClient) *Client {
+    return &Client{Cloud: cloudClient}
+}
+```
+
+2. **Update `.mockery.yml` to generate mocks:**
+```yaml
+packages:
+  github.com/temporalio/cloud-cli/internal/myresource:
+    interfaces:
+      CloudService:
+```
+
+3. **Regenerate mocks:**
+```bash
+make mocks
+```
+
+This generates `internal/myresource/mock/mock.go` with a `MockCloudService` type.
+
+4. **Add the client interface to command context:**
+
+If the resource needs to be accessible across multiple commands, add it to `temporalcloudcli/commands.go`:
+```go
+type MyResourceClient interface {
+    GetResource(context.Context, string) (*resourcev1.Resource, error)
+    // ... other methods from internal/myresource/client.go
+}
+
+type CommandContext struct {
+    // ... existing fields
+    MyResourceClient MyResourceClient  // For testing, can inject mock
+}
+```
+
+Then add it to `.mockery.yml`:
+```yaml
+packages:
+  github.com/temporalio/cloud-cli/temporalcloudcli:
+    interfaces:
+      MyResourceClient:
+```
+
+And run `make mocks` again.
+
+#### Example Implementation
+
+**Command Layer (`temporalcloudcli/commands.namespace.cert_ca.go`):**
+```go
+func (c *CloudNamespaceCertCaListCommand) run(cctx *CommandContext, _ []string) error {
+    // 1. Get application client (real or mock for testing)
+    namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
+    if err != nil {
+        return err
+    }
+
+    // 2. Validate input
+    if c.Namespace == "" {
+        return errors.New("namespace is required")
+    }
+
+    // 3. Call application layer
+    certs, err := namespaceClient.ListCACerts(cctx.Context, c.Namespace)
+    if err != nil {
+        return err
+    }
+
+    // 4. Format and print output
+    return cctx.Printer.PrintStructured(certs, printer.StructuredOptions{})
+}
+
+// Helper to get client (allows mock injection for testing)
+func getNamespaceClient(cctx *CommandContext, opts ClientOptions) (NamespaceClient, error) {
+    if cctx.NamespaceClient != nil {
+        return cctx.NamespaceClient, nil  // Use mock if provided
+    }
+    cloudClient, err := cctx.BuildCloudClient(opts)
+    if err != nil {
+        return nil, err
+    }
+    return namespace.NewClient(cloudClient.CloudService()), nil
+}
+```
+
+**Application Layer (`internal/namespace/client.go`):**
+```go
+// CloudService defines mockable interface for cloud operations
+type CloudService interface {
+    GetNamespace(ctx context.Context, req *cloudservice.GetNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.GetNamespaceResponse, error)
+    UpdateNamespace(ctx context.Context, req *cloudservice.UpdateNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.UpdateNamespaceResponse, error)
+}
+
+type Client struct {
+    Cloud CloudService  // Mockable interface, not concrete type
+}
+
+func NewClient(cloudClient cloudservice.CloudServiceClient) *Client {
+    return &Client{Cloud: cloudClient}
+}
+
+func (c *Client) ListCACerts(ctx context.Context, namespace string) ([]cert.CACert, error) {
+    // Business logic: fetch namespace, parse certs, validate, etc.
+    res, err := c.Cloud.GetNamespace(ctx, &cloudservice.GetNamespaceRequest{
+        Namespace: namespace,
+    })
+    if err != nil {
+        return nil, err
+    }
+    // ... parse and return certs
+}
+```
+
+**Application Layer Unit Test (`internal/namespace/cert_test.go`):**
+```go
+func TestClient_ListCACerts(t *testing.T) {
+    mockCloud := mock.NewMockCloudService(t)
+    client := &Client{Cloud: mockCloud}
+
+    mockCloud.EXPECT().GetNamespace(mock.Anything, mock.Anything).Return(
+        &cloudservice.GetNamespaceResponse{/* ... */}, nil,
+    )
+
+    certs, err := client.ListCACerts(context.Background(), "my-namespace")
+    require.NoError(t, err)
+    require.NotEmpty(t, certs)
+}
+```
+
+#### When to Use This Pattern
+
+**Use the two-layer pattern when:**
+- The resource has multiple operations (namespace, apikey, identity, etc.)
+- Business logic is non-trivial and needs unit testing
+- The same logic might be reused across multiple commands
+
+**Skip the application layer for:**
+- Simple one-off commands (like `whoami`)
+- Commands with no business logic (direct API passthrough)
+
+For simple commands, call `cloudClient.CloudService()` directly in the `run` method.
+
+### Best Practices and Common Patterns
+
+Follow these patterns to avoid rework and match existing code style:
+
+#### Server-side vs Client-side Responsibility
+- **Don't implement client-side validation that the server handles.** Examples:
+  - Duplicate detection (e.g., adding the same cert filter twice) — let the server return an error
+  - Complex business rules and constraints — trust the server's validation
+- **Do implement client-side validation for:**
+  - Required fields before making API calls
+  - Flag combinations that don't make sense (e.g., both `--file` and `--data` provided)
+  - Input format validation (e.g., valid base64, file exists)
+
+#### Prefer Standard Library Over Custom Helpers
+- Use Go standard library functions instead of writing custom helpers
+- **Good:** Use `slices.ContainsFunc()` for filtering
+- **Bad:** Write a custom `certFilterKey()` function to build map keys
+- **Example from cert_filter.go:**
+  ```go
+  // Good: simple loop with slices.ContainsFunc
+  var newFilters []*namespacev1.CertificateFilterSpec
+  for _, existing := range existingFilters {
+      shouldRemove := slices.ContainsFunc(params.Filters, func(toRemove *namespacev1.CertificateFilterSpec) bool {
+          return certFiltersEqual(existing, toRemove)
+      })
+      if shouldRemove {
+          continue
+      }
+      newFilters = append(newFilters, existing)
+  }
+  ```
+
+#### Choosing the Right Printer Method
+- **`PrintResourceList`** — for list commands returning collections (most common for list operations)
+  ```go
+  return cctx.Printer.PrintResourceList(
+      struct {
+          CertificateFilters []*namespacev1.CertificateFilterSpec
+      }{CertificateFilters: filters},
+      printer.PrintResourceOptions{},
+      printer.TableOptions{},
+  )
+  ```
+- **`PrintStructured`** — for single objects or simple data structures
+- **`PrintResource`** — for resources with metadata and spec fields
+
+#### Mutation Commands Must Prompt for Confirmation
+- **All create and delete commands** must prompt the user before making changes
+- Use `cctx.promptYes()` with `cctx.RootCommand.AutoConfirm` to allow bypass
+- **Pattern:**
+  ```go
+  yes, err := cctx.promptYes("Create (y/yes)?", cctx.RootCommand.AutoConfirm)
+  if err != nil {
+      return err
+  }
+  if !yes {
+      return errors.New("Aborting create.")
+  }
+  ```
+- Update commands typically don't need prompts (user explicitly provides new values)
+
+#### Testing Patterns
+
+**When to use table-driven tests:**
+- Use table-driven tests when test cases follow the **same flow** with simple variations
+- Good for: different flag combinations, different input values, same assertion pattern
+- **Avoid complex branching** in table-driven tests (nested ifs, different setup per case)
+- If you need conditional logic to handle different test cases, use individual test functions instead
+
+**Application Layer Tests (`internal/<resource>/<feature>_test.go`):**
+- Use **external test package** with `_test` suffix: `package namespace_test`
+- Write **individual test functions** (most application logic tests have unique setup/assertions)
+- Use **`proto.Equal()`** for comparing protobuf messages (not field-by-field comparison)
+- **Look at existing tests** like `internal/namespace/cert_test.go` for the pattern
+- Example naming: `TestClient_ListCertFilters_Success`, `TestClient_AddCertFilters_GetNamespaceError`
+
+**Command Layer Tests (`temporalcloudcli/commands.<name>_test.go`):**
+- Use **external test package**: `package temporalcloudcli_test`
+- **Table-driven tests** work well for success cases with simple variations:
+  - Example: async vs sync mode, different flag combinations, with/without resource version
+  - All cases follow same pattern: setup command → run → assert result
+  - See `TestCloudNamespaceCertCaCreateCommand_Success` in `cert_ca_test.go`
+- **Individual test functions** for cases requiring different logic:
+  - Validation errors (different error messages to check)
+  - API errors (different mock setup)
+  - Prompt scenarios (different stdin/AutoConfirm setup)
+  - Idempotent behavior (different assertion logic for success vs error)
+- **Look at existing tests** like `temporalcloudcli/commands.namespace.cert_ca_test.go` for the pattern
+- Always set `RootCommand.AutoConfirm: true` in tests to bypass prompts (unless testing prompt behavior)
+- Test prompt scenarios as individual functions:
+  - User declining prompt (`AutoConfirm: false`, provide `"n\n"` as stdin)
+  - JSON output without auto-confirm (should error)
+
+#### Code Simplicity
+- Keep code simple and readable over clever abstractions
+- **Good:** Simple loop with `continue` for filtering
+- **Bad:** Complex `slices.DeleteFunc` with nested logic
+- If logic is hard to understand at a glance, it's probably too complex
+
 ### Step 1 — Declare the command in `commands.yml`
 
 Every command is declared in `temporalcloudcli/commands.yml`. The name field is the full command path (e.g. `cloud whoami`, `cloud namespace get`). Key fields:
