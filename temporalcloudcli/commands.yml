@@ -768,6 +768,83 @@ commands:
         description: |
           The new name for the search attribute.
 
+  # Namespace codec commands
+  - name: cloud namespace codec
+    summary: Manage codec server settings for namespaces
+    description: |
+      Commands for managing the codec server configuration of Temporal Cloud namespaces.
+
+      The codec server is used to encode and decode payloads for workflows and activities.
+    has-init: false
+  - name: cloud namespace codec get
+    summary: Get codec server configuration for a namespace
+    description: |
+      Retrieve the current codec server configuration for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace codec get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace codec set
+    summary: Set codec server configuration for a namespace
+    description: |
+      Set the codec server configuration for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace codec set --namespace my-namespace.my-account --endpoint https://my-codec.example.com
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: endpoint
+        type: string
+        required: true
+        description: |
+          The codec server endpoint URL.
+      - name: pass-access-token
+        type: bool
+        description: |
+          Whether to pass the user access token to the codec server endpoint.
+      - name: include-cross-origin-credentials
+        type: bool
+        description: |
+          Whether to include cross-origin credentials in requests to the codec server.
+      - name: custom-error-message-default-message
+        type: string
+        description: |
+          A custom message to display for remote codec server errors.
+      - name: custom-error-message-default-link
+        type: string
+        description: |
+          A link to display alongside the custom error message for remote codec server errors.
+  - name: cloud namespace codec delete
+    summary: Delete codec server configuration from a namespace
+    description: |
+      Delete the codec server configuration from a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace codec delete --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+
   # Namespace tag commands
   - name: cloud namespace tag
     summary: Manage namespace tags

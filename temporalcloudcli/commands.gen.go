@@ -188,6 +188,7 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.AddCommand(&NewCloudNamespaceApplyCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCertCaCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCertFilterCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCodecCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceEditCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceGetCommand(cctx, &s).Command)
@@ -469,6 +470,130 @@ func NewCloudNamespaceCertFilterListCommand(cctx *CommandContext, parent *CloudN
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCodecCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceCodecCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceCodecCommand {
+	var s CloudNamespaceCodecCommand
+	s.Parent = parent
+	s.Command.Use = "codec"
+	s.Command.Short = "Manage codec server settings for namespaces"
+	s.Command.Long = "Commands for managing the codec server configuration of Temporal Cloud namespaces.\n\nThe codec server is used to encode and decode payloads for workflows and activities."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceCodecDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCodecGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCodecSetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceCodecDeleteCommand struct {
+	Parent  *CloudNamespaceCodecCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+}
+
+func NewCloudNamespaceCodecDeleteCommand(cctx *CommandContext, parent *CloudNamespaceCodecCommand) *CloudNamespaceCodecDeleteCommand {
+	var s CloudNamespaceCodecDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete codec server configuration from a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Delete the codec server configuration from a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mcloud namespace codec delete --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Delete the codec server configuration from a Temporal Cloud namespace.\n\nExample:\n\n```\ncloud namespace codec delete --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCodecGetCommand struct {
+	Parent  *CloudNamespaceCodecCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceCodecGetCommand(cctx *CommandContext, parent *CloudNamespaceCodecCommand) *CloudNamespaceCodecGetCommand {
+	var s CloudNamespaceCodecGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get codec server configuration for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the current codec server configuration for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mcloud namespace codec get --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the current codec server configuration for a Temporal Cloud namespace.\n\nExample:\n\n```\ncloud namespace codec get --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCodecSetCommand struct {
+	Parent  *CloudNamespaceCodecCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Endpoint                         string
+	PassAccessToken                  bool
+	IncludeCrossOriginCredentials    bool
+	CustomErrorMessageDefaultMessage string
+	CustomErrorMessageDefaultLink    string
+}
+
+func NewCloudNamespaceCodecSetCommand(cctx *CommandContext, parent *CloudNamespaceCodecCommand) *CloudNamespaceCodecSetCommand {
+	var s CloudNamespaceCodecSetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set [flags]"
+	s.Command.Short = "Set codec server configuration for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Set the codec server configuration for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mcloud namespace codec set --namespace my-namespace.my-account --endpoint https://my-codec.example.com\x1b[0m"
+	} else {
+		s.Command.Long = "Set the codec server configuration for a Temporal Cloud namespace.\n\nExample:\n\n```\ncloud namespace codec set --namespace my-namespace.my-account --endpoint https://my-codec.example.com\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Endpoint, "endpoint", "", "The codec server endpoint URL. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "endpoint")
+	s.Command.Flags().BoolVar(&s.PassAccessToken, "pass-access-token", false, "Whether to pass the user access token to the codec server endpoint.")
+	s.Command.Flags().BoolVar(&s.IncludeCrossOriginCredentials, "include-cross-origin-credentials", false, "Whether to include cross-origin credentials in requests to the codec server.")
+	s.Command.Flags().StringVar(&s.CustomErrorMessageDefaultMessage, "custom-error-message-default-message", "", "A custom message to display for remote codec server errors.")
+	s.Command.Flags().StringVar(&s.CustomErrorMessageDefaultLink, "custom-error-message-default-link", "", "A link to display alongside the custom error message for remote codec server errors.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

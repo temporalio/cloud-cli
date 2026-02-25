@@ -79,6 +79,10 @@ type NamespaceClient interface {
 	SetTag(context.Context, namespace.SetTagParams) (*operation.AsyncOperation, error)
 	DeleteTags(context.Context, namespace.DeleteTagsParams) (*operation.AsyncOperation, error)
 	GetNamespace(context.Context, string) (*namespacev1.Namespace, error)
+	UpdateNamespace(context.Context, namespace.UpdateNamespaceParams) (*operation.AsyncOperation, error)
+	GetCodecServer(context.Context, string) (*namespacev1.CodecServerSpec, error)
+	SetCodec(context.Context, namespace.SetCodecParams) (*operation.AsyncOperation, error)
+	DeleteCodec(context.Context, namespace.DeleteCodecParams) (*operation.AsyncOperation, error)
 }
 
 type Poller interface {
