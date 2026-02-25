@@ -75,9 +75,9 @@ w.RegisterActivityWithOptions(a, activity.RegisterOptions{Name: ActivityNamePref
 
 ## Development Process
 
-1. Follow the style rules in `.claude/rules/code-style.md`.
-2. Follow the architecture decisions in `.claude/rules/architecture.md`.
-3. When adding a new command, follow `.claude/rules/command-implementation.md`.
-4. When writing tests, follow `.claude/rules/testing.md`.
+1. Follow the style rules in `.aiagent/rules/code-style.md`.
+2. Follow the architecture decisions in `.aiagent/rules/architecture.md`.
+3. When adding a new command, follow `.aiagent/rules/command-implementation.md`.
+4. When writing tests, follow `.aiagent/rules/testing.md`.
 5. When a new `.go` file is created, `git add` it.
 6. Before saying "done", ensure `make all` passes.
