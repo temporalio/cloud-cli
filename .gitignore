@@ -38,4 +38,6 @@ go.work.sum
 
 # bots and other local information
 .local/
-.claude/
+.claude/*
+!.claude/rules
+!.claude/rules/**

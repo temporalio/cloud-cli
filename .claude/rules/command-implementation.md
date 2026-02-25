@@ -1,0 +1,159 @@
+# Implementing a New Command
+
+Adding a command is a five-step process. Read this top-to-bottom before touching any file.
+
+## Step 1 — Declare the command in `commands.yml`
+
+Every command is declared in `temporalcloudcli/commands.yml`. The `name` field is the full command path. Key fields:
+
+```yaml
+- name: cloud <subcommand>          # full dotted path; determines the cobra tree
+  summary: One-line description
+  description: |
+    Longer description shown in --help.
+    Include a usage example block.
+  has-init: false                   # true only for the root `cloud` command
+  option-sets:
+    - client                        # adds --api-key / --server flags
+  options:
+    - name: my-flag
+      type: string                  # string | bool | int
+      required: true
+      short: f                      # optional single-char shorthand
+      description: |
+        Flag description.
+  docs:                             # optional; used for generated docs site
+    keywords: [...]
+    description-header: ...
+    tags: [...]
+```
+
+**Reusable option-sets** (defined at the bottom of `commands.yml`):
+- `client` — adds `--api-key` and `--server` (hidden); include on every command that calls the API
+- `diff` — adds `--verbose-diff`; include on mutation commands that show a diff before applying
+- `common` — external package options; only on the root `cloud` command
+
+**Read-only commands** do not need `--async-operation-id` or `--resource-version`.
+
+## Step 2 — Regenerate `commands.gen.go`
+
+```bash
+make gen
+```
+
+This clones the `temporalio/cli` repo, builds the `gen-commands` tool, and regenerates `temporalcloudcli/commands.gen.go`. **Never edit `commands.gen.go` by hand.**
+
+The generator derives the Go struct name from the command path:
+- `cloud namespace get` → `CloudNamespaceGetCommand`
+- `cloud whoami` → `CloudWhoamiCommand`
+
+Each generated struct embeds the option-set structs (e.g. `ClientOptions`) and a `cobra.Command`. The generator wires `s.Command.Run` to call `s.run(cctx, args)`, which you implement in Step 3.
+
+## Step 3 — Implement `commands.<name>.go`
+
+Create `temporalcloudcli/commands.<name>.go` and implement the `run` method on the generated struct.
+
+**Standard read command skeleton:**
+```go
+package temporalcloudcli
+
+import (
+    "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+    "github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
+)
+
+func (c *CloudMyCommand) run(cctx *CommandContext, _ []string) error {
+    cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+    if err != nil {
+        return err
+    }
+    res, err := cloudClient.CloudService().SomeRPCMethod(cctx.Context, &cloudservice.SomeRequest{})
+    if err != nil {
+        return err
+    }
+    return cctx.Printer.PrintStructured(res, printer.StructuredOptions{})
+}
+```
+
+**Printer methods:**
+- `PrintStructured(v, opts)` — single object; JSON or text table
+- `PrintResource(proto, opts)` — standard resource with metadata + spec fields
+- `PrintResourceList(list, printOpts, tableOpts)` — slice of resources as a table
+
+**Common helpers in `common.go`:**
+- `loadJSONSpec(spec string)` — loads JSON from inline string or `@file` path
+- `runEditorForJSONEditForProtos(current, target)` — opens `$EDITOR` for interactive editing
+- `promptApplyResource(cctx, old, new, verbose)` — shows diff and asks for confirmation
+- `PollAsyncOperation(cctx, client, opID, resourceID)` — polls until terminal state
+- `isNotFoundErr(err)` / `isNothingChangedErr(idempotent, err)` — gRPC error helpers
+
+After creating the file, run `git add temporalcloudcli/commands.<name>.go`.
+
+## Step 4 — Write tests in `commands.<name>_test.go`
+
+See `.claude/rules/testing.md` for testing patterns and the integration test template.
+
+After creating the file, run `git add temporalcloudcli/commands.<name>_test.go`.
+
+## Step 5 — Verify
+
+```bash
+make all   # gen + build + test (unit tests only; integration tests need -tags=integration)
+```
+
+---
+
+## Best Practices
+
+### Server-side vs Client-side Responsibility
+
+**Don't implement client-side validation that the server handles:**
+- Duplicate detection (e.g. adding the same cert filter twice) — let the server return an error
+- Complex business rules and constraints — trust the server's validation
+
+**Do implement client-side validation for:**
+- Required fields before making API calls
+- Flag combinations that don't make sense (e.g. both `--file` and `--data` provided)
+- Input format validation (e.g. valid base64, file exists)
+
+### Prefer Standard Library Over Custom Helpers
+
+Use Go standard library functions instead of writing custom helpers.
+
+```go
+// Good: simple loop with slices.ContainsFunc
+var newFilters []*namespacev1.CertificateFilterSpec
+for _, existing := range existingFilters {
+    shouldRemove := slices.ContainsFunc(params.Filters, func(toRemove *namespacev1.CertificateFilterSpec) bool {
+        return certFiltersEqual(existing, toRemove)
+    })
+    if shouldRemove {
+        continue
+    }
+    newFilters = append(newFilters, existing)
+}
+```
+
+### Mutation Commands Must Prompt for Confirmation
+
+All create and delete commands must prompt the user before making changes:
+
+```go
+yes, err := cctx.promptYes("Create (y/yes)?", cctx.RootCommand.AutoConfirm)
+if err != nil {
+    return err
+}
+if !yes {
+    return errors.New("Aborting create.")
+}
+```
+
+Update commands typically don't need prompts (user explicitly provides new values).
+
+### Code Simplicity
+
+Keep code simple and readable over clever abstractions.
+- **Good:** Simple loop with `continue` for filtering
+- **Bad:** Complex `slices.DeleteFunc` with nested logic
+
+If logic is hard to understand at a glance, it's probably too complex.
