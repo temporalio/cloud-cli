@@ -382,6 +382,74 @@ func (_c *MockNamespaceClient_DeleteCertFilters_Call) RunAndReturn(run func(cont
 	return _c
 }
 
+// DeleteCodec provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) DeleteCodec(context1 context.Context, deleteCodecParams namespace.DeleteCodecParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, deleteCodecParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteCodec")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.DeleteCodecParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, deleteCodecParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.DeleteCodecParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, deleteCodecParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.DeleteCodecParams) error); ok {
+		r1 = returnFunc(context1, deleteCodecParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_DeleteCodec_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteCodec'
+type MockNamespaceClient_DeleteCodec_Call struct {
+	*mock.Call
+}
+
+// DeleteCodec is a helper method to define mock.On call
+//   - context1 context.Context
+//   - deleteCodecParams namespace.DeleteCodecParams
+func (_e *MockNamespaceClient_Expecter) DeleteCodec(context1 interface{}, deleteCodecParams interface{}) *MockNamespaceClient_DeleteCodec_Call {
+	return &MockNamespaceClient_DeleteCodec_Call{Call: _e.mock.On("DeleteCodec", context1, deleteCodecParams)}
+}
+
+func (_c *MockNamespaceClient_DeleteCodec_Call) Run(run func(context1 context.Context, deleteCodecParams namespace.DeleteCodecParams)) *MockNamespaceClient_DeleteCodec_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.DeleteCodecParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.DeleteCodecParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_DeleteCodec_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_DeleteCodec_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_DeleteCodec_Call) RunAndReturn(run func(context1 context.Context, deleteCodecParams namespace.DeleteCodecParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_DeleteCodec_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteTags provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) DeleteTags(context1 context.Context, deleteTagsParams namespace.DeleteTagsParams) (*operation.AsyncOperation, error) {
 	ret := _mock.Called(context1, deleteTagsParams)
@@ -446,6 +514,74 @@ func (_c *MockNamespaceClient_DeleteTags_Call) Return(asyncOperation *operation.
 }
 
 func (_c *MockNamespaceClient_DeleteTags_Call) RunAndReturn(run func(context1 context.Context, deleteTagsParams namespace.DeleteTagsParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_DeleteTags_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetCodecServer provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) GetCodecServer(context1 context.Context, s string) (*namespace0.CodecServerSpec, error) {
+	ret := _mock.Called(context1, s)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetCodecServer")
+	}
+
+	var r0 *namespace0.CodecServerSpec
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*namespace0.CodecServerSpec, error)); ok {
+		return returnFunc(context1, s)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *namespace0.CodecServerSpec); ok {
+		r0 = returnFunc(context1, s)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*namespace0.CodecServerSpec)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(context1, s)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_GetCodecServer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetCodecServer'
+type MockNamespaceClient_GetCodecServer_Call struct {
+	*mock.Call
+}
+
+// GetCodecServer is a helper method to define mock.On call
+//   - context1 context.Context
+//   - s string
+func (_e *MockNamespaceClient_Expecter) GetCodecServer(context1 interface{}, s interface{}) *MockNamespaceClient_GetCodecServer_Call {
+	return &MockNamespaceClient_GetCodecServer_Call{Call: _e.mock.On("GetCodecServer", context1, s)}
+}
+
+func (_c *MockNamespaceClient_GetCodecServer_Call) Run(run func(context1 context.Context, s string)) *MockNamespaceClient_GetCodecServer_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_GetCodecServer_Call) Return(codecServerSpec *namespace0.CodecServerSpec, err error) *MockNamespaceClient_GetCodecServer_Call {
+	_c.Call.Return(codecServerSpec, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_GetCodecServer_Call) RunAndReturn(run func(context1 context.Context, s string) (*namespace0.CodecServerSpec, error)) *MockNamespaceClient_GetCodecServer_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -858,6 +994,74 @@ func (_c *MockNamespaceClient_RenameSearchAttribute_Call) RunAndReturn(run func(
 	return _c
 }
 
+// SetCodec provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) SetCodec(context1 context.Context, setCodecParams namespace.SetCodecParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, setCodecParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetCodec")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.SetCodecParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, setCodecParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.SetCodecParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, setCodecParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.SetCodecParams) error); ok {
+		r1 = returnFunc(context1, setCodecParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_SetCodec_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetCodec'
+type MockNamespaceClient_SetCodec_Call struct {
+	*mock.Call
+}
+
+// SetCodec is a helper method to define mock.On call
+//   - context1 context.Context
+//   - setCodecParams namespace.SetCodecParams
+func (_e *MockNamespaceClient_Expecter) SetCodec(context1 interface{}, setCodecParams interface{}) *MockNamespaceClient_SetCodec_Call {
+	return &MockNamespaceClient_SetCodec_Call{Call: _e.mock.On("SetCodec", context1, setCodecParams)}
+}
+
+func (_c *MockNamespaceClient_SetCodec_Call) Run(run func(context1 context.Context, setCodecParams namespace.SetCodecParams)) *MockNamespaceClient_SetCodec_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.SetCodecParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.SetCodecParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_SetCodec_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_SetCodec_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_SetCodec_Call) RunAndReturn(run func(context1 context.Context, setCodecParams namespace.SetCodecParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_SetCodec_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetTag provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) SetTag(context1 context.Context, setTagParams namespace.SetTagParams) (*operation.AsyncOperation, error) {
 	ret := _mock.Called(context1, setTagParams)
@@ -922,6 +1126,74 @@ func (_c *MockNamespaceClient_SetTag_Call) Return(asyncOperation *operation.Asyn
 }
 
 func (_c *MockNamespaceClient_SetTag_Call) RunAndReturn(run func(context1 context.Context, setTagParams namespace.SetTagParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_SetTag_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateNamespace provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) UpdateNamespace(context1 context.Context, updateNamespaceParams namespace.UpdateNamespaceParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, updateNamespaceParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateNamespace")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.UpdateNamespaceParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, updateNamespaceParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.UpdateNamespaceParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, updateNamespaceParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.UpdateNamespaceParams) error); ok {
+		r1 = returnFunc(context1, updateNamespaceParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_UpdateNamespace_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateNamespace'
+type MockNamespaceClient_UpdateNamespace_Call struct {
+	*mock.Call
+}
+
+// UpdateNamespace is a helper method to define mock.On call
+//   - context1 context.Context
+//   - updateNamespaceParams namespace.UpdateNamespaceParams
+func (_e *MockNamespaceClient_Expecter) UpdateNamespace(context1 interface{}, updateNamespaceParams interface{}) *MockNamespaceClient_UpdateNamespace_Call {
+	return &MockNamespaceClient_UpdateNamespace_Call{Call: _e.mock.On("UpdateNamespace", context1, updateNamespaceParams)}
+}
+
+func (_c *MockNamespaceClient_UpdateNamespace_Call) Run(run func(context1 context.Context, updateNamespaceParams namespace.UpdateNamespaceParams)) *MockNamespaceClient_UpdateNamespace_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.UpdateNamespaceParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.UpdateNamespaceParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_UpdateNamespace_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_UpdateNamespace_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_UpdateNamespace_Call) RunAndReturn(run func(context1 context.Context, updateNamespaceParams namespace.UpdateNamespaceParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_UpdateNamespace_Call {
 	_c.Call.Return(run)
 	return _c
 }
