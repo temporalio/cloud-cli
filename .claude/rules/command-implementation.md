@@ -30,7 +30,7 @@ Every command is declared in `temporalcloudcli/commands.yml`. The `name` field i
 
 **Reusable option-sets** (defined at the bottom of `commands.yml`):
 - `client` — adds `--api-key` and `--server` (hidden); include on every command that calls the API
-- `diff` — adds `--verbose-diff`; include on mutation commands that show a diff before applying
+- `diff` — adds `--verbose-diff`; include **only** on `apply` and `edit` commands that show a full spec diff before applying. Do NOT include on targeted mutation commands like `set` or `update` — those don't show a diff.
 - `common` — external package options; only on the root `cloud` command
 
 **Read-only commands** do not need `--async-operation-id` or `--resource-version`.
@@ -76,8 +76,8 @@ func (c *CloudMyCommand) run(cctx *CommandContext, _ []string) error {
 ```
 
 **Printer methods:**
-- `PrintStructured(v, opts)` — single object; JSON or text table
-- `PrintResource(proto, opts)` — standard resource with metadata + spec fields
+- `PrintStructured(v, opts)` — flat data or raw responses with no clear spec boundary
+- `PrintResource(v, opts)` — use for any get command that returns a resource or sub-resource. Pass a struct with top-level identity fields (e.g. `Namespace string`) and a `Spec` field for the content. In text mode this renders the identity at the top and spec fields indented under `Spec:`; in JSON mode it falls back to `PrintStructured`.
 - `PrintResourceList(list, printOpts, tableOpts)` — slice of resources as a table
 
 **Common helpers in `common.go`:**

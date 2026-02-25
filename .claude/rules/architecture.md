@@ -26,6 +26,8 @@ All resource commands follow a two-layer architecture for separation of concerns
 - Returns domain objects, not command-specific types
 - Must be testable without CLI dependencies
 
+**Namespace sub-features** (cert, codec, tags, search attributes, etc.) each get their own application layer file (e.g. `internal/namespace/codec.go`). Each method in that file owns its complete operation: fetching current namespace state, mutating the relevant spec fields, and calling `UpdateNamespace`. Add the new methods to the `NamespaceClient` interface in `commands.go` and run `make mocks` to regenerate.
+
 ### When to Use This Pattern
 
 **Use the two-layer pattern when:**

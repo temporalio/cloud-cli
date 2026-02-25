@@ -4,7 +4,7 @@
 
 - Use external test package with `_test` suffix: `package namespace_test`
 - Write individual test functions (most application logic tests have unique setup/assertions)
-- Use `proto.Equal()` for comparing protobuf messages (not field-by-field comparison)
+- Use `assert.Equal` for protobuf message assertions — it handles proto comparison correctly. Use `proto.Equal` only inside `mock.MatchedBy` closures (which must return a bool). Never compare proto messages field-by-field.
 - Mock the `CloudService` interface to test business logic in isolation
 - Example naming: `TestClient_ListCertFilters_Success`, `TestClient_AddCertFilters_GetNamespaceError`
 - See `internal/namespace/cert_test.go` for the canonical pattern
