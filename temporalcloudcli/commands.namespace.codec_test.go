@@ -212,7 +212,10 @@ func TestCloudNamespaceCodecSetCommand_WithCustomErrorMessage(t *testing.T) {
 
 	var result temporalcloudcli.MutationResult
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-	assert.Equal(t, "test-operation-id", result.AsyncOp.Id)
+	assert.Equal(t, temporalcloudcli.MutationResult{
+		AsyncOp: &operation.AsyncOperation{Id: "test-operation-id"},
+		ID:      "test-namespace.test-account",
+	}, result)
 }
 
 func TestCloudNamespaceCodecSetCommand_Error(t *testing.T) {

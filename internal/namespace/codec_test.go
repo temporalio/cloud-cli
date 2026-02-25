@@ -40,9 +40,10 @@ func TestGetCodecServer_Success(t *testing.T) {
 	result, err := client.GetCodecServer(ctx, "test-namespace")
 
 	require.NoError(t, err)
-	require.NotNil(t, result)
-	assert.Equal(t, "https://codec.example.com", result.Endpoint)
-	assert.True(t, result.PassAccessToken)
+	assert.Equal(t, &namespacev1.CodecServerSpec{
+		Endpoint:        "https://codec.example.com",
+		PassAccessToken: true,
+	}, result)
 }
 
 func TestGetCodecServer_NilCodecServer(t *testing.T) {
@@ -153,11 +154,22 @@ func TestSetCodec_WithCustomErrorMessage(t *testing.T) {
 
 	mockCloud.EXPECT().
 		UpdateNamespace(ctx, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
-			cs := req.GetSpec().GetCodecServer()
-			return cs != nil &&
-				cs.Endpoint == "https://codec.example.com" &&
-				cs.GetCustomErrorMessage().GetDefault().GetMessage() == "Codec unavailable" &&
-				cs.GetCustomErrorMessage().GetDefault().GetLink() == "https://docs.example.com"
+			expected := &cloudservice.UpdateNamespaceRequest{
+				Namespace:       "test-namespace",
+				ResourceVersion: "v1",
+				Spec: &namespacev1.NamespaceSpec{
+					CodecServer: &namespacev1.CodecServerSpec{
+						Endpoint: "https://codec.example.com",
+						CustomErrorMessage: &namespacev1.CodecServerSpec_CustomErrorMessage{
+							Default: &namespacev1.CodecServerSpec_CustomErrorMessage_ErrorMessage{
+								Message: "Codec unavailable",
+								Link:    "https://docs.example.com",
+							},
+						},
+					},
+				},
+			}
+			return proto.Equal(expected, req)
 		})).
 		Return(&cloudservice.UpdateNamespaceResponse{AsyncOperation: expectedOp}, nil)
 
@@ -213,7 +225,16 @@ func TestSetCodec_CustomResourceVersion(t *testing.T) {
 
 	mockCloud.EXPECT().
 		UpdateNamespace(ctx, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
-			return req.ResourceVersion == "custom-version"
+			expected := &cloudservice.UpdateNamespaceRequest{
+				Namespace:       "test-namespace",
+				ResourceVersion: "custom-version",
+				Spec: &namespacev1.NamespaceSpec{
+					CodecServer: &namespacev1.CodecServerSpec{
+						Endpoint: "https://codec.example.com",
+					},
+				},
+			}
+			return proto.Equal(expected, req)
 		})).
 		Return(&cloudservice.UpdateNamespaceResponse{AsyncOperation: expectedOp}, nil)
 
@@ -320,7 +341,12 @@ func TestDeleteCodec_CustomResourceVersion(t *testing.T) {
 
 	mockCloud.EXPECT().
 		UpdateNamespace(ctx, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
-			return req.ResourceVersion == "custom-version" && req.GetSpec().GetCodecServer() == nil
+			expected := &cloudservice.UpdateNamespaceRequest{
+				Namespace:       "test-namespace",
+				ResourceVersion: "custom-version",
+				Spec:            &namespacev1.NamespaceSpec{},
+			}
+			return proto.Equal(expected, req)
 		})).
 		Return(&cloudservice.UpdateNamespaceResponse{AsyncOperation: expectedOp}, nil)
 
