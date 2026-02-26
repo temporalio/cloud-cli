@@ -136,12 +136,14 @@ func (c *CloudNamespaceExportS3CreateCommand) run(cctx *CommandContext, _ []stri
 	return createExportSink(namespace.CreateExportSinkParams{
 		Namespace: c.Namespace,
 		SinkName:  c.SinkName,
-		S3: &namespace.S3ExportSinkParams{
-			RoleName:     c.RoleName,
-			BucketName:   c.BucketName,
-			Region:       c.Region,
-			AwsAccountID: c.AwsAccountId,
-			KmsArn:       c.KmsArn,
+		Sink: namespace.ExportSinkParams{
+			S3: &namespace.S3ExportSinkParams{
+				RoleName:     c.RoleName,
+				BucketName:   c.BucketName,
+				Region:       c.Region,
+				AwsAccountID: c.AwsAccountId,
+				KmsArn:       c.KmsArn,
+			},
 		},
 		AsyncOperationID: c.AsyncOperationId,
 	})
@@ -157,12 +159,14 @@ func (c *CloudNamespaceExportS3UpdateCommand) run(cctx *CommandContext, _ []stri
 	return updateExportSink(namespace.UpdateExportSinkParams{
 		Namespace: c.Namespace,
 		SinkName:  c.SinkName,
-		S3: &namespace.S3ExportSinkParams{
-			RoleName:     c.RoleName,
-			BucketName:   c.BucketName,
-			Region:       c.Region,
-			AwsAccountID: c.AwsAccountId,
-			KmsArn:       c.KmsArn,
+		Sink: namespace.ExportSinkParams{
+			S3: &namespace.S3ExportSinkParams{
+				RoleName:     c.RoleName,
+				BucketName:   c.BucketName,
+				Region:       c.Region,
+				AwsAccountID: c.AwsAccountId,
+				KmsArn:       c.KmsArn,
+			},
 		},
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
@@ -178,12 +182,14 @@ func (c *CloudNamespaceExportS3ValidateCommand) run(cctx *CommandContext, _ []st
 	if err := namespaceClient.ValidateExportSink(cctx.Context, namespace.ValidateExportSinkParams{
 		Namespace: c.Namespace,
 		SinkName:  c.SinkName,
-		S3: &namespace.S3ExportSinkParams{
-			RoleName:     c.RoleName,
-			BucketName:   c.BucketName,
-			Region:       c.Region,
-			AwsAccountID: c.AwsAccountId,
-			KmsArn:       c.KmsArn,
+		Sink: namespace.ExportSinkParams{
+			S3: &namespace.S3ExportSinkParams{
+				RoleName:     c.RoleName,
+				BucketName:   c.BucketName,
+				Region:       c.Region,
+				AwsAccountID: c.AwsAccountId,
+				KmsArn:       c.KmsArn,
+			},
 		},
 	}); err != nil {
 		return err
@@ -205,11 +211,13 @@ func (c *CloudNamespaceExportGcsCreateCommand) run(cctx *CommandContext, _ []str
 	return createExportSink(namespace.CreateExportSinkParams{
 		Namespace: c.Namespace,
 		SinkName:  c.SinkName,
-		GCS: &namespace.GCSExportSinkParams{
-			SaID:         c.SaId,
-			BucketName:   c.BucketName,
-			GcpProjectID: c.GcpProjectId,
-			Region:       c.Region,
+		Sink: namespace.ExportSinkParams{
+			GCS: &namespace.GCSExportSinkParams{
+				SaID:         c.SaId,
+				BucketName:   c.BucketName,
+				GcpProjectID: c.GcpProjectId,
+				Region:       c.Region,
+			},
 		},
 		AsyncOperationID: c.AsyncOperationId,
 	})
@@ -225,11 +233,13 @@ func (c *CloudNamespaceExportGcsUpdateCommand) run(cctx *CommandContext, _ []str
 	return updateExportSink(namespace.UpdateExportSinkParams{
 		Namespace: c.Namespace,
 		SinkName:  c.SinkName,
-		GCS: &namespace.GCSExportSinkParams{
-			SaID:         c.SaId,
-			BucketName:   c.BucketName,
-			GcpProjectID: c.GcpProjectId,
-			Region:       c.Region,
+		Sink: namespace.ExportSinkParams{
+			GCS: &namespace.GCSExportSinkParams{
+				SaID:         c.SaId,
+				BucketName:   c.BucketName,
+				GcpProjectID: c.GcpProjectId,
+				Region:       c.Region,
+			},
 		},
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
@@ -245,11 +255,13 @@ func (c *CloudNamespaceExportGcsValidateCommand) run(cctx *CommandContext, _ []s
 	if err := namespaceClient.ValidateExportSink(cctx.Context, namespace.ValidateExportSinkParams{
 		Namespace: c.Namespace,
 		SinkName:  c.SinkName,
-		GCS: &namespace.GCSExportSinkParams{
-			SaID:         c.SaId,
-			BucketName:   c.BucketName,
-			GcpProjectID: c.GcpProjectId,
-			Region:       c.Region,
+		Sink: namespace.ExportSinkParams{
+			GCS: &namespace.GCSExportSinkParams{
+				SaID:         c.SaId,
+				BucketName:   c.BucketName,
+				GcpProjectID: c.GcpProjectId,
+				Region:       c.Region,
+			},
 		},
 	}); err != nil {
 		return err

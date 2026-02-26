@@ -143,11 +143,13 @@ func TestClient_CreateExportSink_S3_Success(t *testing.T) {
 	op, err := client.CreateExportSink(ctx, namespace.CreateExportSinkParams{
 		Namespace: "test-ns",
 		SinkName:  "my-sink",
-		S3: &namespace.S3ExportSinkParams{
-			RoleName:     "my-role",
-			BucketName:   "my-bucket",
-			Region:       "us-east-1",
-			AwsAccountID: "123456789012",
+		Sink: namespace.ExportSinkParams{
+			S3: &namespace.S3ExportSinkParams{
+				RoleName:     "my-role",
+				BucketName:   "my-bucket",
+				Region:       "us-east-1",
+				AwsAccountID: "123456789012",
+			},
 		},
 	})
 	require.NoError(t, err)
@@ -205,11 +207,13 @@ func TestClient_UpdateExportSink_S3_Success(t *testing.T) {
 	op, err := client.UpdateExportSink(ctx, namespace.UpdateExportSinkParams{
 		Namespace: "test-ns",
 		SinkName:  "my-sink",
-		S3: &namespace.S3ExportSinkParams{
-			RoleName:     "new-role",
-			BucketName:   "my-bucket",
-			Region:       "us-east-1",
-			AwsAccountID: "123456789012",
+		Sink: namespace.ExportSinkParams{
+			S3: &namespace.S3ExportSinkParams{
+				RoleName:     "new-role",
+				BucketName:   "my-bucket",
+				Region:       "us-east-1",
+				AwsAccountID: "123456789012",
+			},
 		},
 	})
 	require.NoError(t, err)
@@ -231,11 +235,13 @@ func TestClient_UpdateExportSink_S3_GetSinkError(t *testing.T) {
 	_, err := client.UpdateExportSink(ctx, namespace.UpdateExportSinkParams{
 		Namespace: "test-ns",
 		SinkName:  "my-sink",
-		S3: &namespace.S3ExportSinkParams{
-			RoleName:     "new-role",
-			BucketName:   "my-bucket",
-			Region:       "us-east-1",
-			AwsAccountID: "123456789012",
+		Sink: namespace.ExportSinkParams{
+			S3: &namespace.S3ExportSinkParams{
+				RoleName:     "new-role",
+				BucketName:   "my-bucket",
+				Region:       "us-east-1",
+				AwsAccountID: "123456789012",
+			},
 		},
 	})
 	require.Error(t, err)
@@ -287,11 +293,13 @@ func TestClient_UpdateExportSink_S3_CustomResourceVersion(t *testing.T) {
 	op, err := client.UpdateExportSink(ctx, namespace.UpdateExportSinkParams{
 		Namespace: "test-ns",
 		SinkName:  "my-sink",
-		S3: &namespace.S3ExportSinkParams{
-			RoleName:     "new-role",
-			BucketName:   "my-bucket",
-			Region:       "us-east-1",
-			AwsAccountID: "123456789012",
+		Sink: namespace.ExportSinkParams{
+			S3: &namespace.S3ExportSinkParams{
+				RoleName:     "new-role",
+				BucketName:   "my-bucket",
+				Region:       "us-east-1",
+				AwsAccountID: "123456789012",
+			},
 		},
 		ResourceVersion: "v2",
 	})
@@ -323,11 +331,13 @@ func TestClient_ValidateExportSink_S3_Success(t *testing.T) {
 	err := client.ValidateExportSink(ctx, namespace.ValidateExportSinkParams{
 		Namespace: "test-ns",
 		SinkName:  "my-sink",
-		S3: &namespace.S3ExportSinkParams{
-			RoleName:     "my-role",
-			BucketName:   "my-bucket",
-			Region:       "us-east-1",
-			AwsAccountID: "123456789012",
+		Sink: namespace.ExportSinkParams{
+			S3: &namespace.S3ExportSinkParams{
+				RoleName:     "my-role",
+				BucketName:   "my-bucket",
+				Region:       "us-east-1",
+				AwsAccountID: "123456789012",
+			},
 		},
 	})
 	require.NoError(t, err)
@@ -360,11 +370,13 @@ func TestClient_CreateExportSink_GCS_Success(t *testing.T) {
 	op, err := client.CreateExportSink(ctx, namespace.CreateExportSinkParams{
 		Namespace: "test-ns",
 		SinkName:  "my-sink",
-		GCS: &namespace.GCSExportSinkParams{
-			SaID:         "sa@project.iam.gserviceaccount.com",
-			BucketName:   "my-bucket",
-			GcpProjectID: "my-project",
-			Region:       "us-central1",
+		Sink: namespace.ExportSinkParams{
+			GCS: &namespace.GCSExportSinkParams{
+				SaID:         "sa@project.iam.gserviceaccount.com",
+				BucketName:   "my-bucket",
+				GcpProjectID: "my-project",
+				Region:       "us-central1",
+			},
 		},
 	})
 	require.NoError(t, err)
@@ -421,11 +433,13 @@ func TestClient_UpdateExportSink_GCS_Success(t *testing.T) {
 	op, err := client.UpdateExportSink(ctx, namespace.UpdateExportSinkParams{
 		Namespace: "test-ns",
 		SinkName:  "my-sink",
-		GCS: &namespace.GCSExportSinkParams{
-			SaID:         "new-sa@project.iam.gserviceaccount.com",
-			BucketName:   "my-bucket",
-			GcpProjectID: "my-project",
-			Region:       "us-central1",
+		Sink: namespace.ExportSinkParams{
+			GCS: &namespace.GCSExportSinkParams{
+				SaID:         "new-sa@project.iam.gserviceaccount.com",
+				BucketName:   "my-bucket",
+				GcpProjectID: "my-project",
+				Region:       "us-central1",
+			},
 		},
 	})
 	require.NoError(t, err)
@@ -447,11 +461,13 @@ func TestClient_UpdateExportSink_GCS_GetSinkError(t *testing.T) {
 	_, err := client.UpdateExportSink(ctx, namespace.UpdateExportSinkParams{
 		Namespace: "test-ns",
 		SinkName:  "my-sink",
-		GCS: &namespace.GCSExportSinkParams{
-			SaID:         "sa@project.iam.gserviceaccount.com",
-			BucketName:   "my-bucket",
-			GcpProjectID: "my-project",
-			Region:       "us-central1",
+		Sink: namespace.ExportSinkParams{
+			GCS: &namespace.GCSExportSinkParams{
+				SaID:         "sa@project.iam.gserviceaccount.com",
+				BucketName:   "my-bucket",
+				GcpProjectID: "my-project",
+				Region:       "us-central1",
+			},
 		},
 	})
 	require.Error(t, err)
@@ -481,11 +497,13 @@ func TestClient_ValidateExportSink_GCS_Success(t *testing.T) {
 	err := client.ValidateExportSink(ctx, namespace.ValidateExportSinkParams{
 		Namespace: "test-ns",
 		SinkName:  "my-sink",
-		GCS: &namespace.GCSExportSinkParams{
-			SaID:         "sa@project.iam.gserviceaccount.com",
-			BucketName:   "my-bucket",
-			GcpProjectID: "my-project",
-			Region:       "us-central1",
+		Sink: namespace.ExportSinkParams{
+			GCS: &namespace.GCSExportSinkParams{
+				SaID:         "sa@project.iam.gserviceaccount.com",
+				BucketName:   "my-bucket",
+				GcpProjectID: "my-project",
+				Region:       "us-central1",
+			},
 		},
 	})
 	require.NoError(t, err)
