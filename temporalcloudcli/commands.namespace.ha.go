@@ -86,7 +86,7 @@ func (c *CloudNamespaceHaRegionListCommand) run(cctx *CommandContext, _ []string
 	)
 }
 
-func (c *CloudNamespaceHaRegionCreateCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudNamespaceHaRegionAddCommand) run(cctx *CommandContext, _ []string) error {
 	haClient, err := getNamespaceClient(cctx, c.ClientOptions)
 	if err != nil {
 		return err

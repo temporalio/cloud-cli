@@ -807,13 +807,13 @@ func NewCloudNamespaceHaRegionCommand(cctx *CommandContext, parent *CloudNamespa
 	s.Command.Short = "Manage replica regions for a namespace"
 	s.Command.Long = "Commands for managing replica regions of Temporal Cloud namespaces."
 	s.Command.Args = cobra.NoArgs
-	s.Command.AddCommand(&NewCloudNamespaceHaRegionCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceHaRegionAddCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceHaRegionDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceHaRegionListCommand(cctx, &s).Command)
 	return &s
 }
 
-type CloudNamespaceHaRegionCreateCommand struct {
+type CloudNamespaceHaRegionAddCommand struct {
 	Parent  *CloudNamespaceHaRegionCommand
 	Command cobra.Command
 	ClientOptions
@@ -823,16 +823,16 @@ type CloudNamespaceHaRegionCreateCommand struct {
 	Region string
 }
 
-func NewCloudNamespaceHaRegionCreateCommand(cctx *CommandContext, parent *CloudNamespaceHaRegionCommand) *CloudNamespaceHaRegionCreateCommand {
-	var s CloudNamespaceHaRegionCreateCommand
+func NewCloudNamespaceHaRegionAddCommand(cctx *CommandContext, parent *CloudNamespaceHaRegionCommand) *CloudNamespaceHaRegionAddCommand {
+	var s CloudNamespaceHaRegionAddCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "create [flags]"
+	s.Command.Use = "add [flags]"
 	s.Command.Short = "Add a replica region to a namespace"
 	if hasHighlighting {
-		s.Command.Long = "Add a replica region to a Temporal Cloud namespace. The region will be added\nas a passive replica and can later be used for failover.\n\nExample:\n\n\x1b[1mcloud namespace ha region create --namespace my-namespace.my-account --region aws-us-west-2\x1b[0m"
+		s.Command.Long = "Add a replica region to a Temporal Cloud namespace. The region will be added\nas a passive replica and can later be used for failover.\n\nExample:\n\n\x1b[1mcloud namespace ha region add --namespace my-namespace.my-account --region aws-us-west-2\x1b[0m"
 	} else {
-		s.Command.Long = "Add a replica region to a Temporal Cloud namespace. The region will be added\nas a passive replica and can later be used for failover.\n\nExample:\n\n```\ncloud namespace ha region create --namespace my-namespace.my-account --region aws-us-west-2\n```"
+		s.Command.Long = "Add a replica region to a Temporal Cloud namespace. The region will be added\nas a passive replica and can later be used for failover.\n\nExample:\n\n```\ncloud namespace ha region add --namespace my-namespace.my-account --region aws-us-west-2\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Region, "region", "", "The region ID to add as a replica (e.g., aws-us-west-2). Required.")
