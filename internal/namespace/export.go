@@ -120,7 +120,8 @@ func (c *Client) CreateExportSink(ctx context.Context, params CreateExportSinkPa
 		Name:    params.SinkName,
 		Enabled: true,
 	}
-	if params.S3 != nil {
+	switch {
+	case params.S3 != nil:
 		spec.S3 = &sinkv1.S3Spec{
 			RoleName:     params.S3.RoleName,
 			BucketName:   params.S3.BucketName,
@@ -128,7 +129,7 @@ func (c *Client) CreateExportSink(ctx context.Context, params CreateExportSinkPa
 			AwsAccountId: params.S3.AwsAccountID,
 			KmsArn:       params.S3.KmsArn,
 		}
-	} else if params.GCS != nil {
+	case params.GCS != nil:
 		spec.Gcs = &sinkv1.GCSSpec{
 			SaId:         params.GCS.SaID,
 			BucketName:   params.GCS.BucketName,
@@ -164,7 +165,8 @@ func (c *Client) UpdateExportSink(ctx context.Context, params UpdateExportSinkPa
 		Name:    params.SinkName,
 		Enabled: sink.GetSpec().GetEnabled(),
 	}
-	if params.S3 != nil {
+	switch {
+	case params.S3 != nil:
 		spec.S3 = &sinkv1.S3Spec{
 			RoleName:     params.S3.RoleName,
 			BucketName:   params.S3.BucketName,
@@ -172,7 +174,7 @@ func (c *Client) UpdateExportSink(ctx context.Context, params UpdateExportSinkPa
 			AwsAccountId: params.S3.AwsAccountID,
 			KmsArn:       params.S3.KmsArn,
 		}
-	} else if params.GCS != nil {
+	case params.GCS != nil:
 		spec.Gcs = &sinkv1.GCSSpec{
 			SaId:         params.GCS.SaID,
 			BucketName:   params.GCS.BucketName,
@@ -200,7 +202,8 @@ func (c *Client) ValidateExportSink(ctx context.Context, params ValidateExportSi
 		Name:    params.SinkName,
 		Enabled: true,
 	}
-	if params.S3 != nil {
+	switch {
+	case params.S3 != nil:
 		spec.S3 = &sinkv1.S3Spec{
 			RoleName:     params.S3.RoleName,
 			BucketName:   params.S3.BucketName,
@@ -208,7 +211,7 @@ func (c *Client) ValidateExportSink(ctx context.Context, params ValidateExportSi
 			AwsAccountId: params.S3.AwsAccountID,
 			KmsArn:       params.S3.KmsArn,
 		}
-	} else if params.GCS != nil {
+	case params.GCS != nil:
 		spec.Gcs = &sinkv1.GCSSpec{
 			SaId:         params.GCS.SaID,
 			BucketName:   params.GCS.BucketName,
