@@ -18,6 +18,9 @@ type CloudService interface {
 	UpdateNamespace(ctx context.Context, req *cloudservice.UpdateNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.UpdateNamespaceResponse, error)
 	RenameCustomSearchAttribute(ctx context.Context, req *cloudservice.RenameCustomSearchAttributeRequest, opts ...grpc.CallOption) (*cloudservice.RenameCustomSearchAttributeResponse, error)
 	UpdateNamespaceTags(ctx context.Context, req *cloudservice.UpdateNamespaceTagsRequest, opts ...grpc.CallOption) (*cloudservice.UpdateNamespaceTagsResponse, error)
+	AddNamespaceRegion(ctx context.Context, req *cloudservice.AddNamespaceRegionRequest, opts ...grpc.CallOption) (*cloudservice.AddNamespaceRegionResponse, error)
+	DeleteNamespaceRegion(ctx context.Context, req *cloudservice.DeleteNamespaceRegionRequest, opts ...grpc.CallOption) (*cloudservice.DeleteNamespaceRegionResponse, error)
+	FailoverNamespaceRegion(ctx context.Context, req *cloudservice.FailoverNamespaceRegionRequest, opts ...grpc.CallOption) (*cloudservice.FailoverNamespaceRegionResponse, error)
 }
 
 func NewClient(cloudClient cloudservice.CloudServiceClient) *Client {
