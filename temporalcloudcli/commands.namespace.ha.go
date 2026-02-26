@@ -92,7 +92,7 @@ func (c *CloudNamespaceHaRegionAddCommand) run(cctx *CommandContext, _ []string)
 		return err
 	}
 
-	prompt := fmt.Sprintf("Create region %s (y/yes)?", c.Region)
+	prompt := fmt.Sprintf("Add region %s (y/yes)?", c.Region)
 	yes, err := cctx.promptYes(prompt, cctx.RootCommand.AutoConfirm)
 	if err != nil {
 		return err
@@ -116,7 +116,8 @@ func (c *CloudNamespaceHaRegionDeleteCommand) run(cctx *CommandContext, _ []stri
 		return err
 	}
 
-	yes, err := cctx.promptYes("Delete region (y/yes)?", cctx.RootCommand.AutoConfirm)
+	prompt := fmt.Sprintf("Delete region %s (y/yes)?", c.Region)
+	yes, err := cctx.promptYes(prompt, cctx.RootCommand.AutoConfirm)
 	if err != nil {
 		return err
 	}
