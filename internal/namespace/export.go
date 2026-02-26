@@ -9,6 +9,77 @@ import (
 	sinkv1 "go.temporal.io/cloud-sdk/api/sink/v1"
 )
 
+// S3ExportSinkParams contains S3-specific parameters for export sink operations.
+type S3ExportSinkParams struct {
+	RoleName     string
+	BucketName   string
+	Region       string
+	AwsAccountID string
+	KmsArn       string
+}
+
+// GCSExportSinkParams contains GCS-specific parameters for export sink operations.
+type GCSExportSinkParams struct {
+	SaID         string
+	BucketName   string
+	GcpProjectID string
+	Region       string
+}
+
+// CreateExportSinkParams contains parameters for creating an export sink.
+// Exactly one of S3 or GCS must be set.
+type CreateExportSinkParams struct {
+	Namespace        string
+	SinkName         string
+	S3               *S3ExportSinkParams
+	GCS              *GCSExportSinkParams
+	AsyncOperationID string
+}
+
+// UpdateExportSinkParams contains parameters for updating an export sink.
+// Exactly one of S3 or GCS must be set.
+type UpdateExportSinkParams struct {
+	Namespace        string
+	SinkName         string
+	S3               *S3ExportSinkParams
+	GCS              *GCSExportSinkParams
+	ResourceVersion  string
+	AsyncOperationID string
+}
+
+// ValidateExportSinkParams contains parameters for validating an export sink configuration.
+// Exactly one of S3 or GCS must be set.
+type ValidateExportSinkParams struct {
+	Namespace string
+	SinkName  string
+	S3        *S3ExportSinkParams
+	GCS       *GCSExportSinkParams
+}
+
+// EnableExportSinkParams contains parameters for enabling an export sink.
+type EnableExportSinkParams struct {
+	Namespace        string
+	SinkName         string
+	ResourceVersion  string
+	AsyncOperationID string
+}
+
+// DisableExportSinkParams contains parameters for disabling an export sink.
+type DisableExportSinkParams struct {
+	Namespace        string
+	SinkName         string
+	ResourceVersion  string
+	AsyncOperationID string
+}
+
+// DeleteExportSinkParams contains parameters for deleting an export sink.
+type DeleteExportSinkParams struct {
+	Namespace        string
+	SinkName         string
+	ResourceVersion  string
+	AsyncOperationID string
+}
+
 // GetExportSink retrieves a single export sink by name for the specified namespace.
 func (c *Client) GetExportSink(ctx context.Context, namespaceName, sinkName string) (*namespacev1.ExportSink, error) {
 	res, err := c.Cloud.GetNamespaceExportSink(ctx, &cloudservice.GetNamespaceExportSinkRequest{
@@ -42,34 +113,32 @@ func (c *Client) ListExportSinks(ctx context.Context, namespaceName string) ([]*
 	return sinks, nil
 }
 
-// CreateS3ExportSinkParams contains parameters for creating an S3 export sink.
-type CreateS3ExportSinkParams struct {
-	Namespace        string
-	SinkName         string
-	RoleName         string
-	BucketName       string
-	Region           string
-	AwsAccountID     string
-	KmsArn           string
-	AsyncOperationID string
-}
-
-// CreateS3ExportSink creates a new S3 export sink for the specified namespace.
-// The sink is created in the enabled state.
-func (c *Client) CreateS3ExportSink(ctx context.Context, params CreateS3ExportSinkParams) (*operation.AsyncOperation, error) {
+// CreateExportSink creates a new export sink for the specified namespace.
+// The sink is created in the enabled state. Exactly one of params.S3 or params.GCS must be set.
+func (c *Client) CreateExportSink(ctx context.Context, params CreateExportSinkParams) (*operation.AsyncOperation, error) {
+	spec := &namespacev1.ExportSinkSpec{
+		Name:    params.SinkName,
+		Enabled: true,
+	}
+	if params.S3 != nil {
+		spec.S3 = &sinkv1.S3Spec{
+			RoleName:     params.S3.RoleName,
+			BucketName:   params.S3.BucketName,
+			Region:       params.S3.Region,
+			AwsAccountId: params.S3.AwsAccountID,
+			KmsArn:       params.S3.KmsArn,
+		}
+	} else if params.GCS != nil {
+		spec.Gcs = &sinkv1.GCSSpec{
+			SaId:         params.GCS.SaID,
+			BucketName:   params.GCS.BucketName,
+			GcpProjectId: params.GCS.GcpProjectID,
+			Region:       params.GCS.Region,
+		}
+	}
 	res, err := c.Cloud.CreateNamespaceExportSink(ctx, &cloudservice.CreateNamespaceExportSinkRequest{
-		Namespace: params.Namespace,
-		Spec: &namespacev1.ExportSinkSpec{
-			Name:    params.SinkName,
-			Enabled: true,
-			S3: &sinkv1.S3Spec{
-				RoleName:     params.RoleName,
-				BucketName:   params.BucketName,
-				Region:       params.Region,
-				AwsAccountId: params.AwsAccountID,
-				KmsArn:       params.KmsArn,
-			},
-		},
+		Namespace:        params.Namespace,
+		Spec:             spec,
 		AsyncOperationId: params.AsyncOperationID,
 	})
 	if err != nil {
@@ -78,21 +147,9 @@ func (c *Client) CreateS3ExportSink(ctx context.Context, params CreateS3ExportSi
 	return res.AsyncOperation, nil
 }
 
-// UpdateS3ExportSinkParams contains parameters for updating an S3 export sink.
-type UpdateS3ExportSinkParams struct {
-	Namespace        string
-	SinkName         string
-	RoleName         string
-	BucketName       string
-	Region           string
-	AwsAccountID     string
-	KmsArn           string
-	ResourceVersion  string
-	AsyncOperationID string
-}
-
-// UpdateS3ExportSink updates an existing S3 export sink, preserving the current enabled state.
-func (c *Client) UpdateS3ExportSink(ctx context.Context, params UpdateS3ExportSinkParams) (*operation.AsyncOperation, error) {
+// UpdateExportSink updates an existing export sink, preserving the current enabled state.
+// Exactly one of params.S3 or params.GCS must be set.
+func (c *Client) UpdateExportSink(ctx context.Context, params UpdateExportSinkParams) (*operation.AsyncOperation, error) {
 	sink, err := c.GetExportSink(ctx, params.Namespace, params.SinkName)
 	if err != nil {
 		return nil, err
@@ -103,19 +160,30 @@ func (c *Client) UpdateS3ExportSink(ctx context.Context, params UpdateS3ExportSi
 		resourceVersion = params.ResourceVersion
 	}
 
+	spec := &namespacev1.ExportSinkSpec{
+		Name:    params.SinkName,
+		Enabled: sink.GetSpec().GetEnabled(),
+	}
+	if params.S3 != nil {
+		spec.S3 = &sinkv1.S3Spec{
+			RoleName:     params.S3.RoleName,
+			BucketName:   params.S3.BucketName,
+			Region:       params.S3.Region,
+			AwsAccountId: params.S3.AwsAccountID,
+			KmsArn:       params.S3.KmsArn,
+		}
+	} else if params.GCS != nil {
+		spec.Gcs = &sinkv1.GCSSpec{
+			SaId:         params.GCS.SaID,
+			BucketName:   params.GCS.BucketName,
+			GcpProjectId: params.GCS.GcpProjectID,
+			Region:       params.GCS.Region,
+		}
+	}
+
 	res, err := c.Cloud.UpdateNamespaceExportSink(ctx, &cloudservice.UpdateNamespaceExportSinkRequest{
-		Namespace: params.Namespace,
-		Spec: &namespacev1.ExportSinkSpec{
-			Name:    params.SinkName,
-			Enabled: sink.GetSpec().GetEnabled(),
-			S3: &sinkv1.S3Spec{
-				RoleName:     params.RoleName,
-				BucketName:   params.BucketName,
-				Region:       params.Region,
-				AwsAccountId: params.AwsAccountID,
-				KmsArn:       params.KmsArn,
-			},
-		},
+		Namespace:        params.Namespace,
+		Spec:             spec,
 		ResourceVersion:  resourceVersion,
 		AsyncOperationId: params.AsyncOperationID,
 	})
@@ -125,149 +193,34 @@ func (c *Client) UpdateS3ExportSink(ctx context.Context, params UpdateS3ExportSi
 	return res.AsyncOperation, nil
 }
 
-// ValidateS3ExportSinkParams contains parameters for validating an S3 export sink configuration.
-type ValidateS3ExportSinkParams struct {
-	Namespace    string
-	SinkName     string
-	RoleName     string
-	BucketName   string
-	Region       string
-	AwsAccountID string
-	KmsArn       string
-}
-
-// ValidateS3ExportSink validates an S3 export sink configuration without creating or updating it.
-func (c *Client) ValidateS3ExportSink(ctx context.Context, params ValidateS3ExportSinkParams) error {
+// ValidateExportSink validates an export sink configuration without creating or updating it.
+// Exactly one of params.S3 or params.GCS must be set.
+func (c *Client) ValidateExportSink(ctx context.Context, params ValidateExportSinkParams) error {
+	spec := &namespacev1.ExportSinkSpec{
+		Name:    params.SinkName,
+		Enabled: true,
+	}
+	if params.S3 != nil {
+		spec.S3 = &sinkv1.S3Spec{
+			RoleName:     params.S3.RoleName,
+			BucketName:   params.S3.BucketName,
+			Region:       params.S3.Region,
+			AwsAccountId: params.S3.AwsAccountID,
+			KmsArn:       params.S3.KmsArn,
+		}
+	} else if params.GCS != nil {
+		spec.Gcs = &sinkv1.GCSSpec{
+			SaId:         params.GCS.SaID,
+			BucketName:   params.GCS.BucketName,
+			GcpProjectId: params.GCS.GcpProjectID,
+			Region:       params.GCS.Region,
+		}
+	}
 	_, err := c.Cloud.ValidateNamespaceExportSink(ctx, &cloudservice.ValidateNamespaceExportSinkRequest{
 		Namespace: params.Namespace,
-		Spec: &namespacev1.ExportSinkSpec{
-			Name:    params.SinkName,
-			Enabled: true,
-			S3: &sinkv1.S3Spec{
-				RoleName:     params.RoleName,
-				BucketName:   params.BucketName,
-				Region:       params.Region,
-				AwsAccountId: params.AwsAccountID,
-				KmsArn:       params.KmsArn,
-			},
-		},
+		Spec:      spec,
 	})
 	return err
-}
-
-// CreateGCSExportSinkParams contains parameters for creating a GCS export sink.
-type CreateGCSExportSinkParams struct {
-	Namespace        string
-	SinkName         string
-	SaID             string
-	BucketName       string
-	GcpProjectID     string
-	Region           string
-	AsyncOperationID string
-}
-
-// CreateGCSExportSink creates a new GCS export sink for the specified namespace.
-// The sink is created in the enabled state.
-func (c *Client) CreateGCSExportSink(ctx context.Context, params CreateGCSExportSinkParams) (*operation.AsyncOperation, error) {
-	res, err := c.Cloud.CreateNamespaceExportSink(ctx, &cloudservice.CreateNamespaceExportSinkRequest{
-		Namespace: params.Namespace,
-		Spec: &namespacev1.ExportSinkSpec{
-			Name:    params.SinkName,
-			Enabled: true,
-			Gcs: &sinkv1.GCSSpec{
-				SaId:         params.SaID,
-				BucketName:   params.BucketName,
-				GcpProjectId: params.GcpProjectID,
-				Region:       params.Region,
-			},
-		},
-		AsyncOperationId: params.AsyncOperationID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return res.AsyncOperation, nil
-}
-
-// UpdateGCSExportSinkParams contains parameters for updating a GCS export sink.
-type UpdateGCSExportSinkParams struct {
-	Namespace        string
-	SinkName         string
-	SaID             string
-	BucketName       string
-	GcpProjectID     string
-	Region           string
-	ResourceVersion  string
-	AsyncOperationID string
-}
-
-// UpdateGCSExportSink updates an existing GCS export sink, preserving the current enabled state.
-func (c *Client) UpdateGCSExportSink(ctx context.Context, params UpdateGCSExportSinkParams) (*operation.AsyncOperation, error) {
-	sink, err := c.GetExportSink(ctx, params.Namespace, params.SinkName)
-	if err != nil {
-		return nil, err
-	}
-
-	resourceVersion := sink.ResourceVersion
-	if params.ResourceVersion != "" {
-		resourceVersion = params.ResourceVersion
-	}
-
-	res, err := c.Cloud.UpdateNamespaceExportSink(ctx, &cloudservice.UpdateNamespaceExportSinkRequest{
-		Namespace: params.Namespace,
-		Spec: &namespacev1.ExportSinkSpec{
-			Name:    params.SinkName,
-			Enabled: sink.GetSpec().GetEnabled(),
-			Gcs: &sinkv1.GCSSpec{
-				SaId:         params.SaID,
-				BucketName:   params.BucketName,
-				GcpProjectId: params.GcpProjectID,
-				Region:       params.Region,
-			},
-		},
-		ResourceVersion:  resourceVersion,
-		AsyncOperationId: params.AsyncOperationID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return res.AsyncOperation, nil
-}
-
-// ValidateGCSExportSinkParams contains parameters for validating a GCS export sink configuration.
-type ValidateGCSExportSinkParams struct {
-	Namespace    string
-	SinkName     string
-	SaID         string
-	BucketName   string
-	GcpProjectID string
-	Region       string
-}
-
-// ValidateGCSExportSink validates a GCS export sink configuration without creating or updating it.
-func (c *Client) ValidateGCSExportSink(ctx context.Context, params ValidateGCSExportSinkParams) error {
-	_, err := c.Cloud.ValidateNamespaceExportSink(ctx, &cloudservice.ValidateNamespaceExportSinkRequest{
-		Namespace: params.Namespace,
-		Spec: &namespacev1.ExportSinkSpec{
-			Name:    params.SinkName,
-			Enabled: true,
-			Gcs: &sinkv1.GCSSpec{
-				SaId:         params.SaID,
-				BucketName:   params.BucketName,
-				GcpProjectId: params.GcpProjectID,
-				Region:       params.Region,
-			},
-		},
-	})
-	return err
-}
-
-// EnableExportSinkParams contains parameters for enabling an export sink.
-type EnableExportSinkParams struct {
-	Namespace        string
-	SinkName         string
-	ResourceVersion  string
-	AsyncOperationID string
 }
 
 // EnableExportSink enables a previously disabled export sink.
@@ -297,14 +250,6 @@ func (c *Client) EnableExportSink(ctx context.Context, params EnableExportSinkPa
 	return res.AsyncOperation, nil
 }
 
-// DisableExportSinkParams contains parameters for disabling an export sink.
-type DisableExportSinkParams struct {
-	Namespace        string
-	SinkName         string
-	ResourceVersion  string
-	AsyncOperationID string
-}
-
 // DisableExportSink disables an export sink while preserving its configuration.
 func (c *Client) DisableExportSink(ctx context.Context, params DisableExportSinkParams) (*operation.AsyncOperation, error) {
 	sink, err := c.GetExportSink(ctx, params.Namespace, params.SinkName)
@@ -330,14 +275,6 @@ func (c *Client) DisableExportSink(ctx context.Context, params DisableExportSink
 		return nil, err
 	}
 	return res.AsyncOperation, nil
-}
-
-// DeleteExportSinkParams contains parameters for deleting an export sink.
-type DeleteExportSinkParams struct {
-	Namespace        string
-	SinkName         string
-	ResourceVersion  string
-	AsyncOperationID string
 }
 
 // DeleteExportSink deletes an export sink from the specified namespace.

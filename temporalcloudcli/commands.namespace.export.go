@@ -132,15 +132,17 @@ func (c *CloudNamespaceExportS3CreateCommand) run(cctx *CommandContext, _ []stri
 		return err
 	}
 
-	createS3ExportSink := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.SinkName, c.ClientOptions, namespaceClient.CreateS3ExportSink)
-	return createS3ExportSink(namespace.CreateS3ExportSinkParams{
-		Namespace:        c.Namespace,
-		SinkName:         c.SinkName,
-		RoleName:         c.RoleName,
-		BucketName:       c.BucketName,
-		Region:           c.Region,
-		AwsAccountID:     c.AwsAccountId,
-		KmsArn:           c.KmsArn,
+	createExportSink := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.SinkName, c.ClientOptions, namespaceClient.CreateExportSink)
+	return createExportSink(namespace.CreateExportSinkParams{
+		Namespace: c.Namespace,
+		SinkName:  c.SinkName,
+		S3: &namespace.S3ExportSinkParams{
+			RoleName:     c.RoleName,
+			BucketName:   c.BucketName,
+			Region:       c.Region,
+			AwsAccountID: c.AwsAccountId,
+			KmsArn:       c.KmsArn,
+		},
 		AsyncOperationID: c.AsyncOperationId,
 	})
 }
@@ -151,15 +153,17 @@ func (c *CloudNamespaceExportS3UpdateCommand) run(cctx *CommandContext, _ []stri
 		return err
 	}
 
-	updateS3ExportSink := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.SinkName, c.ClientOptions, namespaceClient.UpdateS3ExportSink)
-	return updateS3ExportSink(namespace.UpdateS3ExportSinkParams{
-		Namespace:        c.Namespace,
-		SinkName:         c.SinkName,
-		RoleName:         c.RoleName,
-		BucketName:       c.BucketName,
-		Region:           c.Region,
-		AwsAccountID:     c.AwsAccountId,
-		KmsArn:           c.KmsArn,
+	updateExportSink := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.SinkName, c.ClientOptions, namespaceClient.UpdateExportSink)
+	return updateExportSink(namespace.UpdateExportSinkParams{
+		Namespace: c.Namespace,
+		SinkName:  c.SinkName,
+		S3: &namespace.S3ExportSinkParams{
+			RoleName:     c.RoleName,
+			BucketName:   c.BucketName,
+			Region:       c.Region,
+			AwsAccountID: c.AwsAccountId,
+			KmsArn:       c.KmsArn,
+		},
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
 	})
@@ -171,14 +175,16 @@ func (c *CloudNamespaceExportS3ValidateCommand) run(cctx *CommandContext, _ []st
 		return err
 	}
 
-	if err := namespaceClient.ValidateS3ExportSink(cctx.Context, namespace.ValidateS3ExportSinkParams{
-		Namespace:    c.Namespace,
-		SinkName:     c.SinkName,
-		RoleName:     c.RoleName,
-		BucketName:   c.BucketName,
-		Region:       c.Region,
-		AwsAccountID: c.AwsAccountId,
-		KmsArn:       c.KmsArn,
+	if err := namespaceClient.ValidateExportSink(cctx.Context, namespace.ValidateExportSinkParams{
+		Namespace: c.Namespace,
+		SinkName:  c.SinkName,
+		S3: &namespace.S3ExportSinkParams{
+			RoleName:     c.RoleName,
+			BucketName:   c.BucketName,
+			Region:       c.Region,
+			AwsAccountID: c.AwsAccountId,
+			KmsArn:       c.KmsArn,
+		},
 	}); err != nil {
 		return err
 	}
@@ -195,14 +201,16 @@ func (c *CloudNamespaceExportGcsCreateCommand) run(cctx *CommandContext, _ []str
 		return err
 	}
 
-	createGCSExportSink := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.SinkName, c.ClientOptions, namespaceClient.CreateGCSExportSink)
-	return createGCSExportSink(namespace.CreateGCSExportSinkParams{
-		Namespace:        c.Namespace,
-		SinkName:         c.SinkName,
-		SaID:             c.SaId,
-		BucketName:       c.BucketName,
-		GcpProjectID:     c.GcpProjectId,
-		Region:           c.Region,
+	createExportSink := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.SinkName, c.ClientOptions, namespaceClient.CreateExportSink)
+	return createExportSink(namespace.CreateExportSinkParams{
+		Namespace: c.Namespace,
+		SinkName:  c.SinkName,
+		GCS: &namespace.GCSExportSinkParams{
+			SaID:         c.SaId,
+			BucketName:   c.BucketName,
+			GcpProjectID: c.GcpProjectId,
+			Region:       c.Region,
+		},
 		AsyncOperationID: c.AsyncOperationId,
 	})
 }
@@ -213,14 +221,16 @@ func (c *CloudNamespaceExportGcsUpdateCommand) run(cctx *CommandContext, _ []str
 		return err
 	}
 
-	updateGCSExportSink := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.SinkName, c.ClientOptions, namespaceClient.UpdateGCSExportSink)
-	return updateGCSExportSink(namespace.UpdateGCSExportSinkParams{
-		Namespace:        c.Namespace,
-		SinkName:         c.SinkName,
-		SaID:             c.SaId,
-		BucketName:       c.BucketName,
-		GcpProjectID:     c.GcpProjectId,
-		Region:           c.Region,
+	updateExportSink := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.SinkName, c.ClientOptions, namespaceClient.UpdateExportSink)
+	return updateExportSink(namespace.UpdateExportSinkParams{
+		Namespace: c.Namespace,
+		SinkName:  c.SinkName,
+		GCS: &namespace.GCSExportSinkParams{
+			SaID:         c.SaId,
+			BucketName:   c.BucketName,
+			GcpProjectID: c.GcpProjectId,
+			Region:       c.Region,
+		},
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
 	})
@@ -232,13 +242,15 @@ func (c *CloudNamespaceExportGcsValidateCommand) run(cctx *CommandContext, _ []s
 		return err
 	}
 
-	if err := namespaceClient.ValidateGCSExportSink(cctx.Context, namespace.ValidateGCSExportSinkParams{
-		Namespace:    c.Namespace,
-		SinkName:     c.SinkName,
-		SaID:         c.SaId,
-		BucketName:   c.BucketName,
-		GcpProjectID: c.GcpProjectId,
-		Region:       c.Region,
+	if err := namespaceClient.ValidateExportSink(cctx.Context, namespace.ValidateExportSinkParams{
+		Namespace: c.Namespace,
+		SinkName:  c.SinkName,
+		GCS: &namespace.GCSExportSinkParams{
+			SaID:         c.SaId,
+			BucketName:   c.BucketName,
+			GcpProjectID: c.GcpProjectId,
+			Region:       c.Region,
+		},
 	}); err != nil {
 		return err
 	}

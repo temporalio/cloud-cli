@@ -115,7 +115,7 @@ func TestClient_ListExportSinks_Pagination(t *testing.T) {
 	assert.Equal(t, append(page1, page2...), result)
 }
 
-func TestClient_CreateS3ExportSink_Success(t *testing.T) {
+func TestClient_CreateExportSink_S3_Success(t *testing.T) {
 	ctx := context.Background()
 	mockCloud := nsmock.NewMockCloudService(t)
 	client := &namespace.Client{Cloud: mockCloud}
@@ -140,19 +140,21 @@ func TestClient_CreateS3ExportSink_Success(t *testing.T) {
 		}).
 		Return(&cloudservice.CreateNamespaceExportSinkResponse{AsyncOperation: expectedOp}, nil)
 
-	op, err := client.CreateS3ExportSink(ctx, namespace.CreateS3ExportSinkParams{
-		Namespace:    "test-ns",
-		SinkName:     "my-sink",
-		RoleName:     "my-role",
-		BucketName:   "my-bucket",
-		Region:       "us-east-1",
-		AwsAccountID: "123456789012",
+	op, err := client.CreateExportSink(ctx, namespace.CreateExportSinkParams{
+		Namespace: "test-ns",
+		SinkName:  "my-sink",
+		S3: &namespace.S3ExportSinkParams{
+			RoleName:     "my-role",
+			BucketName:   "my-bucket",
+			Region:       "us-east-1",
+			AwsAccountID: "123456789012",
+		},
 	})
 	require.NoError(t, err)
 	assert.Equal(t, expectedOp, op)
 }
 
-func TestClient_UpdateS3ExportSink_Success(t *testing.T) {
+func TestClient_UpdateExportSink_S3_Success(t *testing.T) {
 	ctx := context.Background()
 	mockCloud := nsmock.NewMockCloudService(t)
 	client := &namespace.Client{Cloud: mockCloud}
@@ -200,19 +202,21 @@ func TestClient_UpdateS3ExportSink_Success(t *testing.T) {
 		}).
 		Return(&cloudservice.UpdateNamespaceExportSinkResponse{AsyncOperation: expectedOp}, nil)
 
-	op, err := client.UpdateS3ExportSink(ctx, namespace.UpdateS3ExportSinkParams{
-		Namespace:    "test-ns",
-		SinkName:     "my-sink",
-		RoleName:     "new-role",
-		BucketName:   "my-bucket",
-		Region:       "us-east-1",
-		AwsAccountID: "123456789012",
+	op, err := client.UpdateExportSink(ctx, namespace.UpdateExportSinkParams{
+		Namespace: "test-ns",
+		SinkName:  "my-sink",
+		S3: &namespace.S3ExportSinkParams{
+			RoleName:     "new-role",
+			BucketName:   "my-bucket",
+			Region:       "us-east-1",
+			AwsAccountID: "123456789012",
+		},
 	})
 	require.NoError(t, err)
 	assert.Equal(t, expectedOp, op)
 }
 
-func TestClient_UpdateS3ExportSink_GetSinkError(t *testing.T) {
+func TestClient_UpdateExportSink_S3_GetSinkError(t *testing.T) {
 	ctx := context.Background()
 	mockCloud := nsmock.NewMockCloudService(t)
 	client := &namespace.Client{Cloud: mockCloud}
@@ -224,18 +228,20 @@ func TestClient_UpdateS3ExportSink_GetSinkError(t *testing.T) {
 		}).
 		Return(nil, errors.New("not found"))
 
-	_, err := client.UpdateS3ExportSink(ctx, namespace.UpdateS3ExportSinkParams{
-		Namespace:    "test-ns",
-		SinkName:     "my-sink",
-		RoleName:     "new-role",
-		BucketName:   "my-bucket",
-		Region:       "us-east-1",
-		AwsAccountID: "123456789012",
+	_, err := client.UpdateExportSink(ctx, namespace.UpdateExportSinkParams{
+		Namespace: "test-ns",
+		SinkName:  "my-sink",
+		S3: &namespace.S3ExportSinkParams{
+			RoleName:     "new-role",
+			BucketName:   "my-bucket",
+			Region:       "us-east-1",
+			AwsAccountID: "123456789012",
+		},
 	})
 	require.Error(t, err)
 }
 
-func TestClient_UpdateS3ExportSink_CustomResourceVersion(t *testing.T) {
+func TestClient_UpdateExportSink_S3_CustomResourceVersion(t *testing.T) {
 	ctx := context.Background()
 	mockCloud := nsmock.NewMockCloudService(t)
 	client := &namespace.Client{Cloud: mockCloud}
@@ -278,20 +284,22 @@ func TestClient_UpdateS3ExportSink_CustomResourceVersion(t *testing.T) {
 		}).
 		Return(&cloudservice.UpdateNamespaceExportSinkResponse{AsyncOperation: expectedOp}, nil)
 
-	op, err := client.UpdateS3ExportSink(ctx, namespace.UpdateS3ExportSinkParams{
-		Namespace:       "test-ns",
-		SinkName:        "my-sink",
-		RoleName:        "new-role",
-		BucketName:      "my-bucket",
-		Region:          "us-east-1",
-		AwsAccountID:    "123456789012",
+	op, err := client.UpdateExportSink(ctx, namespace.UpdateExportSinkParams{
+		Namespace: "test-ns",
+		SinkName:  "my-sink",
+		S3: &namespace.S3ExportSinkParams{
+			RoleName:     "new-role",
+			BucketName:   "my-bucket",
+			Region:       "us-east-1",
+			AwsAccountID: "123456789012",
+		},
 		ResourceVersion: "v2",
 	})
 	require.NoError(t, err)
 	assert.Equal(t, expectedOp, op)
 }
 
-func TestClient_ValidateS3ExportSink_Success(t *testing.T) {
+func TestClient_ValidateExportSink_S3_Success(t *testing.T) {
 	ctx := context.Background()
 	mockCloud := nsmock.NewMockCloudService(t)
 	client := &namespace.Client{Cloud: mockCloud}
@@ -312,18 +320,20 @@ func TestClient_ValidateS3ExportSink_Success(t *testing.T) {
 		}).
 		Return(&cloudservice.ValidateNamespaceExportSinkResponse{}, nil)
 
-	err := client.ValidateS3ExportSink(ctx, namespace.ValidateS3ExportSinkParams{
-		Namespace:    "test-ns",
-		SinkName:     "my-sink",
-		RoleName:     "my-role",
-		BucketName:   "my-bucket",
-		Region:       "us-east-1",
-		AwsAccountID: "123456789012",
+	err := client.ValidateExportSink(ctx, namespace.ValidateExportSinkParams{
+		Namespace: "test-ns",
+		SinkName:  "my-sink",
+		S3: &namespace.S3ExportSinkParams{
+			RoleName:     "my-role",
+			BucketName:   "my-bucket",
+			Region:       "us-east-1",
+			AwsAccountID: "123456789012",
+		},
 	})
 	require.NoError(t, err)
 }
 
-func TestClient_CreateGCSExportSink_Success(t *testing.T) {
+func TestClient_CreateExportSink_GCS_Success(t *testing.T) {
 	ctx := context.Background()
 	mockCloud := nsmock.NewMockCloudService(t)
 	client := &namespace.Client{Cloud: mockCloud}
@@ -347,19 +357,21 @@ func TestClient_CreateGCSExportSink_Success(t *testing.T) {
 		}).
 		Return(&cloudservice.CreateNamespaceExportSinkResponse{AsyncOperation: expectedOp}, nil)
 
-	op, err := client.CreateGCSExportSink(ctx, namespace.CreateGCSExportSinkParams{
-		Namespace:    "test-ns",
-		SinkName:     "my-sink",
-		SaID:         "sa@project.iam.gserviceaccount.com",
-		BucketName:   "my-bucket",
-		GcpProjectID: "my-project",
-		Region:       "us-central1",
+	op, err := client.CreateExportSink(ctx, namespace.CreateExportSinkParams{
+		Namespace: "test-ns",
+		SinkName:  "my-sink",
+		GCS: &namespace.GCSExportSinkParams{
+			SaID:         "sa@project.iam.gserviceaccount.com",
+			BucketName:   "my-bucket",
+			GcpProjectID: "my-project",
+			Region:       "us-central1",
+		},
 	})
 	require.NoError(t, err)
 	assert.Equal(t, expectedOp, op)
 }
 
-func TestClient_UpdateGCSExportSink_Success(t *testing.T) {
+func TestClient_UpdateExportSink_GCS_Success(t *testing.T) {
 	ctx := context.Background()
 	mockCloud := nsmock.NewMockCloudService(t)
 	client := &namespace.Client{Cloud: mockCloud}
@@ -406,19 +418,21 @@ func TestClient_UpdateGCSExportSink_Success(t *testing.T) {
 		}).
 		Return(&cloudservice.UpdateNamespaceExportSinkResponse{AsyncOperation: expectedOp}, nil)
 
-	op, err := client.UpdateGCSExportSink(ctx, namespace.UpdateGCSExportSinkParams{
-		Namespace:    "test-ns",
-		SinkName:     "my-sink",
-		SaID:         "new-sa@project.iam.gserviceaccount.com",
-		BucketName:   "my-bucket",
-		GcpProjectID: "my-project",
-		Region:       "us-central1",
+	op, err := client.UpdateExportSink(ctx, namespace.UpdateExportSinkParams{
+		Namespace: "test-ns",
+		SinkName:  "my-sink",
+		GCS: &namespace.GCSExportSinkParams{
+			SaID:         "new-sa@project.iam.gserviceaccount.com",
+			BucketName:   "my-bucket",
+			GcpProjectID: "my-project",
+			Region:       "us-central1",
+		},
 	})
 	require.NoError(t, err)
 	assert.Equal(t, expectedOp, op)
 }
 
-func TestClient_UpdateGCSExportSink_GetSinkError(t *testing.T) {
+func TestClient_UpdateExportSink_GCS_GetSinkError(t *testing.T) {
 	ctx := context.Background()
 	mockCloud := nsmock.NewMockCloudService(t)
 	client := &namespace.Client{Cloud: mockCloud}
@@ -430,18 +444,20 @@ func TestClient_UpdateGCSExportSink_GetSinkError(t *testing.T) {
 		}).
 		Return(nil, errors.New("not found"))
 
-	_, err := client.UpdateGCSExportSink(ctx, namespace.UpdateGCSExportSinkParams{
-		Namespace:    "test-ns",
-		SinkName:     "my-sink",
-		SaID:         "sa@project.iam.gserviceaccount.com",
-		BucketName:   "my-bucket",
-		GcpProjectID: "my-project",
-		Region:       "us-central1",
+	_, err := client.UpdateExportSink(ctx, namespace.UpdateExportSinkParams{
+		Namespace: "test-ns",
+		SinkName:  "my-sink",
+		GCS: &namespace.GCSExportSinkParams{
+			SaID:         "sa@project.iam.gserviceaccount.com",
+			BucketName:   "my-bucket",
+			GcpProjectID: "my-project",
+			Region:       "us-central1",
+		},
 	})
 	require.Error(t, err)
 }
 
-func TestClient_ValidateGCSExportSink_Success(t *testing.T) {
+func TestClient_ValidateExportSink_GCS_Success(t *testing.T) {
 	ctx := context.Background()
 	mockCloud := nsmock.NewMockCloudService(t)
 	client := &namespace.Client{Cloud: mockCloud}
@@ -462,13 +478,15 @@ func TestClient_ValidateGCSExportSink_Success(t *testing.T) {
 		}).
 		Return(&cloudservice.ValidateNamespaceExportSinkResponse{}, nil)
 
-	err := client.ValidateGCSExportSink(ctx, namespace.ValidateGCSExportSinkParams{
-		Namespace:    "test-ns",
-		SinkName:     "my-sink",
-		SaID:         "sa@project.iam.gserviceaccount.com",
-		BucketName:   "my-bucket",
-		GcpProjectID: "my-project",
-		Region:       "us-central1",
+	err := client.ValidateExportSink(ctx, namespace.ValidateExportSinkParams{
+		Namespace: "test-ns",
+		SinkName:  "my-sink",
+		GCS: &namespace.GCSExportSinkParams{
+			SaID:         "sa@project.iam.gserviceaccount.com",
+			BucketName:   "my-bucket",
+			GcpProjectID: "my-project",
+			Region:       "us-central1",
+		},
 	})
 	require.NoError(t, err)
 }

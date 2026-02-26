@@ -90,12 +90,9 @@ type NamespaceClient interface {
 	Failover(context.Context, namespace.FailoverParams) (*operation.AsyncOperation, error)
 	GetExportSink(context.Context, string, string) (*namespacev1.ExportSink, error)
 	ListExportSinks(context.Context, string) ([]*namespacev1.ExportSink, error)
-	CreateS3ExportSink(context.Context, namespace.CreateS3ExportSinkParams) (*operation.AsyncOperation, error)
-	UpdateS3ExportSink(context.Context, namespace.UpdateS3ExportSinkParams) (*operation.AsyncOperation, error)
-	ValidateS3ExportSink(context.Context, namespace.ValidateS3ExportSinkParams) error
-	CreateGCSExportSink(context.Context, namespace.CreateGCSExportSinkParams) (*operation.AsyncOperation, error)
-	UpdateGCSExportSink(context.Context, namespace.UpdateGCSExportSinkParams) (*operation.AsyncOperation, error)
-	ValidateGCSExportSink(context.Context, namespace.ValidateGCSExportSinkParams) error
+	CreateExportSink(context.Context, namespace.CreateExportSinkParams) (*operation.AsyncOperation, error)
+	UpdateExportSink(context.Context, namespace.UpdateExportSinkParams) (*operation.AsyncOperation, error)
+	ValidateExportSink(context.Context, namespace.ValidateExportSinkParams) error
 	EnableExportSink(context.Context, namespace.EnableExportSinkParams) (*operation.AsyncOperation, error)
 	DisableExportSink(context.Context, namespace.DisableExportSinkParams) (*operation.AsyncOperation, error)
 	DeleteExportSink(context.Context, namespace.DeleteExportSinkParams) (*operation.AsyncOperation, error)
