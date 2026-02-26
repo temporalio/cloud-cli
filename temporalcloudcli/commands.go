@@ -83,6 +83,11 @@ type NamespaceClient interface {
 	GetCodecServer(context.Context, string) (*namespacev1.CodecServerSpec, error)
 	SetCodec(context.Context, namespace.SetCodecParams) (*operation.AsyncOperation, error)
 	DeleteCodec(context.Context, namespace.DeleteCodecParams) (*operation.AsyncOperation, error)
+	ListRegions(context.Context, string) ([]namespace.RegionStatus, error)
+	UpdateHA(context.Context, namespace.UpdateHAParams) (*operation.AsyncOperation, error)
+	AddRegion(context.Context, namespace.AddRegionParams) (*operation.AsyncOperation, error)
+	RemoveRegion(context.Context, namespace.RemoveRegionParams) (*operation.AsyncOperation, error)
+	Failover(context.Context, namespace.FailoverParams) (*operation.AsyncOperation, error)
 }
 
 type Poller interface {
@@ -503,6 +508,7 @@ func registerKnownPrinterEnumToStringConverters(p *printer.Printer) {
 	// Register any enum converters for known types here.
 	printer.RegisterEnumToStringConverter[resource.ResourceState](p, "RESOURCE_STATE_", resource.ResourceState_name)
 	printer.RegisterEnumToStringConverter[operation.AsyncOperation_State](p, "STATE_", operation.AsyncOperation_State_name)
+	printer.RegisterEnumToStringConverter[namespacev1.NamespaceRegionStatus_State](p, "STATE_", namespacev1.NamespaceRegionStatus_State_name)
 }
 
 func (c *CloudCommand) preRun(cctx *CommandContext, timeoutCancel *context.CancelFunc) error {

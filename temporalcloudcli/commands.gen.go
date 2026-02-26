@@ -192,6 +192,7 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.AddCommand(&NewCloudNamespaceDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceEditCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceHaCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceLifecycleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceRetentionCommand(cctx, &s).Command)
@@ -704,6 +705,243 @@ func NewCloudNamespaceGetCommand(cctx *CommandContext, parent *CloudNamespaceCom
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
 	s.Command.Flags().BoolVar(&s.Spec, "spec", false, "Output only the namespace specification in JSON format, omitting metadata and status information.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceHaCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceHaCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceHaCommand {
+	var s CloudNamespaceHaCommand
+	s.Parent = parent
+	s.Command.Use = "ha"
+	s.Command.Short = "Manage High Availability settings for namespaces"
+	s.Command.Long = "Commands for managing High Availability (HA) settings of Temporal Cloud namespaces.\n\nHA settings control active region, managed failover, and replica regions."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceHaFailoverCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceHaGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceHaRegionCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceHaUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceHaFailoverCommand struct {
+	Parent  *CloudNamespaceHaCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	Region string
+}
+
+func NewCloudNamespaceHaFailoverCommand(cctx *CommandContext, parent *CloudNamespaceHaCommand) *CloudNamespaceHaFailoverCommand {
+	var s CloudNamespaceHaFailoverCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "failover [flags]"
+	s.Command.Short = "Trigger a failover to a different region"
+	if hasHighlighting {
+		s.Command.Long = "Trigger a failover for a Temporal Cloud namespace to a different region.\nThe target region must already be a replica region of the namespace.\n\nExample:\n\n\x1b[1mcloud namespace ha failover --namespace my-namespace.my-account --region aws-us-west-2\x1b[0m"
+	} else {
+		s.Command.Long = "Trigger a failover for a Temporal Cloud namespace to a different region.\nThe target region must already be a replica region of the namespace.\n\nExample:\n\n```\ncloud namespace ha failover --namespace my-namespace.my-account --region aws-us-west-2\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Region, "region", "", "The target region to failover to (e.g., aws-us-west-2). Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "region")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceHaGetCommand struct {
+	Parent  *CloudNamespaceHaCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceHaGetCommand(cctx *CommandContext, parent *CloudNamespaceHaCommand) *CloudNamespaceHaGetCommand {
+	var s CloudNamespaceHaGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get High Availability configuration for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the current High Availability configuration for a Temporal Cloud namespace.\nShows the active region and whether managed failover is enabled.\n\nExample:\n\n\x1b[1mcloud namespace ha get --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the current High Availability configuration for a Temporal Cloud namespace.\nShows the active region and whether managed failover is enabled.\n\nExample:\n\n```\ncloud namespace ha get --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceHaRegionCommand struct {
+	Parent  *CloudNamespaceHaCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceHaRegionCommand(cctx *CommandContext, parent *CloudNamespaceHaCommand) *CloudNamespaceHaRegionCommand {
+	var s CloudNamespaceHaRegionCommand
+	s.Parent = parent
+	s.Command.Use = "region"
+	s.Command.Short = "Manage replica regions for a namespace"
+	s.Command.Long = "Commands for managing replica regions of Temporal Cloud namespaces."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceHaRegionCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceHaRegionDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceHaRegionListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceHaRegionCreateCommand struct {
+	Parent  *CloudNamespaceHaRegionCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Region string
+}
+
+func NewCloudNamespaceHaRegionCreateCommand(cctx *CommandContext, parent *CloudNamespaceHaRegionCommand) *CloudNamespaceHaRegionCreateCommand {
+	var s CloudNamespaceHaRegionCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Add a replica region to a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Add a replica region to a Temporal Cloud namespace. The region will be added\nas a passive replica and can later be used for failover.\n\nExample:\n\n\x1b[1mcloud namespace ha region create --namespace my-namespace.my-account --region aws-us-west-2\x1b[0m"
+	} else {
+		s.Command.Long = "Add a replica region to a Temporal Cloud namespace. The region will be added\nas a passive replica and can later be used for failover.\n\nExample:\n\n```\ncloud namespace ha region create --namespace my-namespace.my-account --region aws-us-west-2\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Region, "region", "", "The region ID to add as a replica (e.g., aws-us-west-2). Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "region")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceHaRegionDeleteCommand struct {
+	Parent  *CloudNamespaceHaRegionCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Region string
+}
+
+func NewCloudNamespaceHaRegionDeleteCommand(cctx *CommandContext, parent *CloudNamespaceHaRegionCommand) *CloudNamespaceHaRegionDeleteCommand {
+	var s CloudNamespaceHaRegionDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Remove a replica region from a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Remove a replica region from a Temporal Cloud namespace. Note that a 7-day\ncooldown period applies before the same region can be re-added.\n\nExample:\n\n\x1b[1mcloud namespace ha region delete --namespace my-namespace.my-account --region aws-us-west-2\x1b[0m"
+	} else {
+		s.Command.Long = "Remove a replica region from a Temporal Cloud namespace. Note that a 7-day\ncooldown period applies before the same region can be re-added.\n\nExample:\n\n```\ncloud namespace ha region delete --namespace my-namespace.my-account --region aws-us-west-2\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Region, "region", "", "The region ID to remove (e.g., aws-us-west-2). Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "region")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceHaRegionListCommand struct {
+	Parent  *CloudNamespaceHaRegionCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceHaRegionListCommand(cctx *CommandContext, parent *CloudNamespaceHaRegionCommand) *CloudNamespaceHaRegionListCommand {
+	var s CloudNamespaceHaRegionListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List regions for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "List all regions and their states for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mcloud namespace ha region list --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "List all regions and their states for a Temporal Cloud namespace.\n\nExample:\n\n```\ncloud namespace ha region list --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceHaUpdateCommand struct {
+	Parent  *CloudNamespaceHaCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	DisableAutoFailover bool
+}
+
+func NewCloudNamespaceHaUpdateCommand(cctx *CommandContext, parent *CloudNamespaceHaCommand) *CloudNamespaceHaUpdateCommand {
+	var s CloudNamespaceHaUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update High Availability configuration for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Update the High Availability configuration for a Temporal Cloud namespace.\nUse --disable-auto-failover to toggle Temporal-managed automatic failover.\n\nExample:\n\n\x1b[1mcloud namespace ha update --namespace my-namespace.my-account --disable-auto-failover true\x1b[0m"
+	} else {
+		s.Command.Long = "Update the High Availability configuration for a Temporal Cloud namespace.\nUse --disable-auto-failover to toggle Temporal-managed automatic failover.\n\nExample:\n\n```\ncloud namespace ha update --namespace my-namespace.my-account --disable-auto-failover true\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.DisableAutoFailover, "disable-auto-failover", false, "Set to true to disable Temporal-managed automatic failover for the namespace. Set to false to re-enable automatic failover. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "disable-auto-failover")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
