@@ -247,6 +247,142 @@ func (_c *MockNamespaceClient_AddRegion_Call) RunAndReturn(run func(context1 con
 	return _c
 }
 
+// CreateGCSExportSink provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) CreateGCSExportSink(context1 context.Context, createGCSExportSinkParams namespace.CreateGCSExportSinkParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, createGCSExportSinkParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateGCSExportSink")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.CreateGCSExportSinkParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, createGCSExportSinkParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.CreateGCSExportSinkParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, createGCSExportSinkParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.CreateGCSExportSinkParams) error); ok {
+		r1 = returnFunc(context1, createGCSExportSinkParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_CreateGCSExportSink_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateGCSExportSink'
+type MockNamespaceClient_CreateGCSExportSink_Call struct {
+	*mock.Call
+}
+
+// CreateGCSExportSink is a helper method to define mock.On call
+//   - context1 context.Context
+//   - createGCSExportSinkParams namespace.CreateGCSExportSinkParams
+func (_e *MockNamespaceClient_Expecter) CreateGCSExportSink(context1 interface{}, createGCSExportSinkParams interface{}) *MockNamespaceClient_CreateGCSExportSink_Call {
+	return &MockNamespaceClient_CreateGCSExportSink_Call{Call: _e.mock.On("CreateGCSExportSink", context1, createGCSExportSinkParams)}
+}
+
+func (_c *MockNamespaceClient_CreateGCSExportSink_Call) Run(run func(context1 context.Context, createGCSExportSinkParams namespace.CreateGCSExportSinkParams)) *MockNamespaceClient_CreateGCSExportSink_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.CreateGCSExportSinkParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.CreateGCSExportSinkParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_CreateGCSExportSink_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_CreateGCSExportSink_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_CreateGCSExportSink_Call) RunAndReturn(run func(context1 context.Context, createGCSExportSinkParams namespace.CreateGCSExportSinkParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_CreateGCSExportSink_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateS3ExportSink provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) CreateS3ExportSink(context1 context.Context, createS3ExportSinkParams namespace.CreateS3ExportSinkParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, createS3ExportSinkParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateS3ExportSink")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.CreateS3ExportSinkParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, createS3ExportSinkParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.CreateS3ExportSinkParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, createS3ExportSinkParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.CreateS3ExportSinkParams) error); ok {
+		r1 = returnFunc(context1, createS3ExportSinkParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_CreateS3ExportSink_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateS3ExportSink'
+type MockNamespaceClient_CreateS3ExportSink_Call struct {
+	*mock.Call
+}
+
+// CreateS3ExportSink is a helper method to define mock.On call
+//   - context1 context.Context
+//   - createS3ExportSinkParams namespace.CreateS3ExportSinkParams
+func (_e *MockNamespaceClient_Expecter) CreateS3ExportSink(context1 interface{}, createS3ExportSinkParams interface{}) *MockNamespaceClient_CreateS3ExportSink_Call {
+	return &MockNamespaceClient_CreateS3ExportSink_Call{Call: _e.mock.On("CreateS3ExportSink", context1, createS3ExportSinkParams)}
+}
+
+func (_c *MockNamespaceClient_CreateS3ExportSink_Call) Run(run func(context1 context.Context, createS3ExportSinkParams namespace.CreateS3ExportSinkParams)) *MockNamespaceClient_CreateS3ExportSink_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.CreateS3ExportSinkParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.CreateS3ExportSinkParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_CreateS3ExportSink_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_CreateS3ExportSink_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_CreateS3ExportSink_Call) RunAndReturn(run func(context1 context.Context, createS3ExportSinkParams namespace.CreateS3ExportSinkParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_CreateS3ExportSink_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateSearchAttribute provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) CreateSearchAttribute(context1 context.Context, createSearchAttributeParams namespace.CreateSearchAttributeParams) (*operation.AsyncOperation, error) {
 	ret := _mock.Called(context1, createSearchAttributeParams)
@@ -519,6 +655,74 @@ func (_c *MockNamespaceClient_DeleteCodec_Call) RunAndReturn(run func(context1 c
 	return _c
 }
 
+// DeleteExportSink provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) DeleteExportSink(context1 context.Context, deleteExportSinkParams namespace.DeleteExportSinkParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, deleteExportSinkParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteExportSink")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.DeleteExportSinkParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, deleteExportSinkParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.DeleteExportSinkParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, deleteExportSinkParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.DeleteExportSinkParams) error); ok {
+		r1 = returnFunc(context1, deleteExportSinkParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_DeleteExportSink_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteExportSink'
+type MockNamespaceClient_DeleteExportSink_Call struct {
+	*mock.Call
+}
+
+// DeleteExportSink is a helper method to define mock.On call
+//   - context1 context.Context
+//   - deleteExportSinkParams namespace.DeleteExportSinkParams
+func (_e *MockNamespaceClient_Expecter) DeleteExportSink(context1 interface{}, deleteExportSinkParams interface{}) *MockNamespaceClient_DeleteExportSink_Call {
+	return &MockNamespaceClient_DeleteExportSink_Call{Call: _e.mock.On("DeleteExportSink", context1, deleteExportSinkParams)}
+}
+
+func (_c *MockNamespaceClient_DeleteExportSink_Call) Run(run func(context1 context.Context, deleteExportSinkParams namespace.DeleteExportSinkParams)) *MockNamespaceClient_DeleteExportSink_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.DeleteExportSinkParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.DeleteExportSinkParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_DeleteExportSink_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_DeleteExportSink_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_DeleteExportSink_Call) RunAndReturn(run func(context1 context.Context, deleteExportSinkParams namespace.DeleteExportSinkParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_DeleteExportSink_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteTags provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) DeleteTags(context1 context.Context, deleteTagsParams namespace.DeleteTagsParams) (*operation.AsyncOperation, error) {
 	ret := _mock.Called(context1, deleteTagsParams)
@@ -583,6 +787,142 @@ func (_c *MockNamespaceClient_DeleteTags_Call) Return(asyncOperation *operation.
 }
 
 func (_c *MockNamespaceClient_DeleteTags_Call) RunAndReturn(run func(context1 context.Context, deleteTagsParams namespace.DeleteTagsParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_DeleteTags_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DisableExportSink provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) DisableExportSink(context1 context.Context, disableExportSinkParams namespace.DisableExportSinkParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, disableExportSinkParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DisableExportSink")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.DisableExportSinkParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, disableExportSinkParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.DisableExportSinkParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, disableExportSinkParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.DisableExportSinkParams) error); ok {
+		r1 = returnFunc(context1, disableExportSinkParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_DisableExportSink_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DisableExportSink'
+type MockNamespaceClient_DisableExportSink_Call struct {
+	*mock.Call
+}
+
+// DisableExportSink is a helper method to define mock.On call
+//   - context1 context.Context
+//   - disableExportSinkParams namespace.DisableExportSinkParams
+func (_e *MockNamespaceClient_Expecter) DisableExportSink(context1 interface{}, disableExportSinkParams interface{}) *MockNamespaceClient_DisableExportSink_Call {
+	return &MockNamespaceClient_DisableExportSink_Call{Call: _e.mock.On("DisableExportSink", context1, disableExportSinkParams)}
+}
+
+func (_c *MockNamespaceClient_DisableExportSink_Call) Run(run func(context1 context.Context, disableExportSinkParams namespace.DisableExportSinkParams)) *MockNamespaceClient_DisableExportSink_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.DisableExportSinkParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.DisableExportSinkParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_DisableExportSink_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_DisableExportSink_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_DisableExportSink_Call) RunAndReturn(run func(context1 context.Context, disableExportSinkParams namespace.DisableExportSinkParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_DisableExportSink_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// EnableExportSink provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) EnableExportSink(context1 context.Context, enableExportSinkParams namespace.EnableExportSinkParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, enableExportSinkParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for EnableExportSink")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.EnableExportSinkParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, enableExportSinkParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.EnableExportSinkParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, enableExportSinkParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.EnableExportSinkParams) error); ok {
+		r1 = returnFunc(context1, enableExportSinkParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_EnableExportSink_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EnableExportSink'
+type MockNamespaceClient_EnableExportSink_Call struct {
+	*mock.Call
+}
+
+// EnableExportSink is a helper method to define mock.On call
+//   - context1 context.Context
+//   - enableExportSinkParams namespace.EnableExportSinkParams
+func (_e *MockNamespaceClient_Expecter) EnableExportSink(context1 interface{}, enableExportSinkParams interface{}) *MockNamespaceClient_EnableExportSink_Call {
+	return &MockNamespaceClient_EnableExportSink_Call{Call: _e.mock.On("EnableExportSink", context1, enableExportSinkParams)}
+}
+
+func (_c *MockNamespaceClient_EnableExportSink_Call) Run(run func(context1 context.Context, enableExportSinkParams namespace.EnableExportSinkParams)) *MockNamespaceClient_EnableExportSink_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.EnableExportSinkParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.EnableExportSinkParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_EnableExportSink_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_EnableExportSink_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_EnableExportSink_Call) RunAndReturn(run func(context1 context.Context, enableExportSinkParams namespace.EnableExportSinkParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_EnableExportSink_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -719,6 +1059,80 @@ func (_c *MockNamespaceClient_GetCodecServer_Call) Return(codecServerSpec *names
 }
 
 func (_c *MockNamespaceClient_GetCodecServer_Call) RunAndReturn(run func(context1 context.Context, s string) (*namespace0.CodecServerSpec, error)) *MockNamespaceClient_GetCodecServer_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetExportSink provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) GetExportSink(context1 context.Context, s string, s1 string) (*namespace0.ExportSink, error) {
+	ret := _mock.Called(context1, s, s1)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetExportSink")
+	}
+
+	var r0 *namespace0.ExportSink
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (*namespace0.ExportSink, error)); ok {
+		return returnFunc(context1, s, s1)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *namespace0.ExportSink); ok {
+		r0 = returnFunc(context1, s, s1)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*namespace0.ExportSink)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(context1, s, s1)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_GetExportSink_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetExportSink'
+type MockNamespaceClient_GetExportSink_Call struct {
+	*mock.Call
+}
+
+// GetExportSink is a helper method to define mock.On call
+//   - context1 context.Context
+//   - s string
+//   - s1 string
+func (_e *MockNamespaceClient_Expecter) GetExportSink(context1 interface{}, s interface{}, s1 interface{}) *MockNamespaceClient_GetExportSink_Call {
+	return &MockNamespaceClient_GetExportSink_Call{Call: _e.mock.On("GetExportSink", context1, s, s1)}
+}
+
+func (_c *MockNamespaceClient_GetExportSink_Call) Run(run func(context1 context.Context, s string, s1 string)) *MockNamespaceClient_GetExportSink_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_GetExportSink_Call) Return(exportSink *namespace0.ExportSink, err error) *MockNamespaceClient_GetExportSink_Call {
+	_c.Call.Return(exportSink, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_GetExportSink_Call) RunAndReturn(run func(context1 context.Context, s string, s1 string) (*namespace0.ExportSink, error)) *MockNamespaceClient_GetExportSink_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -923,6 +1337,74 @@ func (_c *MockNamespaceClient_ListCertFilters_Call) Return(certificateFilterSpec
 }
 
 func (_c *MockNamespaceClient_ListCertFilters_Call) RunAndReturn(run func(context1 context.Context, s string) ([]*namespace0.CertificateFilterSpec, error)) *MockNamespaceClient_ListCertFilters_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListExportSinks provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) ListExportSinks(context1 context.Context, s string) ([]*namespace0.ExportSink, error) {
+	ret := _mock.Called(context1, s)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListExportSinks")
+	}
+
+	var r0 []*namespace0.ExportSink
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]*namespace0.ExportSink, error)); ok {
+		return returnFunc(context1, s)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []*namespace0.ExportSink); ok {
+		r0 = returnFunc(context1, s)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*namespace0.ExportSink)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(context1, s)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_ListExportSinks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListExportSinks'
+type MockNamespaceClient_ListExportSinks_Call struct {
+	*mock.Call
+}
+
+// ListExportSinks is a helper method to define mock.On call
+//   - context1 context.Context
+//   - s string
+func (_e *MockNamespaceClient_Expecter) ListExportSinks(context1 interface{}, s interface{}) *MockNamespaceClient_ListExportSinks_Call {
+	return &MockNamespaceClient_ListExportSinks_Call{Call: _e.mock.On("ListExportSinks", context1, s)}
+}
+
+func (_c *MockNamespaceClient_ListExportSinks_Call) Run(run func(context1 context.Context, s string)) *MockNamespaceClient_ListExportSinks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_ListExportSinks_Call) Return(exportSinks []*namespace0.ExportSink, err error) *MockNamespaceClient_ListExportSinks_Call {
+	_c.Call.Return(exportSinks, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_ListExportSinks_Call) RunAndReturn(run func(context1 context.Context, s string) ([]*namespace0.ExportSink, error)) *MockNamespaceClient_ListExportSinks_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1403,6 +1885,74 @@ func (_c *MockNamespaceClient_SetTag_Call) RunAndReturn(run func(context1 contex
 	return _c
 }
 
+// UpdateGCSExportSink provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) UpdateGCSExportSink(context1 context.Context, updateGCSExportSinkParams namespace.UpdateGCSExportSinkParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, updateGCSExportSinkParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateGCSExportSink")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.UpdateGCSExportSinkParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, updateGCSExportSinkParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.UpdateGCSExportSinkParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, updateGCSExportSinkParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.UpdateGCSExportSinkParams) error); ok {
+		r1 = returnFunc(context1, updateGCSExportSinkParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_UpdateGCSExportSink_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateGCSExportSink'
+type MockNamespaceClient_UpdateGCSExportSink_Call struct {
+	*mock.Call
+}
+
+// UpdateGCSExportSink is a helper method to define mock.On call
+//   - context1 context.Context
+//   - updateGCSExportSinkParams namespace.UpdateGCSExportSinkParams
+func (_e *MockNamespaceClient_Expecter) UpdateGCSExportSink(context1 interface{}, updateGCSExportSinkParams interface{}) *MockNamespaceClient_UpdateGCSExportSink_Call {
+	return &MockNamespaceClient_UpdateGCSExportSink_Call{Call: _e.mock.On("UpdateGCSExportSink", context1, updateGCSExportSinkParams)}
+}
+
+func (_c *MockNamespaceClient_UpdateGCSExportSink_Call) Run(run func(context1 context.Context, updateGCSExportSinkParams namespace.UpdateGCSExportSinkParams)) *MockNamespaceClient_UpdateGCSExportSink_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.UpdateGCSExportSinkParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.UpdateGCSExportSinkParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_UpdateGCSExportSink_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_UpdateGCSExportSink_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_UpdateGCSExportSink_Call) RunAndReturn(run func(context1 context.Context, updateGCSExportSinkParams namespace.UpdateGCSExportSinkParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_UpdateGCSExportSink_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateHA provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) UpdateHA(context1 context.Context, updateHAParams namespace.UpdateHAParams) (*operation.AsyncOperation, error) {
 	ret := _mock.Called(context1, updateHAParams)
@@ -1535,6 +2085,188 @@ func (_c *MockNamespaceClient_UpdateNamespace_Call) Return(asyncOperation *opera
 }
 
 func (_c *MockNamespaceClient_UpdateNamespace_Call) RunAndReturn(run func(context1 context.Context, updateNamespaceParams namespace.UpdateNamespaceParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_UpdateNamespace_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateS3ExportSink provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) UpdateS3ExportSink(context1 context.Context, updateS3ExportSinkParams namespace.UpdateS3ExportSinkParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, updateS3ExportSinkParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateS3ExportSink")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.UpdateS3ExportSinkParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, updateS3ExportSinkParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.UpdateS3ExportSinkParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, updateS3ExportSinkParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.UpdateS3ExportSinkParams) error); ok {
+		r1 = returnFunc(context1, updateS3ExportSinkParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_UpdateS3ExportSink_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateS3ExportSink'
+type MockNamespaceClient_UpdateS3ExportSink_Call struct {
+	*mock.Call
+}
+
+// UpdateS3ExportSink is a helper method to define mock.On call
+//   - context1 context.Context
+//   - updateS3ExportSinkParams namespace.UpdateS3ExportSinkParams
+func (_e *MockNamespaceClient_Expecter) UpdateS3ExportSink(context1 interface{}, updateS3ExportSinkParams interface{}) *MockNamespaceClient_UpdateS3ExportSink_Call {
+	return &MockNamespaceClient_UpdateS3ExportSink_Call{Call: _e.mock.On("UpdateS3ExportSink", context1, updateS3ExportSinkParams)}
+}
+
+func (_c *MockNamespaceClient_UpdateS3ExportSink_Call) Run(run func(context1 context.Context, updateS3ExportSinkParams namespace.UpdateS3ExportSinkParams)) *MockNamespaceClient_UpdateS3ExportSink_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.UpdateS3ExportSinkParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.UpdateS3ExportSinkParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_UpdateS3ExportSink_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_UpdateS3ExportSink_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_UpdateS3ExportSink_Call) RunAndReturn(run func(context1 context.Context, updateS3ExportSinkParams namespace.UpdateS3ExportSinkParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_UpdateS3ExportSink_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ValidateGCSExportSink provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) ValidateGCSExportSink(context1 context.Context, validateGCSExportSinkParams namespace.ValidateGCSExportSinkParams) error {
+	ret := _mock.Called(context1, validateGCSExportSinkParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ValidateGCSExportSink")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.ValidateGCSExportSinkParams) error); ok {
+		r0 = returnFunc(context1, validateGCSExportSinkParams)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockNamespaceClient_ValidateGCSExportSink_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ValidateGCSExportSink'
+type MockNamespaceClient_ValidateGCSExportSink_Call struct {
+	*mock.Call
+}
+
+// ValidateGCSExportSink is a helper method to define mock.On call
+//   - context1 context.Context
+//   - validateGCSExportSinkParams namespace.ValidateGCSExportSinkParams
+func (_e *MockNamespaceClient_Expecter) ValidateGCSExportSink(context1 interface{}, validateGCSExportSinkParams interface{}) *MockNamespaceClient_ValidateGCSExportSink_Call {
+	return &MockNamespaceClient_ValidateGCSExportSink_Call{Call: _e.mock.On("ValidateGCSExportSink", context1, validateGCSExportSinkParams)}
+}
+
+func (_c *MockNamespaceClient_ValidateGCSExportSink_Call) Run(run func(context1 context.Context, validateGCSExportSinkParams namespace.ValidateGCSExportSinkParams)) *MockNamespaceClient_ValidateGCSExportSink_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.ValidateGCSExportSinkParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.ValidateGCSExportSinkParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_ValidateGCSExportSink_Call) Return(err error) *MockNamespaceClient_ValidateGCSExportSink_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_ValidateGCSExportSink_Call) RunAndReturn(run func(context1 context.Context, validateGCSExportSinkParams namespace.ValidateGCSExportSinkParams) error) *MockNamespaceClient_ValidateGCSExportSink_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ValidateS3ExportSink provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) ValidateS3ExportSink(context1 context.Context, validateS3ExportSinkParams namespace.ValidateS3ExportSinkParams) error {
+	ret := _mock.Called(context1, validateS3ExportSinkParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ValidateS3ExportSink")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.ValidateS3ExportSinkParams) error); ok {
+		r0 = returnFunc(context1, validateS3ExportSinkParams)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockNamespaceClient_ValidateS3ExportSink_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ValidateS3ExportSink'
+type MockNamespaceClient_ValidateS3ExportSink_Call struct {
+	*mock.Call
+}
+
+// ValidateS3ExportSink is a helper method to define mock.On call
+//   - context1 context.Context
+//   - validateS3ExportSinkParams namespace.ValidateS3ExportSinkParams
+func (_e *MockNamespaceClient_Expecter) ValidateS3ExportSink(context1 interface{}, validateS3ExportSinkParams interface{}) *MockNamespaceClient_ValidateS3ExportSink_Call {
+	return &MockNamespaceClient_ValidateS3ExportSink_Call{Call: _e.mock.On("ValidateS3ExportSink", context1, validateS3ExportSinkParams)}
+}
+
+func (_c *MockNamespaceClient_ValidateS3ExportSink_Call) Run(run func(context1 context.Context, validateS3ExportSinkParams namespace.ValidateS3ExportSinkParams)) *MockNamespaceClient_ValidateS3ExportSink_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.ValidateS3ExportSinkParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.ValidateS3ExportSinkParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_ValidateS3ExportSink_Call) Return(err error) *MockNamespaceClient_ValidateS3ExportSink_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_ValidateS3ExportSink_Call) RunAndReturn(run func(context1 context.Context, validateS3ExportSinkParams namespace.ValidateS3ExportSinkParams) error) *MockNamespaceClient_ValidateS3ExportSink_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -88,6 +88,17 @@ type NamespaceClient interface {
 	AddRegion(context.Context, namespace.AddRegionParams) (*operation.AsyncOperation, error)
 	RemoveRegion(context.Context, namespace.RemoveRegionParams) (*operation.AsyncOperation, error)
 	Failover(context.Context, namespace.FailoverParams) (*operation.AsyncOperation, error)
+	GetExportSink(context.Context, string, string) (*namespacev1.ExportSink, error)
+	ListExportSinks(context.Context, string) ([]*namespacev1.ExportSink, error)
+	CreateS3ExportSink(context.Context, namespace.CreateS3ExportSinkParams) (*operation.AsyncOperation, error)
+	UpdateS3ExportSink(context.Context, namespace.UpdateS3ExportSinkParams) (*operation.AsyncOperation, error)
+	ValidateS3ExportSink(context.Context, namespace.ValidateS3ExportSinkParams) error
+	CreateGCSExportSink(context.Context, namespace.CreateGCSExportSinkParams) (*operation.AsyncOperation, error)
+	UpdateGCSExportSink(context.Context, namespace.UpdateGCSExportSinkParams) (*operation.AsyncOperation, error)
+	ValidateGCSExportSink(context.Context, namespace.ValidateGCSExportSinkParams) error
+	EnableExportSink(context.Context, namespace.EnableExportSinkParams) (*operation.AsyncOperation, error)
+	DisableExportSink(context.Context, namespace.DisableExportSinkParams) (*operation.AsyncOperation, error)
+	DeleteExportSink(context.Context, namespace.DeleteExportSinkParams) (*operation.AsyncOperation, error)
 }
 
 type Poller interface {

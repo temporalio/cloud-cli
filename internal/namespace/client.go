@@ -21,6 +21,12 @@ type CloudService interface {
 	AddNamespaceRegion(ctx context.Context, req *cloudservice.AddNamespaceRegionRequest, opts ...grpc.CallOption) (*cloudservice.AddNamespaceRegionResponse, error)
 	DeleteNamespaceRegion(ctx context.Context, req *cloudservice.DeleteNamespaceRegionRequest, opts ...grpc.CallOption) (*cloudservice.DeleteNamespaceRegionResponse, error)
 	FailoverNamespaceRegion(ctx context.Context, req *cloudservice.FailoverNamespaceRegionRequest, opts ...grpc.CallOption) (*cloudservice.FailoverNamespaceRegionResponse, error)
+	CreateNamespaceExportSink(ctx context.Context, req *cloudservice.CreateNamespaceExportSinkRequest, opts ...grpc.CallOption) (*cloudservice.CreateNamespaceExportSinkResponse, error)
+	GetNamespaceExportSink(ctx context.Context, req *cloudservice.GetNamespaceExportSinkRequest, opts ...grpc.CallOption) (*cloudservice.GetNamespaceExportSinkResponse, error)
+	GetNamespaceExportSinks(ctx context.Context, req *cloudservice.GetNamespaceExportSinksRequest, opts ...grpc.CallOption) (*cloudservice.GetNamespaceExportSinksResponse, error)
+	UpdateNamespaceExportSink(ctx context.Context, req *cloudservice.UpdateNamespaceExportSinkRequest, opts ...grpc.CallOption) (*cloudservice.UpdateNamespaceExportSinkResponse, error)
+	DeleteNamespaceExportSink(ctx context.Context, req *cloudservice.DeleteNamespaceExportSinkRequest, opts ...grpc.CallOption) (*cloudservice.DeleteNamespaceExportSinkResponse, error)
+	ValidateNamespaceExportSink(ctx context.Context, req *cloudservice.ValidateNamespaceExportSinkRequest, opts ...grpc.CallOption) (*cloudservice.ValidateNamespaceExportSinkResponse, error)
 }
 
 func NewClient(cloudClient cloudservice.CloudServiceClient) *Client {
