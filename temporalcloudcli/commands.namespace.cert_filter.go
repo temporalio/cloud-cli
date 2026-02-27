@@ -90,10 +90,10 @@ func (c *CloudNamespaceCertFilterDeleteCommand) run(cctx *CommandContext, _ []st
 	})
 }
 
-// loadOptionalCertFilter parses a CertificateFilterSpec from the certificate filter option set.
+// loadCertFilter parses a CertificateFilterSpec from the certificate filter option set.
 // Returns nil (no error) if neither flag is provided.
 // Returns an error if both flags are provided.
-func loadOptionalCertFilter(cctx *CommandContext, opts CertificateFilterOptions) (*namespacev1.CertificateFilterSpec, error) {
+func loadCertFilter(cctx *CommandContext, opts CertificateFilterOptions) (*namespacev1.CertificateFilterSpec, error) {
 	if opts.CertificateFilter != "" && opts.CertificateFilterFile != "" {
 		return nil, fmt.Errorf("cannot specify both --certificate-filter and --certificate-filter-file")
 	}

@@ -314,7 +314,7 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 	}
 
 	// Handle CA certificate
-	certBytes, err := readOptionalRawCACertBytes(c.CaCertificateOptions)
+	certBytes, err := readCACertBytes(c.CaCertificateOptions)
 	if err != nil {
 		return err
 	}
@@ -326,7 +326,7 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 	}
 
 	// Handle certificate filter
-	certFilter, err := loadOptionalCertFilter(cctx, c.CertificateFilterOptions)
+	certFilter, err := loadCertFilter(cctx, c.CertificateFilterOptions)
 	if err != nil {
 		return err
 	}
@@ -365,11 +365,10 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 	// Handle connectivity rules
 	spec.ConnectivityRuleIds = c.ConnectionRuleId
 
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
 	if err != nil {
 		return err
 	}
-	client := newNamespaceClient(withCloudClient(cloudClient))
 
 	yes, err := cctx.promptYes("Create (y/yes)?", cctx.RootCommand.AutoConfirm)
 	if err != nil {
@@ -379,9 +378,9 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		return fmt.Errorf("Aborting create.")
 	}
 
-	res, err := client.createNamespace(cctx.Context, createNamespaceParams{
-		spec:             spec,
-		asyncOperationID: c.AsyncOperationId,
+	asyncOp, err := namespaceClient.CreateNamespace(cctx.Context, namespace.CreateNamespaceParams{
+		Spec:             spec,
+		AsyncOperationID: c.AsyncOperationId,
 	})
 	if err != nil {
 		return err
@@ -389,8 +388,8 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 
 	if c.Async {
 		return cctx.Printer.PrintStructured(MutationResult{
-			AsyncOp: res.asyncOp,
-			ID:      res.Namespace,
+			AsyncOp: asyncOp,
+			ID:      c.Name,
 		}, printer.StructuredOptions{})
 	}
 
@@ -399,7 +398,7 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		return err
 	}
 
-	return poller.PollAsyncOperation(cctx, res.asyncOp.Id, res.Namespace)
+	return poller.PollAsyncOperation(cctx, asyncOp.Id, c.Name)
 }
 
 func getNamespaceClient(cctx *CommandContext, opts ClientOptions) (NamespaceClient, error) {

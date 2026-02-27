@@ -247,6 +247,74 @@ func (_c *MockNamespaceClient_AddRegion_Call) RunAndReturn(run func(context1 con
 	return _c
 }
 
+// CreateNamespace provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) CreateNamespace(context1 context.Context, createNamespaceParams namespace.CreateNamespaceParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, createNamespaceParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateNamespace")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.CreateNamespaceParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, createNamespaceParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.CreateNamespaceParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, createNamespaceParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.CreateNamespaceParams) error); ok {
+		r1 = returnFunc(context1, createNamespaceParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_CreateNamespace_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateNamespace'
+type MockNamespaceClient_CreateNamespace_Call struct {
+	*mock.Call
+}
+
+// CreateNamespace is a helper method to define mock.On call
+//   - context1 context.Context
+//   - createNamespaceParams namespace.CreateNamespaceParams
+func (_e *MockNamespaceClient_Expecter) CreateNamespace(context1 interface{}, createNamespaceParams interface{}) *MockNamespaceClient_CreateNamespace_Call {
+	return &MockNamespaceClient_CreateNamespace_Call{Call: _e.mock.On("CreateNamespace", context1, createNamespaceParams)}
+}
+
+func (_c *MockNamespaceClient_CreateNamespace_Call) Run(run func(context1 context.Context, createNamespaceParams namespace.CreateNamespaceParams)) *MockNamespaceClient_CreateNamespace_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.CreateNamespaceParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.CreateNamespaceParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_CreateNamespace_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_CreateNamespace_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_CreateNamespace_Call) RunAndReturn(run func(context1 context.Context, createNamespaceParams namespace.CreateNamespaceParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_CreateNamespace_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateSearchAttribute provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) CreateSearchAttribute(context1 context.Context, createSearchAttributeParams namespace.CreateSearchAttributeParams) (*operation.AsyncOperation, error) {
 	ret := _mock.Called(context1, createSearchAttributeParams)

@@ -66,6 +66,7 @@ type CommandContext struct {
 }
 
 type NamespaceClient interface {
+	CreateNamespace(context.Context, namespace.CreateNamespaceParams) (*operation.AsyncOperation, error)
 	AddCACerts(context.Context, namespace.AddCACertsParams) (*operation.AsyncOperation, error)
 	ListCACerts(context.Context, string) ([]cert.CACert, error)
 	DeleteCACerts(context.Context, namespace.DeleteCACertsParams) (*operation.AsyncOperation, error)

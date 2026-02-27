@@ -74,10 +74,10 @@ func (c *CloudNamespaceCertCaDeleteCommand) run(cctx *CommandContext, _ []string
 	})
 }
 
-// readOptionalRawCACertBytes reads raw PEM bytes when cert flags are optional.
+// readCACertBytes reads raw PEM bytes when cert flags are optional.
 // Returns nil (no error) if neither flag is provided.
 // Returns an error if both flags are provided.
-func readOptionalRawCACertBytes(opts CaCertificateOptions) ([]byte, error) {
+func readCACertBytes(opts CaCertificateOptions) ([]byte, error) {
 	if opts.CaCertificate != "" && opts.CaCertificateFile != "" {
 		return nil, errors.New("cannot specify both --ca-certificate and --ca-certificate-file")
 	}
@@ -110,7 +110,7 @@ func readAndParseCACerts(opts CaCertificateOptions) ([]cert.CACert, error) {
 	if opts.CaCertificate == "" && opts.CaCertificateFile == "" {
 		return nil, errors.New("either --ca-certificate-file or --ca-certificate must be provided")
 	}
-	certData, err := readOptionalRawCACertBytes(opts)
+	certData, err := readCACertBytes(opts)
 	if err != nil {
 		return nil, err
 	}

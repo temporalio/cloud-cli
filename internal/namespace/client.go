@@ -15,6 +15,7 @@ import (
 type CloudService interface {
 	GetNamespace(ctx context.Context, req *cloudservice.GetNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.GetNamespaceResponse, error)
 	GetNamespaces(ctx context.Context, req *cloudservice.GetNamespacesRequest, opts ...grpc.CallOption) (*cloudservice.GetNamespacesResponse, error)
+	CreateNamespace(ctx context.Context, req *cloudservice.CreateNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.CreateNamespaceResponse, error)
 	UpdateNamespace(ctx context.Context, req *cloudservice.UpdateNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.UpdateNamespaceResponse, error)
 	RenameCustomSearchAttribute(ctx context.Context, req *cloudservice.RenameCustomSearchAttributeRequest, opts ...grpc.CallOption) (*cloudservice.RenameCustomSearchAttributeResponse, error)
 	UpdateNamespaceTags(ctx context.Context, req *cloudservice.UpdateNamespaceTagsRequest, opts ...grpc.CallOption) (*cloudservice.UpdateNamespaceTagsResponse, error)
@@ -63,6 +64,22 @@ func (c *Client) GetNamespaces(ctx context.Context, params GetNamespacesParams) 
 	}
 
 	return res.Namespaces, res.NextPageToken, nil
+}
+
+type CreateNamespaceParams struct {
+	Spec             *namespacev1.NamespaceSpec
+	AsyncOperationID string
+}
+
+func (c *Client) CreateNamespace(ctx context.Context, params CreateNamespaceParams) (*operation.AsyncOperation, error) {
+	res, err := c.Cloud.CreateNamespace(ctx, &cloudservice.CreateNamespaceRequest{
+		AsyncOperationId: params.AsyncOperationID,
+		Spec:             params.Spec,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return res.GetAsyncOperation(), nil
 }
 
 type UpdateNamespaceParams struct {
