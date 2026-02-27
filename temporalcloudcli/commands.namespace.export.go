@@ -131,6 +131,14 @@ func (c *CloudNamespaceExportS3CreateCommand) run(cctx *CommandContext, _ []stri
 		return err
 	}
 
+	yes, err := cctx.promptYes("Create (y/yes)?", cctx.RootCommand.AutoConfirm)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting create.")
+	}
+
 	createExportSink := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.SinkName, c.ClientOptions, namespaceClient.CreateExportSink)
 	return createExportSink(namespace.CreateExportSinkParams{
 		Namespace: c.Namespace,
@@ -204,6 +212,14 @@ func (c *CloudNamespaceExportGcsCreateCommand) run(cctx *CommandContext, _ []str
 	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
 	if err != nil {
 		return err
+	}
+
+	yes, err := cctx.promptYes("Create (y/yes)?", cctx.RootCommand.AutoConfirm)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting create.")
 	}
 
 	createExportSink := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.SinkName, c.ClientOptions, namespaceClient.CreateExportSink)
