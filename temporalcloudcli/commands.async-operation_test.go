@@ -83,11 +83,8 @@ func (s *SharedServerSuite) TestAsyncOperationCommands() {
 	s.Suite.Require().NoError(err)
 
 	// Since we used `-o=json`, `await` prints out the final `MutationResult` or error state json
-	var awaitOutput map[string]interface{}
-	err = json.Unmarshal(awaitBuf, &awaitOutput)
+	var asyncOp operation.AsyncOperation
+	err = json.Unmarshal(awaitBuf, &asyncOp)
 	s.Suite.Require().NoError(err)
-
-	awaitOpMap, ok := awaitOutput["asyncOperation"].(map[string]interface{})
-	s.Suite.Require().True(ok, "expected asyncOperation in await output")
-	s.Suite.Require().Equal("FULFILLED", awaitOpMap["state"].(string), "should be fulfilled")
+	s.Suite.Require().Equal("STATE_FULFILLED", asyncOp.GetState(), "should be fulfilled")
 }
