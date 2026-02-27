@@ -379,6 +379,7 @@ commands:
       - client
       - async-operation
       - codec-server
+      - ca-certificate
     options:
       - name: name
         type: string
@@ -398,16 +399,6 @@ commands:
         description: |
           Number of days to retain closed workflow history. If not specified,
           the server default applies.
-      - name: ca-certificate
-        type: string
-        description: |
-          Base64-encoded CA certificate for mTLS authentication.
-          Mutually exclusive with --ca-certificate-file.
-      - name: ca-certificate-file
-        type: string
-        description: |
-          Path to a CA certificate PEM file for mTLS authentication.
-          Mutually exclusive with --ca-certificate.
       - name: certificate-filter
         type: string
         description: |
@@ -614,15 +605,7 @@ commands:
       - namespace
       - async-operation
       - resource-version
-    options:
-      - name: ca-certificate-file
-        type: string
-        description: |
-          Path to a CA certificate PEM file. Mutually exclusive with --ca-certificate.
-      - name: ca-certificate
-        type: string
-        description: |
-          Base64 encoded CA certificate data. Mutually exclusive with --ca-certificate-file.
+      - ca-certificate
 
   - name: cloud namespace cert-ca delete
     summary: Delete CA certificates from a namespace
@@ -650,15 +633,7 @@ commands:
       - namespace
       - async-operation
       - resource-version
-    options:
-      - name: ca-certificate-file
-        type: string
-        description: |
-          Path to a CA certificate PEM file. Mutually exclusive with --ca-certificate.
-      - name: ca-certificate
-        type: string
-        description: |
-          Base64 encoded CA certificate data. Mutually exclusive with --ca-certificate-file.
+      - ca-certificate
 
   # Namespace cert-filter commands
   - name: cloud namespace cert-filter
@@ -1581,3 +1556,15 @@ option-sets:
         type: bool
         description: |
           Include cross-origin credentials in codec server requests.
+  - name: ca-certificate
+    options:
+      - name: ca-certificate
+        type: string
+        description: |
+          Base64-encoded CA certificate for mTLS authentication.
+          Mutually exclusive with --ca-certificate-file.
+      - name: ca-certificate-file
+        type: string
+        description: |
+          Path to a CA certificate PEM file for mTLS authentication.
+          Mutually exclusive with --ca-certificate.

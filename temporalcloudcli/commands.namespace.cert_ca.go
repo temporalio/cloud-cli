@@ -3,6 +3,7 @@ package temporalcloudcli
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/temporalio/cloud-cli/internal/cert"
@@ -16,7 +17,7 @@ func (c *CloudNamespaceCertCaCreateCommand) run(cctx *CommandContext, _ []string
 		return err
 	}
 
-	newCerts, err := readAndParseCACerts(c.CaCertificateFile, c.CaCertificate)
+	newCerts, err := readAndParseCACerts(c.CaCertificateOptions)
 	if err != nil {
 		return err
 	}
@@ -50,7 +51,7 @@ func (c *CloudNamespaceCertCaDeleteCommand) run(cctx *CommandContext, _ []string
 		return err
 	}
 
-	certsToRemove, err := readAndParseCACerts(c.CaCertificateFile, c.CaCertificate)
+	certsToRemove, err := readAndParseCACerts(c.CaCertificateOptions)
 	if err != nil {
 		return err
 	}
@@ -73,47 +74,52 @@ func (c *CloudNamespaceCertCaDeleteCommand) run(cctx *CommandContext, _ []string
 	})
 }
 
-// readAndParseCACerts reads certificate data from either a file or base64 string,
-// validates the input, and parses the certificates. Returns an error if:
+// readOptionalRawCACertBytes reads raw PEM bytes when cert flags are optional.
+// Returns nil (no error) if neither flag is provided.
+// Returns an error if both flags are provided.
+func readOptionalRawCACertBytes(opts CaCertificateOptions) ([]byte, error) {
+	if opts.CaCertificate != "" && opts.CaCertificateFile != "" {
+		return nil, errors.New("cannot specify both --ca-certificate and --ca-certificate-file")
+	}
+	if opts.CaCertificateFile != "" {
+		data, err := os.ReadFile(opts.CaCertificateFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read CA certificate file: %w", err)
+		}
+		return data, nil
+	}
+	if opts.CaCertificate != "" {
+		data, err := base64.StdEncoding.DecodeString(opts.CaCertificate)
+		if err != nil {
+			return nil, errors.New("invalid base64 encoded certificate data")
+		}
+		return data, nil
+	}
+	return nil, nil
+}
+
+// readAndParseCACerts requires exactly one cert flag to be provided.
+// Returns an error if:
 // - Neither flag is provided
 // - Both flags are provided
 // - The file cannot be read
 // - The base64 data is invalid
 // - The certificate data cannot be parsed
 // - No valid certificates are found
-func readAndParseCACerts(certFile, certBase64 string) ([]cert.CACert, error) {
-	// Validate that exactly one of the two flags is provided
-	if certFile == "" && certBase64 == "" {
+func readAndParseCACerts(opts CaCertificateOptions) ([]cert.CACert, error) {
+	if opts.CaCertificate == "" && opts.CaCertificateFile == "" {
 		return nil, errors.New("either --ca-certificate-file or --ca-certificate must be provided")
 	}
-	if certFile != "" && certBase64 != "" {
-		return nil, errors.New("cannot specify both --ca-certificate-file and --ca-certificate")
+	certData, err := readOptionalRawCACertBytes(opts)
+	if err != nil {
+		return nil, err
 	}
-
-	var certData []byte
-	var err error
-
-	if certFile != "" {
-		certData, err = os.ReadFile(certFile)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// Decode base64 certificate data
-		certData, err = base64.StdEncoding.DecodeString(certBase64)
-		if err != nil {
-			return nil, errors.New("invalid base64 encoded certificate data")
-		}
-	}
-
 	certs, err := cert.ParseCACerts(certData)
 	if err != nil {
 		return nil, err
 	}
-
 	if len(certs) == 0 {
 		return nil, errors.New("invalid certificate")
 	}
-
 	return certs, nil
 }

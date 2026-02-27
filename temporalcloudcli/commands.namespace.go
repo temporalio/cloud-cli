@@ -1,9 +1,7 @@
 package temporalcloudcli
 
 import (
-	"encoding/base64"
 	"fmt"
-	"os"
 	"strings"
 
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
@@ -307,10 +305,6 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 }
 
 func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) error {
-	// Validate mutual exclusions
-	if c.CaCertificate != "" && c.CaCertificateFile != "" {
-		return fmt.Errorf("cannot specify both --ca-certificate and --ca-certificate-file")
-	}
 	if c.CertificateFilter != "" && c.CertificateFilterFile != "" {
 		return fmt.Errorf("cannot specify both --certificate-filter and --certificate-filter-file")
 	}
@@ -323,24 +317,16 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		Lifecycle:     &namespacev1.LifecycleSpec{EnableDeleteProtection: c.EnableDeleteProtection},
 	}
 
-	// Build MtlsAuth spec if any cert flags are provided
-	if c.CaCertificate != "" || c.CaCertificateFile != "" || c.CertificateFilter != "" || c.CertificateFilterFile != "" {
-		spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
-	}
-
 	// Handle CA certificate
-	if c.CaCertificateFile != "" {
-		certData, err := os.ReadFile(c.CaCertificateFile)
-		if err != nil {
-			return fmt.Errorf("failed to read CA certificate file: %w", err)
+	certBytes, err := readOptionalRawCACertBytes(c.CaCertificateOptions)
+	if err != nil {
+		return err
+	}
+	if certBytes != nil {
+		if spec.MtlsAuth == nil {
+			spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
 		}
-		spec.MtlsAuth.AcceptedClientCa = certData
-	} else if c.CaCertificate != "" {
-		certData, err := base64.StdEncoding.DecodeString(c.CaCertificate)
-		if err != nil {
-			return fmt.Errorf("invalid base64 encoded CA certificate: %w", err)
-		}
-		spec.MtlsAuth.AcceptedClientCa = certData
+		spec.MtlsAuth.AcceptedClientCa = certBytes
 	}
 
 	// Handle certificate filter
@@ -356,6 +342,9 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		filter := &namespacev1.CertificateFilterSpec{}
 		if err := cctx.UnmarshalProtoJSON(filterData, filter); err != nil {
 			return fmt.Errorf("failed to parse certificate filter: %w", err)
+		}
+		if spec.MtlsAuth == nil {
+			spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
 		}
 		spec.MtlsAuth.CertificateFilters = append(spec.MtlsAuth.CertificateFilters, filter)
 	}
