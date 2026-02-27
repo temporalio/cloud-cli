@@ -173,7 +173,7 @@ func NewCloudAsyncOperationGetCommand(cctx *CommandContext, parent *CloudAsyncOp
 		s.Command.Long = "Retrieve the status and details of a Temporal Cloud asynchronous operation.\n\nExample:\n\n```\ncloud async-operation get --async-operation-id my-op-id\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "The async operation ID to retrieve. Required.")
+	s.Command.Flags().StringVarP(&s.AsyncOperationId, "async-operation-id", "i", "", "The async operation ID to retrieve. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "async-operation-id")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {

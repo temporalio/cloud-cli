@@ -175,6 +175,7 @@ commands:
         type: string
         description: |
           The async operation ID to retrieve.
+        short: i
   - name: cloud async-operation await
     summary: Wait for an async operation to complete
     description: |
