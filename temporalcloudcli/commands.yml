@@ -380,6 +380,7 @@ commands:
       - async-operation
       - codec-server
       - ca-certificate
+      - certificate-filter
     options:
       - name: name
         type: string
@@ -399,16 +400,6 @@ commands:
         description: |
           Number of days to retain closed workflow history. If not specified,
           the server default applies.
-      - name: certificate-filter
-        type: string
-        description: |
-          Certificate filter as a JSON object (e.g. '{"commonName":"foo"}').
-          Mutually exclusive with --certificate-filter-file.
-      - name: certificate-filter-file
-        type: string
-        description: |
-          Path to a JSON file containing a certificate filter object.
-          Mutually exclusive with --certificate-filter.
       - name: api-key-auth-enabled
         type: bool
         description: |
@@ -1568,3 +1559,15 @@ option-sets:
         description: |
           Path to a CA certificate PEM file for mTLS authentication.
           Mutually exclusive with --ca-certificate.
+  - name: certificate-filter
+    options:
+      - name: certificate-filter
+        type: string
+        description: |
+          Certificate filter as a JSON object (e.g. '{"commonName":"foo"}').
+          Mutually exclusive with --certificate-filter-file.
+      - name: certificate-filter-file
+        type: string
+        description: |
+          Path to a JSON file containing a certificate filter object.
+          Mutually exclusive with --certificate-filter.

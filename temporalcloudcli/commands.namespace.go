@@ -305,10 +305,6 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 }
 
 func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) error {
-	if c.CertificateFilter != "" && c.CertificateFilterFile != "" {
-		return fmt.Errorf("cannot specify both --certificate-filter and --certificate-filter-file")
-	}
-
 	spec := &namespacev1.NamespaceSpec{
 		Name:          c.Name,
 		Regions:       c.Region,
@@ -330,23 +326,15 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 	}
 
 	// Handle certificate filter
-	if c.CertificateFilter != "" || c.CertificateFilterFile != "" {
-		filterSrc := c.CertificateFilter
-		if c.CertificateFilterFile != "" {
-			filterSrc = "@" + c.CertificateFilterFile
-		}
-		filterData, err := loadJSONSpec(filterSrc)
-		if err != nil {
-			return err
-		}
-		filter := &namespacev1.CertificateFilterSpec{}
-		if err := cctx.UnmarshalProtoJSON(filterData, filter); err != nil {
-			return fmt.Errorf("failed to parse certificate filter: %w", err)
-		}
+	certFilter, err := loadOptionalCertFilter(cctx, c.CertificateFilterOptions)
+	if err != nil {
+		return err
+	}
+	if certFilter != nil {
 		if spec.MtlsAuth == nil {
 			spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
 		}
-		spec.MtlsAuth.CertificateFilters = append(spec.MtlsAuth.CertificateFilters, filter)
+		spec.MtlsAuth.CertificateFilters = append(spec.MtlsAuth.CertificateFilters, certFilter)
 	}
 
 	// Handle codec server

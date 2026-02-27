@@ -2,6 +2,7 @@ package temporalcloudcli
 
 import (
 	"errors"
+	"fmt"
 
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 
@@ -87,6 +88,31 @@ func (c *CloudNamespaceCertFilterDeleteCommand) run(cctx *CommandContext, _ []st
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
 	})
+}
+
+// loadOptionalCertFilter parses a CertificateFilterSpec from the certificate filter option set.
+// Returns nil (no error) if neither flag is provided.
+// Returns an error if both flags are provided.
+func loadOptionalCertFilter(cctx *CommandContext, opts CertificateFilterOptions) (*namespacev1.CertificateFilterSpec, error) {
+	if opts.CertificateFilter != "" && opts.CertificateFilterFile != "" {
+		return nil, fmt.Errorf("cannot specify both --certificate-filter and --certificate-filter-file")
+	}
+	if opts.CertificateFilter == "" && opts.CertificateFilterFile == "" {
+		return nil, nil
+	}
+	filterSrc := opts.CertificateFilter
+	if opts.CertificateFilterFile != "" {
+		filterSrc = "@" + opts.CertificateFilterFile
+	}
+	filterData, err := loadJSONSpec(filterSrc)
+	if err != nil {
+		return nil, err
+	}
+	filter := &namespacev1.CertificateFilterSpec{}
+	if err := cctx.UnmarshalProtoJSON(filterData, filter); err != nil {
+		return nil, fmt.Errorf("failed to parse certificate filter: %w", err)
+	}
+	return filter, nil
 }
 
 // buildCertFilterFromFlags creates a CertificateFilterSpec from command line flags.

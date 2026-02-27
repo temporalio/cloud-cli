@@ -112,6 +112,18 @@ func (v *CaCertificateOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringVar(&v.CaCertificateFile, "ca-certificate-file", "", "Path to a CA certificate PEM file for mTLS authentication. Mutually exclusive with --ca-certificate.")
 }
 
+type CertificateFilterOptions struct {
+	CertificateFilter     string
+	CertificateFilterFile string
+	FlagSet               *pflag.FlagSet
+}
+
+func (v *CertificateFilterOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.CertificateFilter, "certificate-filter", "", "Certificate filter as a JSON object (e.g. '{\"commonName\":\"foo\"}'). Mutually exclusive with --certificate-filter-file.")
+	f.StringVar(&v.CertificateFilterFile, "certificate-filter-file", "", "Path to a JSON file containing a certificate filter object. Mutually exclusive with --certificate-filter.")
+}
+
 type CloudCommand struct {
 	Command cobra.Command
 	ClientOptions
@@ -862,11 +874,10 @@ type CloudNamespaceCreateCommand struct {
 	AsyncOperationOptions
 	CodecServerOptions
 	CaCertificateOptions
+	CertificateFilterOptions
 	Name                   string
 	Region                 []string
 	RetentionDays          int
-	CertificateFilter      string
-	CertificateFilterFile  string
 	ApiKeyAuthEnabled      bool
 	EnableDeleteProtection bool
 	SearchAttribute        []string
@@ -890,8 +901,6 @@ func NewCloudNamespaceCreateCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Command.Flags().StringArrayVar(&s.Region, "region", nil, "Cloud region where the namespace will be hosted. Repeat to specify multiple regions for High Availability (e.g. --region aws-us-east-1 --region aws-us-west-2). Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "region")
 	s.Command.Flags().IntVar(&s.RetentionDays, "retention-days", 0, "Number of days to retain closed workflow history. If not specified, the server default applies.")
-	s.Command.Flags().StringVar(&s.CertificateFilter, "certificate-filter", "", "Certificate filter as a JSON object (e.g. '{\"commonName\":\"foo\"}'). Mutually exclusive with --certificate-filter-file.")
-	s.Command.Flags().StringVar(&s.CertificateFilterFile, "certificate-filter-file", "", "Path to a JSON file containing a certificate filter object. Mutually exclusive with --certificate-filter.")
 	s.Command.Flags().BoolVar(&s.ApiKeyAuthEnabled, "api-key-auth-enabled", false, "Enable API key authentication for the namespace.")
 	s.Command.Flags().BoolVar(&s.EnableDeleteProtection, "enable-delete-protection", false, "Prevent accidental deletion of this namespace.")
 	s.Command.Flags().StringArrayVar(&s.SearchAttribute, "search-attribute", nil, "Custom search attribute as 'name=Type' (e.g. --search-attribute myAttr=Keyword). Valid types: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Repeat to add multiple.")
@@ -900,6 +909,7 @@ func NewCloudNamespaceCreateCommand(cctx *CommandContext, parent *CloudNamespace
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.CodecServerOptions.BuildFlags(s.Command.Flags())
 	s.CaCertificateOptions.BuildFlags(s.Command.Flags())
+	s.CertificateFilterOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
