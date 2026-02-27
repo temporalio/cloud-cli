@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -174,33 +175,33 @@ func (p *AsyncOperationPoller) PollAsyncOperation(
 			var (
 				progressString string
 				outAsyncOp     *operation.AsyncOperation
-				outErr         error
+				outErr         bool
 			)
 			switch asyncOp.State {
 			case operation.AsyncOperation_STATE_PENDING:
-				progressString = fmt.Sprintf("[%s] Operation pending...\n", time.Now().Format("15:04:05"))
+				progressString = "Operation pending..."
 			case operation.AsyncOperation_STATE_IN_PROGRESS:
-				progressString = fmt.Sprintf("[%s] Operation in progress...\n", time.Now().Format("15:04:05"))
+				progressString = "Operation in progress..."
 			case operation.AsyncOperation_STATE_FULFILLED:
-				progressString = fmt.Sprintf("[%s] Operation completed successfully\n", time.Now().Format("15:04:05"))
+				progressString = "Operation completed successfully"
 				outAsyncOp = asyncOp
 			case operation.AsyncOperation_STATE_FAILED:
-				progressString = fmt.Sprintf("[%s] Operation failed: %s\n", time.Now().Format("15:04:05"), asyncOp.FailureReason)
+				progressString = fmt.Sprintf("Operation failed: %s", asyncOp.FailureReason)
 				outAsyncOp = asyncOp
-				outErr = fmt.Errorf("async operation failed: %s", asyncOp.FailureReason)
+				outErr = true
 			case operation.AsyncOperation_STATE_CANCELLED:
-				progressString = fmt.Sprintf("[%s] Operation cancelled\n", time.Now().Format("15:04:05"))
+				progressString = "Operation cancelled"
 				outAsyncOp = asyncOp
-				outErr = fmt.Errorf("async operation cancelled")
+				outErr = true
 			case operation.AsyncOperation_STATE_REJECTED:
-				progressString = fmt.Sprintf("[%s] Operation rejected\n", time.Now().Format("15:04:05"))
+				progressString = "Operation rejected"
 				asyncOp = asyncOp
-				outErr = fmt.Errorf("async operation rejected")
+				outErr = true
 			default:
-				progressString = fmt.Sprintf("[%s] Operation pending...\n", time.Now().Format("15:04:05"))
+				progressString = "Operation pending..."
 			}
 			if !cctx.JSONOutput {
-				cctx.Printer.Print(progressString)
+				cctx.Printer.Print(fmt.Sprintf("[%s] %s\n", time.Now().Format("15:04:05"), progressString))
 			}
 			if outAsyncOp != nil {
 				// Print the final operation details in structured format
@@ -208,9 +209,9 @@ func (p *AsyncOperationPoller) PollAsyncOperation(
 					return err
 				}
 			}
-			if outErr != nil {
+			if outErr {
 				// Return the error after printing the final status and details
-				return outErr
+				return errors.New(progressString)
 			}
 			return nil
 		}
