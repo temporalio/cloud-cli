@@ -173,47 +173,46 @@ func (p *AsyncOperationPoller) PollAsyncOperation(
 
 			// Print current state
 			var (
-				progressString string
-				outAsyncOp     *operation.AsyncOperation
-				outErr         bool
+				outString  string
+				outAsyncOp *operation.AsyncOperation
+				outErr     bool
 			)
 			switch asyncOp.State {
+			default:
+				fallthrough
 			case operation.AsyncOperation_STATE_PENDING:
-				progressString = "Operation pending..."
+				outString = "Operation pending..."
 			case operation.AsyncOperation_STATE_IN_PROGRESS:
-				progressString = "Operation in progress..."
+				outString = "Operation in progress..."
 			case operation.AsyncOperation_STATE_FULFILLED:
-				progressString = "Operation completed successfully"
+				outString = "Operation completed successfully"
 				outAsyncOp = asyncOp
 			case operation.AsyncOperation_STATE_FAILED:
-				progressString = fmt.Sprintf("Operation failed: %s", asyncOp.FailureReason)
+				outString = fmt.Sprintf("Operation failed: %s", asyncOp.FailureReason)
 				outAsyncOp = asyncOp
 				outErr = true
 			case operation.AsyncOperation_STATE_CANCELLED:
-				progressString = "Operation cancelled"
+				outString = "Operation cancelled"
 				outAsyncOp = asyncOp
 				outErr = true
 			case operation.AsyncOperation_STATE_REJECTED:
-				progressString = "Operation rejected"
-				asyncOp = asyncOp
+				outString = "Operation rejected"
+				outAsyncOp = asyncOp
 				outErr = true
-			default:
-				progressString = "Operation pending..."
 			}
 			if !cctx.JSONOutput {
-				cctx.Printer.Print(fmt.Sprintf("[%s] %s\n", time.Now().Format("15:04:05"), progressString))
+				cctx.Printer.Print(fmt.Sprintf("[%s] %s\n", time.Now().Format("15:04:05"), outString))
 			}
 			if outAsyncOp != nil {
-				// Print the final operation details in structured format
+				// If we have a final operation state, print the details in structured format
 				if err := cctx.Printer.PrintStructured(outAsyncOp, printer.StructuredOptions{}); err != nil {
 					return err
 				}
+				if outErr {
+					return errors.New(outString)
+				}
+				return nil
 			}
-			if outErr {
-				// Return the error after printing the final status and details
-				return errors.New(progressString)
-			}
-			return nil
 		}
 	}
 }
