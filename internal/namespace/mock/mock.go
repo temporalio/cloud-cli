@@ -39,6 +39,255 @@ func (_m *MockCloudService) EXPECT() *MockCloudService_Expecter {
 	return &MockCloudService_Expecter{mock: &_m.Mock}
 }
 
+// AddNamespaceRegion provides a mock function for the type MockCloudService
+func (_mock *MockCloudService) AddNamespaceRegion(ctx context.Context, req *cloudservice.AddNamespaceRegionRequest, opts ...grpc.CallOption) (*cloudservice.AddNamespaceRegionResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, req, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, req)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddNamespaceRegion")
+	}
+
+	var r0 *cloudservice.AddNamespaceRegionResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.AddNamespaceRegionRequest, ...grpc.CallOption) (*cloudservice.AddNamespaceRegionResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.AddNamespaceRegionRequest, ...grpc.CallOption) *cloudservice.AddNamespaceRegionResponse); ok {
+		r0 = returnFunc(ctx, req, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.AddNamespaceRegionResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.AddNamespaceRegionRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, req, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudService_AddNamespaceRegion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddNamespaceRegion'
+type MockCloudService_AddNamespaceRegion_Call struct {
+	*mock.Call
+}
+
+// AddNamespaceRegion is a helper method to define mock.On call
+//   - ctx context.Context
+//   - req *cloudservice.AddNamespaceRegionRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudService_Expecter) AddNamespaceRegion(ctx interface{}, req interface{}, opts ...interface{}) *MockCloudService_AddNamespaceRegion_Call {
+	return &MockCloudService_AddNamespaceRegion_Call{Call: _e.mock.On("AddNamespaceRegion",
+		append([]interface{}{ctx, req}, opts...)...)}
+}
+
+func (_c *MockCloudService_AddNamespaceRegion_Call) Run(run func(ctx context.Context, req *cloudservice.AddNamespaceRegionRequest, opts ...grpc.CallOption)) *MockCloudService_AddNamespaceRegion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.AddNamespaceRegionRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.AddNamespaceRegionRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudService_AddNamespaceRegion_Call) Return(addNamespaceRegionResponse *cloudservice.AddNamespaceRegionResponse, err error) *MockCloudService_AddNamespaceRegion_Call {
+	_c.Call.Return(addNamespaceRegionResponse, err)
+	return _c
+}
+
+func (_c *MockCloudService_AddNamespaceRegion_Call) RunAndReturn(run func(ctx context.Context, req *cloudservice.AddNamespaceRegionRequest, opts ...grpc.CallOption) (*cloudservice.AddNamespaceRegionResponse, error)) *MockCloudService_AddNamespaceRegion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteNamespaceRegion provides a mock function for the type MockCloudService
+func (_mock *MockCloudService) DeleteNamespaceRegion(ctx context.Context, req *cloudservice.DeleteNamespaceRegionRequest, opts ...grpc.CallOption) (*cloudservice.DeleteNamespaceRegionResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, req, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, req)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteNamespaceRegion")
+	}
+
+	var r0 *cloudservice.DeleteNamespaceRegionResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.DeleteNamespaceRegionRequest, ...grpc.CallOption) (*cloudservice.DeleteNamespaceRegionResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.DeleteNamespaceRegionRequest, ...grpc.CallOption) *cloudservice.DeleteNamespaceRegionResponse); ok {
+		r0 = returnFunc(ctx, req, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.DeleteNamespaceRegionResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.DeleteNamespaceRegionRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, req, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudService_DeleteNamespaceRegion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteNamespaceRegion'
+type MockCloudService_DeleteNamespaceRegion_Call struct {
+	*mock.Call
+}
+
+// DeleteNamespaceRegion is a helper method to define mock.On call
+//   - ctx context.Context
+//   - req *cloudservice.DeleteNamespaceRegionRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudService_Expecter) DeleteNamespaceRegion(ctx interface{}, req interface{}, opts ...interface{}) *MockCloudService_DeleteNamespaceRegion_Call {
+	return &MockCloudService_DeleteNamespaceRegion_Call{Call: _e.mock.On("DeleteNamespaceRegion",
+		append([]interface{}{ctx, req}, opts...)...)}
+}
+
+func (_c *MockCloudService_DeleteNamespaceRegion_Call) Run(run func(ctx context.Context, req *cloudservice.DeleteNamespaceRegionRequest, opts ...grpc.CallOption)) *MockCloudService_DeleteNamespaceRegion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.DeleteNamespaceRegionRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.DeleteNamespaceRegionRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudService_DeleteNamespaceRegion_Call) Return(deleteNamespaceRegionResponse *cloudservice.DeleteNamespaceRegionResponse, err error) *MockCloudService_DeleteNamespaceRegion_Call {
+	_c.Call.Return(deleteNamespaceRegionResponse, err)
+	return _c
+}
+
+func (_c *MockCloudService_DeleteNamespaceRegion_Call) RunAndReturn(run func(ctx context.Context, req *cloudservice.DeleteNamespaceRegionRequest, opts ...grpc.CallOption) (*cloudservice.DeleteNamespaceRegionResponse, error)) *MockCloudService_DeleteNamespaceRegion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FailoverNamespaceRegion provides a mock function for the type MockCloudService
+func (_mock *MockCloudService) FailoverNamespaceRegion(ctx context.Context, req *cloudservice.FailoverNamespaceRegionRequest, opts ...grpc.CallOption) (*cloudservice.FailoverNamespaceRegionResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, req, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, req)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for FailoverNamespaceRegion")
+	}
+
+	var r0 *cloudservice.FailoverNamespaceRegionResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.FailoverNamespaceRegionRequest, ...grpc.CallOption) (*cloudservice.FailoverNamespaceRegionResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.FailoverNamespaceRegionRequest, ...grpc.CallOption) *cloudservice.FailoverNamespaceRegionResponse); ok {
+		r0 = returnFunc(ctx, req, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.FailoverNamespaceRegionResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.FailoverNamespaceRegionRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, req, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudService_FailoverNamespaceRegion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FailoverNamespaceRegion'
+type MockCloudService_FailoverNamespaceRegion_Call struct {
+	*mock.Call
+}
+
+// FailoverNamespaceRegion is a helper method to define mock.On call
+//   - ctx context.Context
+//   - req *cloudservice.FailoverNamespaceRegionRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudService_Expecter) FailoverNamespaceRegion(ctx interface{}, req interface{}, opts ...interface{}) *MockCloudService_FailoverNamespaceRegion_Call {
+	return &MockCloudService_FailoverNamespaceRegion_Call{Call: _e.mock.On("FailoverNamespaceRegion",
+		append([]interface{}{ctx, req}, opts...)...)}
+}
+
+func (_c *MockCloudService_FailoverNamespaceRegion_Call) Run(run func(ctx context.Context, req *cloudservice.FailoverNamespaceRegionRequest, opts ...grpc.CallOption)) *MockCloudService_FailoverNamespaceRegion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.FailoverNamespaceRegionRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.FailoverNamespaceRegionRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudService_FailoverNamespaceRegion_Call) Return(failoverNamespaceRegionResponse *cloudservice.FailoverNamespaceRegionResponse, err error) *MockCloudService_FailoverNamespaceRegion_Call {
+	_c.Call.Return(failoverNamespaceRegionResponse, err)
+	return _c
+}
+
+func (_c *MockCloudService_FailoverNamespaceRegion_Call) RunAndReturn(run func(ctx context.Context, req *cloudservice.FailoverNamespaceRegionRequest, opts ...grpc.CallOption) (*cloudservice.FailoverNamespaceRegionResponse, error)) *MockCloudService_FailoverNamespaceRegion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetNamespace provides a mock function for the type MockCloudService
 func (_mock *MockCloudService) GetNamespace(ctx context.Context, req *cloudservice.GetNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.GetNamespaceResponse, error) {
 	var tmpRet mock.Arguments

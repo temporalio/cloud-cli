@@ -50,17 +50,25 @@ func (v *NamespaceOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "namespace")
 }
 
-type ResourceModifyOptions struct {
-	ResourceVersion  string
+type ResourceVersionOptions struct {
+	ResourceVersion string
+	FlagSet         *pflag.FlagSet
+}
+
+func (v *ResourceVersionOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVarP(&v.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
+}
+
+type AsyncOperationOptions struct {
 	Idempotent       bool
 	AsyncOperationId string
 	Async            bool
 	FlagSet          *pflag.FlagSet
 }
 
-func (v *ResourceModifyOptions) BuildFlags(f *pflag.FlagSet) {
+func (v *AsyncOperationOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.StringVarP(&v.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	f.BoolVar(&v.Idempotent, "idempotent", false, "Succeed silently if the namespace already matches the specification. Without this flag, the command errors when no changes are needed.")
 	f.StringVar(&v.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
 	f.BoolVar(&v.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
@@ -257,12 +265,17 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudNamespaceApplyCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCertCaCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCertFilterCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCodecCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceEditCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceHaCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceLifecycleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceRetentionCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceSearchAttributeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceTagCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -329,7 +342,8 @@ type CloudNamespaceCertCaCreateCommand struct {
 	Command cobra.Command
 	ClientOptions
 	NamespaceOptions
-	ResourceModifyOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
 	CaCertificateFile string
 	CaCertificate     string
 }
@@ -350,7 +364,8 @@ func NewCloudNamespaceCertCaCreateCommand(cctx *CommandContext, parent *CloudNam
 	s.Command.Flags().StringVar(&s.CaCertificate, "ca-certificate", "", "Base64 encoded CA certificate data. Mutually exclusive with --ca-certificate-file.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
-	s.ResourceModifyOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -364,7 +379,8 @@ type CloudNamespaceCertCaDeleteCommand struct {
 	Command cobra.Command
 	ClientOptions
 	NamespaceOptions
-	ResourceModifyOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
 	CaCertificateFile string
 	CaCertificate     string
 }
@@ -385,7 +401,8 @@ func NewCloudNamespaceCertCaDeleteCommand(cctx *CommandContext, parent *CloudNam
 	s.Command.Flags().StringVar(&s.CaCertificate, "ca-certificate", "", "Base64 encoded CA certificate data. Mutually exclusive with --ca-certificate-file.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
-	s.ResourceModifyOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -415,6 +432,247 @@ func NewCloudNamespaceCertCaListCommand(cctx *CommandContext, parent *CloudNames
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCertFilterCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceCertFilterCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceCertFilterCommand {
+	var s CloudNamespaceCertFilterCommand
+	s.Parent = parent
+	s.Command.Use = "cert-filter"
+	s.Command.Short = "Manage certificate filters for namespaces"
+	s.Command.Long = "Commands for managing certificate filters for Temporal Cloud namespaces.\nCertificate filters restrict mTLS connections to client certificates with\nspecific distinguished name properties."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceCertFilterCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCertFilterDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCertFilterListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceCertFilterCreateCommand struct {
+	Parent  *CloudNamespaceCertFilterCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	CommonName             string
+	Organization           string
+	OrganizationalUnit     string
+	SubjectAlternativeName string
+}
+
+func NewCloudNamespaceCertFilterCreateCommand(cctx *CommandContext, parent *CloudNamespaceCertFilterCommand) *CloudNamespaceCertFilterCreateCommand {
+	var s CloudNamespaceCertFilterCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Add certificate filters to a namespace"
+	s.Command.Long = "Add new certificate filters to a Temporal Cloud namespace. Certificate\nfilters restrict mTLS connections to client certificates whose distinguished\nname properties match at least one of the filters."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.CommonName, "common-name", "", "The common name (CN) field from the certificate's distinguished name.")
+	s.Command.Flags().StringVar(&s.Organization, "organization", "", "The organization (O) field from the certificate's distinguished name.")
+	s.Command.Flags().StringVar(&s.OrganizationalUnit, "organizational-unit", "", "The organizational unit (OU) field from the certificate's distinguished name.")
+	s.Command.Flags().StringVar(&s.SubjectAlternativeName, "subject-alternative-name", "", "The subject alternative name (SAN) from the certificate.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCertFilterDeleteCommand struct {
+	Parent  *CloudNamespaceCertFilterCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	CommonName             string
+	Organization           string
+	OrganizationalUnit     string
+	SubjectAlternativeName string
+}
+
+func NewCloudNamespaceCertFilterDeleteCommand(cctx *CommandContext, parent *CloudNamespaceCertFilterCommand) *CloudNamespaceCertFilterDeleteCommand {
+	var s CloudNamespaceCertFilterDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete certificate filters from a namespace"
+	s.Command.Long = "Delete certificate filters from a Temporal Cloud namespace. Filters are\nmatched by exact field equality."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.CommonName, "common-name", "", "The common name (CN) field from the certificate's distinguished name.")
+	s.Command.Flags().StringVar(&s.Organization, "organization", "", "The organization (O) field from the certificate's distinguished name.")
+	s.Command.Flags().StringVar(&s.OrganizationalUnit, "organizational-unit", "", "The organizational unit (OU) field from the certificate's distinguished name.")
+	s.Command.Flags().StringVar(&s.SubjectAlternativeName, "subject-alternative-name", "", "The subject alternative name (SAN) from the certificate.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCertFilterListCommand struct {
+	Parent  *CloudNamespaceCertFilterCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceCertFilterListCommand(cctx *CommandContext, parent *CloudNamespaceCertFilterCommand) *CloudNamespaceCertFilterListCommand {
+	var s CloudNamespaceCertFilterListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List certificate filters for a namespace"
+	s.Command.Long = "List all certificate filters configured for a Temporal Cloud namespace."
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCodecCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceCodecCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceCodecCommand {
+	var s CloudNamespaceCodecCommand
+	s.Parent = parent
+	s.Command.Use = "codec"
+	s.Command.Short = "Manage codec server settings for namespaces"
+	s.Command.Long = "Commands for managing the codec server configuration of Temporal Cloud namespaces.\n\nThe codec server is used to encode and decode payloads for workflows and activities."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceCodecDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCodecGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCodecSetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceCodecDeleteCommand struct {
+	Parent  *CloudNamespaceCodecCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+}
+
+func NewCloudNamespaceCodecDeleteCommand(cctx *CommandContext, parent *CloudNamespaceCodecCommand) *CloudNamespaceCodecDeleteCommand {
+	var s CloudNamespaceCodecDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete codec server configuration from a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Delete the codec server configuration from a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mcloud namespace codec delete --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Delete the codec server configuration from a Temporal Cloud namespace.\n\nExample:\n\n```\ncloud namespace codec delete --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCodecGetCommand struct {
+	Parent  *CloudNamespaceCodecCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceCodecGetCommand(cctx *CommandContext, parent *CloudNamespaceCodecCommand) *CloudNamespaceCodecGetCommand {
+	var s CloudNamespaceCodecGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get codec server configuration for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the current codec server configuration for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mcloud namespace codec get --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the current codec server configuration for a Temporal Cloud namespace.\n\nExample:\n\n```\ncloud namespace codec get --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCodecSetCommand struct {
+	Parent  *CloudNamespaceCodecCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Endpoint                         string
+	PassAccessToken                  bool
+	IncludeCrossOriginCredentials    bool
+	CustomErrorMessageDefaultMessage string
+	CustomErrorMessageDefaultLink    string
+}
+
+func NewCloudNamespaceCodecSetCommand(cctx *CommandContext, parent *CloudNamespaceCodecCommand) *CloudNamespaceCodecSetCommand {
+	var s CloudNamespaceCodecSetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set [flags]"
+	s.Command.Short = "Set codec server configuration for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Set the codec server configuration for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mcloud namespace codec set --namespace my-namespace.my-account --endpoint https://my-codec.example.com\x1b[0m"
+	} else {
+		s.Command.Long = "Set the codec server configuration for a Temporal Cloud namespace.\n\nExample:\n\n```\ncloud namespace codec set --namespace my-namespace.my-account --endpoint https://my-codec.example.com\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Endpoint, "endpoint", "", "The codec server endpoint URL. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "endpoint")
+	s.Command.Flags().BoolVar(&s.PassAccessToken, "pass-access-token", false, "Whether to pass the user access token to the codec server endpoint.")
+	s.Command.Flags().BoolVar(&s.IncludeCrossOriginCredentials, "include-cross-origin-credentials", false, "Whether to include cross-origin credentials in requests to the codec server.")
+	s.Command.Flags().StringVar(&s.CustomErrorMessageDefaultMessage, "custom-error-message-default-message", "", "A custom message to display for remote codec server errors.")
+	s.Command.Flags().StringVar(&s.CustomErrorMessageDefaultLink, "custom-error-message-default-link", "", "A link to display alongside the custom error message for remote codec server errors.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -525,6 +783,243 @@ func NewCloudNamespaceGetCommand(cctx *CommandContext, parent *CloudNamespaceCom
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
 	s.Command.Flags().BoolVar(&s.Spec, "spec", false, "Output only the namespace specification in JSON format, omitting metadata and status information.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceHaCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceHaCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceHaCommand {
+	var s CloudNamespaceHaCommand
+	s.Parent = parent
+	s.Command.Use = "ha"
+	s.Command.Short = "Manage High Availability settings for namespaces"
+	s.Command.Long = "Commands for managing High Availability (HA) settings of Temporal Cloud namespaces.\n\nHA settings control active region, managed failover, and replica regions."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceHaFailoverCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceHaGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceHaRegionCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceHaUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceHaFailoverCommand struct {
+	Parent  *CloudNamespaceHaCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	Region string
+}
+
+func NewCloudNamespaceHaFailoverCommand(cctx *CommandContext, parent *CloudNamespaceHaCommand) *CloudNamespaceHaFailoverCommand {
+	var s CloudNamespaceHaFailoverCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "failover [flags]"
+	s.Command.Short = "Trigger a failover to a different region"
+	if hasHighlighting {
+		s.Command.Long = "Trigger a failover for a Temporal Cloud namespace to a different region.\nThe target region must already be a replica region of the namespace.\n\nExample:\n\n\x1b[1mcloud namespace ha failover --namespace my-namespace.my-account --region aws-us-west-2\x1b[0m"
+	} else {
+		s.Command.Long = "Trigger a failover for a Temporal Cloud namespace to a different region.\nThe target region must already be a replica region of the namespace.\n\nExample:\n\n```\ncloud namespace ha failover --namespace my-namespace.my-account --region aws-us-west-2\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Region, "region", "", "The target region to failover to (e.g., aws-us-west-2). Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "region")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceHaGetCommand struct {
+	Parent  *CloudNamespaceHaCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceHaGetCommand(cctx *CommandContext, parent *CloudNamespaceHaCommand) *CloudNamespaceHaGetCommand {
+	var s CloudNamespaceHaGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get High Availability configuration for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the current High Availability configuration for a Temporal Cloud namespace.\nShows the active region and whether managed failover is enabled.\n\nExample:\n\n\x1b[1mcloud namespace ha get --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the current High Availability configuration for a Temporal Cloud namespace.\nShows the active region and whether managed failover is enabled.\n\nExample:\n\n```\ncloud namespace ha get --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceHaRegionCommand struct {
+	Parent  *CloudNamespaceHaCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceHaRegionCommand(cctx *CommandContext, parent *CloudNamespaceHaCommand) *CloudNamespaceHaRegionCommand {
+	var s CloudNamespaceHaRegionCommand
+	s.Parent = parent
+	s.Command.Use = "region"
+	s.Command.Short = "Manage replica regions for a namespace"
+	s.Command.Long = "Commands for managing replica regions of Temporal Cloud namespaces."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceHaRegionAddCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceHaRegionDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceHaRegionListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceHaRegionAddCommand struct {
+	Parent  *CloudNamespaceHaRegionCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Region string
+}
+
+func NewCloudNamespaceHaRegionAddCommand(cctx *CommandContext, parent *CloudNamespaceHaRegionCommand) *CloudNamespaceHaRegionAddCommand {
+	var s CloudNamespaceHaRegionAddCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "add [flags]"
+	s.Command.Short = "Add a replica region to a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Add a replica region to a Temporal Cloud namespace. The region will be added\nas a passive replica and can later be used for failover.\n\nExample:\n\n\x1b[1mcloud namespace ha region add --namespace my-namespace.my-account --region aws-us-west-2\x1b[0m"
+	} else {
+		s.Command.Long = "Add a replica region to a Temporal Cloud namespace. The region will be added\nas a passive replica and can later be used for failover.\n\nExample:\n\n```\ncloud namespace ha region add --namespace my-namespace.my-account --region aws-us-west-2\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Region, "region", "", "The region ID to add as a replica (e.g., aws-us-west-2). Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "region")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceHaRegionDeleteCommand struct {
+	Parent  *CloudNamespaceHaRegionCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Region string
+}
+
+func NewCloudNamespaceHaRegionDeleteCommand(cctx *CommandContext, parent *CloudNamespaceHaRegionCommand) *CloudNamespaceHaRegionDeleteCommand {
+	var s CloudNamespaceHaRegionDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Remove a replica region from a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Remove a replica region from a Temporal Cloud namespace. Note that a 7-day\ncooldown period applies before the same region can be re-added.\n\nExample:\n\n\x1b[1mcloud namespace ha region delete --namespace my-namespace.my-account --region aws-us-west-2\x1b[0m"
+	} else {
+		s.Command.Long = "Remove a replica region from a Temporal Cloud namespace. Note that a 7-day\ncooldown period applies before the same region can be re-added.\n\nExample:\n\n```\ncloud namespace ha region delete --namespace my-namespace.my-account --region aws-us-west-2\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Region, "region", "", "The region ID to remove (e.g., aws-us-west-2). Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "region")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceHaRegionListCommand struct {
+	Parent  *CloudNamespaceHaRegionCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceHaRegionListCommand(cctx *CommandContext, parent *CloudNamespaceHaRegionCommand) *CloudNamespaceHaRegionListCommand {
+	var s CloudNamespaceHaRegionListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List regions for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "List all regions and their states for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mcloud namespace ha region list --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "List all regions and their states for a Temporal Cloud namespace.\n\nExample:\n\n```\ncloud namespace ha region list --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceHaUpdateCommand struct {
+	Parent  *CloudNamespaceHaCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	DisableAutoFailover bool
+}
+
+func NewCloudNamespaceHaUpdateCommand(cctx *CommandContext, parent *CloudNamespaceHaCommand) *CloudNamespaceHaUpdateCommand {
+	var s CloudNamespaceHaUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update High Availability configuration for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Update the High Availability configuration for a Temporal Cloud namespace.\nUse --disable-auto-failover to toggle Temporal-managed automatic failover.\n\nExample:\n\n\x1b[1mcloud namespace ha update --namespace my-namespace.my-account --disable-auto-failover true\x1b[0m"
+	} else {
+		s.Command.Long = "Update the High Availability configuration for a Temporal Cloud namespace.\nUse --disable-auto-failover to toggle Temporal-managed automatic failover.\n\nExample:\n\n```\ncloud namespace ha update --namespace my-namespace.my-account --disable-auto-failover true\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.DisableAutoFailover, "disable-auto-failover", false, "Set to true to disable Temporal-managed automatic failover for the namespace. Set to false to re-enable automatic failover. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "disable-auto-failover")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -738,6 +1233,287 @@ func NewCloudNamespaceRetentionSetCommand(cctx *CommandContext, parent *CloudNam
 	s.Command.Flags().StringVar(&s.ResourceVersion, "resource-version", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceSearchAttributeCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceSearchAttributeCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceSearchAttributeCommand {
+	var s CloudNamespaceSearchAttributeCommand
+	s.Parent = parent
+	s.Command.Use = "search-attribute"
+	s.Command.Short = "Manage custom search attributes for namespaces"
+	s.Command.Long = "Commands for managing custom search attributes for Temporal Cloud namespaces.\nSearch attributes enable filtering and searching workflows by custom fields."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceSearchAttributeCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceSearchAttributeListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceSearchAttributeRenameCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceSearchAttributeCreateCommand struct {
+	Parent  *CloudNamespaceSearchAttributeCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Name string
+	Type string
+}
+
+func NewCloudNamespaceSearchAttributeCreateCommand(cctx *CommandContext, parent *CloudNamespaceSearchAttributeCommand) *CloudNamespaceSearchAttributeCreateCommand {
+	var s CloudNamespaceSearchAttributeCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a custom search attribute for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Create a new custom search attribute for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mcloud namespace search-attribute create --namespace my-namespace.my-account --name MyField --type Keyword\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new custom search attribute for a Temporal Cloud namespace.\n\nExample:\n\n```\ncloud namespace search-attribute create --namespace my-namespace.my-account --name MyField --type Keyword\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the search attribute to create. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.Type, "type", "", "The type of the search attribute. Valid values: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "type")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceSearchAttributeListCommand struct {
+	Parent  *CloudNamespaceSearchAttributeCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceSearchAttributeListCommand(cctx *CommandContext, parent *CloudNamespaceSearchAttributeCommand) *CloudNamespaceSearchAttributeListCommand {
+	var s CloudNamespaceSearchAttributeListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List custom search attributes for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "List all custom search attributes configured for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mcloud namespace search-attribute list --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "List all custom search attributes configured for a Temporal Cloud namespace.\n\nExample:\n\n```\ncloud namespace search-attribute list --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceSearchAttributeRenameCommand struct {
+	Parent  *CloudNamespaceSearchAttributeCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ExistingName string
+	NewName      string
+}
+
+func NewCloudNamespaceSearchAttributeRenameCommand(cctx *CommandContext, parent *CloudNamespaceSearchAttributeCommand) *CloudNamespaceSearchAttributeRenameCommand {
+	var s CloudNamespaceSearchAttributeRenameCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "rename [flags]"
+	s.Command.Short = "Rename a custom search attribute"
+	if hasHighlighting {
+		s.Command.Long = "Rename an existing custom search attribute for a Temporal Cloud namespace.\nThis operation preserves all existing data associated with the search attribute.\n\nExample:\n\n\x1b[1mcloud namespace search-attribute rename --namespace my-namespace.my-account --existing-name OldField --new-name NewField\x1b[0m"
+	} else {
+		s.Command.Long = "Rename an existing custom search attribute for a Temporal Cloud namespace.\nThis operation preserves all existing data associated with the search attribute.\n\nExample:\n\n```\ncloud namespace search-attribute rename --namespace my-namespace.my-account --existing-name OldField --new-name NewField\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ExistingName, "existing-name", "", "The current name of the search attribute to rename. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "existing-name")
+	s.Command.Flags().StringVar(&s.NewName, "new-name", "", "The new name for the search attribute. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "new-name")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceTagCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceTagCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceTagCommand {
+	var s CloudNamespaceTagCommand
+	s.Parent = parent
+	s.Command.Use = "tag"
+	s.Command.Short = "Manage namespace tags"
+	s.Command.Long = "Commands for managing tags of Temporal Cloud namespaces.\n\nTags are key-value pairs used for organization and categorization of namespaces."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceTagCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceTagDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceTagListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceTagUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceTagCreateCommand struct {
+	Parent  *CloudNamespaceTagCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	Key   string
+	Value string
+}
+
+func NewCloudNamespaceTagCreateCommand(cctx *CommandContext, parent *CloudNamespaceTagCommand) *CloudNamespaceTagCreateCommand {
+	var s CloudNamespaceTagCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a tag for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Create a new tag for a Temporal Cloud namespace. Fails if a tag with\nthe specified key already exists.\n\nExample:\n\n\x1b[1mcloud namespace tag create --namespace my-namespace.my-account --key environment --value production\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new tag for a Temporal Cloud namespace. Fails if a tag with\nthe specified key already exists.\n\nExample:\n\n```\ncloud namespace tag create --namespace my-namespace.my-account --key environment --value production\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Key, "key", "", "The tag key. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "key")
+	s.Command.Flags().StringVar(&s.Value, "value", "", "The tag value. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "value")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceTagDeleteCommand struct {
+	Parent  *CloudNamespaceTagCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	Key string
+}
+
+func NewCloudNamespaceTagDeleteCommand(cctx *CommandContext, parent *CloudNamespaceTagCommand) *CloudNamespaceTagDeleteCommand {
+	var s CloudNamespaceTagDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a tag from a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Delete a tag from a Temporal Cloud namespace by its key.\n\nExample:\n\n\x1b[1mcloud namespace tag delete --namespace my-namespace.my-account --key environment\x1b[0m"
+	} else {
+		s.Command.Long = "Delete a tag from a Temporal Cloud namespace by its key.\n\nExample:\n\n```\ncloud namespace tag delete --namespace my-namespace.my-account --key environment\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Key, "key", "", "The tag key to delete. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "key")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceTagListCommand struct {
+	Parent  *CloudNamespaceTagCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceTagListCommand(cctx *CommandContext, parent *CloudNamespaceTagCommand) *CloudNamespaceTagListCommand {
+	var s CloudNamespaceTagListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List tags for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "List all tags configured for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mcloud namespace tag list --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "List all tags configured for a Temporal Cloud namespace.\n\nExample:\n\n```\ncloud namespace tag list --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceTagUpdateCommand struct {
+	Parent  *CloudNamespaceTagCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	Key   string
+	Value string
+}
+
+func NewCloudNamespaceTagUpdateCommand(cctx *CommandContext, parent *CloudNamespaceTagCommand) *CloudNamespaceTagUpdateCommand {
+	var s CloudNamespaceTagUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update a tag for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Update the value of an existing tag for a Temporal Cloud namespace.\nFails if the specified tag key does not exist.\n\nExample:\n\n\x1b[1mcloud namespace tag update --namespace my-namespace.my-account --key environment --value staging\x1b[0m"
+	} else {
+		s.Command.Long = "Update the value of an existing tag for a Temporal Cloud namespace.\nFails if the specified tag key does not exist.\n\nExample:\n\n```\ncloud namespace tag update --namespace my-namespace.my-account --key environment --value staging\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Key, "key", "", "The tag key to update. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "key")
+	s.Command.Flags().StringVar(&s.Value, "value", "", "The new value for the tag. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "value")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

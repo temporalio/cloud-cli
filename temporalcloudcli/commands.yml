@@ -136,6 +136,7 @@ commands:
         description: |
           Authentication domain for the OAuth provider.
         default: login.tmprl-test.cloud
+  # Async operation commands
   - name: cloud async-operation
     summary: Manage Temporal Cloud async operations
     description: |
@@ -203,6 +204,7 @@ commands:
         description: |
           The async operation ID to wait for.
         short: i
+  # Namespace commands
   - name: cloud namespace
     summary: Manage Temporal Cloud namespaces
     description: |
@@ -426,6 +428,8 @@ commands:
         type: string
         description: |
           Filter namespaces by the name as defined in the specification of the namespace.
+
+  # Namespace retention commands
   - name: cloud namespace retention
     summary: Manage namespace retention settings
     description: |
@@ -505,6 +509,8 @@ commands:
         description: |
           Resource version for optimistic concurrency control. If not provided,
           the current version is fetched automatically.
+
+  # Namespace lifecycle commands
   - name: cloud namespace lifecycle
     summary: Manage namespace lifecycle settings
     description: |
@@ -585,6 +591,8 @@ commands:
         description: |
           Resource version for optimistic concurrency control. If not provided,
           the current version is fetched automatically.
+
+  # Namespace cert-ca commands
   - name: cloud namespace cert-ca
     summary: Manage client CA certificates for namespaces
     description: |
@@ -629,7 +637,8 @@ commands:
     option-sets:
       - client
       - namespace
-      - resource-modify
+      - async-operation
+      - resource-version
     options:
       - name: ca-certificate-file
         type: string
@@ -664,7 +673,8 @@ commands:
     option-sets:
       - client
       - namespace
-      - resource-modify
+      - async-operation
+      - resource-version
     options:
       - name: ca-certificate-file
         type: string
@@ -674,6 +684,466 @@ commands:
         type: string
         description: |
           Base64 encoded CA certificate data. Mutually exclusive with --ca-certificate-file.
+
+  # Namespace cert-filter commands
+  - name: cloud namespace cert-filter
+    summary: Manage certificate filters for namespaces
+    description: |
+      Commands for managing certificate filters for Temporal Cloud namespaces.
+      Certificate filters restrict mTLS connections to client certificates with
+      specific distinguished name properties.
+    has-init: false
+  - name: cloud namespace cert-filter list
+    summary: List certificate filters for a namespace
+    description: |
+      List all certificate filters configured for a Temporal Cloud namespace.
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace cert-filter create
+    summary: Add certificate filters to a namespace
+    description: |
+      Add new certificate filters to a Temporal Cloud namespace. Certificate
+      filters restrict mTLS connections to client certificates whose distinguished
+      name properties match at least one of the filters.
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: common-name
+        type: string
+        description: |
+          The common name (CN) field from the certificate's distinguished name.
+      - name: organization
+        type: string
+        description: |
+          The organization (O) field from the certificate's distinguished name.
+      - name: organizational-unit
+        type: string
+        description: |
+          The organizational unit (OU) field from the certificate's distinguished name.
+      - name: subject-alternative-name
+        type: string
+        description: |
+          The subject alternative name (SAN) from the certificate.
+  - name: cloud namespace cert-filter delete
+    summary: Delete certificate filters from a namespace
+    description: |
+      Delete certificate filters from a Temporal Cloud namespace. Filters are
+      matched by exact field equality.
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: common-name
+        type: string
+        description: |
+          The common name (CN) field from the certificate's distinguished name.
+      - name: organization
+        type: string
+        description: |
+          The organization (O) field from the certificate's distinguished name.
+      - name: organizational-unit
+        type: string
+        description: |
+          The organizational unit (OU) field from the certificate's distinguished name.
+      - name: subject-alternative-name
+        type: string
+        description: |
+          The subject alternative name (SAN) from the certificate.
+
+  # Namespace search-attribute commands
+  - name: cloud namespace search-attribute
+    summary: Manage custom search attributes for namespaces
+    description: |
+      Commands for managing custom search attributes for Temporal Cloud namespaces.
+      Search attributes enable filtering and searching workflows by custom fields.
+    has-init: false
+  - name: cloud namespace search-attribute list
+    summary: List custom search attributes for a namespace
+    description: |
+      List all custom search attributes configured for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace search-attribute list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace search-attribute create
+    summary: Create a custom search attribute for a namespace
+    description: |
+      Create a new custom search attribute for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace search-attribute create --namespace my-namespace.my-account --name MyField --type Keyword
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the search attribute to create.
+      - name: type
+        type: string
+        required: true
+        description: |
+          The type of the search attribute. Valid values: Text, Keyword, Int, Double,
+          Bool, Datetime, KeywordList.
+  - name: cloud namespace search-attribute rename
+    summary: Rename a custom search attribute
+    description: |
+      Rename an existing custom search attribute for a Temporal Cloud namespace.
+      This operation preserves all existing data associated with the search attribute.
+
+      Example:
+
+      ```
+      cloud namespace search-attribute rename --namespace my-namespace.my-account --existing-name OldField --new-name NewField
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: existing-name
+        type: string
+        required: true
+        description: |
+          The current name of the search attribute to rename.
+      - name: new-name
+        type: string
+        required: true
+        description: |
+          The new name for the search attribute.
+
+  # Namespace codec commands
+  - name: cloud namespace codec
+    summary: Manage codec server settings for namespaces
+    description: |
+      Commands for managing the codec server configuration of Temporal Cloud namespaces.
+
+      The codec server is used to encode and decode payloads for workflows and activities.
+    has-init: false
+  - name: cloud namespace codec get
+    summary: Get codec server configuration for a namespace
+    description: |
+      Retrieve the current codec server configuration for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace codec get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace codec set
+    summary: Set codec server configuration for a namespace
+    description: |
+      Set the codec server configuration for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace codec set --namespace my-namespace.my-account --endpoint https://my-codec.example.com
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: endpoint
+        type: string
+        required: true
+        description: |
+          The codec server endpoint URL.
+      - name: pass-access-token
+        type: bool
+        description: |
+          Whether to pass the user access token to the codec server endpoint.
+      - name: include-cross-origin-credentials
+        type: bool
+        description: |
+          Whether to include cross-origin credentials in requests to the codec server.
+      - name: custom-error-message-default-message
+        type: string
+        description: |
+          A custom message to display for remote codec server errors.
+      - name: custom-error-message-default-link
+        type: string
+        description: |
+          A link to display alongside the custom error message for remote codec server errors.
+  - name: cloud namespace codec delete
+    summary: Delete codec server configuration from a namespace
+    description: |
+      Delete the codec server configuration from a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace codec delete --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+
+  # Namespace tag commands
+  - name: cloud namespace tag
+    summary: Manage namespace tags
+    description: |
+      Commands for managing tags of Temporal Cloud namespaces.
+
+      Tags are key-value pairs used for organization and categorization of namespaces.
+    has-init: false
+  - name: cloud namespace tag list
+    summary: List tags for a namespace
+    description: |
+      List all tags configured for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace tag list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace tag create
+    summary: Create a tag for a namespace
+    description: |
+      Create a new tag for a Temporal Cloud namespace. Fails if a tag with
+      the specified key already exists.
+
+      Example:
+
+      ```
+      cloud namespace tag create --namespace my-namespace.my-account --key environment --value production
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+    options:
+      - name: key
+        type: string
+        required: true
+        description: |
+          The tag key.
+      - name: value
+        type: string
+        required: true
+        description: |
+          The tag value.
+  - name: cloud namespace tag update
+    summary: Update a tag for a namespace
+    description: |
+      Update the value of an existing tag for a Temporal Cloud namespace.
+      Fails if the specified tag key does not exist.
+
+      Example:
+
+      ```
+      cloud namespace tag update --namespace my-namespace.my-account --key environment --value staging
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+    options:
+      - name: key
+        type: string
+        required: true
+        description: |
+          The tag key to update.
+      - name: value
+        type: string
+        required: true
+        description: |
+          The new value for the tag.
+  - name: cloud namespace tag delete
+    summary: Delete a tag from a namespace
+    description: |
+      Delete a tag from a Temporal Cloud namespace by its key.
+
+      Example:
+
+      ```
+      cloud namespace tag delete --namespace my-namespace.my-account --key environment
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+    options:
+      - name: key
+        type: string
+        required: true
+        description: |
+          The tag key to delete.
+
+  # Namespace HA commands
+  - name: cloud namespace ha
+    summary: Manage High Availability settings for namespaces
+    description: |
+      Commands for managing High Availability (HA) settings of Temporal Cloud namespaces.
+
+      HA settings control active region, managed failover, and replica regions.
+    has-init: false
+  - name: cloud namespace ha get
+    summary: Get High Availability configuration for a namespace
+    description: |
+      Retrieve the current High Availability configuration for a Temporal Cloud namespace.
+      Shows the active region and whether managed failover is enabled.
+
+      Example:
+
+      ```
+      cloud namespace ha get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace ha update
+    summary: Update High Availability configuration for a namespace
+    description: |
+      Update the High Availability configuration for a Temporal Cloud namespace.
+      Use --disable-auto-failover to toggle Temporal-managed automatic failover.
+
+      Example:
+
+      ```
+      cloud namespace ha update --namespace my-namespace.my-account --disable-auto-failover true
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: disable-auto-failover
+        type: bool
+        required: true
+        description: |
+          Set to true to disable Temporal-managed automatic failover for the namespace.
+          Set to false to re-enable automatic failover.
+  - name: cloud namespace ha region
+    summary: Manage replica regions for a namespace
+    description: |
+      Commands for managing replica regions of Temporal Cloud namespaces.
+    has-init: false
+  - name: cloud namespace ha region list
+    summary: List regions for a namespace
+    description: |
+      List all regions and their states for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace ha region list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace ha region add
+    summary: Add a replica region to a namespace
+    description: |
+      Add a replica region to a Temporal Cloud namespace. The region will be added
+      as a passive replica and can later be used for failover.
+
+      Example:
+
+      ```
+      cloud namespace ha region add --namespace my-namespace.my-account --region aws-us-west-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: region
+        type: string
+        required: true
+        description: |
+          The region ID to add as a replica (e.g., aws-us-west-2).
+  - name: cloud namespace ha region delete
+    summary: Remove a replica region from a namespace
+    description: |
+      Remove a replica region from a Temporal Cloud namespace. Note that a 7-day
+      cooldown period applies before the same region can be re-added.
+
+      Example:
+
+      ```
+      cloud namespace ha region delete --namespace my-namespace.my-account --region aws-us-west-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: region
+        type: string
+        required: true
+        description: |
+          The region ID to remove (e.g., aws-us-west-2).
+  - name: cloud namespace ha failover
+    summary: Trigger a failover to a different region
+    description: |
+      Trigger a failover for a Temporal Cloud namespace to a different region.
+      The target region must already be a replica region of the namespace.
+
+      Example:
+
+      ```
+      cloud namespace ha failover --namespace my-namespace.my-account --region aws-us-west-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+    options:
+      - name: region
+        type: string
+        required: true
+        description: |
+          The target region to failover to (e.g., aws-us-west-2).
 
 option-sets:
   - name: client
@@ -709,7 +1179,7 @@ option-sets:
           (e.g., 'my-namespace.my-account').
         short: n
         required: true
-  - name: resource-modify
+  - name: resource-version
     options:
       - name: resource-version
         type: string
@@ -717,6 +1187,8 @@ option-sets:
         description: |
           Resource version for optimistic concurrency control. If not provided,
           the current version is fetched automatically.
+  - name: async-operation
+    options:
       - name: idempotent
         type: bool
         description: |

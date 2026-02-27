@@ -248,8 +248,6 @@ func getPoller(cctx *CommandContext, opts ClientOptions) (Poller, error) {
 	}, nil
 }
 
-// executeAsyncOperation executes a function that returns an AsyncOperation
-// and handles idempotent errors and async operation polling.
 // wrapAsyncOperation wraps an async operation function with standard error handling
 // and async operation polling. It returns a function that takes the operation parameters
 // and executes the operation with:
@@ -258,7 +256,7 @@ func getPoller(cctx *CommandContext, opts ClientOptions) (Poller, error) {
 //   - Automatic polling until completion (if async is false)
 func wrapAsyncOperation[P any](
 	cctx *CommandContext,
-	modifyOpts ResourceModifyOptions,
+	asyncOpts AsyncOperationOptions,
 	resourceID string,
 	clientOpts ClientOptions,
 	fn func(context.Context, P) (*operation.AsyncOperation, error),
@@ -266,13 +264,13 @@ func wrapAsyncOperation[P any](
 	return func(params P) error {
 		op, err := fn(cctx.Context, params)
 		if err != nil {
-			if isNothingChangedErr(modifyOpts.Idempotent, err) {
+			if isNothingChangedErr(asyncOpts.Idempotent, err) {
 				return cctx.Printer.PrintStructured(newUnchangedResult(resourceID), printer.StructuredOptions{})
 			}
 			return err
 		}
 
-		if modifyOpts.Async {
+		if asyncOpts.Async {
 			// Return immediately with the async operation
 			return cctx.Printer.PrintStructured(MutationResult{
 				AsyncOp: op,
