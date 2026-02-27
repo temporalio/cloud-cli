@@ -136,6 +136,73 @@ commands:
         description: |
           Authentication domain for the OAuth provider.
         default: login.tmprl-test.cloud
+  - name: cloud async-operation
+    summary: Manage Temporal Cloud async operations
+    description: |
+      Commands for managing and checking the status of Temporal Cloud asynchronous operations.
+    has-init: false
+    docs:
+      keywords:
+        - async-operation
+        - operation
+      description-header: Async Operation Management Commands
+      tags:
+        - async-operations
+  - name: cloud async-operation get
+    summary: Retrieve async operation details
+    description: |
+      Retrieve the status and details of a Temporal Cloud asynchronous operation.
+
+      Example:
+
+      ```
+      cloud async-operation get --async-operation-id my-op-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+    docs:
+      keywords:
+        - async-operation
+        - get
+      description-header: Retrieve an async operation.
+      tags:
+        - async-operations
+    options:
+      - name: async-operation-id
+        required: true
+        type: string
+        description: |
+          The async operation ID to retrieve.
+  - name: cloud async-operation await
+    summary: Wait for an async operation to complete
+    description: |
+      Wait for a Temporal Cloud asynchronous operation to reach a terminal state (fulfilled, failed, cancelled, or rejected).
+      It polls the operation status periodically and returns when finished.
+
+      Example:
+
+      ```
+      cloud async-operation await --async-operation-id my-op-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+    docs:
+      keywords:
+        - async-operation
+        - await
+        - wait
+      description-header: Await an async operation.
+      tags:
+        - async-operations
+    options:
+      - name: async-operation-id
+        required: true
+        type: string
+        description: |
+          The async operation ID to wait for.
+        short: i
   - name: cloud namespace
     summary: Manage Temporal Cloud namespaces
     description: |

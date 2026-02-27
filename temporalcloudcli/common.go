@@ -171,7 +171,11 @@ func (p *AsyncOperationPoller) PollAsyncOperation(
 			}
 
 			// Print current state
-			var progressString string
+			var (
+				progressString string
+				outAsyncOp     *operation.AsyncOperation
+				outErr         error
+			)
 			switch asyncOp.State {
 			case operation.AsyncOperation_STATE_PENDING:
 				progressString = fmt.Sprintf("[%s] Operation pending...\n", time.Now().Format("15:04:05"))
@@ -179,46 +183,36 @@ func (p *AsyncOperationPoller) PollAsyncOperation(
 				progressString = fmt.Sprintf("[%s] Operation in progress...\n", time.Now().Format("15:04:05"))
 			case operation.AsyncOperation_STATE_FULFILLED:
 				progressString = fmt.Sprintf("[%s] Operation completed successfully\n", time.Now().Format("15:04:05"))
-				return cctx.Printer.PrintStructured(MutationResult{
-					ID:      id,
-					AsyncOp: asyncOp,
-				}, printer.StructuredOptions{})
+				outAsyncOp = asyncOp
 			case operation.AsyncOperation_STATE_FAILED:
 				progressString = fmt.Sprintf("[%s] Operation failed: %s\n", time.Now().Format("15:04:05"), asyncOp.FailureReason)
-				// Print the structured output first, then return error for proper exit code
-				if err := cctx.Printer.PrintStructured(MutationResult{
-					ID:      id,
-					AsyncOp: asyncOp,
-				}, printer.StructuredOptions{}); err != nil {
-					return err
-				}
-				return fmt.Errorf("async operation failed: %s", asyncOp.FailureReason)
+				outAsyncOp = asyncOp
+				outErr = fmt.Errorf("async operation failed: %s", asyncOp.FailureReason)
 			case operation.AsyncOperation_STATE_CANCELLED:
 				progressString = fmt.Sprintf("[%s] Operation cancelled\n", time.Now().Format("15:04:05"))
-				// Print the structured output first, then return error for proper exit code
-				if err := cctx.Printer.PrintStructured(MutationResult{
-					ID:      id,
-					AsyncOp: asyncOp,
-				}, printer.StructuredOptions{}); err != nil {
-					return err
-				}
-				return fmt.Errorf("async operation cancelled")
+				outAsyncOp = asyncOp
+				outErr = fmt.Errorf("async operation cancelled")
 			case operation.AsyncOperation_STATE_REJECTED:
 				progressString = fmt.Sprintf("[%s] Operation rejected\n", time.Now().Format("15:04:05"))
-				// Print the structured output first, then return error for proper exit code
-				if err := cctx.Printer.PrintStructured(MutationResult{
-					ID:      id,
-					AsyncOp: asyncOp,
-				}, printer.StructuredOptions{}); err != nil {
-					return err
-				}
-				return fmt.Errorf("async operation rejected")
+				asyncOp = asyncOp
+				outErr = fmt.Errorf("async operation rejected")
 			default:
 				progressString = fmt.Sprintf("[%s] Operation pending...\n", time.Now().Format("15:04:05"))
 			}
 			if !cctx.JSONOutput {
 				cctx.Printer.Print(progressString)
 			}
+			if outAsyncOp != nil {
+				// Print the final operation details in structured format
+				if err := cctx.Printer.PrintStructured(outAsyncOp, printer.StructuredOptions{}); err != nil {
+					return err
+				}
+			}
+			if outErr != nil {
+				// Return the error after printing the final status and details
+				return outErr
+			}
+			return nil
 		}
 	}
 }

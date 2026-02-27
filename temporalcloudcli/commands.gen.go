@@ -85,6 +85,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 		s.Command.Long = "The Temporal Cloud CLI provides commands for managing and operating Temporal Cloud resources,\nincluding namespaces, users, and account settings.\n\nExample:\n\n```\ncloud namespace get --namespace my-namespace.my-account\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudAsyncOperationCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLoginCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLogoutCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCommand(cctx, &s).Command)
@@ -95,6 +96,83 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
 	s.CommonOptions.BuildFlags(s.Command.PersistentFlags())
 	s.initCommand(cctx)
+	return &s
+}
+
+type CloudAsyncOperationCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+}
+
+func NewCloudAsyncOperationCommand(cctx *CommandContext, parent *CloudCommand) *CloudAsyncOperationCommand {
+	var s CloudAsyncOperationCommand
+	s.Parent = parent
+	s.Command.Use = "async-operation"
+	s.Command.Short = "Manage Temporal Cloud async operations"
+	s.Command.Long = "Commands for managing and checking the status of Temporal Cloud asynchronous operations."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudAsyncOperationAwaitCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudAsyncOperationGetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudAsyncOperationAwaitCommand struct {
+	Parent  *CloudAsyncOperationCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationId string
+}
+
+func NewCloudAsyncOperationAwaitCommand(cctx *CommandContext, parent *CloudAsyncOperationCommand) *CloudAsyncOperationAwaitCommand {
+	var s CloudAsyncOperationAwaitCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "await [flags]"
+	s.Command.Short = "Wait for an async operation to complete"
+	if hasHighlighting {
+		s.Command.Long = "Wait for a Temporal Cloud asynchronous operation to reach a terminal state (fulfilled, failed, cancelled, or rejected).\nIt polls the operation status periodically and returns when finished.\n\nExample:\n\n\x1b[1mcloud async-operation await --async-operation-id my-op-id\x1b[0m"
+	} else {
+		s.Command.Long = "Wait for a Temporal Cloud asynchronous operation to reach a terminal state (fulfilled, failed, cancelled, or rejected).\nIt polls the operation status periodically and returns when finished.\n\nExample:\n\n```\ncloud async-operation await --async-operation-id my-op-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.AsyncOperationId, "async-operation-id", "i", "", "The async operation ID to wait for. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "async-operation-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudAsyncOperationGetCommand struct {
+	Parent  *CloudAsyncOperationCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationId string
+}
+
+func NewCloudAsyncOperationGetCommand(cctx *CommandContext, parent *CloudAsyncOperationCommand) *CloudAsyncOperationGetCommand {
+	var s CloudAsyncOperationGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Retrieve async operation details"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the status and details of a Temporal Cloud asynchronous operation.\n\nExample:\n\n\x1b[1mcloud async-operation get --async-operation-id my-op-id\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the status and details of a Temporal Cloud asynchronous operation.\n\nExample:\n\n```\ncloud async-operation get --async-operation-id my-op-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "The async operation ID to retrieve. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "async-operation-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
