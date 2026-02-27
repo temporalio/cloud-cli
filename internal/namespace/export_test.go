@@ -142,8 +142,8 @@ func TestClient_CreateExportSink_S3_Success(t *testing.T) {
 
 	op, err := client.CreateExportSink(ctx, namespace.CreateExportSinkParams{
 		Namespace: "test-ns",
-		SinkName:  "my-sink",
 		Sink: namespace.ExportSinkParams{
+			SinkName: "my-sink",
 			S3: &namespace.S3ExportSinkParams{
 				RoleName:     "my-role",
 				BucketName:   "my-bucket",
@@ -206,8 +206,8 @@ func TestClient_UpdateExportSink_S3_Success(t *testing.T) {
 
 	op, err := client.UpdateExportSink(ctx, namespace.UpdateExportSinkParams{
 		Namespace: "test-ns",
-		SinkName:  "my-sink",
 		Sink: namespace.ExportSinkParams{
+			SinkName: "my-sink",
 			S3: &namespace.S3ExportSinkParams{
 				RoleName:     "new-role",
 				BucketName:   "my-bucket",
@@ -234,8 +234,8 @@ func TestClient_UpdateExportSink_S3_GetSinkError(t *testing.T) {
 
 	_, err := client.UpdateExportSink(ctx, namespace.UpdateExportSinkParams{
 		Namespace: "test-ns",
-		SinkName:  "my-sink",
 		Sink: namespace.ExportSinkParams{
+			SinkName: "my-sink",
 			S3: &namespace.S3ExportSinkParams{
 				RoleName:     "new-role",
 				BucketName:   "my-bucket",
@@ -292,8 +292,8 @@ func TestClient_UpdateExportSink_S3_CustomResourceVersion(t *testing.T) {
 
 	op, err := client.UpdateExportSink(ctx, namespace.UpdateExportSinkParams{
 		Namespace: "test-ns",
-		SinkName:  "my-sink",
 		Sink: namespace.ExportSinkParams{
+			SinkName: "my-sink",
 			S3: &namespace.S3ExportSinkParams{
 				RoleName:     "new-role",
 				BucketName:   "my-bucket",
@@ -330,8 +330,8 @@ func TestClient_ValidateExportSink_S3_Success(t *testing.T) {
 
 	err := client.ValidateExportSink(ctx, namespace.ValidateExportSinkParams{
 		Namespace: "test-ns",
-		SinkName:  "my-sink",
 		Sink: namespace.ExportSinkParams{
+			SinkName: "my-sink",
 			S3: &namespace.S3ExportSinkParams{
 				RoleName:     "my-role",
 				BucketName:   "my-bucket",
@@ -369,8 +369,8 @@ func TestClient_CreateExportSink_GCS_Success(t *testing.T) {
 
 	op, err := client.CreateExportSink(ctx, namespace.CreateExportSinkParams{
 		Namespace: "test-ns",
-		SinkName:  "my-sink",
 		Sink: namespace.ExportSinkParams{
+			SinkName: "my-sink",
 			GCS: &namespace.GCSExportSinkParams{
 				SaID:         "sa@project.iam.gserviceaccount.com",
 				BucketName:   "my-bucket",
@@ -432,8 +432,8 @@ func TestClient_UpdateExportSink_GCS_Success(t *testing.T) {
 
 	op, err := client.UpdateExportSink(ctx, namespace.UpdateExportSinkParams{
 		Namespace: "test-ns",
-		SinkName:  "my-sink",
 		Sink: namespace.ExportSinkParams{
+			SinkName: "my-sink",
 			GCS: &namespace.GCSExportSinkParams{
 				SaID:         "new-sa@project.iam.gserviceaccount.com",
 				BucketName:   "my-bucket",
@@ -460,8 +460,8 @@ func TestClient_UpdateExportSink_GCS_GetSinkError(t *testing.T) {
 
 	_, err := client.UpdateExportSink(ctx, namespace.UpdateExportSinkParams{
 		Namespace: "test-ns",
-		SinkName:  "my-sink",
 		Sink: namespace.ExportSinkParams{
+			SinkName: "my-sink",
 			GCS: &namespace.GCSExportSinkParams{
 				SaID:         "sa@project.iam.gserviceaccount.com",
 				BucketName:   "my-bucket",
@@ -496,8 +496,8 @@ func TestClient_ValidateExportSink_GCS_Success(t *testing.T) {
 
 	err := client.ValidateExportSink(ctx, namespace.ValidateExportSinkParams{
 		Namespace: "test-ns",
-		SinkName:  "my-sink",
 		Sink: namespace.ExportSinkParams{
+			SinkName: "my-sink",
 			GCS: &namespace.GCSExportSinkParams{
 				SaID:         "sa@project.iam.gserviceaccount.com",
 				BucketName:   "my-bucket",

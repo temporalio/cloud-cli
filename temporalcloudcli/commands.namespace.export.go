@@ -134,8 +134,8 @@ func (c *CloudNamespaceExportS3CreateCommand) run(cctx *CommandContext, _ []stri
 	createExportSink := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.SinkName, c.ClientOptions, namespaceClient.CreateExportSink)
 	return createExportSink(namespace.CreateExportSinkParams{
 		Namespace: c.Namespace,
-		SinkName:  c.SinkName,
 		Sink: namespace.ExportSinkParams{
+			SinkName: c.SinkName,
 			S3: &namespace.S3ExportSinkParams{
 				RoleName:     c.RoleName,
 				BucketName:   c.BucketName,
@@ -157,8 +157,8 @@ func (c *CloudNamespaceExportS3UpdateCommand) run(cctx *CommandContext, _ []stri
 	updateExportSink := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.SinkName, c.ClientOptions, namespaceClient.UpdateExportSink)
 	return updateExportSink(namespace.UpdateExportSinkParams{
 		Namespace: c.Namespace,
-		SinkName:  c.SinkName,
 		Sink: namespace.ExportSinkParams{
+			SinkName: c.SinkName,
 			S3: &namespace.S3ExportSinkParams{
 				RoleName:     c.RoleName,
 				BucketName:   c.BucketName,
@@ -180,8 +180,8 @@ func (c *CloudNamespaceExportS3ValidateCommand) run(cctx *CommandContext, _ []st
 
 	if err := namespaceClient.ValidateExportSink(cctx.Context, namespace.ValidateExportSinkParams{
 		Namespace: c.Namespace,
-		SinkName:  c.SinkName,
 		Sink: namespace.ExportSinkParams{
+			SinkName: c.SinkName,
 			S3: &namespace.S3ExportSinkParams{
 				RoleName:     c.RoleName,
 				BucketName:   c.BucketName,
@@ -209,8 +209,8 @@ func (c *CloudNamespaceExportGcsCreateCommand) run(cctx *CommandContext, _ []str
 	createExportSink := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.SinkName, c.ClientOptions, namespaceClient.CreateExportSink)
 	return createExportSink(namespace.CreateExportSinkParams{
 		Namespace: c.Namespace,
-		SinkName:  c.SinkName,
 		Sink: namespace.ExportSinkParams{
+			SinkName: c.SinkName,
 			GCS: &namespace.GCSExportSinkParams{
 				SaID:         c.SaId,
 				BucketName:   c.BucketName,
@@ -231,8 +231,8 @@ func (c *CloudNamespaceExportGcsUpdateCommand) run(cctx *CommandContext, _ []str
 	updateExportSink := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.SinkName, c.ClientOptions, namespaceClient.UpdateExportSink)
 	return updateExportSink(namespace.UpdateExportSinkParams{
 		Namespace: c.Namespace,
-		SinkName:  c.SinkName,
 		Sink: namespace.ExportSinkParams{
+			SinkName: c.SinkName,
 			GCS: &namespace.GCSExportSinkParams{
 				SaID:         c.SaId,
 				BucketName:   c.BucketName,
@@ -253,8 +253,8 @@ func (c *CloudNamespaceExportGcsValidateCommand) run(cctx *CommandContext, _ []s
 
 	if err := namespaceClient.ValidateExportSink(cctx.Context, namespace.ValidateExportSinkParams{
 		Namespace: c.Namespace,
-		SinkName:  c.SinkName,
 		Sink: namespace.ExportSinkParams{
+			SinkName: c.SinkName,
 			GCS: &namespace.GCSExportSinkParams{
 				SaID:         c.SaId,
 				BucketName:   c.BucketName,
