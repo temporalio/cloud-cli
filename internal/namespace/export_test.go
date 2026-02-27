@@ -618,18 +618,63 @@ func TestClient_DisableExportSink_Success(t *testing.T) {
 	assert.Equal(t, expectedOp, op)
 }
 
-func TestClient_DeleteExportSink_Success(t *testing.T) {
+func TestClient_DeleteExportSink_AutoFetchResourceVersion(t *testing.T) {
 	ctx := context.Background()
 	mockCloud := nsmock.NewMockCloudService(t)
 	client := &namespace.Client{Cloud: mockCloud}
 
+	existingSink := &namespacev1.ExportSink{
+		Name:            "my-sink",
+		ResourceVersion: "v1",
+	}
 	expectedOp := &operationv1.AsyncOperation{Id: "op-1"}
+
+	mockCloud.EXPECT().
+		GetNamespaceExportSink(ctx, &cloudservice.GetNamespaceExportSinkRequest{
+			Namespace: "test-ns",
+			Name:      "my-sink",
+		}).
+		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: existingSink}, nil)
+
+	mockCloud.EXPECT().
+		DeleteNamespaceExportSink(ctx, &cloudservice.DeleteNamespaceExportSinkRequest{
+			Namespace:       "test-ns",
+			Name:            "my-sink",
+			ResourceVersion: "v1",
+		}).
+		Return(&cloudservice.DeleteNamespaceExportSinkResponse{AsyncOperation: expectedOp}, nil)
+
+	op, err := client.DeleteExportSink(ctx, namespace.DeleteExportSinkParams{
+		Namespace: "test-ns",
+		SinkName:  "my-sink",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, expectedOp, op)
+}
+
+func TestClient_DeleteExportSink_CustomResourceVersion(t *testing.T) {
+	ctx := context.Background()
+	mockCloud := nsmock.NewMockCloudService(t)
+	client := &namespace.Client{Cloud: mockCloud}
+
+	existingSink := &namespacev1.ExportSink{
+		Name:            "my-sink",
+		ResourceVersion: "v1",
+	}
+	expectedOp := &operationv1.AsyncOperation{Id: "op-1"}
+
+	mockCloud.EXPECT().
+		GetNamespaceExportSink(ctx, &cloudservice.GetNamespaceExportSinkRequest{
+			Namespace: "test-ns",
+			Name:      "my-sink",
+		}).
+		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: existingSink}, nil)
 
 	mockCloud.EXPECT().
 		DeleteNamespaceExportSink(ctx, &cloudservice.DeleteNamespaceExportSinkRequest{
 			Namespace:        "test-ns",
 			Name:             "my-sink",
-			ResourceVersion:  "v1",
+			ResourceVersion:  "v2",
 			AsyncOperationId: "my-op-id",
 		}).
 		Return(&cloudservice.DeleteNamespaceExportSinkResponse{AsyncOperation: expectedOp}, nil)
@@ -637,24 +682,24 @@ func TestClient_DeleteExportSink_Success(t *testing.T) {
 	op, err := client.DeleteExportSink(ctx, namespace.DeleteExportSinkParams{
 		Namespace:        "test-ns",
 		SinkName:         "my-sink",
-		ResourceVersion:  "v1",
+		ResourceVersion:  "v2",
 		AsyncOperationID: "my-op-id",
 	})
 	require.NoError(t, err)
 	assert.Equal(t, expectedOp, op)
 }
 
-func TestClient_DeleteExportSink_Error(t *testing.T) {
+func TestClient_DeleteExportSink_GetSinkError(t *testing.T) {
 	ctx := context.Background()
 	mockCloud := nsmock.NewMockCloudService(t)
 	client := &namespace.Client{Cloud: mockCloud}
 
 	mockCloud.EXPECT().
-		DeleteNamespaceExportSink(ctx, &cloudservice.DeleteNamespaceExportSinkRequest{
+		GetNamespaceExportSink(ctx, &cloudservice.GetNamespaceExportSinkRequest{
 			Namespace: "test-ns",
 			Name:      "my-sink",
 		}).
-		Return(nil, errors.New("delete failed"))
+		Return(nil, errors.New("not found"))
 
 	_, err := client.DeleteExportSink(ctx, namespace.DeleteExportSinkParams{
 		Namespace: "test-ns",

@@ -255,10 +255,20 @@ func (c *Client) DisableExportSink(ctx context.Context, params DisableExportSink
 
 // DeleteExportSink deletes an export sink from the specified namespace.
 func (c *Client) DeleteExportSink(ctx context.Context, params DeleteExportSinkParams) (*operation.AsyncOperation, error) {
+	sink, err := c.GetExportSink(ctx, params.Namespace, params.SinkName)
+	if err != nil {
+		return nil, err
+	}
+
+	resourceVersion := sink.ResourceVersion
+	if params.ResourceVersion != "" {
+		resourceVersion = params.ResourceVersion
+	}
+
 	res, err := c.Cloud.DeleteNamespaceExportSink(ctx, &cloudservice.DeleteNamespaceExportSinkRequest{
 		Namespace:        params.Namespace,
 		Name:             params.SinkName,
-		ResourceVersion:  params.ResourceVersion,
+		ResourceVersion:  resourceVersion,
 		AsyncOperationId: params.AsyncOperationID,
 	})
 	if err != nil {

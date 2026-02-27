@@ -23,11 +23,9 @@ func (c *CloudNamespaceExportGetCommand) run(cctx *CommandContext, _ []string) e
 
 	result := struct {
 		Namespace string
-		Name      string
 		Spec      *namespacev1.ExportSinkSpec
 	}{
 		Namespace: c.Namespace,
-		Name:      sink.Name,
 		Spec:      sink.Spec,
 	}
 	return cctx.Printer.PrintResource(result, printer.PrintResourceOptions{})
@@ -51,7 +49,8 @@ func (c *CloudNamespaceExportListCommand) run(cctx *CommandContext, _ []string) 
 			Sinks: sinks,
 		},
 		printer.PrintResourceOptions{
-			Fields: []string{"Name", "State"},
+			Fields:     []string{"Name", "State"},
+			SpecFields: []string{"Enabled"},
 		},
 		printer.TableOptions{},
 	)
