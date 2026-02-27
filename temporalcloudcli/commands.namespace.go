@@ -1,7 +1,10 @@
 package temporalcloudcli
 
 import (
+	"encoding/base64"
 	"fmt"
+	"os"
+	"strings"
 
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
@@ -301,6 +304,125 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 		},
 		printer.TableOptions{},
 	)
+}
+
+func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) error {
+	// Validate mutual exclusions
+	if c.CaCertificate != "" && c.CaCertificateFile != "" {
+		return fmt.Errorf("cannot specify both --ca-certificate and --ca-certificate-file")
+	}
+	if c.CertificateFilter != "" && c.CertificateFilterFile != "" {
+		return fmt.Errorf("cannot specify both --certificate-filter and --certificate-filter-file")
+	}
+
+	spec := &namespacev1.NamespaceSpec{
+		Name:          c.Name,
+		Regions:       c.Region,
+		RetentionDays: int32(c.RetentionDays),
+		ApiKeyAuth:    &namespacev1.ApiKeyAuthSpec{Enabled: c.ApiKeyAuthEnabled},
+		Lifecycle:     &namespacev1.LifecycleSpec{EnableDeleteProtection: c.EnableDeleteProtection},
+	}
+
+	// Build MtlsAuth spec if any cert flags are provided
+	if c.CaCertificate != "" || c.CaCertificateFile != "" || c.CertificateFilter != "" || c.CertificateFilterFile != "" {
+		spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
+	}
+
+	// Handle CA certificate
+	if c.CaCertificateFile != "" {
+		certData, err := os.ReadFile(c.CaCertificateFile)
+		if err != nil {
+			return fmt.Errorf("failed to read CA certificate file: %w", err)
+		}
+		spec.MtlsAuth.AcceptedClientCa = certData
+	} else if c.CaCertificate != "" {
+		certData, err := base64.StdEncoding.DecodeString(c.CaCertificate)
+		if err != nil {
+			return fmt.Errorf("invalid base64 encoded CA certificate: %w", err)
+		}
+		spec.MtlsAuth.AcceptedClientCa = certData
+	}
+
+	// Handle certificate filter
+	if c.CertificateFilter != "" || c.CertificateFilterFile != "" {
+		filterSrc := c.CertificateFilter
+		if c.CertificateFilterFile != "" {
+			filterSrc = "@" + c.CertificateFilterFile
+		}
+		filterData, err := loadJSONSpec(filterSrc)
+		if err != nil {
+			return err
+		}
+		filter := &namespacev1.CertificateFilterSpec{}
+		if err := cctx.UnmarshalProtoJSON(filterData, filter); err != nil {
+			return fmt.Errorf("failed to parse certificate filter: %w", err)
+		}
+		spec.MtlsAuth.CertificateFilters = append(spec.MtlsAuth.CertificateFilters, filter)
+	}
+
+	// Handle codec server
+	if c.CodecEndpoint != "" {
+		spec.CodecServer = &namespacev1.CodecServerSpec{
+			Endpoint:                      c.CodecEndpoint,
+			PassAccessToken:               c.CodecPassAccessToken,
+			IncludeCrossOriginCredentials: c.CodecIncludeCrossOriginCredentials,
+		}
+	}
+
+	// Handle search attributes
+	if len(c.SearchAttribute) > 0 {
+		spec.SearchAttributes = make(map[string]namespacev1.NamespaceSpec_SearchAttributeType, len(c.SearchAttribute))
+		for _, sa := range c.SearchAttribute {
+			name, typStr, ok := strings.Cut(sa, "=")
+			if !ok {
+				return fmt.Errorf("invalid search attribute format %q: expected 'name=Type'", sa)
+			}
+			attrType, err := parseSearchAttributeType(typStr)
+			if err != nil {
+				return err
+			}
+			spec.SearchAttributes[name] = attrType
+		}
+	}
+
+	// Handle connectivity rules
+	spec.ConnectivityRuleIds = c.ConnectionRuleId
+
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	client := newNamespaceClient(withCloudClient(cloudClient))
+
+	yes, err := cctx.promptYes("Create (y/yes)?", cctx.RootCommand.AutoConfirm)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return fmt.Errorf("Aborting create.")
+	}
+
+	res, err := client.createNamespace(cctx.Context, createNamespaceParams{
+		spec:             spec,
+		asyncOperationID: c.AsyncOperationId,
+	})
+	if err != nil {
+		return err
+	}
+
+	if c.Async {
+		return cctx.Printer.PrintStructured(MutationResult{
+			AsyncOp: res.asyncOp,
+			ID:      res.Namespace,
+		}, printer.StructuredOptions{})
+	}
+
+	poller, err := getPoller(cctx, c.ClientOptions)
+	if err != nil {
+		return err
+	}
+
+	return poller.PollAsyncOperation(cctx, res.asyncOp.Id, res.Namespace)
 }
 
 func getNamespaceClient(cctx *CommandContext, opts ClientOptions) (NamespaceClient, error) {
