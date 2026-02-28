@@ -74,7 +74,7 @@ func (c *CloudNamespaceCertCaDeleteCommand) run(cctx *CommandContext, _ []string
 	})
 }
 
-// readCACertBytes reads raw PEM bytes when cert flags are optional.
+// readCACertBytes reads raw PEM bytes.
 // Returns nil (no error) if neither flag is provided.
 // Returns an error if both flags are provided.
 func readCACertBytes(opts CaCertificateOptions) ([]byte, error) {
