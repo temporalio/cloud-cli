@@ -46,6 +46,10 @@ func (s *SharedServerSuite) TestNamespaceCreate() {
 		"--region", "aws-us-east-1",
 		"--retention-days", "30",
 		"--api-key-auth-enabled",
+		"--search-attribute", "MyText=Text",
+		"--search-attribute", "MyKeyword=Keyword",
+		"--certificate-filter", `{"commonName":"test.temporal.io","organization":"Temporal"}`,
+		"--certificate-filter", `{"subjectAlternativeName":"*.temporal.io"}`,
 		"-o=json",
 	)
 	s.Suite.Require().NoError(res.Err)
@@ -76,6 +80,15 @@ func (s *SharedServerSuite) TestNamespaceCreate() {
 	s.Suite.Equal(int32(30), gotSpec.RetentionDays)
 	s.Suite.Require().NotNil(gotSpec.ApiKeyAuth)
 	s.Suite.True(gotSpec.ApiKeyAuth.Enabled)
+
+	s.Suite.Equal(namespace.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_TEXT, gotSpec.SearchAttributes["MyText"])
+	s.Suite.Equal(namespace.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_KEYWORD, gotSpec.SearchAttributes["MyKeyword"])
+
+	s.Suite.Require().NotNil(gotSpec.MtlsAuth)
+	s.Suite.Require().Len(gotSpec.MtlsAuth.CertificateFilters, 2)
+	s.Suite.Equal("test.temporal.io", gotSpec.MtlsAuth.CertificateFilters[0].CommonName)
+	s.Suite.Equal("Temporal", gotSpec.MtlsAuth.CertificateFilters[0].Organization)
+	s.Suite.Equal("*.temporal.io", gotSpec.MtlsAuth.CertificateFilters[1].SubjectAlternativeName)
 }
 
 func (s *SharedServerSuite) testnamespaceCRUD() {

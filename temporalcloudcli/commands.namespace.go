@@ -325,16 +325,16 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		spec.MtlsAuth.AcceptedClientCa = certBytes
 	}
 
-	// Handle certificate filter
-	certFilter, err := loadCertFilter(cctx, c.CertificateFilterOptions)
+	// Handle certificate filters
+	certFilters, err := loadCertFilters(cctx, c.CertificateFilterOptions)
 	if err != nil {
 		return err
 	}
-	if certFilter != nil {
+	if len(certFilters) > 0 {
 		if spec.MtlsAuth == nil {
 			spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
 		}
-		spec.MtlsAuth.CertificateFilters = append(spec.MtlsAuth.CertificateFilters, certFilter)
+		spec.MtlsAuth.CertificateFilters = append(spec.MtlsAuth.CertificateFilters, certFilters...)
 	}
 
 	// Handle codec server
@@ -378,7 +378,7 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		return fmt.Errorf("Aborting create.")
 	}
 
-	asyncOp, err := namespaceClient.CreateNamespace(cctx.Context, namespace.CreateNamespaceParams{
+	res, err := namespaceClient.CreateNamespace(cctx.Context, namespace.CreateNamespaceParams{
 		Spec:             spec,
 		AsyncOperationID: c.AsyncOperationId,
 	})
@@ -388,8 +388,8 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 
 	if c.Async {
 		return cctx.Printer.PrintStructured(MutationResult{
-			AsyncOp: asyncOp,
-			ID:      c.Name,
+			AsyncOp: res.AsyncOp,
+			ID:      res.NamespaceID,
 		}, printer.StructuredOptions{})
 	}
 
@@ -398,7 +398,7 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		return err
 	}
 
-	return poller.PollAsyncOperation(cctx, asyncOp.Id, c.Name)
+	return poller.PollAsyncOperation(cctx, res.AsyncOp.Id, res.NamespaceID)
 }
 
 func getNamespaceClient(cctx *CommandContext, opts ClientOptions) (NamespaceClient, error) {

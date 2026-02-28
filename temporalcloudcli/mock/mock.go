@@ -248,24 +248,22 @@ func (_c *MockNamespaceClient_AddRegion_Call) RunAndReturn(run func(context1 con
 }
 
 // CreateNamespace provides a mock function for the type MockNamespaceClient
-func (_mock *MockNamespaceClient) CreateNamespace(context1 context.Context, createNamespaceParams namespace.CreateNamespaceParams) (*operation.AsyncOperation, error) {
+func (_mock *MockNamespaceClient) CreateNamespace(context1 context.Context, createNamespaceParams namespace.CreateNamespaceParams) (namespace.CreateNamespaceResult, error) {
 	ret := _mock.Called(context1, createNamespaceParams)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateNamespace")
 	}
 
-	var r0 *operation.AsyncOperation
+	var r0 namespace.CreateNamespaceResult
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.CreateNamespaceParams) (*operation.AsyncOperation, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.CreateNamespaceParams) (namespace.CreateNamespaceResult, error)); ok {
 		return returnFunc(context1, createNamespaceParams)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.CreateNamespaceParams) *operation.AsyncOperation); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.CreateNamespaceParams) namespace.CreateNamespaceResult); ok {
 		r0 = returnFunc(context1, createNamespaceParams)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*operation.AsyncOperation)
-		}
+		r0 = ret.Get(0).(namespace.CreateNamespaceResult)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.CreateNamespaceParams) error); ok {
 		r1 = returnFunc(context1, createNamespaceParams)
@@ -305,12 +303,12 @@ func (_c *MockNamespaceClient_CreateNamespace_Call) Run(run func(context1 contex
 	return _c
 }
 
-func (_c *MockNamespaceClient_CreateNamespace_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_CreateNamespace_Call {
-	_c.Call.Return(asyncOperation, err)
+func (_c *MockNamespaceClient_CreateNamespace_Call) Return(createNamespaceResult namespace.CreateNamespaceResult, err error) *MockNamespaceClient_CreateNamespace_Call {
+	_c.Call.Return(createNamespaceResult, err)
 	return _c
 }
 
-func (_c *MockNamespaceClient_CreateNamespace_Call) RunAndReturn(run func(context1 context.Context, createNamespaceParams namespace.CreateNamespaceParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_CreateNamespace_Call {
+func (_c *MockNamespaceClient_CreateNamespace_Call) RunAndReturn(run func(context1 context.Context, createNamespaceParams namespace.CreateNamespaceParams) (namespace.CreateNamespaceResult, error)) *MockNamespaceClient_CreateNamespace_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -113,15 +113,15 @@ func (v *CaCertificateOptions) BuildFlags(f *pflag.FlagSet) {
 }
 
 type CertificateFilterOptions struct {
-	CertificateFilter     string
+	CertificateFilter     []string
 	CertificateFilterFile string
 	FlagSet               *pflag.FlagSet
 }
 
 func (v *CertificateFilterOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.StringVar(&v.CertificateFilter, "certificate-filter", "", "Certificate filter as a JSON object (e.g. '{\"commonName\":\"foo\"}'). Mutually exclusive with --certificate-filter-file.")
-	f.StringVar(&v.CertificateFilterFile, "certificate-filter-file", "", "Path to a JSON file containing a certificate filter object. Mutually exclusive with --certificate-filter.")
+	f.StringArrayVar(&v.CertificateFilter, "certificate-filter", nil, "Certificate filter as a JSON object (e.g. '{\"commonName\":\"foo\"}'). Repeat to add multiple.")
+	f.StringVar(&v.CertificateFilterFile, "certificate-filter-file", "", "Path to a JSON file containing a certificate filter object.")
 }
 
 type CloudCommand struct {

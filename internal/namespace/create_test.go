@@ -23,16 +23,18 @@ func TestClient_CreateNamespace_Success(t *testing.T) {
 		Spec:             &namespacev1.NamespaceSpec{Name: "my-ns"},
 	}).Return(
 		&cloudservice.CreateNamespaceResponse{
+			Namespace:      "my-ns.account123",
 			AsyncOperation: &operation.AsyncOperation{Id: "op-123"},
 		}, nil,
 	)
 
-	asyncOp, err := client.CreateNamespace(context.Background(), namespace.CreateNamespaceParams{
+	result, err := client.CreateNamespace(context.Background(), namespace.CreateNamespaceParams{
 		Spec:             &namespacev1.NamespaceSpec{Name: "my-ns"},
 		AsyncOperationID: "op-123",
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "op-123", asyncOp.Id)
+	assert.Equal(t, "my-ns.account123", result.NamespaceID)
+	assert.Equal(t, "op-123", result.AsyncOp.Id)
 }
 
 func TestClient_CreateNamespace_Error(t *testing.T) {

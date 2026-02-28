@@ -1562,12 +1562,10 @@ option-sets:
   - name: certificate-filter
     options:
       - name: certificate-filter
-        type: string
+        type: string[]
         description: |
-          Certificate filter as a JSON object (e.g. '{"commonName":"foo"}').
-          Mutually exclusive with --certificate-filter-file.
+          Certificate filter as a JSON object (e.g. '{"commonName":"foo"}'). Repeat to add multiple.
       - name: certificate-filter-file
         type: string
         description: |
           Path to a JSON file containing a certificate filter object.
-          Mutually exclusive with --certificate-filter.

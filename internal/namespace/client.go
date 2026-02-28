@@ -71,15 +71,28 @@ type CreateNamespaceParams struct {
 	AsyncOperationID string
 }
 
-func (c *Client) CreateNamespace(ctx context.Context, params CreateNamespaceParams) (*operation.AsyncOperation, error) {
+type CreateNamespaceResult struct {
+	// NamespaceID is the server-assigned full namespace identifier (e.g. "name.accountId").
+	// AIDEV-NOTE: Unlike update/delete, create gets its resource ID from the server response,
+	// not from the caller — which is why wrapAsyncOperation cannot be used directly here.
+	// TODO: Refactor wrapAsyncOperation to return a MutationResult with a populated ID so
+	// that create commands can use the same wrapper as other mutation commands.
+	NamespaceID string
+	AsyncOp     *operation.AsyncOperation
+}
+
+func (c *Client) CreateNamespace(ctx context.Context, params CreateNamespaceParams) (CreateNamespaceResult, error) {
 	res, err := c.Cloud.CreateNamespace(ctx, &cloudservice.CreateNamespaceRequest{
 		AsyncOperationId: params.AsyncOperationID,
 		Spec:             params.Spec,
 	})
 	if err != nil {
-		return nil, err
+		return CreateNamespaceResult{}, err
 	}
-	return res.GetAsyncOperation(), nil
+	return CreateNamespaceResult{
+		NamespaceID: res.GetNamespace(),
+		AsyncOp:     res.GetAsyncOperation(),
+	}, nil
 }
 
 type UpdateNamespaceParams struct {
