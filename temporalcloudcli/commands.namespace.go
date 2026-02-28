@@ -6,6 +6,8 @@ import (
 
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/temporalio/cloud-cli/internal/namespace"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
@@ -383,6 +385,11 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		AsyncOperationID: c.AsyncOperationId,
 	})
 	if err != nil {
+		if c.Idempotent {
+			if s, ok := status.FromError(err); ok && s.Code() == codes.AlreadyExists {
+				return cctx.Printer.PrintStructured(newUnchangedResult(c.Name), printer.StructuredOptions{})
+			}
+		}
 		return err
 	}
 
