@@ -387,7 +387,8 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 	if err != nil {
 		if c.Idempotent {
 			if s, ok := status.FromError(err); ok && s.Code() == codes.AlreadyExists {
-				return cctx.Printer.PrintStructured(newUnchangedResult(c.Name), printer.StructuredOptions{})
+				cctx.Printer.Println(fmt.Sprintf("namespace %q already exists", c.Name))
+				return nil
 			}
 		}
 		return err
