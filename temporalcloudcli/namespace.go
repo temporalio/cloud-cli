@@ -47,25 +47,6 @@ func (c *namespaceClient) getNamespace(ctx context.Context, namespace string) (*
 	return res.Namespace, nil
 }
 
-type getNamespacesParams struct {
-	pageSize  int32
-	pageToken string
-	name      string // optional, if set, will filter by name
-}
-
-func (c *namespaceClient) getNamespaces(ctx context.Context, params getNamespacesParams) ([]*namespace.Namespace, string, error) {
-	res, err := c.client.CloudService().GetNamespaces(ctx, &cloudservice.GetNamespacesRequest{
-		PageSize:  params.pageSize,
-		PageToken: params.pageToken,
-		Name:      params.name,
-	})
-	if err != nil {
-		return nil, "", err
-	}
-
-	return res.Namespaces, res.NextPageToken, nil
-}
-
 type updateNamespaceParams struct {
 	namespace string
 	spec      *namespace.NamespaceSpec
