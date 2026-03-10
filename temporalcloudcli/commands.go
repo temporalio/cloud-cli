@@ -21,6 +21,7 @@ import (
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/temporalproto"
+	"go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	"go.temporal.io/cloud-sdk/api/operation/v1"
 	"go.temporal.io/cloud-sdk/api/resource/v1"
 	"go.temporal.io/cloud-sdk/cloudclient"
@@ -61,6 +62,7 @@ type CommandContext struct {
 	RootCommand    *CloudCommand
 	CurrentCommand *cobra.Command
 
+	CloudClient     cloudservice.CloudServiceClient
 	NamespaceClient NamespaceClient
 	Poller          Poller
 }
@@ -69,20 +71,29 @@ type NamespaceClient interface {
 	AddCACerts(context.Context, namespace.AddCACertsParams) (*operation.AsyncOperation, error)
 	ListCACerts(context.Context, string) ([]cert.CACert, error)
 	DeleteCACerts(context.Context, namespace.DeleteCACertsParams) (*operation.AsyncOperation, error)
+
 	AddCertFilters(context.Context, namespace.AddCertFiltersParams) (*operation.AsyncOperation, error)
 	ListCertFilters(context.Context, string) ([]*namespacev1.CertificateFilterSpec, error)
 	DeleteCertFilters(context.Context, namespace.DeleteCertFiltersParams) (*operation.AsyncOperation, error)
+
 	ListSearchAttributes(context.Context, string) ([]namespace.SearchAttribute, error)
 	CreateSearchAttribute(context.Context, namespace.CreateSearchAttributeParams) (*operation.AsyncOperation, error)
 	RenameSearchAttribute(context.Context, namespace.RenameSearchAttributeParams) (*operation.AsyncOperation, error)
+
 	ListTags(context.Context, string) ([]namespace.Tag, error)
 	SetTag(context.Context, namespace.SetTagParams) (*operation.AsyncOperation, error)
 	DeleteTags(context.Context, namespace.DeleteTagsParams) (*operation.AsyncOperation, error)
+
 	GetNamespace(context.Context, string) (*namespacev1.Namespace, error)
+	DeleteNamespace(context.Context, namespace.DeleteNamespaceParams) (*operation.AsyncOperation, error)
 	UpdateNamespace(context.Context, namespace.UpdateNamespaceParams) (*operation.AsyncOperation, error)
+	UpsertNamespace(context.Context, namespace.UpsertNamespaceParams) (*operation.AsyncOperation, error)
+	ListNamespaces(context.Context, string, string, int32) ([]*namespacev1.Namespace, string, error)
+
 	GetCodecServer(context.Context, string) (*namespacev1.CodecServerSpec, error)
 	SetCodec(context.Context, namespace.SetCodecParams) (*operation.AsyncOperation, error)
 	DeleteCodec(context.Context, namespace.DeleteCodecParams) (*operation.AsyncOperation, error)
+
 	ListRegions(context.Context, string) ([]namespace.RegionStatus, error)
 	UpdateHA(context.Context, namespace.UpdateHAParams) (*operation.AsyncOperation, error)
 	AddRegion(context.Context, namespace.AddRegionParams) (*operation.AsyncOperation, error)

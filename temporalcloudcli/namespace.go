@@ -8,8 +8,6 @@ import (
 	namespace "go.temporal.io/cloud-sdk/api/namespace/v1"
 	"go.temporal.io/cloud-sdk/api/operation/v1"
 	"go.temporal.io/cloud-sdk/cloudclient"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type namespaceClient struct {
@@ -92,103 +90,4 @@ func (c *namespaceClient) updateNamespace(ctx context.Context, params updateName
 	}
 
 	return res.AsyncOperation, nil
-}
-
-type createNamespaceParams struct {
-	spec *namespace.NamespaceSpec
-
-	asyncOperationID string
-}
-
-type createNamespaceResponse struct {
-	asyncOp   *operation.AsyncOperation
-	Namespace string
-}
-
-func (c *namespaceClient) createNamespace(ctx context.Context, params createNamespaceParams) (createNamespaceResponse, error) {
-	res, err := c.client.CloudService().CreateNamespace(ctx, &cloudservice.CreateNamespaceRequest{
-		AsyncOperationId: params.asyncOperationID,
-		Spec:             params.spec,
-	})
-	if err != nil {
-		return createNamespaceResponse{}, err
-	}
-
-	return createNamespaceResponse{
-		asyncOp:   res.GetAsyncOperation(),
-		Namespace: res.GetNamespace(),
-	}, nil
-}
-
-type deleteNamespaceParams struct {
-	namespace string
-
-	resourceVersion  string // optional, if empty, will be fetched
-	asyncOperationID string
-	idempotent       bool
-}
-
-func (c *namespaceClient) deleteNamespace(ctx context.Context, params deleteNamespaceParams) (*operation.AsyncOperation, error) {
-	// get the namespace to get its resource version
-	ns, err := c.getNamespace(ctx, params.namespace)
-	if err != nil {
-		if isNotFoundErr(err) && params.idempotent {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	if params.resourceVersion == "" {
-		params.resourceVersion = ns.ResourceVersion
-	}
-
-	res, err := c.client.CloudService().DeleteNamespace(ctx, &cloudservice.DeleteNamespaceRequest{
-		AsyncOperationId: params.asyncOperationID,
-		Namespace:        params.namespace,
-		ResourceVersion:  params.resourceVersion,
-	})
-	if err != nil {
-		if isNotFoundErr(err) && params.idempotent {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return res.AsyncOperation, nil
-}
-
-func (c *namespaceClient) getNamespaceByName(ctx context.Context, name string) (*namespace.Namespace, error) {
-	namespaces, err := c.listNamespacesWithName(ctx, name, true)
-	if err != nil {
-		return nil, err
-	} else if len(namespaces) > 1 {
-		return nil, fmt.Errorf("multiple namespaces match namespace name: %s", name)
-	} else if len(namespaces) == 0 {
-		return nil, status.Errorf(codes.NotFound, "namespace not found")
-	}
-	return namespaces[0], nil
-}
-
-func (c *namespaceClient) listNamespacesWithName(ctx context.Context, name string, shortCircuit bool) ([]*namespace.Namespace, error) {
-	namespaces := []*namespace.Namespace{}
-	pageToken := ""
-	for {
-		res, err := c.client.CloudService().GetNamespaces(ctx, &cloudservice.GetNamespacesRequest{
-			Name:      name,
-			PageToken: pageToken,
-		})
-		if err != nil {
-			return nil, err
-		}
-		namespaces = append(namespaces, res.Namespaces...)
-		if shortCircuit {
-			return namespaces, nil
-		}
-		// Check if we should continue paging
-		pageToken = res.NextPageToken
-		if len(pageToken) == 0 {
-			break
-		}
-	}
-	return namespaces, nil
 }
