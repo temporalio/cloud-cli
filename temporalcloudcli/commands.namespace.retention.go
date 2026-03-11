@@ -64,16 +64,12 @@ func SetRetention(ctx context.Context, params SetRetentionParams) error {
 		rv = params.ResourceVersion
 	}
 
-	updateRes, updateErr := params.Cloud.UpdateNamespace(ctx, &cloudservice.UpdateNamespaceRequest{
+	return runAsyncOpration(params.Cloud.UpdateNamespace, params.OperationHandler)(ctx, &cloudservice.UpdateNamespaceRequest{
 		Namespace:        params.Namespace,
 		Spec:             newSpec,
 		ResourceVersion:  rv,
 		AsyncOperationId: params.AsyncOperationID,
 	})
-	if updateErr != nil {
-		return params.OperationHandler.HandleErr(updateErr)
-	}
-	return params.OperationHandler.Handle(updateRes.AsyncOperation)
 }
 
 func (c *CloudNamespaceRetentionGetCommand) run(cctx *CommandContext, _ []string) error {

@@ -12,6 +12,7 @@ import (
 
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -324,12 +325,30 @@ func wrapAsyncOperation[P any](
 	clientOpts ClientOptions,
 	fn func(context.Context, P) (*operation.AsyncOperation, error),
 ) func(P) error {
-	runner := NewAsyncOperationHandler(cctx, asyncOpts, resourceID, clientOpts)
+	handler := NewAsyncOperationHandler(cctx, asyncOpts, resourceID, clientOpts)
 	return func(params P) error {
 		op, err := fn(cctx.Context, params)
 		if err != nil {
-			return runner.HandleErr(err)
+			return handler.HandleErr(err)
 		}
-		return runner.Handle(op)
+		return handler.Handle(op)
 	}
+}
+
+func runAsyncOpration[Req any, Res AsyncOperationResponse](
+	fn func(context.Context, Req, ...grpc.CallOption) (Res, error),
+	handler AsyncOperationHandler,
+) func(context.Context, Req) error {
+	return func(ctx context.Context, params Req) error {
+		res, err := fn(ctx, params)
+		if err != nil {
+			return handler.HandleErr(err)
+		}
+
+		return handler.Handle(res.GetAsyncOperation())
+	}
+}
+
+type AsyncOperationResponse interface {
+	GetAsyncOperation() *operation.AsyncOperation
 }
