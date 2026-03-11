@@ -88,7 +88,7 @@ type NamespaceClient interface {
 	DeleteNamespace(context.Context, namespace.DeleteNamespaceParams) (*operation.AsyncOperation, error)
 	UpdateNamespace(context.Context, namespace.UpdateNamespaceParams) (*operation.AsyncOperation, error)
 	UpsertNamespace(context.Context, namespace.UpsertNamespaceParams) (*operation.AsyncOperation, error)
-	ListNamespaces(context.Context, string, string, int32) ([]*namespacev1.Namespace, string, error)
+	GetNamespaces(context.Context, namespace.GetNamespacesParams) ([]*namespacev1.Namespace, string, error)
 
 	GetCodecServer(context.Context, string) (*namespacev1.CodecServerSpec, error)
 	SetCodec(context.Context, namespace.SetCodecParams) (*operation.AsyncOperation, error)

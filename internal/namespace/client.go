@@ -148,15 +148,3 @@ func (c *Client) DeleteNamespace(ctx context.Context, params DeleteNamespacePara
 	return deleteRes.AsyncOperation, nil
 }
 
-func (c *Client) ListNamespaces(ctx context.Context, name, pageToken string, pageSize int32) ([]*namespacev1.Namespace, string, error) {
-	res, err := c.Cloud.GetNamespaces(ctx, &cloudservice.GetNamespacesRequest{
-		PageSize:  pageSize,
-		PageToken: pageToken,
-		Name:      name,
-	})
-	if err != nil {
-		return nil, "", err
-	}
-
-	return res.Namespaces, res.NextPageToken, nil
-}

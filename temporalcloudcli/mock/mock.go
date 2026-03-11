@@ -518,6 +518,74 @@ func (_c *MockNamespaceClient_DeleteCodec_Call) RunAndReturn(run func(context1 c
 	return _c
 }
 
+// DeleteNamespace provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) DeleteNamespace(context1 context.Context, deleteNamespaceParams namespace.DeleteNamespaceParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, deleteNamespaceParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteNamespace")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.DeleteNamespaceParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, deleteNamespaceParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.DeleteNamespaceParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, deleteNamespaceParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.DeleteNamespaceParams) error); ok {
+		r1 = returnFunc(context1, deleteNamespaceParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_DeleteNamespace_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteNamespace'
+type MockNamespaceClient_DeleteNamespace_Call struct {
+	*mock.Call
+}
+
+// DeleteNamespace is a helper method to define mock.On call
+//   - context1 context.Context
+//   - deleteNamespaceParams namespace.DeleteNamespaceParams
+func (_e *MockNamespaceClient_Expecter) DeleteNamespace(context1 interface{}, deleteNamespaceParams interface{}) *MockNamespaceClient_DeleteNamespace_Call {
+	return &MockNamespaceClient_DeleteNamespace_Call{Call: _e.mock.On("DeleteNamespace", context1, deleteNamespaceParams)}
+}
+
+func (_c *MockNamespaceClient_DeleteNamespace_Call) Run(run func(context1 context.Context, deleteNamespaceParams namespace.DeleteNamespaceParams)) *MockNamespaceClient_DeleteNamespace_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.DeleteNamespaceParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.DeleteNamespaceParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_DeleteNamespace_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_DeleteNamespace_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_DeleteNamespace_Call) RunAndReturn(run func(context1 context.Context, deleteNamespaceParams namespace.DeleteNamespaceParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_DeleteNamespace_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteTags provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) DeleteTags(context1 context.Context, deleteTagsParams namespace.DeleteTagsParams) (*operation.AsyncOperation, error) {
 	ret := _mock.Called(context1, deleteTagsParams)
@@ -786,6 +854,80 @@ func (_c *MockNamespaceClient_GetNamespace_Call) Return(namespace1 *namespace0.N
 }
 
 func (_c *MockNamespaceClient_GetNamespace_Call) RunAndReturn(run func(context1 context.Context, s string) (*namespace0.Namespace, error)) *MockNamespaceClient_GetNamespace_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetNamespaces provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) GetNamespaces(context1 context.Context, getNamespacesParams namespace.GetNamespacesParams) ([]*namespace0.Namespace, string, error) {
+	ret := _mock.Called(context1, getNamespacesParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetNamespaces")
+	}
+
+	var r0 []*namespace0.Namespace
+	var r1 string
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.GetNamespacesParams) ([]*namespace0.Namespace, string, error)); ok {
+		return returnFunc(context1, getNamespacesParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.GetNamespacesParams) []*namespace0.Namespace); ok {
+		r0 = returnFunc(context1, getNamespacesParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*namespace0.Namespace)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.GetNamespacesParams) string); ok {
+		r1 = returnFunc(context1, getNamespacesParams)
+	} else {
+		r1 = ret.Get(1).(string)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, namespace.GetNamespacesParams) error); ok {
+		r2 = returnFunc(context1, getNamespacesParams)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockNamespaceClient_GetNamespaces_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetNamespaces'
+type MockNamespaceClient_GetNamespaces_Call struct {
+	*mock.Call
+}
+
+// GetNamespaces is a helper method to define mock.On call
+//   - context1 context.Context
+//   - getNamespacesParams namespace.GetNamespacesParams
+func (_e *MockNamespaceClient_Expecter) GetNamespaces(context1 interface{}, getNamespacesParams interface{}) *MockNamespaceClient_GetNamespaces_Call {
+	return &MockNamespaceClient_GetNamespaces_Call{Call: _e.mock.On("GetNamespaces", context1, getNamespacesParams)}
+}
+
+func (_c *MockNamespaceClient_GetNamespaces_Call) Run(run func(context1 context.Context, getNamespacesParams namespace.GetNamespacesParams)) *MockNamespaceClient_GetNamespaces_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.GetNamespacesParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.GetNamespacesParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_GetNamespaces_Call) Return(namespaces []*namespace0.Namespace, s string, err error) *MockNamespaceClient_GetNamespaces_Call {
+	_c.Call.Return(namespaces, s, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_GetNamespaces_Call) RunAndReturn(run func(context1 context.Context, getNamespacesParams namespace.GetNamespacesParams) ([]*namespace0.Namespace, string, error)) *MockNamespaceClient_GetNamespaces_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1534,6 +1676,74 @@ func (_c *MockNamespaceClient_UpdateNamespace_Call) Return(asyncOperation *opera
 }
 
 func (_c *MockNamespaceClient_UpdateNamespace_Call) RunAndReturn(run func(context1 context.Context, updateNamespaceParams namespace.UpdateNamespaceParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_UpdateNamespace_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpsertNamespace provides a mock function for the type MockNamespaceClient
+func (_mock *MockNamespaceClient) UpsertNamespace(context1 context.Context, upsertNamespaceParams namespace.UpsertNamespaceParams) (*operation.AsyncOperation, error) {
+	ret := _mock.Called(context1, upsertNamespaceParams)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertNamespace")
+	}
+
+	var r0 *operation.AsyncOperation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.UpsertNamespaceParams) (*operation.AsyncOperation, error)); ok {
+		return returnFunc(context1, upsertNamespaceParams)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, namespace.UpsertNamespaceParams) *operation.AsyncOperation); ok {
+		r0 = returnFunc(context1, upsertNamespaceParams)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operation.AsyncOperation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, namespace.UpsertNamespaceParams) error); ok {
+		r1 = returnFunc(context1, upsertNamespaceParams)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockNamespaceClient_UpsertNamespace_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpsertNamespace'
+type MockNamespaceClient_UpsertNamespace_Call struct {
+	*mock.Call
+}
+
+// UpsertNamespace is a helper method to define mock.On call
+//   - context1 context.Context
+//   - upsertNamespaceParams namespace.UpsertNamespaceParams
+func (_e *MockNamespaceClient_Expecter) UpsertNamespace(context1 interface{}, upsertNamespaceParams interface{}) *MockNamespaceClient_UpsertNamespace_Call {
+	return &MockNamespaceClient_UpsertNamespace_Call{Call: _e.mock.On("UpsertNamespace", context1, upsertNamespaceParams)}
+}
+
+func (_c *MockNamespaceClient_UpsertNamespace_Call) Run(run func(context1 context.Context, upsertNamespaceParams namespace.UpsertNamespaceParams)) *MockNamespaceClient_UpsertNamespace_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 namespace.UpsertNamespaceParams
+		if args[1] != nil {
+			arg1 = args[1].(namespace.UpsertNamespaceParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNamespaceClient_UpsertNamespace_Call) Return(asyncOperation *operation.AsyncOperation, err error) *MockNamespaceClient_UpsertNamespace_Call {
+	_c.Call.Return(asyncOperation, err)
+	return _c
+}
+
+func (_c *MockNamespaceClient_UpsertNamespace_Call) RunAndReturn(run func(context1 context.Context, upsertNamespaceParams namespace.UpsertNamespaceParams) (*operation.AsyncOperation, error)) *MockNamespaceClient_UpsertNamespace_Call {
 	_c.Call.Return(run)
 	return _c
 }

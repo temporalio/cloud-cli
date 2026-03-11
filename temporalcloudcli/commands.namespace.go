@@ -74,7 +74,7 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 		return err
 	}
 
-	listRes, _, err := namespaceClient.ListNamespaces(cctx.Context, spec.Name, "", 0)
+	listRes, _, err := namespaceClient.GetNamespaces(cctx.Context, namespace.GetNamespacesParams{Name: spec.Name})
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,11 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 		return err
 	}
 
-	namespaces, nextPageToken, err := client.ListNamespaces(cctx.Context, c.Name, c.PageToken, int32(c.PageSize))
+	namespaces, nextPageToken, err := client.GetNamespaces(cctx.Context, namespace.GetNamespacesParams{
+		Name:      c.Name,
+		PageToken: c.PageToken,
+		PageSize:  int32(c.PageSize),
+	})
 	if err != nil {
 		return err
 	}
