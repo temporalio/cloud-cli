@@ -1076,7 +1076,7 @@ type CloudNamespaceRetentionGetCommand struct {
 	Parent  *CloudNamespaceRetentionCommand
 	Command cobra.Command
 	ClientOptions
-	Namespace string
+	NamespaceOptions
 }
 
 func NewCloudNamespaceRetentionGetCommand(cctx *CommandContext, parent *CloudNamespaceRetentionCommand) *CloudNamespaceRetentionGetCommand {
@@ -1091,9 +1091,8 @@ func NewCloudNamespaceRetentionGetCommand(cctx *CommandContext, parent *CloudNam
 		s.Command.Long = "Retrieve the current data retention period for a Temporal Cloud namespace.\nThe retention period defines how long closed workflow history data are stored.\n\nExample:\n\n```\ncloud namespace retention get --namespace my-namespace.my-account\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1107,12 +1106,10 @@ type CloudNamespaceRetentionSetCommand struct {
 	Command cobra.Command
 	ClientOptions
 	DiffOptions
-	Namespace        string
-	AsyncOperationId string
-	Async            bool
-	Idempotent       bool
-	RetentionDays    int
-	ResourceVersion  string
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	RetentionDays int
 }
 
 func NewCloudNamespaceRetentionSetCommand(cctx *CommandContext, parent *CloudNamespaceRetentionCommand) *CloudNamespaceRetentionSetCommand {
@@ -1127,16 +1124,13 @@ func NewCloudNamespaceRetentionSetCommand(cctx *CommandContext, parent *CloudNam
 		s.Command.Long = "Set the data retention period for a Temporal Cloud namespace. The\nretention period defines how long closed workflow history data are stored.\n\nExample:\n\n```\ncloud namespace retention set --namespace my-namespace.my-account --retention-days 14\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
-	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
-	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
-	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if the retention period is already set to the specified value. Without this flag, the command errors when no change is needed.")
 	s.Command.Flags().IntVar(&s.RetentionDays, "retention-days", 0, "New retention period in days for closed workflow history data. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "retention-days")
-	s.Command.Flags().StringVar(&s.ResourceVersion, "resource-version", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

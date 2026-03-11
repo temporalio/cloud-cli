@@ -315,14 +315,7 @@ commands:
     has-init: false
     option-sets:
       - client
-    options:
-      - name: namespace
-        type: string
-        description: |
-          The fully qualified namespace name in the format 'namespace.account'
-          (e.g., 'my-namespace.my-account').
-        short: n
-        required: true
+      - namespace
   - name: cloud namespace retention set
     summary: Set namespace retention period
     description: |
@@ -338,40 +331,15 @@ commands:
     option-sets:
       - client
       - diff
+      - namespace
+      - async-operation
+      - resource-version
     options:
-      - name: namespace
-        type: string
-        description: |
-          The fully qualified namespace name in the format 'namespace.account'
-          (e.g., 'my-namespace.my-account').
-        short: n
-        required: true
-      - name: async-operation-id
-        type: string
-        description: |
-          Custom identifier for tracking this async operation. If not provided,
-          a unique ID is generated automatically.
-      - name: async
-        type: bool
-        description: |
-          Return immediately after initiating the operation instead of waiting
-          for completion. Use the returned operation ID to check status later.
-      - name: idempotent
-        type: bool
-        description: |
-          Succeed silently if the retention period is already set to the
-          specified value. Without this flag, the command errors when no change
-          is needed.
       - name: retention-days
         type: int
         description: |
           New retention period in days for closed workflow history data.
         required: true
-      - name: resource-version
-        type: string
-        description: |
-          Resource version for optimistic concurrency control. If not provided,
-          the current version is fetched automatically.
 
   # Namespace lifecycle commands
   - name: cloud namespace lifecycle
