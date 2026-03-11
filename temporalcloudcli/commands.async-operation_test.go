@@ -18,7 +18,7 @@ func (s *SharedServerSuite) TestAsyncOperationCommands() {
 
 	spec := map[string]interface{}{
 		"name":           nsName,
-		"region":         "aws-us-east-1",
+		"regions":        []string{"aws-us-east-1"},
 		"retention_days": 1,
 	}
 	specBytes, err := json.Marshal(spec)
@@ -38,6 +38,16 @@ func (s *SharedServerSuite) TestAsyncOperationCommands() {
 
 	buf, err := io.ReadAll(&createRes.Stdout)
 	s.Suite.Require().NoError(err)
+
+	defer func() {
+		// Clean up the namespace after the test
+		_, _ = s.Execute(
+			"namespace", "delete",
+			fmt.Sprintf("--server=%s", s.server),
+			nsName,
+			"--auto-confirm",
+		)
+	}()
 
 	// Extract the async operation ID from the output
 	var output map[string]interface{}

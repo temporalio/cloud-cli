@@ -282,6 +282,7 @@ commands:
     option-sets:
       - client
       - diff
+      - async-operation
     options:
       - name: spec
         type: string
@@ -289,21 +290,6 @@ commands:
           Namespace configuration in JSON format. Provide inline JSON directly,
           or use '@path/to/file.json' to load from a file.
         required: true
-      - name: async-operation-id
-        type: string
-        description: |
-          Custom identifier for tracking this async operation. If not provided,
-          a unique ID is generated automatically.
-      - name: idempotent
-        type: bool
-        description: |
-          Succeed silently if the namespace already matches the specification.
-          Without this flag, the command errors when no changes are needed.
-      - name: async
-        type: bool
-        description: |
-          Return immediately after initiating the operation instead of waiting
-          for completion. Use the returned operation ID to check status later.
       - name: resource-version
         type: string
         short: v
@@ -329,6 +315,7 @@ commands:
     option-sets:
       - client
       - diff
+      - async-operation
     options:
       - name: namespace
         type: string
@@ -337,21 +324,6 @@ commands:
           (e.g., 'my-namespace.my-account').
         short: n
         required: true
-      - name: async-operation-id
-        type: string
-        description: |
-          Custom identifier for tracking this async operation. If not provided,
-          a unique ID is generated automatically.
-      - name: idempotent
-        type: bool
-        description: |
-          Succeed silently if no changes were made in the editor. Without this
-          flag, the command errors when the configuration is unchanged.
-      - name: async
-        type: bool
-        description: |
-          Return immediately after initiating the operation instead of waiting
-          for completion. Use the returned operation ID to check status later.
       - name: resource-version
         type: string
         short: v
@@ -373,6 +345,7 @@ commands:
     has-init: false
     option-sets:
       - client
+      - async-operation
     options:
       - name: namespace
         type: string
@@ -381,21 +354,6 @@ commands:
           (e.g., 'my-namespace.my-account').
         short: n
         required: true
-      - name: async-operation-id
-        type: string
-        description: |
-          Custom identifier for tracking this async operation. If not provided,
-          a unique ID is generated automatically.
-      - name: async
-        type: bool
-        description: |
-          Return immediately after initiating the operation instead of waiting
-          for completion. Use the returned operation ID to check status later.
-      - name: idempotent
-        type: bool
-        description: |
-          Succeed silently if the namespace does not exist. Without this flag,
-          the command errors if the namespace is not found.
       - name: resource-version
         type: string
         short: v
@@ -476,6 +434,7 @@ commands:
     option-sets:
       - client
       - diff
+      - async-operation
     options:
       - name: namespace
         type: string
@@ -484,22 +443,6 @@ commands:
           (e.g., 'my-namespace.my-account').
         short: n
         required: true
-      - name: async-operation-id
-        type: string
-        description: |
-          Custom identifier for tracking this async operation. If not provided,
-          a unique ID is generated automatically.
-      - name: async
-        type: bool
-        description: |
-          Return immediately after initiating the operation instead of waiting
-          for completion. Use the returned operation ID to check status later.
-      - name: idempotent
-        type: bool
-        description: |
-          Succeed silently if the retention period is already set to the
-          specified value. Without this flag, the command errors when no change
-          is needed.
       - name: retention-days
         type: int
         description: |
@@ -557,6 +500,7 @@ commands:
     option-sets:
       - client
       - diff
+      - async-operation
     options:
       - name: namespace
         type: string
@@ -571,22 +515,6 @@ commands:
           Enable or disable delete protection for the namespace. When enabled,
           the namespace cannot be deleted until this flag is set to false.
         required: true
-      - name: async-operation-id
-        type: string
-        description: |
-          Custom identifier for tracking this async operation. If not provided,
-          a unique ID is generated automatically.
-      - name: async
-        type: bool
-        description: |
-          Return immediately after initiating the operation instead of waiting
-          for completion. Use the returned operation ID to check status later.
-      - name: idempotent
-        type: bool
-        description: |
-          Succeed silently if the lifecycle configuration is already set to the
-          specified value. Without this flag, the command errors when no change
-          is needed.
       - name: resource-version
         type: string
         description: |

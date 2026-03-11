@@ -3,6 +3,7 @@ package temporalcloudcli
 import (
 	"fmt"
 
+	"go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 
@@ -34,21 +35,20 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 	if err != nil {
 		return err
 	}
-
-	client := newNamespaceClient(withCloudClient(cloudClient))
-
-	ns, err := client.getNamespace(cctx.Context, c.Namespace)
+	getResp, err := cloudClient.CloudService().GetNamespace(cctx.Context, &cloudservice.GetNamespaceRequest{
+		Namespace: c.Namespace,
+	})
 	if err != nil {
 		return err
 	}
 
 	newSpec := &namespacev1.NamespaceSpec{}
-	err = runEditorForJSONEditForProtos(ns.Spec, newSpec)
+	err = runEditorForJSONEditForProtos(getResp.GetNamespace().GetSpec(), newSpec)
 	if err != nil {
 		return err
 	}
 
-	err = promptApplyResource(cctx, ns.Spec, newSpec, c.VerboseDiff)
+	err = promptApplyResource(cctx, getResp.GetNamespace().GetSpec(), newSpec, c.VerboseDiff)
 	if err != nil {
 		return err
 	}
@@ -56,49 +56,15 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 	// Use provided resource version, or fall back to the fetched namespace's resource version.
 	resourceVersion := c.ResourceVersion
 	if resourceVersion == "" {
-		resourceVersion = ns.ResourceVersion
+		resourceVersion = getResp.GetNamespace().GetResourceVersion()
 	}
 
-	asyncOp, err := client.updateNamespace(cctx.Context, updateNamespaceParams{
-		namespace:        c.Namespace,
-		spec:             newSpec,
-		asyncOperationID: c.AsyncOperationId,
-		resourceVersion:  resourceVersion,
-		idempotent:       c.Idempotent,
+	return wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.ClientOptions, cloudClient.CloudService().UpdateNamespace)(&cloudservice.UpdateNamespaceRequest{
+		Namespace:        c.Namespace,
+		Spec:             newSpec,
+		AsyncOperationId: c.AsyncOperationId,
+		ResourceVersion:  resourceVersion,
 	})
-	if err != nil {
-		return err
-	}
-
-	// TODO: (gmankes) remove this -- clean up and make shareable
-	if asyncOp == nil {
-		// Nothing changed (idempotent case)
-		result := struct {
-			Status    string
-			Namespace string
-		}{
-			Status:    "unchanged",
-			Namespace: c.Namespace,
-		}
-		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
-	}
-
-	// Handle async flag
-	if c.Async {
-		// Return immediately with the async operation
-		return cctx.Printer.PrintStructured(MutationResult{
-			AsyncOp: asyncOp,
-			ID:      c.Namespace,
-		}, printer.StructuredOptions{})
-	}
-
-	// Poll for completion
-	poller, err := getPoller(cctx, c.ClientOptions)
-	if err != nil {
-		return err
-	}
-
-	return poller.PollAsyncOperation(cctx, asyncOp.Id, c.Namespace)
 }
 
 func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error {
@@ -119,11 +85,11 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 	if err != nil {
 		return err
 	}
-	client := newNamespaceClient(withCloudClient(cloudClient))
-
 	// Step 4: Retrieve existing namespace
 	var found bool
-	existing, err := client.getNamespaceByName(cctx.Context, spec.Name)
+	existing, err := cloudClient.CloudService().GetNamespace(cctx.Context, &cloudservice.GetNamespaceRequest{
+		Namespace: spec.GetNamespace(),
+	})
 	if err != nil && !isNotFoundErr(err) {
 		return err
 	} else if err == nil {
@@ -304,10 +270,6 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 }
 
 func getNamespaceClient(cctx *CommandContext, opts ClientOptions) (NamespaceClient, error) {
-	if cctx.NamespaceClient != nil {
-		return cctx.NamespaceClient, nil
-	}
-
 	cloudClient, err := cctx.BuildCloudClient(opts)
 	if err != nil {
 		return nil, err

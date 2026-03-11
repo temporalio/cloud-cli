@@ -27,5 +27,10 @@ func (c *CloudAsyncOperationAwaitCommand) run(cctx *CommandContext, _ []string) 
 		return err
 	}
 
-	return poller.PollAsyncOperation(cctx, c.AsyncOperationId, c.AsyncOperationId)
+	asyncOp, err := poller.PollAsyncOperationByID(cctx, c.AsyncOperationId)
+	if err != nil {
+		return err
+	}
+
+	return cctx.Printer.PrintStructured(asyncOp, printer.StructuredOptions{})
 }
