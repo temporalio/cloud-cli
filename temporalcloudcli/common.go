@@ -133,6 +133,63 @@ func promptApplyResource(cctx *CommandContext, existing, actual proto.Message, v
 	return nil
 }
 
+// AsyncOperationHandler handles the async operation lifecycle. Mockable for testing.
+type AsyncOperationHandler interface {
+	// Handle dispatches a successfully started operation: prints immediately (async)
+	// or polls until completion (sync).
+	Handle(op *operation.AsyncOperation) error
+	// HandleErr handles an error from an operation call: swallows nothing-to-change
+	// errors when idempotent, propagates all others.
+	HandleErr(err error) error
+}
+
+// ApplyPrompter shows a diff and asks the user to confirm before applying.
+// Mockable for testing.
+type ApplyPrompter interface {
+	PromptApply(old, new proto.Message, verbose bool) error
+}
+
+type asyncOperationHandler struct {
+	cctx       *CommandContext
+	asyncOpts  AsyncOperationOptions
+	resourceID string
+	clientOpts ClientOptions
+}
+
+func NewAsyncOperationHandler(cctx *CommandContext, asyncOpts AsyncOperationOptions, resourceID string, clientOpts ClientOptions) AsyncOperationHandler {
+	return &asyncOperationHandler{cctx: cctx, asyncOpts: asyncOpts, resourceID: resourceID, clientOpts: clientOpts}
+}
+
+func (r *asyncOperationHandler) Handle(op *operation.AsyncOperation) error {
+	if r.asyncOpts.Async {
+		return r.cctx.Printer.PrintStructured(MutationResult{AsyncOp: op, ID: r.resourceID}, printer.StructuredOptions{})
+	}
+	poller, pollerErr := getPoller(r.cctx, r.clientOpts)
+	if pollerErr != nil {
+		return pollerErr
+	}
+	return poller.PollAsyncOperation(r.cctx, op.Id, r.resourceID)
+}
+
+func (r *asyncOperationHandler) HandleErr(err error) error {
+	if isNothingChangedErr(r.asyncOpts.Idempotent, err) {
+		return r.cctx.Printer.PrintStructured(newUnchangedResult(r.resourceID), printer.StructuredOptions{})
+	}
+	return err
+}
+
+type applyPrompter struct {
+	cctx *CommandContext
+}
+
+func newApplyPrompter(cctx *CommandContext) ApplyPrompter {
+	return &applyPrompter{cctx: cctx}
+}
+
+func (p *applyPrompter) PromptApply(old, new proto.Message, verbose bool) error {
+	return promptApplyResource(p.cctx, old, new, verbose)
+}
+
 type AsyncOperationPoller struct {
 	CloudClient cloudservice.CloudServiceClient
 }
@@ -267,28 +324,12 @@ func wrapAsyncOperation[P any](
 	clientOpts ClientOptions,
 	fn func(context.Context, P) (*operation.AsyncOperation, error),
 ) func(P) error {
+	runner := NewAsyncOperationHandler(cctx, asyncOpts, resourceID, clientOpts)
 	return func(params P) error {
 		op, err := fn(cctx.Context, params)
 		if err != nil {
-			if isNothingChangedErr(asyncOpts.Idempotent, err) {
-				return cctx.Printer.PrintStructured(newUnchangedResult(resourceID), printer.StructuredOptions{})
-			}
-			return err
+			return runner.HandleErr(err)
 		}
-
-		if asyncOpts.Async {
-			// Return immediately with the async operation
-			return cctx.Printer.PrintStructured(MutationResult{
-				AsyncOp: op,
-				ID:      resourceID,
-			}, printer.StructuredOptions{})
-		}
-
-		poller, err := getPoller(cctx, clientOpts)
-		if err != nil {
-			return err
-		}
-
-		return poller.PollAsyncOperation(cctx, op.Id, resourceID)
+		return runner.Handle(op)
 	}
 }
