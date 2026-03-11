@@ -63,14 +63,13 @@ import (
     "context"
 
     cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
-    "github.com/temporalio/cloud-cli/internal/namespace"
     "github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
 type GetFooParams struct {
     Namespace string
 
-    Cloud   namespace.CloudService
+    Cloud   cloudservice.CloudServiceClient
     Printer *printer.Printer
 }
 
@@ -103,7 +102,7 @@ type SetFooParams struct {
     ResourceVersion  string
     AsyncOperationID string
 
-    Cloud            namespace.CloudService
+    Cloud            cloudservice.CloudServiceClient
     Prompter         Prompter
     OperationHandler AsyncOperationHandler
 }

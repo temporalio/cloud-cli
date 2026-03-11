@@ -9,7 +9,7 @@ Unit tests call the exported application logic functions directly with mocked de
 - Write individual test functions (most have unique setup/assertions)
 - Use `assert.Equal` for protobuf message assertions. Use `proto.Equal` only inside `mock.MatchedBy` closures. Never compare proto messages field-by-field.
 - Mock all three injectable dependency interfaces:
-  - `nsmock.NewMockCloudService(t)` (from `internal/namespace/mock`)
+  - `csmock.NewMockCloudServiceClient(t)` (from `internal/cloudservice/mock`)
   - `cmdmock.NewMockPrompter(t)` (from `temporalcloudcli/mock`)
   - `cmdmock.NewMockAsyncOperationHandler(t)` (from `temporalcloudcli/mock`)
 - Example naming: `TestGetRetention_Success`, `TestSetRetention_GetNamespaceError`
@@ -18,7 +18,7 @@ Unit tests call the exported application logic functions directly with mocked de
 **Example:**
 ```go
 func TestGetFoo_Success(t *testing.T) {
-    mockCloud := nsmock.NewMockCloudService(t)
+    mockCloud := csmock.NewMockCloudServiceClient(t)
 
     mockCloud.EXPECT().
         GetNamespace(context.Background(), &cloudservice.GetNamespaceRequest{Namespace: "my-namespace"}).

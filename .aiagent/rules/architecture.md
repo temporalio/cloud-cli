@@ -17,7 +17,7 @@ Each command's application logic lives in an **exported function** in the `tempo
 **Application logic function** (`temporalcloudcli/commands.<resource>.go`):
 - Exported function (e.g., `GetRetention`, `SetRetention`) owns the full operation
 - Takes a `XxxParams` struct with data fields (e.g. `Namespace`, `RetentionDays`) and dependency fields (`Cloud`, `Prompter`, `OperationHandler`)
-- Calls the gRPC API via the `Cloud` field (a `namespace.CloudService` interface)
+- Calls the gRPC API via the `Cloud` field (a `cloudservice.CloudServiceClient` interface)
 - Testable by calling the function directly with mock dependencies
 
 **`run` method wiring** (on the generated command struct):
@@ -32,7 +32,7 @@ type (
     GetFooParams struct {
         Namespace string
 
-        Cloud   namespace.CloudService
+        Cloud   cloudservice.CloudServiceClient
         Printer *printer.Printer
     }
 
@@ -42,7 +42,7 @@ type (
         ResourceVersion  string
         AsyncOperationID string
 
-        Cloud            namespace.CloudService
+        Cloud            cloudservice.CloudServiceClient
         Prompter         Prompter
         OperationHandler AsyncOperationHandler
     }
@@ -115,7 +115,7 @@ func (c *CloudNamespaceFooSetCommand) run(cctx *CommandContext, _ []string) erro
 
 ### Key Interfaces
 
-- `namespace.CloudService` (from `internal/namespace`) — the gRPC client interface; mock with `nsmock.NewMockCloudService(t)`
+- `cloudservice.CloudServiceClient` (from `go.temporal.io/cloud-sdk/api/cloudservice/v1`) — the gRPC client interface; mock with `csmock.NewMockCloudServiceClient(t)`
 - `Prompter` (from `temporalcloudcli/common.go`) — shows diffs and prompts for confirmation; mock with `cmdmock.NewMockPrompter(t)`
 - `AsyncOperationHandler` (from `temporalcloudcli/common.go`) — handles async op lifecycle; mock with `cmdmock.NewMockAsyncOperationHandler(t)`
 
@@ -126,7 +126,7 @@ For simple commands with no business logic (e.g. `whoami`), call `cloudClient.Cl
 ## Setting Up Mocks
 
 The mockery-generated mocks live in:
-- `internal/namespace/mock/` — provides `MockCloudService` for the gRPC interface
+- `internal/cloudservice/mock/` — provides `MockCloudServiceClient` for the gRPC interface
 - `temporalcloudcli/mock/` — provides `MockPrompter` and `MockAsyncOperationHandler`
 
 To regenerate all mocks after interface changes:
