@@ -6,6 +6,8 @@ packages:
     interfaces:
       Poller:
       NamespaceClient:
+      AsyncOperationHandler:
+      Prompter:
   github.com/temporalio/cloud-cli/internal/namespace:
     interfaces:
       CloudService:

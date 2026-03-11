@@ -1,77 +1,75 @@
 package temporalcloudcli
 
 import (
-	namespace "go.temporal.io/cloud-sdk/api/namespace/v1"
+	"context"
+
+	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/temporalio/cloud-cli/internal/namespace"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
-func (c *CloudNamespaceRetentionSetCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+type (
+	GetRetentionParams struct {
+		Namespace string
+
+		Cloud   namespace.CloudService
+		Printer *printer.Printer
+	}
+
+	SetRetentionParams struct {
+		Namespace        string
+		RetentionDays    int32
+		ResourceVersion  string
+		AsyncOperationID string
+
+		Cloud            namespace.CloudService
+		Prompter         Prompter
+		OperationHandler AsyncOperationHandler
+	}
+)
+
+func GetRetention(ctx context.Context, params GetRetentionParams) error {
+	res, err := params.Cloud.GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: params.Namespace})
 	if err != nil {
 		return err
 	}
+	return params.Printer.PrintStructured(struct {
+		Namespace     string `json:"namespace"`
+		RetentionDays int32  `json:"retentionDays"`
+	}{
+		Namespace:     res.Namespace.Namespace,
+		RetentionDays: res.Namespace.Spec.RetentionDays,
+	}, printer.StructuredOptions{})
+}
 
-	client := newNamespaceClient(withCloudClient(cloudClient))
-
-	ns, err := client.getNamespace(cctx.Context, c.Namespace)
+func SetRetention(ctx context.Context, params SetRetentionParams) error {
+	res, err := params.Cloud.GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: params.Namespace})
 	if err != nil {
 		return err
 	}
+	ns := res.Namespace
+	newSpec := proto.Clone(ns.Spec).(*namespacev1.NamespaceSpec)
+	newSpec.RetentionDays = params.RetentionDays
 
-	newSpec := proto.Clone(ns.Spec).(*namespace.NamespaceSpec)
-	newSpec.RetentionDays = int32(c.RetentionDays)
-
-	err = promptApplyResource(cctx, ns.Spec, newSpec, c.VerboseDiff)
-	if err != nil {
+	if err := params.Prompter.PromptApply(ns.Spec, newSpec, false); err != nil {
 		return err
 	}
 
-	// Use provided resource version, or fetch from current namespace
-	resourceVersion := c.ResourceVersion
-	if resourceVersion == "" {
-		resourceVersion = ns.ResourceVersion
+	rv := ns.ResourceVersion
+	if params.ResourceVersion != "" {
+		rv = params.ResourceVersion
 	}
-
-	asyncOp, err := client.updateNamespace(cctx.Context, updateNamespaceParams{
-		namespace:        c.Namespace,
-		spec:             newSpec,
-		asyncOperationID: c.AsyncOperationId,
-		resourceVersion:  resourceVersion,
-		idempotent:       c.Idempotent,
-	})
-	if err != nil {
-		return err
+	updateNamespace := runAsyncOperation(params.Cloud.UpdateNamespace, params.OperationHandler)
+	updateParams := &cloudservice.UpdateNamespaceRequest{
+		Namespace:        params.Namespace,
+		Spec:             newSpec,
+		ResourceVersion:  rv,
+		AsyncOperationId: params.AsyncOperationID,
 	}
-	if asyncOp == nil {
-		// Nothing changed (idempotent case)
-		result := struct {
-			Status    string
-			Namespace string
-		}{
-			Status:    "unchanged",
-			Namespace: c.Namespace,
-		}
-		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
-	}
-
-	// Handle async flag
-	if c.Async {
-		// Return immediately with the async operation
-		return cctx.Printer.PrintStructured(MutationResult{
-			AsyncOp: asyncOp,
-			ID:      c.Namespace,
-		}, printer.StructuredOptions{})
-	}
-
-	// Poll for completion
-	poller, err := getPoller(cctx, c.ClientOptions)
-	if err != nil {
-		return err
-	}
-
-	return poller.PollAsyncOperation(cctx, asyncOp.Id, c.Namespace)
+	return updateNamespace(ctx, updateParams)
 }
 
 func (c *CloudNamespaceRetentionGetCommand) run(cctx *CommandContext, _ []string) error {
@@ -79,22 +77,25 @@ func (c *CloudNamespaceRetentionGetCommand) run(cctx *CommandContext, _ []string
 	if err != nil {
 		return err
 	}
+	return GetRetention(cctx.Context, GetRetentionParams{
+		Namespace: c.Namespace,
+		Cloud:     cloudClient.CloudService(),
+		Printer:   cctx.Printer,
+	})
+}
 
-	client := newNamespaceClient(withCloudClient(cloudClient))
-
-	ns, err := client.getNamespace(cctx.Context, c.Namespace)
+func (c *CloudNamespaceRetentionSetCommand) run(cctx *CommandContext, _ []string) error {
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-
-	// Create focused output showing only retention information
-	result := struct {
-		Namespace     string `json:"namespace"`
-		RetentionDays int32  `json:"retentionDays"`
-	}{
-		Namespace:     ns.Namespace,
-		RetentionDays: ns.Spec.RetentionDays,
-	}
-
-	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+	return SetRetention(cctx.Context, SetRetentionParams{
+		Namespace:        c.Namespace,
+		RetentionDays:    int32(c.RetentionDays),
+		ResourceVersion:  c.ResourceVersion,
+		AsyncOperationID: c.AsyncOperationId,
+		Cloud:            cloudClient.CloudService(),
+		Prompter:         newPrompter(cctx),
+		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions),
+	})
 }
