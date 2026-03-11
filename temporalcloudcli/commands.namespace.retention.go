@@ -7,7 +7,6 @@ import (
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/temporalio/cloud-cli/internal/namespace"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
@@ -15,7 +14,7 @@ type (
 	GetRetentionParams struct {
 		Namespace string
 
-		Cloud   namespace.CloudService
+		Cloud   cloudservice.CloudServiceClient
 		Printer *printer.Printer
 	}
 
@@ -25,7 +24,7 @@ type (
 		ResourceVersion  string
 		AsyncOperationID string
 
-		Cloud            namespace.CloudService
+		Cloud            cloudservice.CloudServiceClient
 		Prompter         Prompter
 		OperationHandler AsyncOperationHandler
 	}

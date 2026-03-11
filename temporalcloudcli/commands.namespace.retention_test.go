@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	nsmock "github.com/temporalio/cloud-cli/internal/namespace/mock"
+	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 	cmdmock "github.com/temporalio/cloud-cli/temporalcloudcli/mock"
@@ -24,7 +24,7 @@ func newTestPrinter(buf *bytes.Buffer) *printer.Printer {
 
 // TestGetRetention_Success verifies that getRetention prints namespace and retentionDays.
 func TestGetRetention_Success(t *testing.T) {
-	mockCloud := nsmock.NewMockCloudService(t)
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 
 	mockCloud.EXPECT().
 		GetNamespace(context.Background(), &cloudservice.GetNamespaceRequest{Namespace: "my-namespace"}).
@@ -56,7 +56,7 @@ func TestGetRetention_Success(t *testing.T) {
 
 // TestGetRetention_Error verifies that a GetNamespace error propagates.
 func TestGetRetention_Error(t *testing.T) {
-	mockCloud := nsmock.NewMockCloudService(t)
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	var buf bytes.Buffer
 	apiErr := errors.New("api error")
 
@@ -75,7 +75,7 @@ func TestGetRetention_Error(t *testing.T) {
 
 // TestSetRetention_Success verifies UpdateNamespace is called with the correct RetentionDays.
 func TestSetRetention_Success(t *testing.T) {
-	mockCloud := nsmock.NewMockCloudService(t)
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	mockPrompter := cmdmock.NewMockPrompter(t)
 	mockRunner := cmdmock.NewMockAsyncOperationHandler(t)
 
@@ -123,7 +123,7 @@ func TestSetRetention_Success(t *testing.T) {
 
 // TestSetRetention_PromptDeclined verifies UpdateNamespace is never called when prompt is declined.
 func TestSetRetention_PromptDeclined(t *testing.T) {
-	mockCloud := nsmock.NewMockCloudService(t)
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	mockPrompter := cmdmock.NewMockPrompter(t)
 	mockRunner := cmdmock.NewMockAsyncOperationHandler(t)
 	promptErr := errors.New("Aborting apply.")
@@ -157,7 +157,7 @@ func TestSetRetention_PromptDeclined(t *testing.T) {
 
 // TestSetRetention_GetNamespaceError verifies that a GetNamespace error propagates and UpdateNamespace is never called.
 func TestSetRetention_GetNamespaceError(t *testing.T) {
-	mockCloud := nsmock.NewMockCloudService(t)
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	mockPrompter := cmdmock.NewMockPrompter(t)
 	mockRunner := cmdmock.NewMockAsyncOperationHandler(t)
 	apiErr := errors.New("api error")
@@ -178,7 +178,7 @@ func TestSetRetention_GetNamespaceError(t *testing.T) {
 
 // TestSetRetention_UpdateNamespaceError verifies that Runner.HandleErr receives the UpdateNamespace error.
 func TestSetRetention_UpdateNamespaceError(t *testing.T) {
-	mockCloud := nsmock.NewMockCloudService(t)
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	mockPrompter := cmdmock.NewMockPrompter(t)
 	mockRunner := cmdmock.NewMockAsyncOperationHandler(t)
 	updateErr := errors.New("update error")
