@@ -14,8 +14,8 @@ This repository contains the CLI Plugin for Temporal Cloud (`temporal-cloud`).
   - `commands.login.go` - Login command implementation
   - `commands.namespace.go` - Namespace command implementation
   - `commands.yml` - Command configuration, used to generate commands.gen.go
-  - `common.go` - Shared utilities, constants, and types used across the CLI
-  - `namespace.go` - The namespace client implementation
+  - `common.go` - Shared utilities, constants, and types used across the CLI (`AsyncOperationHandler`, `Prompter`, `runAsyncOperation`, etc.)
+  - `namespace.go` - Legacy namespace client helpers (being replaced by the function-based pattern; see `commands.namespace.retention.go` for the canonical new pattern)
   - `internal/printer/` - Output formatting utilities
 
 ## Building

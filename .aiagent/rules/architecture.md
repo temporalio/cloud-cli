@@ -6,94 +6,132 @@
 2. All top-level spec-based commands (e.g. namespace) that include a mutation must have `apply` and `edit` subcommands. The only exception is `apikey`.
 3. All mutation commands must have a `--resource-version` flag for optimistic locking.
 
-## Two-Layer Architecture
+## Function-Based Architecture
 
-All resource commands follow a two-layer architecture for separation of concerns and testability.
+All resource commands follow a function-based architecture for separation of concerns and testability.
 
-### Layer 1 — Command Layer (`temporalcloudcli/commands.<resource>.go`)
+### Pattern
 
-- Parse and validate user input (flags, arguments)
-- Handle user interactions (prompts, confirmations)
-- Call application layer methods
-- Format and print output using printer utilities
-- Must NOT contain business logic or direct API calls (except for simple one-off commands)
+Each command's application logic lives in an **exported function** in the `temporalcloudcli` package. The function takes a `context.Context` and an exported `XxxParams` struct containing both data fields and injectable dependencies. The `run` method only builds the cloud client and wires everything together.
 
-### Layer 2 — Application Layer (`internal/<resource>/client.go`)
+**Application logic function** (`temporalcloudcli/commands.<resource>.go`):
+- Exported function (e.g., `GetRetention`, `SetRetention`) owns the full operation
+- Takes a `XxxParams` struct with data fields (e.g. `Namespace`, `RetentionDays`) and dependency fields (`Cloud`, `Prompter`, `OperationHandler`)
+- Calls the gRPC API via the `Cloud` field (a `namespace.CloudService` interface)
+- Testable by calling the function directly with mock dependencies
 
-- Contains business logic and domain operations
-- Communicates with the cloud API
-- Defines mockable interfaces (e.g. `CloudService`) for all external dependencies
-- Returns domain objects, not command-specific types
-- Must be testable without CLI dependencies
+**`run` method wiring** (on the generated command struct):
+- Builds the cloud client via `cctx.BuildCloudClient`
+- Constructs the `XxxParams` struct from command flags and wired dependencies
+- Calls the exported application logic function
 
-**Namespace sub-features** (cert, codec, tags, search attributes, etc.) each get their own application layer file (e.g. `internal/namespace/codec.go`). Each method in that file owns its complete operation: fetching current namespace state, mutating the relevant spec fields, and calling `UpdateNamespace`. Add the new methods to the `NamespaceClient` interface in `commands.go` and run `make mocks` to regenerate.
+**Example:**
+```go
+// XxxParams structs — exported for testability
+type (
+    GetFooParams struct {
+        Namespace string
 
-### When to Use This Pattern
+        Cloud   namespace.CloudService
+        Printer *printer.Printer
+    }
 
-**Use the two-layer pattern when:**
-- The resource has multiple operations (namespace, apikey, identity, etc.)
-- Business logic is non-trivial and needs unit testing
-- The same logic might be reused across multiple commands
+    SetFooParams struct {
+        Namespace        string
+        Value            string
+        ResourceVersion  string
+        AsyncOperationID string
 
-**Skip the application layer for:**
-- Simple one-off commands (like `whoami`)
-- Commands with no business logic (direct API passthrough)
+        Cloud            namespace.CloudService
+        Prompter         Prompter
+        OperationHandler AsyncOperationHandler
+    }
+)
 
-For simple commands, call `cloudClient.CloudService()` directly in the `run` method.
+// Exported application logic functions
+func GetFoo(ctx context.Context, params GetFooParams) error {
+    res, err := params.Cloud.GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: params.Namespace})
+    if err != nil {
+        return err
+    }
+    return params.Printer.PrintStructured(res.Namespace.Spec, printer.StructuredOptions{})
+}
+
+func SetFoo(ctx context.Context, params SetFooParams) error {
+    res, err := params.Cloud.GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: params.Namespace})
+    if err != nil {
+        return err
+    }
+    ns := res.Namespace
+    newSpec := proto.Clone(ns.Spec).(*namespacev1.NamespaceSpec)
+    // mutate newSpec...
+
+    if err := params.Prompter.PromptApply(ns.Spec, newSpec, false); err != nil {
+        return err
+    }
+
+    rv := ns.ResourceVersion
+    if params.ResourceVersion != "" {
+        rv = params.ResourceVersion
+    }
+    updateNamespace := runAsyncOperation(params.Cloud.UpdateNamespace, params.OperationHandler)
+    return updateNamespace(ctx, &cloudservice.UpdateNamespaceRequest{
+        Namespace:        params.Namespace,
+        Spec:             newSpec,
+        ResourceVersion:  rv,
+        AsyncOperationId: params.AsyncOperationID,
+    })
+}
+
+// run methods — wiring only
+func (c *CloudNamespaceFooGetCommand) run(cctx *CommandContext, _ []string) error {
+    cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+    if err != nil {
+        return err
+    }
+    return GetFoo(cctx.Context, GetFooParams{
+        Namespace: c.Namespace,
+        Cloud:     cloudClient.CloudService(),
+        Printer:   cctx.Printer,
+    })
+}
+
+func (c *CloudNamespaceFooSetCommand) run(cctx *CommandContext, _ []string) error {
+    cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+    if err != nil {
+        return err
+    }
+    return SetFoo(cctx.Context, SetFooParams{
+        Namespace:        c.Namespace,
+        Value:            c.Value,
+        ResourceVersion:  c.ResourceVersion,
+        AsyncOperationID: c.AsyncOperationId,
+        Cloud:            cloudClient.CloudService(),
+        Prompter:         newPrompter(cctx),
+        OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions),
+    })
+}
+```
+
+### Key Interfaces
+
+- `namespace.CloudService` (from `internal/namespace`) — the gRPC client interface; mock with `nsmock.NewMockCloudService(t)`
+- `Prompter` (from `temporalcloudcli/common.go`) — shows diffs and prompts for confirmation; mock with `cmdmock.NewMockPrompter(t)`
+- `AsyncOperationHandler` (from `temporalcloudcli/common.go`) — handles async op lifecycle; mock with `cmdmock.NewMockAsyncOperationHandler(t)`
+
+### When to Skip This Pattern
+
+For simple commands with no business logic (e.g. `whoami`), call `cloudClient.CloudService()` directly in the `run` method — no exported function or params struct needed.
 
 ## Setting Up Mocks
 
-When creating a new resource client with mockable interfaces:
+The mockery-generated mocks live in:
+- `internal/namespace/mock/` — provides `MockCloudService` for the gRPC interface
+- `temporalcloudcli/mock/` — provides `MockPrompter` and `MockAsyncOperationHandler`
 
-**1. Define the interface in the application layer:**
-```go
-// internal/myresource/client.go
-type CloudService interface {
-    GetResource(ctx context.Context, req *cloudservice.GetResourceRequest, opts ...grpc.CallOption) (*cloudservice.GetResourceResponse, error)
-    // ... other methods
-}
-
-type Client struct {
-    Cloud CloudService
-}
-
-func NewClient(cloudClient cloudservice.CloudServiceClient) *Client {
-    return &Client{Cloud: cloudClient}
-}
-```
-
-**2. Update `.mockery.yml`:**
-```yaml
-packages:
-  github.com/temporalio/cloud-cli/internal/myresource:
-    interfaces:
-      CloudService:
-```
-
-**3. Regenerate mocks:**
+To regenerate all mocks after interface changes:
 ```bash
 make mocks
 ```
 
-This generates `internal/myresource/mock/mock.go` with a `MockCloudService` type.
-
-**4. Add the client interface to `CommandContext` if needed across multiple commands:**
-```go
-// temporalcloudcli/commands.go
-type MyResourceClient interface {
-    GetResource(context.Context, string) (*resourcev1.Resource, error)
-}
-
-type CommandContext struct {
-    // ...
-    MyResourceClient MyResourceClient
-}
-```
-
-Then add to `.mockery.yml` and run `make mocks` again:
-```yaml
-packages:
-  github.com/temporalio/cloud-cli/temporalcloudcli:
-    interfaces:
-      MyResourceClient:
-```
+To add a new interface to an existing package's mock, update `.mockery.yml` and run `make mocks`.

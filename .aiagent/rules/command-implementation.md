@@ -51,29 +51,107 @@ Each generated struct embeds the option-set structs (e.g. `ClientOptions`) and a
 
 ## Step 3 — Implement `commands.<name>.go`
 
-Create `temporalcloudcli/commands.<name>.go` and implement the `run` method on the generated struct.
+Create `temporalcloudcli/commands.<name>.go` and implement the application logic function(s) plus the `run` wiring method(s).
 
-**Standard read command skeleton:**
+Each command gets an exported `XxxParams` struct with data fields and injectable dependency fields, and an exported function that contains all application logic. The `run` method only builds the cloud client and calls the exported function.
+
+**Read command skeleton:**
 ```go
 package temporalcloudcli
 
 import (
-    "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+    "context"
+
+    cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+    "github.com/temporalio/cloud-cli/internal/namespace"
     "github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
-func (c *CloudMyCommand) run(cctx *CommandContext, _ []string) error {
+type GetFooParams struct {
+    Namespace string
+
+    Cloud   namespace.CloudService
+    Printer *printer.Printer
+}
+
+func GetFoo(ctx context.Context, params GetFooParams) error {
+    res, err := params.Cloud.GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: params.Namespace})
+    if err != nil {
+        return err
+    }
+    return params.Printer.PrintStructured(res.Namespace.Spec, printer.StructuredOptions{})
+}
+
+func (c *CloudNamespaceFooGetCommand) run(cctx *CommandContext, _ []string) error {
     cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
     if err != nil {
         return err
     }
-    res, err := cloudClient.CloudService().SomeRPCMethod(cctx.Context, &cloudservice.SomeRequest{})
+    return GetFoo(cctx.Context, GetFooParams{
+        Namespace: c.Namespace,
+        Cloud:     cloudClient.CloudService(),
+        Printer:   cctx.Printer,
+    })
+}
+```
+
+**Mutation command skeleton:**
+```go
+type SetFooParams struct {
+    Namespace        string
+    Value            string
+    ResourceVersion  string
+    AsyncOperationID string
+
+    Cloud            namespace.CloudService
+    Prompter         Prompter
+    OperationHandler AsyncOperationHandler
+}
+
+func SetFoo(ctx context.Context, params SetFooParams) error {
+    res, err := params.Cloud.GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: params.Namespace})
     if err != nil {
         return err
     }
-    return cctx.Printer.PrintStructured(res, printer.StructuredOptions{})
+    ns := res.Namespace
+    newSpec := proto.Clone(ns.Spec).(*namespacev1.NamespaceSpec)
+    // mutate newSpec...
+
+    if err := params.Prompter.PromptApply(ns.Spec, newSpec, false); err != nil {
+        return err
+    }
+
+    rv := ns.ResourceVersion
+    if params.ResourceVersion != "" {
+        rv = params.ResourceVersion
+    }
+    updateNamespace := runAsyncOperation(params.Cloud.UpdateNamespace, params.OperationHandler)
+    return updateNamespace(ctx, &cloudservice.UpdateNamespaceRequest{
+        Namespace:        params.Namespace,
+        Spec:             newSpec,
+        ResourceVersion:  rv,
+        AsyncOperationId: params.AsyncOperationID,
+    })
+}
+
+func (c *CloudNamespaceFooSetCommand) run(cctx *CommandContext, _ []string) error {
+    cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+    if err != nil {
+        return err
+    }
+    return SetFoo(cctx.Context, SetFooParams{
+        Namespace:        c.Namespace,
+        Value:            c.Value,
+        ResourceVersion:  c.ResourceVersion,
+        AsyncOperationID: c.AsyncOperationId,
+        Cloud:            cloudClient.CloudService(),
+        Prompter:         newPrompter(cctx),
+        OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions),
+    })
 }
 ```
+
+See `temporalcloudcli/commands.namespace.retention.go` for the canonical example.
 
 **Printer methods:**
 - `PrintStructured(v, opts)` — flat data or raw responses with no clear spec boundary
