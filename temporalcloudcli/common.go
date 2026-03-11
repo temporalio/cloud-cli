@@ -134,7 +134,7 @@ func promptApplyResource(cctx *CommandContext, existing, actual proto.Message, v
 	return nil
 }
 
-// AsyncOperationHandler handles the async operation lifecycle. Mockable for testing.
+// AsyncOperationHandler handles the async operation lifecycle.
 type AsyncOperationHandler interface {
 	// Handle dispatches a successfully started operation: prints immediately (async)
 	// or polls until completion (sync).
