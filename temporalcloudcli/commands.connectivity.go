@@ -1,0 +1,226 @@
+package temporalcloudcli
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	connectivityrulev1 "go.temporal.io/cloud-sdk/api/connectivityrule/v1"
+	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+
+	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
+)
+
+type (
+	ListConnectivityRulesParams struct {
+		Namespace string
+		PageSize  int32
+		PageToken string
+
+		Cloud   cloudservice.CloudServiceClient
+		Printer *printer.Printer
+	}
+
+	GetConnectivityRuleParams struct {
+		ID string
+
+		Cloud   cloudservice.CloudServiceClient
+		Printer *printer.Printer
+	}
+
+	CreateConnectivityRuleParams struct {
+		Type             string
+		ConnectionID     string
+		Region           string
+		GCPProjectID     string
+		AsyncOperationID string
+
+		Cloud            cloudservice.CloudServiceClient
+		OperationHandler AsyncOperationHandler
+		Printer          *printer.Printer
+	}
+
+	DeleteConnectivityRuleParams struct {
+		ID               string
+		ResourceVersion  string
+		AsyncOperationID string
+
+		Cloud            cloudservice.CloudServiceClient
+		OperationHandler AsyncOperationHandler
+	}
+)
+
+// ListConnectivityRules retrieves connectivity rules, optionally filtered by namespace.
+func ListConnectivityRules(ctx context.Context, params ListConnectivityRulesParams) error {
+	res, err := params.Cloud.GetConnectivityRules(ctx, &cloudservice.GetConnectivityRulesRequest{
+		Namespace: params.Namespace,
+		PageSize:  params.PageSize,
+		PageToken: params.PageToken,
+	})
+	if err != nil {
+		return err
+	}
+	return params.Printer.PrintStructured(res.ConnectivityRules, printer.StructuredOptions{})
+}
+
+// GetConnectivityRule retrieves details of a specific connectivity rule by ID.
+func GetConnectivityRule(ctx context.Context, params GetConnectivityRuleParams) error {
+	res, err := params.Cloud.GetConnectivityRule(ctx, &cloudservice.GetConnectivityRuleRequest{
+		ConnectivityRuleId: params.ID,
+	})
+	if err != nil {
+		return err
+	}
+	return params.Printer.PrintStructured(res.ConnectivityRule, printer.StructuredOptions{})
+}
+
+// CreateConnectivityRule creates a new connectivity rule of the given type.
+// AIDEV-NOTE: This function calls the API directly (not via runAsyncOperation) because we need
+// the ConnectivityRuleId from the response to print before handling the async operation.
+func CreateConnectivityRule(ctx context.Context, params CreateConnectivityRuleParams) error {
+	spec, err := buildConnectivityRuleSpec(params)
+	if err != nil {
+		return err
+	}
+
+	res, err := params.Cloud.CreateConnectivityRule(ctx, &cloudservice.CreateConnectivityRuleRequest{
+		Spec:             spec,
+		AsyncOperationId: params.AsyncOperationID,
+	})
+	if err != nil {
+		return params.OperationHandler.HandleErr(err)
+	}
+
+	if err := params.Printer.PrintStructured(struct {
+		ConnectivityRuleID string `json:"connectivityRuleId"`
+	}{ConnectivityRuleID: res.ConnectivityRuleId}, printer.StructuredOptions{}); err != nil {
+		return err
+	}
+
+	return params.OperationHandler.Handle(res.GetAsyncOperation())
+}
+
+// DeleteConnectivityRule deletes a connectivity rule by ID.
+// If ResourceVersion is not provided, it fetches the current resource version first.
+func DeleteConnectivityRule(ctx context.Context, params DeleteConnectivityRuleParams) error {
+	rv := params.ResourceVersion
+	if rv == "" {
+		res, err := params.Cloud.GetConnectivityRule(ctx, &cloudservice.GetConnectivityRuleRequest{
+			ConnectivityRuleId: params.ID,
+		})
+		if err != nil {
+			return err
+		}
+		rv = res.ConnectivityRule.ResourceVersion
+	}
+
+	deleteConnectivityRule := runAsyncOperation(params.Cloud.DeleteConnectivityRule, params.OperationHandler)
+	return deleteConnectivityRule(ctx, &cloudservice.DeleteConnectivityRuleRequest{
+		ConnectivityRuleId: params.ID,
+		ResourceVersion:    rv,
+		AsyncOperationId:   params.AsyncOperationID,
+	})
+}
+
+// buildConnectivityRuleSpec builds a ConnectivityRuleSpec from the given params.
+func buildConnectivityRuleSpec(params CreateConnectivityRuleParams) (*connectivityrulev1.ConnectivityRuleSpec, error) {
+	switch params.Type {
+	case "public":
+		return &connectivityrulev1.ConnectivityRuleSpec{
+			ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PublicRule{
+				PublicRule: &connectivityrulev1.PublicConnectivityRule{},
+			},
+		}, nil
+	case "private":
+		if params.ConnectionID == "" {
+			return nil, errors.New("--connection-id is required for private connectivity")
+		}
+		if params.Region == "" {
+			return nil, errors.New("--region is required for private connectivity")
+		}
+		return &connectivityrulev1.ConnectivityRuleSpec{
+			ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PrivateRule{
+				PrivateRule: &connectivityrulev1.PrivateConnectivityRule{
+					ConnectionId: params.ConnectionID,
+					GcpProjectId: params.GCPProjectID,
+					Region:       params.Region,
+				},
+			},
+		}, nil
+	default:
+		return nil, fmt.Errorf("invalid connectivity rule type %q: must be \"public\" or \"private\"", params.Type)
+	}
+}
+
+func (c *CloudConnectivityListCommand) run(cctx *CommandContext, _ []string) error {
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	return ListConnectivityRules(cctx.Context, ListConnectivityRulesParams{
+		Namespace: c.Namespace,
+		PageSize:  int32(c.PageSize),
+		PageToken: c.PageToken,
+		Cloud:     cloudClient.CloudService(),
+		Printer:   cctx.Printer,
+	})
+}
+
+func (c *CloudConnectivityGetCommand) run(cctx *CommandContext, _ []string) error {
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	return GetConnectivityRule(cctx.Context, GetConnectivityRuleParams{
+		ID:      c.Id,
+		Cloud:   cloudClient.CloudService(),
+		Printer: cctx.Printer,
+	})
+}
+
+func (c *CloudConnectivityCreateCommand) run(cctx *CommandContext, _ []string) error {
+	yes, err := cctx.promptYes("Create (y/yes)?", cctx.RootCommand.AutoConfirm)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting create.")
+	}
+
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	return CreateConnectivityRule(cctx.Context, CreateConnectivityRuleParams{
+		Type:             c.Type,
+		ConnectionID:     c.ConnectionId,
+		Region:           c.Region,
+		GCPProjectID:     c.GcpProjectId,
+		AsyncOperationID: c.AsyncOperationId,
+		Cloud:            cloudClient.CloudService(),
+		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, "", c.ClientOptions),
+		Printer:          cctx.Printer,
+	})
+}
+
+func (c *CloudConnectivityDeleteCommand) run(cctx *CommandContext, _ []string) error {
+	yes, err := cctx.promptYes("Delete (y/yes)?", cctx.RootCommand.AutoConfirm)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting delete.")
+	}
+
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	return DeleteConnectivityRule(cctx.Context, DeleteConnectivityRuleParams{
+		ID:               c.Id,
+		ResourceVersion:  c.ResourceVersion,
+		AsyncOperationID: c.AsyncOperationId,
+		Cloud:            cloudClient.CloudService(),
+		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.Id, c.ClientOptions),
+	})
+}

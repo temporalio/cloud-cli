@@ -86,6 +86,17 @@ func (v *UserIdentificationOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringVar(&v.UserEmail, "user-email", "", "The email address of the user. Mutually exclusive with --user-id.")
 }
 
+type ConnectivityRuleIdOptions struct {
+	Id      string
+	FlagSet *pflag.FlagSet
+}
+
+func (v *ConnectivityRuleIdOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.Id, "id", "", "The ID of the connectivity rule. Required.")
+	_ = cobra.MarkFlagRequired(f, "id")
+}
+
 type CloudCommand struct {
 	Command cobra.Command
 	ClientOptions
@@ -105,6 +116,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 		s.Command.Long = "The Temporal Cloud CLI provides commands for managing and operating Temporal Cloud resources,\nincluding namespaces, users, and account settings.\n\nExample:\n\n```\ncloud namespace get --namespace my-namespace.my-account\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudConnectivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLoginCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLogoutCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCommand(cctx, &s).Command)
@@ -116,6 +128,158 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
 	s.CommonOptions.BuildFlags(s.Command.PersistentFlags())
 	s.initCommand(cctx)
+	return &s
+}
+
+type CloudConnectivityCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+}
+
+func NewCloudConnectivityCommand(cctx *CommandContext, parent *CloudCommand) *CloudConnectivityCommand {
+	var s CloudConnectivityCommand
+	s.Parent = parent
+	s.Command.Use = "connectivity"
+	s.Command.Short = "Manage Temporal Cloud connectivity rules"
+	s.Command.Long = "Commands for managing connectivity rules for Temporal Cloud."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudConnectivityCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudConnectivityDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudConnectivityGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudConnectivityListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudConnectivityCreateCommand struct {
+	Parent  *CloudConnectivityCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	Type         string
+	ConnectionId string
+	Region       string
+	GcpProjectId string
+}
+
+func NewCloudConnectivityCreateCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityCreateCommand {
+	var s CloudConnectivityCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a new connectivity rule"
+	if hasHighlighting {
+		s.Command.Long = "Create a new connectivity rule. Use --type public for public internet access,\nor --type private for private VPC access (requires --connection-id and --region).\n\nExample (public):\n\n\x1b[1mcloud connectivity create --type public\x1b[0m\n\nExample (private):\n\n\x1b[1mcloud connectivity create --type private --connection-id vpce-12345 --region aws-us-west-2\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new connectivity rule. Use --type public for public internet access,\nor --type private for private VPC access (requires --connection-id and --region).\n\nExample (public):\n\n```\ncloud connectivity create --type public\n```\n\nExample (private):\n\n```\ncloud connectivity create --type private --connection-id vpce-12345 --region aws-us-west-2\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Type, "type", "", "The connectivity rule type: \"public\" or \"private\". Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "type")
+	s.Command.Flags().StringVar(&s.ConnectionId, "connection-id", "", "The connection ID for private connectivity (required when --type=private).")
+	s.Command.Flags().StringVar(&s.Region, "region", "", "The region for private connectivity (required when --type=private).")
+	s.Command.Flags().StringVar(&s.GcpProjectId, "gcp-project-id", "", "The GCP project ID (only for GCP private connectivity).")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudConnectivityDeleteCommand struct {
+	Parent  *CloudConnectivityCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ConnectivityRuleIdOptions
+}
+
+func NewCloudConnectivityDeleteCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityDeleteCommand {
+	var s CloudConnectivityDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a connectivity rule"
+	if hasHighlighting {
+		s.Command.Long = "Delete a connectivity rule by its ID.\n\nExample:\n\n\x1b[1mcloud connectivity delete --id <connectivity-rule-id>\x1b[0m"
+	} else {
+		s.Command.Long = "Delete a connectivity rule by its ID.\n\nExample:\n\n```\ncloud connectivity delete --id <connectivity-rule-id>\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.ConnectivityRuleIdOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudConnectivityGetCommand struct {
+	Parent  *CloudConnectivityCommand
+	Command cobra.Command
+	ClientOptions
+	ConnectivityRuleIdOptions
+}
+
+func NewCloudConnectivityGetCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityGetCommand {
+	var s CloudConnectivityGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get details of a connectivity rule"
+	if hasHighlighting {
+		s.Command.Long = "Get details of a specific connectivity rule by its ID.\n\nExample:\n\n\x1b[1mcloud connectivity get --id <connectivity-rule-id>\x1b[0m"
+	} else {
+		s.Command.Long = "Get details of a specific connectivity rule by its ID.\n\nExample:\n\n```\ncloud connectivity get --id <connectivity-rule-id>\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.ConnectivityRuleIdOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudConnectivityListCommand struct {
+	Parent  *CloudConnectivityCommand
+	Command cobra.Command
+	ClientOptions
+	Namespace string
+	PageSize  int
+	PageToken string
+}
+
+func NewCloudConnectivityListCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityListCommand {
+	var s CloudConnectivityListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List connectivity rules"
+	if hasHighlighting {
+		s.Command.Long = "List connectivity rules, optionally filtered by namespace.\n\nExample:\n\n\x1b[1mcloud connectivity list --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "List connectivity rules, optionally filtered by namespace.\n\nExample:\n\n```\ncloud connectivity list --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "Filter connectivity rules by namespace (e.g., 'my-namespace.my-account').")
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of connectivity rules to return per page.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Page token for pagination.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
