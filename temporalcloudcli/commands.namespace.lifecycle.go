@@ -28,6 +28,11 @@ type (
 		Prompter         Prompter
 		OperationHandler AsyncOperationHandler
 	}
+
+	GetLifecycleOutput struct {
+		Namespace              string `json:"namespace"`
+		EnableDeleteProtection bool   `json:"enableDeleteProtection"`
+	}
 )
 
 func GetLifecycle(ctx context.Context, params GetLifecycleParams) error {
@@ -40,10 +45,7 @@ func GetLifecycle(ctx context.Context, params GetLifecycleParams) error {
 	if ns.Spec.Lifecycle != nil {
 		enableDeleteProtection = ns.Spec.Lifecycle.EnableDeleteProtection
 	}
-	return params.Printer.PrintStructured(struct {
-		Namespace              string `json:"namespace"`
-		EnableDeleteProtection bool   `json:"enableDeleteProtection"`
-	}{
+	return params.Printer.PrintStructured(GetLifecycleOutput{
 		Namespace:              ns.Namespace,
 		EnableDeleteProtection: enableDeleteProtection,
 	}, printer.StructuredOptions{})

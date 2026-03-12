@@ -43,13 +43,9 @@ func TestGetLifecycle_Success(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	type lifecycleOutput struct {
-		Namespace              string `json:"namespace"`
-		EnableDeleteProtection bool   `json:"enableDeleteProtection"`
-	}
-	var out lifecycleOutput
+	var out temporalcloudcli.GetLifecycleOutput
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
-	assert.Equal(t, lifecycleOutput{Namespace: "my-namespace", EnableDeleteProtection: true}, out)
+	assert.Equal(t, temporalcloudcli.GetLifecycleOutput{Namespace: "my-namespace", EnableDeleteProtection: true}, out)
 }
 
 // TestGetLifecycle_NilLifecycle verifies that GetLifecycle handles a nil lifecycle spec gracefully.
