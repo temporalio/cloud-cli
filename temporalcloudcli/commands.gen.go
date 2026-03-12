@@ -971,7 +971,7 @@ type CloudNamespaceLifecycleGetCommand struct {
 	Parent  *CloudNamespaceLifecycleCommand
 	Command cobra.Command
 	ClientOptions
-	Namespace string
+	NamespaceOptions
 }
 
 func NewCloudNamespaceLifecycleGetCommand(cctx *CommandContext, parent *CloudNamespaceLifecycleCommand) *CloudNamespaceLifecycleGetCommand {
@@ -986,9 +986,8 @@ func NewCloudNamespaceLifecycleGetCommand(cctx *CommandContext, parent *CloudNam
 		s.Command.Long = "Retrieve the current lifecycle configuration for a Temporal Cloud namespace.\nLifecycle settings include delete protection status.\n\nExample:\n\n```\ncloud namespace lifecycle get --namespace my-namespace.my-account\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1001,13 +1000,10 @@ type CloudNamespaceLifecycleSetCommand struct {
 	Parent  *CloudNamespaceLifecycleCommand
 	Command cobra.Command
 	ClientOptions
-	DiffOptions
-	Namespace              string
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
 	EnableDeleteProtection bool
-	AsyncOperationId       string
-	Async                  bool
-	Idempotent             bool
-	ResourceVersion        string
 }
 
 func NewCloudNamespaceLifecycleSetCommand(cctx *CommandContext, parent *CloudNamespaceLifecycleCommand) *CloudNamespaceLifecycleSetCommand {
@@ -1022,16 +1018,12 @@ func NewCloudNamespaceLifecycleSetCommand(cctx *CommandContext, parent *CloudNam
 		s.Command.Long = "Set the lifecycle configuration for a Temporal Cloud namespace.\nLifecycle settings include delete protection to prevent accidental deletion.\n\nExample:\n\n```\ncloud namespace lifecycle set --namespace my-namespace.my-account --enable-delete-protection true\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "The fully qualified namespace name in the format 'namespace.account' (e.g., 'my-namespace.my-account'). Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
 	s.Command.Flags().BoolVar(&s.EnableDeleteProtection, "enable-delete-protection", false, "Enable or disable delete protection for the namespace. When enabled, the namespace cannot be deleted until this flag is set to false. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "enable-delete-protection")
-	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
-	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
-	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if the lifecycle configuration is already set to the specified value. Without this flag, the command errors when no change is needed.")
-	s.Command.Flags().StringVar(&s.ResourceVersion, "resource-version", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
-	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
