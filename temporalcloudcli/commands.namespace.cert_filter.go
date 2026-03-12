@@ -90,40 +90,6 @@ func (c *CloudNamespaceCertFilterDeleteCommand) run(cctx *CommandContext, _ []st
 	})
 }
 
-// loadCertFilters parses CertificateFilterSpecs from the certificate filter option set.
-// Returns nil (no error) if no flags are provided.
-// --certificate-filter may be repeated for multiple inline filters.
-// --certificate-filter-file provides one additional filter from a file.
-func loadCertFilters(cctx *CommandContext, opts CertificateFilterOptions) ([]*namespacev1.CertificateFilterSpec, error) {
-	var filters []*namespacev1.CertificateFilterSpec
-
-	for _, raw := range opts.CertificateFilter {
-		filterData, err := loadJSONSpec(raw)
-		if err != nil {
-			return nil, err
-		}
-		filter := &namespacev1.CertificateFilterSpec{}
-		if err := cctx.UnmarshalProtoJSON(filterData, filter); err != nil {
-			return nil, fmt.Errorf("failed to parse certificate filter: %w", err)
-		}
-		filters = append(filters, filter)
-	}
-
-	if opts.CertificateFilterFile != "" {
-		filterData, err := loadJSONSpec("@" + opts.CertificateFilterFile)
-		if err != nil {
-			return nil, err
-		}
-		filter := &namespacev1.CertificateFilterSpec{}
-		if err := cctx.UnmarshalProtoJSON(filterData, filter); err != nil {
-			return nil, fmt.Errorf("failed to parse certificate filter file: %w", err)
-		}
-		filters = append(filters, filter)
-	}
-
-	return filters, nil
-}
-
 // buildCertFilterFromFlags creates a CertificateFilterSpec from command line flags.
 // Returns an error if no fields are specified (at least one field is required).
 func buildCertFilterFromFlags(commonName, organization, organizationalUnit, subjectAlternativeName string) (*namespacev1.CertificateFilterSpec, error) {
