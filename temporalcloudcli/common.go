@@ -12,6 +12,7 @@ import (
 
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -131,6 +132,81 @@ func promptApplyResource(cctx *CommandContext, existing, actual proto.Message, v
 		return fmt.Errorf("Aborting apply.")
 	}
 	return nil
+}
+
+// AsyncOperationHandler handles the async operation lifecycle.
+type AsyncOperationHandler interface {
+	// Handle dispatches a successfully started operation: prints immediately (async)
+	// or polls until completion (sync).
+	Handle(op *operation.AsyncOperation) error
+	// HandleErr handles an error from an operation call: swallows nothing-to-change
+	// errors when idempotent, propagates all others.
+	HandleErr(err error) error
+}
+
+type Prompter interface {
+	PromptApply(old, new proto.Message, verbose bool) error
+}
+
+type asyncOperationHandler struct {
+	cctx       *CommandContext
+	asyncOpts  AsyncOperationOptions
+	resourceID string
+	clientOpts ClientOptions
+}
+
+func NewAsyncOperationHandler(cctx *CommandContext, asyncOpts AsyncOperationOptions, resourceID string, clientOpts ClientOptions) AsyncOperationHandler {
+	return &asyncOperationHandler{cctx: cctx, asyncOpts: asyncOpts, resourceID: resourceID, clientOpts: clientOpts}
+}
+
+func (r *asyncOperationHandler) Handle(op *operation.AsyncOperation) error {
+	if r.asyncOpts.Async {
+		return r.cctx.Printer.PrintStructured(MutationResult{AsyncOp: op, ID: r.resourceID}, printer.StructuredOptions{})
+	}
+	poller, pollerErr := getPoller(r.cctx, r.clientOpts)
+	if pollerErr != nil {
+		return pollerErr
+	}
+	return poller.PollAsyncOperation(r.cctx, op.Id, r.resourceID)
+}
+
+func (r *asyncOperationHandler) HandleErr(err error) error {
+	if isNothingChangedErr(r.asyncOpts.Idempotent, err) {
+		return r.cctx.Printer.PrintStructured(newUnchangedResult(r.resourceID), printer.StructuredOptions{})
+	}
+	return err
+}
+
+type prompter struct {
+	cctx *CommandContext
+}
+
+func newPrompter(cctx *CommandContext) Prompter {
+	return &prompter{cctx: cctx}
+}
+
+func (p *prompter) PromptApply(old, new proto.Message, verbose bool) error {
+	return promptApplyResource(p.cctx, old, new, verbose)
+}
+
+// AsyncOperationResponse is implemented by gRPC responses that carry an async operation.
+type AsyncOperationResponse interface {
+	GetAsyncOperation() *operation.AsyncOperation
+}
+
+// runAsyncOperation wraps a gRPC call that returns an AsyncOperationResponse,
+// delegating result dispatch and error handling to an AsyncOperationHandler.
+func runAsyncOperation[Req any, Res AsyncOperationResponse](
+	fn func(context.Context, Req, ...grpc.CallOption) (Res, error),
+	handler AsyncOperationHandler,
+) func(context.Context, Req) error {
+	return func(ctx context.Context, params Req) error {
+		res, err := fn(ctx, params)
+		if err != nil {
+			return handler.HandleErr(err)
+		}
+		return handler.Handle(res.GetAsyncOperation())
+	}
 }
 
 type AsyncOperationPoller struct {

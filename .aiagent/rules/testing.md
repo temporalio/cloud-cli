@@ -1,33 +1,48 @@
 # Testing
 
-## Application Layer Tests (`internal/<resource>/<feature>_test.go`)
+## Unit Tests (`temporalcloudcli/commands.<name>_test.go`)
 
-- Use external test package with `_test` suffix: `package namespace_test`
-- Write individual test functions (most application logic tests have unique setup/assertions)
-- Use `assert.Equal` for protobuf message assertions — it handles proto comparison correctly. Use `proto.Equal` only inside `mock.MatchedBy` closures (which must return a bool). Never compare proto messages field-by-field.
-- Mock the `CloudService` interface to test business logic in isolation
-- Example naming: `TestClient_ListCertFilters_Success`, `TestClient_AddCertFilters_GetNamespaceError`
-- See `internal/namespace/cert_test.go` for the canonical pattern
+Unit tests call the exported application logic functions directly with mocked dependencies. No build tag is required — these run as part of the normal `make all` / `go test` flow.
+
+**Package:** `package temporalcloudcli_test`
+
+- Write individual test functions (most have unique setup/assertions)
+- Use `assert.Equal` for protobuf message assertions. Use `proto.Equal` only inside `mock.MatchedBy` closures. Never compare proto messages field-by-field.
+- Mock all three injectable dependency interfaces:
+  - `csmock.NewMockCloudServiceClient(t)` (from `internal/cloudservice/mock`)
+  - `cmdmock.NewMockPrompter(t)` (from `temporalcloudcli/mock`)
+  - `cmdmock.NewMockAsyncOperationHandler(t)` (from `temporalcloudcli/mock`)
+- Example naming: `TestGetRetention_Success`, `TestSetRetention_GetNamespaceError`
+- See `temporalcloudcli/commands.namespace.retention_test.go` for the canonical pattern
 
 **Example:**
 ```go
-func TestClient_ListCACerts(t *testing.T) {
-    mockCloud := mock.NewMockCloudService(t)
-    client := &Client{Cloud: mockCloud}
+func TestGetFoo_Success(t *testing.T) {
+    mockCloud := csmock.NewMockCloudServiceClient(t)
 
-    mockCloud.EXPECT().GetNamespace(mock.Anything, mock.Anything).Return(
-        &cloudservice.GetNamespaceResponse{/* ... */}, nil,
-    )
+    mockCloud.EXPECT().
+        GetNamespace(context.Background(), &cloudservice.GetNamespaceRequest{Namespace: "my-namespace"}).
+        Return(&cloudservice.GetNamespaceResponse{
+            Namespace: &namespacev1.Namespace{
+                Namespace: "my-namespace",
+                Spec:      &namespacev1.NamespaceSpec{/* ... */},
+            },
+        }, nil)
 
-    certs, err := client.ListCACerts(context.Background(), "my-namespace")
+    var buf bytes.Buffer
+    err := temporalcloudcli.GetFoo(context.Background(), temporalcloudcli.GetFooParams{
+        Namespace: "my-namespace",
+        Cloud:     mockCloud,
+        Printer:   &printer.Printer{Output: &buf, JSON: true},
+    })
     require.NoError(t, err)
-    require.NotEmpty(t, certs)
+    // assert buf contents
 }
 ```
 
-## Command Layer Tests (`temporalcloudcli/commands.<name>_test.go`)
+## Integration Tests (`temporalcloudcli/commands.<name>_test.go`)
 
-All tests are integration tests (require a live API key + server) unless mocking the application client.
+Integration tests require a live API key + server and use the `SharedServerSuite`.
 
 **Build tag required:**
 ```go
@@ -80,7 +95,7 @@ func (s *SharedServerSuite) TestMyCommand() {
 
 **Avoid complex branching** in table-driven tests (nested ifs, different setup per case). If you need conditional logic to handle different cases, use individual test functions.
 
-See `temporalcloudcli/commands.namespace.cert_ca_test.go` for the canonical pattern.
+See `temporalcloudcli/commands.namespace.retention_test.go` for the canonical unit test pattern.
 
 ## Common Test Patterns
 
