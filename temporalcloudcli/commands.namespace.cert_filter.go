@@ -2,7 +2,6 @@ package temporalcloudcli
 
 import (
 	"errors"
-	"fmt"
 
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 

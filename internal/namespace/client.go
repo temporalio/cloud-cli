@@ -15,7 +15,6 @@ import (
 type CloudService interface {
 	GetNamespace(ctx context.Context, req *cloudservice.GetNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.GetNamespaceResponse, error)
 	GetNamespaces(ctx context.Context, req *cloudservice.GetNamespacesRequest, opts ...grpc.CallOption) (*cloudservice.GetNamespacesResponse, error)
-	CreateNamespace(ctx context.Context, req *cloudservice.CreateNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.CreateNamespaceResponse, error)
 	UpdateNamespace(ctx context.Context, req *cloudservice.UpdateNamespaceRequest, opts ...grpc.CallOption) (*cloudservice.UpdateNamespaceResponse, error)
 	RenameCustomSearchAttribute(ctx context.Context, req *cloudservice.RenameCustomSearchAttributeRequest, opts ...grpc.CallOption) (*cloudservice.RenameCustomSearchAttributeResponse, error)
 	UpdateNamespaceTags(ctx context.Context, req *cloudservice.UpdateNamespaceTagsRequest, opts ...grpc.CallOption) (*cloudservice.UpdateNamespaceTagsResponse, error)
@@ -69,30 +68,6 @@ func (c *Client) GetNamespaces(ctx context.Context, params GetNamespacesParams) 
 type CreateNamespaceParams struct {
 	Spec             *namespacev1.NamespaceSpec
 	AsyncOperationID string
-}
-
-type CreateNamespaceResult struct {
-	// NamespaceID is the server-assigned full namespace identifier (e.g. "name.accountId").
-	// AIDEV-NOTE: Unlike update/delete, create gets its resource ID from the server response,
-	// not from the caller — which is why wrapAsyncOperation cannot be used directly here.
-	// TODO: Refactor wrapAsyncOperation to return a MutationResult with a populated ID so
-	// that create commands can use the same wrapper as other mutation commands.
-	NamespaceID string
-	AsyncOp     *operation.AsyncOperation
-}
-
-func (c *Client) CreateNamespace(ctx context.Context, params CreateNamespaceParams) (CreateNamespaceResult, error) {
-	res, err := c.Cloud.CreateNamespace(ctx, &cloudservice.CreateNamespaceRequest{
-		AsyncOperationId: params.AsyncOperationID,
-		Spec:             params.Spec,
-	})
-	if err != nil {
-		return CreateNamespaceResult{}, err
-	}
-	return CreateNamespaceResult{
-		NamespaceID: res.GetNamespace(),
-		AsyncOp:     res.GetAsyncOperation(),
-	}, nil
 }
 
 type UpdateNamespaceParams struct {
