@@ -1,13 +1,16 @@
 package temporalcloudcli
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/temporalio/cloud-cli/internal/namespace"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
@@ -306,52 +309,67 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 	)
 }
 
-func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) error {
-	spec := &namespacev1.NamespaceSpec{
-		Name:          c.Name,
-		Regions:       c.Region,
-		RetentionDays: int32(c.RetentionDays),
-		ApiKeyAuth:    &namespacev1.ApiKeyAuthSpec{Enabled: c.ApiKeyAuthEnabled},
-		Lifecycle:     &namespacev1.LifecycleSpec{EnableDeleteProtection: c.EnableDeleteProtection},
-	}
+type (
+	CreateNamespaceParams struct {
+		Name                               string
+		Regions                            []string
+		RetentionDays                      int32
+		ApiKeyAuthEnabled                  bool
+		EnableDeleteProtection             bool
+		AsyncOperationID                   string
+		Idempotent                         bool
+		CACertificateOptions               CaCertificateOptions
+		CertificateFilterOptions           CertificateFilterOptions
+		SearchAttribute                    []string
+		CodecEndpoint                      string
+		CodecPassAccessToken               bool
+		CodecIncludeCrossOriginCredentials bool
+		ConnectionRuleIDs                  []string
 
-	// Handle CA certificate
-	certBytes, err := readCACertBytes(c.CaCertificateOptions)
+		Cloud              cloudservice.CloudServiceClient
+		Printer            *printer.Printer
+		Prompter           Prompter
+		HandleResult       func(op *operation.AsyncOperation, namespaceID string) error
+		UnmarshalProtoJSON func([]byte, proto.Message) error
+	}
+)
+
+// CreateNamespace builds the NamespaceSpec from the given params, prompts for confirmation,
+// calls the API, and dispatches the result via HandleResult.
+func CreateNamespace(ctx context.Context, params CreateNamespaceParams) error {
+	certBytes, err := readCACertBytes(params.CACertificateOptions)
 	if err != nil {
 		return err
 	}
-	if certBytes != nil {
-		if spec.MtlsAuth == nil {
-			spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
+
+	var certFilters []*namespacev1.CertificateFilterSpec
+	for _, raw := range params.CertificateFilterOptions.CertificateFilter {
+		filterData, err := loadJSONSpec(raw)
+		if err != nil {
+			return err
 		}
-		spec.MtlsAuth.AcceptedClientCa = certBytes
+		filter := &namespacev1.CertificateFilterSpec{}
+		if err := params.UnmarshalProtoJSON(filterData, filter); err != nil {
+			return fmt.Errorf("failed to parse certificate filter: %w", err)
+		}
+		certFilters = append(certFilters, filter)
+	}
+	if params.CertificateFilterOptions.CertificateFilterFile != "" {
+		filterData, err := loadJSONSpec("@" + params.CertificateFilterOptions.CertificateFilterFile)
+		if err != nil {
+			return err
+		}
+		filter := &namespacev1.CertificateFilterSpec{}
+		if err := params.UnmarshalProtoJSON(filterData, filter); err != nil {
+			return fmt.Errorf("failed to parse certificate filter file: %w", err)
+		}
+		certFilters = append(certFilters, filter)
 	}
 
-	// Handle certificate filters
-	certFilters, err := loadCertFilters(cctx, c.CertificateFilterOptions)
-	if err != nil {
-		return err
-	}
-	if len(certFilters) > 0 {
-		if spec.MtlsAuth == nil {
-			spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
-		}
-		spec.MtlsAuth.CertificateFilters = append(spec.MtlsAuth.CertificateFilters, certFilters...)
-	}
-
-	// Handle codec server
-	if c.CodecEndpoint != "" {
-		spec.CodecServer = &namespacev1.CodecServerSpec{
-			Endpoint:                      c.CodecEndpoint,
-			PassAccessToken:               c.CodecPassAccessToken,
-			IncludeCrossOriginCredentials: c.CodecIncludeCrossOriginCredentials,
-		}
-	}
-
-	// Handle search attributes
-	if len(c.SearchAttribute) > 0 {
-		spec.SearchAttributes = make(map[string]namespacev1.NamespaceSpec_SearchAttributeType, len(c.SearchAttribute))
-		for _, sa := range c.SearchAttribute {
+	var searchAttrs map[string]namespacev1.NamespaceSpec_SearchAttributeType
+	if len(params.SearchAttribute) > 0 {
+		searchAttrs = make(map[string]namespacev1.NamespaceSpec_SearchAttributeType, len(params.SearchAttribute))
+		for _, sa := range params.SearchAttribute {
 			name, typStr, ok := strings.Cut(sa, "=")
 			if !ok {
 				return fmt.Errorf("invalid search attribute format %q: expected 'name=Type'", sa)
@@ -360,52 +378,98 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 			if err != nil {
 				return err
 			}
-			spec.SearchAttributes[name] = attrType
+			searchAttrs[name] = attrType
 		}
 	}
 
-	// Handle connectivity rules
-	spec.ConnectivityRuleIds = c.ConnectionRuleId
+	spec := &namespacev1.NamespaceSpec{
+		Name:                params.Name,
+		Regions:             params.Regions,
+		RetentionDays:       params.RetentionDays,
+		ApiKeyAuth:          &namespacev1.ApiKeyAuthSpec{Enabled: params.ApiKeyAuthEnabled},
+		Lifecycle:           &namespacev1.LifecycleSpec{EnableDeleteProtection: params.EnableDeleteProtection},
+		ConnectivityRuleIds: params.ConnectionRuleIDs,
+	}
 
-	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
-	if err != nil {
+	if len(certBytes) > 0 {
+		spec.MtlsAuth = &namespacev1.MtlsAuthSpec{AcceptedClientCa: certBytes}
+	}
+	if len(certFilters) > 0 {
+		if spec.MtlsAuth == nil {
+			spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
+		}
+		spec.MtlsAuth.CertificateFilters = certFilters
+	}
+	if params.CodecEndpoint != "" {
+		spec.CodecServer = &namespacev1.CodecServerSpec{
+			Endpoint:                      params.CodecEndpoint,
+			PassAccessToken:               params.CodecPassAccessToken,
+			IncludeCrossOriginCredentials: params.CodecIncludeCrossOriginCredentials,
+		}
+	}
+
+	spec.SearchAttributes = searchAttrs
+
+	if err := params.Prompter.PromptApply(nil, spec, false); err != nil {
 		return err
 	}
 
-	yes, err := cctx.promptYes("Create (y/yes)?", cctx.RootCommand.AutoConfirm)
-	if err != nil {
-		return err
-	}
-	if !yes {
-		return fmt.Errorf("Aborting create.")
-	}
-
-	res, err := namespaceClient.CreateNamespace(cctx.Context, namespace.CreateNamespaceParams{
+	res, err := params.Cloud.CreateNamespace(ctx, &cloudservice.CreateNamespaceRequest{
 		Spec:             spec,
-		AsyncOperationID: c.AsyncOperationId,
+		AsyncOperationId: params.AsyncOperationID,
 	})
 	if err != nil {
-		if c.Idempotent {
+		if params.Idempotent {
 			if s, ok := status.FromError(err); ok && s.Code() == codes.AlreadyExists {
-				return cctx.Printer.PrintStructured(newUnchangedResult(c.Name), printer.StructuredOptions{})
+				return params.Printer.PrintStructured(newUnchangedResult(params.Name), printer.StructuredOptions{})
 			}
 		}
 		return err
 	}
 
-	if c.Async {
-		return cctx.Printer.PrintStructured(MutationResult{
-			AsyncOp: res.AsyncOp,
-			ID:      res.NamespaceID,
-		}, printer.StructuredOptions{})
-	}
+	return params.HandleResult(res.GetAsyncOperation(), res.GetNamespace())
+}
 
-	poller, err := getPoller(cctx, c.ClientOptions)
+func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) error {
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	return poller.PollAsyncOperation(cctx, res.AsyncOp.Id, res.NamespaceID)
+	return CreateNamespace(cctx.Context, CreateNamespaceParams{
+		Name:                               c.Name,
+		Regions:                            c.Region,
+		RetentionDays:                      int32(c.RetentionDays),
+		ApiKeyAuthEnabled:                  c.ApiKeyAuthEnabled,
+		EnableDeleteProtection:             c.EnableDeleteProtection,
+		AsyncOperationID:                   c.AsyncOperationId,
+		Idempotent:                         c.Idempotent,
+		CACertificateOptions:               c.CaCertificateOptions,
+		CertificateFilterOptions:           c.CertificateFilterOptions,
+		SearchAttribute:                    c.SearchAttribute,
+		CodecEndpoint:                      c.CodecEndpoint,
+		CodecPassAccessToken:               c.CodecPassAccessToken,
+		CodecIncludeCrossOriginCredentials: c.CodecIncludeCrossOriginCredentials,
+		ConnectionRuleIDs:                  c.ConnectionRuleId,
+		Cloud:                              cloudClient.CloudService(),
+		Printer:                            cctx.Printer,
+		Prompter:                           newPrompter(cctx),
+		UnmarshalProtoJSON:                 cctx.UnmarshalProtoJSON,
+		// TODO: Use AsyncOperationHandler once it's updated to be able to extract the correct ID for namespaces.
+		HandleResult: func(op *operation.AsyncOperation, namespaceID string) error {
+			if c.Async {
+				return cctx.Printer.PrintStructured(MutationResult{
+					AsyncOp: op,
+					ID:      namespaceID,
+				}, printer.StructuredOptions{})
+			}
+			poller, err := getPoller(cctx, c.ClientOptions)
+			if err != nil {
+				return err
+			}
+			return poller.PollAsyncOperation(cctx, op.Id, namespaceID)
+		},
+	})
 }
 
 func getNamespaceClient(cctx *CommandContext, opts ClientOptions) (NamespaceClient, error) {
