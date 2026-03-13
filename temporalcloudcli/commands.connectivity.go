@@ -36,6 +36,7 @@ type (
 		AsyncOperationID string
 
 		Cloud            cloudservice.CloudServiceClient
+		Prompter         Prompter
 		OperationHandler AsyncOperationHandler
 	}
 
@@ -45,6 +46,7 @@ type (
 		AsyncOperationID string
 
 		Cloud            cloudservice.CloudServiceClient
+		Prompter         Prompter
 		OperationHandler AsyncOperationHandler
 	}
 )
@@ -94,6 +96,10 @@ func CreateConnectivityRule(ctx context.Context, params CreateConnectivityRulePa
 		return err
 	}
 
+	if err := params.Prompter.PromptApply(&connectivityrulev1.ConnectivityRuleSpec{}, spec, false); err != nil {
+		return err
+	}
+
 	createRule := runCreateOperation(
 		params.Cloud.CreateConnectivityRule,
 		params.OperationHandler,
@@ -106,17 +112,23 @@ func CreateConnectivityRule(ctx context.Context, params CreateConnectivityRulePa
 }
 
 // DeleteConnectivityRule deletes a connectivity rule by ID.
-// If ResourceVersion is not provided, it fetches the current resource version first.
+// Always fetches the rule first to show a diff before deletion.
 func DeleteConnectivityRule(ctx context.Context, params DeleteConnectivityRuleParams) error {
+	res, err := params.Cloud.GetConnectivityRule(ctx, &cloudservice.GetConnectivityRuleRequest{
+		ConnectivityRuleId: params.ID,
+	})
+	if err != nil {
+		return err
+	}
+	rule := res.ConnectivityRule
+
+	if err := params.Prompter.PromptApply(rule.Spec, &connectivityrulev1.ConnectivityRuleSpec{}, false); err != nil {
+		return err
+	}
+
 	rv := params.ResourceVersion
 	if rv == "" {
-		res, err := params.Cloud.GetConnectivityRule(ctx, &cloudservice.GetConnectivityRuleRequest{
-			ConnectivityRuleId: params.ID,
-		})
-		if err != nil {
-			return err
-		}
-		rv = res.ConnectivityRule.ResourceVersion
+		rv = rule.ResourceVersion
 	}
 
 	deleteConnectivityRule := runUpdateOperation(params.Cloud.DeleteConnectivityRule, params.OperationHandler, params.ID)
@@ -184,14 +196,6 @@ func (c *CloudConnectivityGetCommand) run(cctx *CommandContext, _ []string) erro
 }
 
 func (c *CloudConnectivityCreateCommand) run(cctx *CommandContext, _ []string) error {
-	yes, err := cctx.promptYes("Create (y/yes)?", cctx.RootCommand.AutoConfirm)
-	if err != nil {
-		return err
-	}
-	if !yes {
-		return errors.New("Aborting create.")
-	}
-
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -203,19 +207,12 @@ func (c *CloudConnectivityCreateCommand) run(cctx *CommandContext, _ []string) e
 		GCPProjectID:     c.GcpProjectId,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
+		Prompter:         newPrompter(cctx),
 		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
 func (c *CloudConnectivityDeleteCommand) run(cctx *CommandContext, _ []string) error {
-	yes, err := cctx.promptYes("Delete (y/yes)?", cctx.RootCommand.AutoConfirm)
-	if err != nil {
-		return err
-	}
-	if !yes {
-		return errors.New("Aborting delete.")
-	}
-
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -225,6 +222,7 @@ func (c *CloudConnectivityDeleteCommand) run(cctx *CommandContext, _ []string) e
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
+		Prompter:         newPrompter(cctx),
 		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }

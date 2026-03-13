@@ -131,8 +131,16 @@ func TestGetConnectivityRule_Error(t *testing.T) {
 func TestCreateConnectivityRule_Public_Success(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
 
 	op := &operation.AsyncOperation{Id: "op-123"}
+	mockPrompter.EXPECT().
+		PromptApply(&connectivityrulev1.ConnectivityRuleSpec{}, &connectivityrulev1.ConnectivityRuleSpec{
+			ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PublicRule{
+				PublicRule: &connectivityrulev1.PublicConnectivityRule{},
+			},
+		}, false).
+		Return(nil)
 	mockCloud.EXPECT().
 		CreateConnectivityRule(context.Background(), &cloudservice.CreateConnectivityRuleRequest{
 			Spec: &connectivityrulev1.ConnectivityRuleSpec{
@@ -151,6 +159,7 @@ func TestCreateConnectivityRule_Public_Success(t *testing.T) {
 	err := temporalcloudcli.CreateConnectivityRule(context.Background(), temporalcloudcli.CreateConnectivityRuleParams{
 		Type:             "public",
 		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
 		OperationHandler: mockHandler,
 	})
 	require.NoError(t, err)
@@ -160,8 +169,19 @@ func TestCreateConnectivityRule_Public_Success(t *testing.T) {
 func TestCreateConnectivityRule_Private_Success(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
 
 	op := &operation.AsyncOperation{Id: "op-456"}
+	mockPrompter.EXPECT().
+		PromptApply(&connectivityrulev1.ConnectivityRuleSpec{}, &connectivityrulev1.ConnectivityRuleSpec{
+			ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PrivateRule{
+				PrivateRule: &connectivityrulev1.PrivateConnectivityRule{
+					ConnectionId: "vpce-12345",
+					Region:       "aws-us-west-2",
+				},
+			},
+		}, false).
+		Return(nil)
 	mockCloud.EXPECT().
 		CreateConnectivityRule(context.Background(), &cloudservice.CreateConnectivityRuleRequest{
 			Spec: &connectivityrulev1.ConnectivityRuleSpec{
@@ -185,6 +205,7 @@ func TestCreateConnectivityRule_Private_Success(t *testing.T) {
 		ConnectionID:     "vpce-12345",
 		Region:           "aws-us-west-2",
 		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
 		OperationHandler: mockHandler,
 	})
 	require.NoError(t, err)
@@ -237,8 +258,16 @@ func TestCreateConnectivityRule_PrivateMissingRegion(t *testing.T) {
 func TestCreateConnectivityRule_APIError(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
 	apiErr := errors.New("api error")
 
+	mockPrompter.EXPECT().
+		PromptApply(&connectivityrulev1.ConnectivityRuleSpec{}, &connectivityrulev1.ConnectivityRuleSpec{
+			ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PublicRule{
+				PublicRule: &connectivityrulev1.PublicConnectivityRule{},
+			},
+		}, false).
+		Return(nil)
 	mockCloud.EXPECT().
 		CreateConnectivityRule(context.Background(), &cloudservice.CreateConnectivityRuleRequest{
 			Spec: &connectivityrulev1.ConnectivityRuleSpec{
@@ -254,16 +283,23 @@ func TestCreateConnectivityRule_APIError(t *testing.T) {
 	err := temporalcloudcli.CreateConnectivityRule(context.Background(), temporalcloudcli.CreateConnectivityRuleParams{
 		Type:             "public",
 		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
 		OperationHandler: mockHandler,
 	})
 	require.ErrorIs(t, err, apiErr)
 }
 
-// TestDeleteConnectivityRule_Success verifies that the rule is fetched for its resource version then deleted.
+// TestDeleteConnectivityRule_Success verifies that the rule is fetched, diff shown, then deleted.
 func TestDeleteConnectivityRule_Success(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
 
+	ruleSpec := &connectivityrulev1.ConnectivityRuleSpec{
+		ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PublicRule{
+			PublicRule: &connectivityrulev1.PublicConnectivityRule{},
+		},
+	}
 	mockCloud.EXPECT().
 		GetConnectivityRule(context.Background(), &cloudservice.GetConnectivityRuleRequest{
 			ConnectivityRuleId: "rule-1",
@@ -272,8 +308,13 @@ func TestDeleteConnectivityRule_Success(t *testing.T) {
 			ConnectivityRule: &connectivityrulev1.ConnectivityRule{
 				Id:              "rule-1",
 				ResourceVersion: "rv-1",
+				Spec:            ruleSpec,
 			},
 		}, nil)
+
+	mockPrompter.EXPECT().
+		PromptApply(ruleSpec, &connectivityrulev1.ConnectivityRuleSpec{}, false).
+		Return(nil)
 
 	op := &operation.AsyncOperation{Id: "op-789"}
 	mockCloud.EXPECT().
@@ -290,6 +331,7 @@ func TestDeleteConnectivityRule_Success(t *testing.T) {
 	err := temporalcloudcli.DeleteConnectivityRule(context.Background(), temporalcloudcli.DeleteConnectivityRuleParams{
 		ID:               "rule-1",
 		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
 		OperationHandler: mockHandler,
 	})
 	require.NoError(t, err)
@@ -299,6 +341,28 @@ func TestDeleteConnectivityRule_Success(t *testing.T) {
 func TestDeleteConnectivityRule_ExplicitResourceVersion(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+
+	ruleSpec := &connectivityrulev1.ConnectivityRuleSpec{
+		ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PublicRule{
+			PublicRule: &connectivityrulev1.PublicConnectivityRule{},
+		},
+	}
+	mockCloud.EXPECT().
+		GetConnectivityRule(context.Background(), &cloudservice.GetConnectivityRuleRequest{
+			ConnectivityRuleId: "rule-1",
+		}).
+		Return(&cloudservice.GetConnectivityRuleResponse{
+			ConnectivityRule: &connectivityrulev1.ConnectivityRule{
+				Id:              "rule-1",
+				ResourceVersion: "rv-1",
+				Spec:            ruleSpec,
+			},
+		}, nil)
+
+	mockPrompter.EXPECT().
+		PromptApply(ruleSpec, &connectivityrulev1.ConnectivityRuleSpec{}, false).
+		Return(nil)
 
 	op := &operation.AsyncOperation{Id: "op-101"}
 	mockCloud.EXPECT().
@@ -316,6 +380,7 @@ func TestDeleteConnectivityRule_ExplicitResourceVersion(t *testing.T) {
 		ID:               "rule-1",
 		ResourceVersion:  "rv-explicit",
 		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
 		OperationHandler: mockHandler,
 	})
 	require.NoError(t, err)
@@ -325,6 +390,7 @@ func TestDeleteConnectivityRule_ExplicitResourceVersion(t *testing.T) {
 func TestDeleteConnectivityRule_GetError(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
 	apiErr := errors.New("not found")
 
 	mockCloud.EXPECT().
@@ -336,6 +402,7 @@ func TestDeleteConnectivityRule_GetError(t *testing.T) {
 	err := temporalcloudcli.DeleteConnectivityRule(context.Background(), temporalcloudcli.DeleteConnectivityRuleParams{
 		ID:               "rule-1",
 		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
 		OperationHandler: mockHandler,
 	})
 	require.ErrorIs(t, err, apiErr)
@@ -345,8 +412,14 @@ func TestDeleteConnectivityRule_GetError(t *testing.T) {
 func TestDeleteConnectivityRule_APIError(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
 	deleteErr := errors.New("delete error")
 
+	ruleSpec := &connectivityrulev1.ConnectivityRuleSpec{
+		ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PublicRule{
+			PublicRule: &connectivityrulev1.PublicConnectivityRule{},
+		},
+	}
 	mockCloud.EXPECT().
 		GetConnectivityRule(context.Background(), &cloudservice.GetConnectivityRuleRequest{
 			ConnectivityRuleId: "rule-1",
@@ -355,8 +428,13 @@ func TestDeleteConnectivityRule_APIError(t *testing.T) {
 			ConnectivityRule: &connectivityrulev1.ConnectivityRule{
 				Id:              "rule-1",
 				ResourceVersion: "rv-1",
+				Spec:            ruleSpec,
 			},
 		}, nil)
+
+	mockPrompter.EXPECT().
+		PromptApply(ruleSpec, &connectivityrulev1.ConnectivityRuleSpec{}, false).
+		Return(nil)
 
 	mockCloud.EXPECT().
 		DeleteConnectivityRule(context.Background(), &cloudservice.DeleteConnectivityRuleRequest{
@@ -370,7 +448,69 @@ func TestDeleteConnectivityRule_APIError(t *testing.T) {
 	err := temporalcloudcli.DeleteConnectivityRule(context.Background(), temporalcloudcli.DeleteConnectivityRuleParams{
 		ID:               "rule-1",
 		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
 		OperationHandler: mockHandler,
 	})
 	require.ErrorIs(t, err, deleteErr)
+}
+
+// TestCreateConnectivityRule_PromptDeclined verifies that declining the prompt aborts the create.
+func TestCreateConnectivityRule_PromptDeclined(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+	promptErr := errors.New("aborted")
+
+	mockPrompter.EXPECT().
+		PromptApply(&connectivityrulev1.ConnectivityRuleSpec{}, &connectivityrulev1.ConnectivityRuleSpec{
+			ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PublicRule{
+				PublicRule: &connectivityrulev1.PublicConnectivityRule{},
+			},
+		}, false).
+		Return(promptErr)
+
+	err := temporalcloudcli.CreateConnectivityRule(context.Background(), temporalcloudcli.CreateConnectivityRuleParams{
+		Type:             "public",
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
+		OperationHandler: mockHandler,
+	})
+	require.ErrorIs(t, err, promptErr)
+}
+
+// TestDeleteConnectivityRule_PromptDeclined verifies that declining the prompt aborts the delete.
+func TestDeleteConnectivityRule_PromptDeclined(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+	promptErr := errors.New("aborted")
+
+	ruleSpec := &connectivityrulev1.ConnectivityRuleSpec{
+		ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PublicRule{
+			PublicRule: &connectivityrulev1.PublicConnectivityRule{},
+		},
+	}
+	mockCloud.EXPECT().
+		GetConnectivityRule(context.Background(), &cloudservice.GetConnectivityRuleRequest{
+			ConnectivityRuleId: "rule-1",
+		}).
+		Return(&cloudservice.GetConnectivityRuleResponse{
+			ConnectivityRule: &connectivityrulev1.ConnectivityRule{
+				Id:              "rule-1",
+				ResourceVersion: "rv-1",
+				Spec:            ruleSpec,
+			},
+		}, nil)
+
+	mockPrompter.EXPECT().
+		PromptApply(ruleSpec, &connectivityrulev1.ConnectivityRuleSpec{}, false).
+		Return(promptErr)
+
+	err := temporalcloudcli.DeleteConnectivityRule(context.Background(), temporalcloudcli.DeleteConnectivityRuleParams{
+		ID:               "rule-1",
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
+		OperationHandler: mockHandler,
+	})
+	require.ErrorIs(t, err, promptErr)
 }
