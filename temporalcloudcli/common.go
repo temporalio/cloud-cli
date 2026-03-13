@@ -136,43 +136,53 @@ func promptApplyResource(cctx *CommandContext, existing, actual proto.Message, v
 
 // AsyncOperationHandler handles the async operation lifecycle.
 type AsyncOperationHandler interface {
-	// Handle dispatches a successfully started operation: prints immediately (async)
+	// HandleOperation dispatches a successfully started operation: prints immediately (async)
 	// or polls until completion (sync).
-	Handle(op *operation.AsyncOperation) error
-	// HandleErr handles an error from an operation call: swallows nothing-to-change
+	HandleOperation(op *operation.AsyncOperation, id string) error
+	// HandleCreateErr handles an error from a create call: swallows AlreadyExists
 	// errors when idempotent, propagates all others.
-	HandleErr(err error) error
+	HandleCreateErr(err error) error
+
+	HandleUpdateErr(err error) error
 }
 
 type Prompter interface {
 	PromptApply(old, new proto.Message, verbose bool) error
 }
 
-type asyncOperationHandler struct {
+type operationHandler struct {
 	cctx       *CommandContext
 	asyncOpts  AsyncOperationOptions
-	resourceID string
 	clientOpts ClientOptions
 }
 
-func NewAsyncOperationHandler(cctx *CommandContext, asyncOpts AsyncOperationOptions, resourceID string, clientOpts ClientOptions) AsyncOperationHandler {
-	return &asyncOperationHandler{cctx: cctx, asyncOpts: asyncOpts, resourceID: resourceID, clientOpts: clientOpts}
+func NewOperationHandler(cctx *CommandContext, asyncOpts AsyncOperationOptions, clientOpts ClientOptions) AsyncOperationHandler {
+	return &operationHandler{cctx: cctx, asyncOpts: asyncOpts, clientOpts: clientOpts}
 }
 
-func (r *asyncOperationHandler) Handle(op *operation.AsyncOperation) error {
+func (r *operationHandler) HandleOperation(op *operation.AsyncOperation, resourceID string) error {
 	if r.asyncOpts.Async {
-		return r.cctx.Printer.PrintStructured(MutationResult{AsyncOp: op, ID: r.resourceID}, printer.StructuredOptions{})
+		return r.cctx.Printer.PrintStructured(MutationResult{AsyncOp: op, ID: resourceID}, printer.StructuredOptions{})
 	}
 	poller, pollerErr := getPoller(r.cctx, r.clientOpts)
 	if pollerErr != nil {
 		return pollerErr
 	}
-	return poller.PollAsyncOperation(r.cctx, op.Id, r.resourceID)
+	return poller.PollAsyncOperation(r.cctx, op.Id, resourceID)
 }
 
-func (r *asyncOperationHandler) HandleErr(err error) error {
+func (r *operationHandler) HandleUpdateErr(err error) error {
 	if isNothingChangedErr(r.asyncOpts.Idempotent, err) {
-		return r.cctx.Printer.PrintStructured(newUnchangedResult(r.resourceID), printer.StructuredOptions{})
+		return r.cctx.Printer.PrintStructured(newUnchangedResult(), printer.StructuredOptions{})
+	}
+	return err
+}
+
+func (r *operationHandler) HandleCreateErr(err error) error {
+	if r.asyncOpts.Idempotent {
+		if s, ok := status.FromError(err); ok && s.Code() == codes.AlreadyExists {
+			return r.cctx.Printer.PrintStructured(newUnchangedResult(), printer.StructuredOptions{})
+		}
 	}
 	return err
 }
@@ -194,18 +204,36 @@ type AsyncOperationResponse interface {
 	GetAsyncOperation() *operation.AsyncOperation
 }
 
-// runAsyncOperation wraps a gRPC call that returns an AsyncOperationResponse,
+// runUpdateOperation wraps a gRPC call that returns an AsyncOperationResponse,
 // delegating result dispatch and error handling to an AsyncOperationHandler.
-func runAsyncOperation[Req any, Res AsyncOperationResponse](
+func runUpdateOperation[Req any, Res AsyncOperationResponse](
 	fn func(context.Context, Req, ...grpc.CallOption) (Res, error),
 	handler AsyncOperationHandler,
+	resourceID string,
 ) func(context.Context, Req) error {
 	return func(ctx context.Context, params Req) error {
 		res, err := fn(ctx, params)
 		if err != nil {
-			return handler.HandleErr(err)
+			return handler.HandleUpdateErr(err)
 		}
-		return handler.Handle(res.GetAsyncOperation())
+
+		return handler.HandleOperation(res.GetAsyncOperation(), resourceID)
+	}
+}
+
+func runCreateOperation[Req any, Res AsyncOperationResponse](
+	fn func(context.Context, Req, ...grpc.CallOption) (Res, error),
+	handler AsyncOperationHandler,
+	idFn func(Res) string,
+) func(context.Context, Req) error {
+	return func(ctx context.Context, params Req) error {
+		res, err := fn(ctx, params)
+		if err != nil {
+			return handler.HandleCreateErr(err)
+		}
+
+		resourceID := idFn(res)
+		return handler.HandleOperation(res.GetAsyncOperation(), resourceID)
 	}
 }
 
@@ -306,13 +334,11 @@ type MutationResult struct {
 
 type Result struct {
 	Status string `json:"status"`
-	ID     string `json:"id"`
 }
 
-func newUnchangedResult(id string) Result {
+func newUnchangedResult() Result {
 	return Result{
 		Status: "unchanged",
-		ID:     id,
 	}
 }
 
@@ -347,7 +373,7 @@ func wrapAsyncOperation[P any](
 		op, err := fn(cctx.Context, params)
 		if err != nil {
 			if isNothingChangedErr(asyncOpts.Idempotent, err) {
-				return cctx.Printer.PrintStructured(newUnchangedResult(resourceID), printer.StructuredOptions{})
+				return cctx.Printer.PrintStructured(newUnchangedResult(), printer.StructuredOptions{})
 			}
 			return err
 		}

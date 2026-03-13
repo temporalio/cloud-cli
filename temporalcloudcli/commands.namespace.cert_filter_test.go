@@ -351,16 +351,13 @@ func TestCloudNamespaceCertFilterCreateCommand_NothingToChange(t *testing.T) {
 				require.NoError(t, capturedErr)
 				var result struct {
 					Status string `json:"status"`
-					ID     string `json:"id"`
 				}
 				err := json.Unmarshal(buf.Bytes(), &result)
 				require.NoError(t, err)
 				expected := struct {
 					Status string `json:"status"`
-					ID     string `json:"id"`
 				}{
 					Status: "unchanged",
-					ID:     "test-namespace.test-account",
 				}
 				assert.Equal(t, expected, result)
 			},
@@ -806,16 +803,13 @@ func TestCloudNamespaceCertFilterDeleteCommand_NothingToChange(t *testing.T) {
 				require.NoError(t, capturedErr)
 				var result struct {
 					Status string `json:"status"`
-					ID     string `json:"id"`
 				}
 				err := json.Unmarshal(buf.Bytes(), &result)
 				require.NoError(t, err)
 				expected := struct {
 					Status string `json:"status"`
-					ID     string `json:"id"`
 				}{
 					Status: "unchanged",
-					ID:     "test-namespace.test-account",
 				}
 				assert.Equal(t, expected, result)
 			},

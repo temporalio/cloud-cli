@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	connectivityrulev1 "go.temporal.io/cloud-sdk/api/connectivityrule/v1"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	connectivityrulev1 "go.temporal.io/cloud-sdk/api/connectivityrule/v1"
 
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
@@ -37,7 +37,6 @@ type (
 
 		Cloud            cloudservice.CloudServiceClient
 		OperationHandler AsyncOperationHandler
-		Printer          *printer.Printer
 	}
 
 	DeleteConnectivityRuleParams struct {
@@ -75,29 +74,21 @@ func GetConnectivityRule(ctx context.Context, params GetConnectivityRuleParams) 
 }
 
 // CreateConnectivityRule creates a new connectivity rule of the given type.
-// AIDEV-NOTE: This function calls the API directly (not via runAsyncOperation) because we need
-// the ConnectivityRuleId from the response to print before handling the async operation.
 func CreateConnectivityRule(ctx context.Context, params CreateConnectivityRuleParams) error {
 	spec, err := buildConnectivityRuleSpec(params)
 	if err != nil {
 		return err
 	}
 
-	res, err := params.Cloud.CreateConnectivityRule(ctx, &cloudservice.CreateConnectivityRuleRequest{
+	createRule := runCreateOperation(
+		params.Cloud.CreateConnectivityRule,
+		params.OperationHandler,
+		func(res *cloudservice.CreateConnectivityRuleResponse) string { return res.GetConnectivityRuleId() },
+	)
+	return createRule(ctx, &cloudservice.CreateConnectivityRuleRequest{
 		Spec:             spec,
 		AsyncOperationId: params.AsyncOperationID,
 	})
-	if err != nil {
-		return params.OperationHandler.HandleErr(err)
-	}
-
-	if err := params.Printer.PrintStructured(struct {
-		ConnectivityRuleID string `json:"connectivityRuleId"`
-	}{ConnectivityRuleID: res.ConnectivityRuleId}, printer.StructuredOptions{}); err != nil {
-		return err
-	}
-
-	return params.OperationHandler.Handle(res.GetAsyncOperation())
 }
 
 // DeleteConnectivityRule deletes a connectivity rule by ID.
@@ -114,7 +105,7 @@ func DeleteConnectivityRule(ctx context.Context, params DeleteConnectivityRulePa
 		rv = res.ConnectivityRule.ResourceVersion
 	}
 
-	deleteConnectivityRule := runAsyncOperation(params.Cloud.DeleteConnectivityRule, params.OperationHandler)
+	deleteConnectivityRule := runUpdateOperation(params.Cloud.DeleteConnectivityRule, params.OperationHandler, params.ID)
 	return deleteConnectivityRule(ctx, &cloudservice.DeleteConnectivityRuleRequest{
 		ConnectivityRuleId: params.ID,
 		ResourceVersion:    rv,
@@ -198,8 +189,7 @@ func (c *CloudConnectivityCreateCommand) run(cctx *CommandContext, _ []string) e
 		GCPProjectID:     c.GcpProjectId,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, "", c.ClientOptions),
-		Printer:          cctx.Printer,
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -221,6 +211,6 @@ func (c *CloudConnectivityDeleteCommand) run(cctx *CommandContext, _ []string) e
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.Id, c.ClientOptions),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }

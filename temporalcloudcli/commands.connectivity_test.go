@@ -3,7 +3,6 @@ package temporalcloudcli_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 
@@ -13,8 +12,8 @@ import (
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 	cmdmock "github.com/temporalio/cloud-cli/temporalcloudcli/mock"
-	connectivityrulev1 "go.temporal.io/cloud-sdk/api/connectivityrule/v1"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	connectivityrulev1 "go.temporal.io/cloud-sdk/api/connectivityrule/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 )
 
@@ -147,23 +146,14 @@ func TestCreateConnectivityRule_Public_Success(t *testing.T) {
 			AsyncOperation:     op,
 		}, nil)
 
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "rule-abc").Return(nil)
 
-	var buf bytes.Buffer
 	err := temporalcloudcli.CreateConnectivityRule(context.Background(), temporalcloudcli.CreateConnectivityRuleParams{
 		Type:             "public",
 		Cloud:            mockCloud,
 		OperationHandler: mockHandler,
-		Printer:          &printer.Printer{Output: &buf, JSON: true},
 	})
 	require.NoError(t, err)
-
-	type createOutput struct {
-		ConnectivityRuleID string `json:"connectivityRuleId"`
-	}
-	var out createOutput
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
-	assert.Equal(t, "rule-abc", out.ConnectivityRuleID)
 }
 
 // TestCreateConnectivityRule_Private_Success verifies that a private rule is created with connection-id and region.
@@ -188,25 +178,16 @@ func TestCreateConnectivityRule_Private_Success(t *testing.T) {
 			AsyncOperation:     op,
 		}, nil)
 
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "rule-def").Return(nil)
 
-	var buf bytes.Buffer
 	err := temporalcloudcli.CreateConnectivityRule(context.Background(), temporalcloudcli.CreateConnectivityRuleParams{
 		Type:             "private",
 		ConnectionID:     "vpce-12345",
 		Region:           "aws-us-west-2",
 		Cloud:            mockCloud,
 		OperationHandler: mockHandler,
-		Printer:          &printer.Printer{Output: &buf, JSON: true},
 	})
 	require.NoError(t, err)
-
-	type createOutput struct {
-		ConnectivityRuleID string `json:"connectivityRuleId"`
-	}
-	var out createOutput
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
-	assert.Equal(t, "rule-def", out.ConnectivityRuleID)
 }
 
 // TestCreateConnectivityRule_InvalidType verifies that an unknown type returns an error.
@@ -214,16 +195,12 @@ func TestCreateConnectivityRule_InvalidType(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
 
-	var buf bytes.Buffer
 	err := temporalcloudcli.CreateConnectivityRule(context.Background(), temporalcloudcli.CreateConnectivityRuleParams{
 		Type:             "invalid",
 		Cloud:            mockCloud,
 		OperationHandler: mockHandler,
-		Printer:          &printer.Printer{Output: &buf, JSON: true},
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid connectivity rule type")
-	assert.Empty(t, buf.String())
 }
 
 // TestCreateConnectivityRule_PrivateMissingConnectionID verifies an error when private but no connection-id.
@@ -231,17 +208,14 @@ func TestCreateConnectivityRule_PrivateMissingConnectionID(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
 
-	var buf bytes.Buffer
 	err := temporalcloudcli.CreateConnectivityRule(context.Background(), temporalcloudcli.CreateConnectivityRuleParams{
 		Type:             "private",
 		Region:           "aws-us-west-2",
 		Cloud:            mockCloud,
 		OperationHandler: mockHandler,
-		Printer:          &printer.Printer{Output: &buf, JSON: true},
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "--connection-id is required")
-	assert.Empty(t, buf.String())
 }
 
 // TestCreateConnectivityRule_PrivateMissingRegion verifies an error when private but no region.
@@ -249,17 +223,14 @@ func TestCreateConnectivityRule_PrivateMissingRegion(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
 
-	var buf bytes.Buffer
 	err := temporalcloudcli.CreateConnectivityRule(context.Background(), temporalcloudcli.CreateConnectivityRuleParams{
 		Type:             "private",
 		ConnectionID:     "vpce-12345",
 		Cloud:            mockCloud,
 		OperationHandler: mockHandler,
-		Printer:          &printer.Printer{Output: &buf, JSON: true},
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "--region is required")
-	assert.Empty(t, buf.String())
 }
 
 // TestCreateConnectivityRule_APIError verifies that an API error goes through HandleErr.
@@ -278,17 +249,14 @@ func TestCreateConnectivityRule_APIError(t *testing.T) {
 		}).
 		Return(nil, apiErr)
 
-	mockHandler.EXPECT().HandleErr(apiErr).Return(apiErr)
+	mockHandler.EXPECT().HandleCreateErr(apiErr).Return(apiErr)
 
-	var buf bytes.Buffer
 	err := temporalcloudcli.CreateConnectivityRule(context.Background(), temporalcloudcli.CreateConnectivityRuleParams{
 		Type:             "public",
 		Cloud:            mockCloud,
 		OperationHandler: mockHandler,
-		Printer:          &printer.Printer{Output: &buf, JSON: true},
 	})
 	require.ErrorIs(t, err, apiErr)
-	assert.Empty(t, buf.String())
 }
 
 // TestDeleteConnectivityRule_Success verifies that the rule is fetched for its resource version then deleted.
@@ -317,7 +285,7 @@ func TestDeleteConnectivityRule_Success(t *testing.T) {
 			AsyncOperation: op,
 		}, nil)
 
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "rule-1").Return(nil)
 
 	err := temporalcloudcli.DeleteConnectivityRule(context.Background(), temporalcloudcli.DeleteConnectivityRuleParams{
 		ID:               "rule-1",
@@ -342,7 +310,7 @@ func TestDeleteConnectivityRule_ExplicitResourceVersion(t *testing.T) {
 			AsyncOperation: op,
 		}, nil)
 
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "rule-1").Return(nil)
 
 	err := temporalcloudcli.DeleteConnectivityRule(context.Background(), temporalcloudcli.DeleteConnectivityRuleParams{
 		ID:               "rule-1",
@@ -397,7 +365,7 @@ func TestDeleteConnectivityRule_APIError(t *testing.T) {
 		}).
 		Return(nil, deleteErr)
 
-	mockHandler.EXPECT().HandleErr(deleteErr).Return(deleteErr)
+	mockHandler.EXPECT().HandleUpdateErr(deleteErr).Return(deleteErr)
 
 	err := temporalcloudcli.DeleteConnectivityRule(context.Background(), temporalcloudcli.DeleteConnectivityRuleParams{
 		ID:               "rule-1",

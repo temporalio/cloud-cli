@@ -261,7 +261,7 @@ func TestCloudNamespaceCodecSetCommand_NothingToChange(t *testing.T) {
 				require.NoError(t, capturedErr)
 				var result temporalcloudcli.Result
 				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-				assert.Equal(t, temporalcloudcli.Result{Status: "unchanged", ID: "test-namespace.test-account"}, result)
+				assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, result)
 			},
 		},
 		{
@@ -500,7 +500,7 @@ func TestCloudNamespaceCodecDeleteCommand_NothingToChange(t *testing.T) {
 				require.NoError(t, capturedErr)
 				var result temporalcloudcli.Result
 				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-				assert.Equal(t, temporalcloudcli.Result{Status: "unchanged", ID: "test-namespace.test-account"}, result)
+				assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, result)
 			},
 		},
 		{
