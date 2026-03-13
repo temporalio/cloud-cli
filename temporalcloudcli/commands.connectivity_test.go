@@ -453,7 +453,7 @@ func TestDeleteConnectivityRule_APIError(t *testing.T) {
 		}).
 		Return(nil, deleteErr)
 
-	mockHandler.EXPECT().HandleUpdateErr(deleteErr).Return(deleteErr)
+	mockHandler.EXPECT().HandleDeleteErr(deleteErr).Return(deleteErr)
 
 	err := temporalcloudcli.DeleteConnectivityRule(context.Background(), temporalcloudcli.DeleteConnectivityRuleParams{
 		ID:               "rule-1",

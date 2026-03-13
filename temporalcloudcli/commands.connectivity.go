@@ -131,7 +131,7 @@ func DeleteConnectivityRule(ctx context.Context, params DeleteConnectivityRulePa
 		rv = rule.ResourceVersion
 	}
 
-	deleteConnectivityRule := wrapUpdateOperation(params.Cloud.DeleteConnectivityRule, params.OperationHandler, params.ID)
+	deleteConnectivityRule := wrapDeleteOperation(params.Cloud.DeleteConnectivityRule, params.OperationHandler, params.ID)
 	return deleteConnectivityRule(ctx, &cloudservice.DeleteConnectivityRuleRequest{
 		ConnectivityRuleId: params.ID,
 		ResourceVersion:    rv,

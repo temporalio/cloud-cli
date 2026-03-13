@@ -144,6 +144,8 @@ type AsyncOperationHandler interface {
 	HandleCreateErr(err error) error
 
 	HandleUpdateErr(err error) error
+
+	HandleDeleteErr(err error) error
 }
 
 type Prompter interface {
@@ -181,6 +183,15 @@ func (r *operationHandler) HandleUpdateErr(err error) error {
 func (r *operationHandler) HandleCreateErr(err error) error {
 	if r.asyncOpts.Idempotent {
 		if s, ok := status.FromError(err); ok && s.Code() == codes.AlreadyExists {
+			return r.cctx.Printer.PrintStructured(newUnchangedResult(), printer.StructuredOptions{})
+		}
+	}
+	return err
+}
+
+func (r *operationHandler) HandleDeleteErr(err error) error {
+	if r.asyncOpts.Idempotent {
+		if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
 			return r.cctx.Printer.PrintStructured(newUnchangedResult(), printer.StructuredOptions{})
 		}
 	}
@@ -233,6 +244,21 @@ func wrapCreateOperation[Req any, Res AsyncOperationResponse](
 		}
 
 		resourceID := idFn(res)
+		return handler.HandleOperation(res.GetAsyncOperation(), resourceID)
+	}
+}
+
+func wrapDeleteOperation[Req any, Res AsyncOperationResponse](
+	fn func(context.Context, Req, ...grpc.CallOption) (Res, error),
+	handler AsyncOperationHandler,
+	resourceID string,
+) func(context.Context, Req) error {
+	return func(ctx context.Context, params Req) error {
+		res, err := fn(ctx, params)
+		if err != nil {
+			return handler.HandleDeleteErr(err)
+		}
+
 		return handler.HandleOperation(res.GetAsyncOperation(), resourceID)
 	}
 }

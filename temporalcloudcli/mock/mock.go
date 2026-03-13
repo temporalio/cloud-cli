@@ -1707,6 +1707,57 @@ func (_c *MockAsyncOperationHandler_HandleCreateErr_Call) RunAndReturn(run func(
 	return _c
 }
 
+// HandleDeleteErr provides a mock function for the type MockAsyncOperationHandler
+func (_mock *MockAsyncOperationHandler) HandleDeleteErr(err error) error {
+	ret := _mock.Called(err)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HandleDeleteErr")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(error) error); ok {
+		r0 = returnFunc(err)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockAsyncOperationHandler_HandleDeleteErr_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandleDeleteErr'
+type MockAsyncOperationHandler_HandleDeleteErr_Call struct {
+	*mock.Call
+}
+
+// HandleDeleteErr is a helper method to define mock.On call
+//   - err error
+func (_e *MockAsyncOperationHandler_Expecter) HandleDeleteErr(err interface{}) *MockAsyncOperationHandler_HandleDeleteErr_Call {
+	return &MockAsyncOperationHandler_HandleDeleteErr_Call{Call: _e.mock.On("HandleDeleteErr", err)}
+}
+
+func (_c *MockAsyncOperationHandler_HandleDeleteErr_Call) Run(run func(err error)) *MockAsyncOperationHandler_HandleDeleteErr_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 error
+		if args[0] != nil {
+			arg0 = args[0].(error)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockAsyncOperationHandler_HandleDeleteErr_Call) Return(err1 error) *MockAsyncOperationHandler_HandleDeleteErr_Call {
+	_c.Call.Return(err1)
+	return _c
+}
+
+func (_c *MockAsyncOperationHandler_HandleDeleteErr_Call) RunAndReturn(run func(err error) error) *MockAsyncOperationHandler_HandleDeleteErr_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // HandleOperation provides a mock function for the type MockAsyncOperationHandler
 func (_mock *MockAsyncOperationHandler) HandleOperation(op *operation.AsyncOperation, id string) error {
 	ret := _mock.Called(op, id)
