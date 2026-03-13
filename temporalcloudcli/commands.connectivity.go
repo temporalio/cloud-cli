@@ -59,7 +59,20 @@ func ListConnectivityRules(ctx context.Context, params ListConnectivityRulesPara
 	if err != nil {
 		return err
 	}
-	return params.Printer.PrintStructured(res.ConnectivityRules, printer.StructuredOptions{})
+	return params.Printer.PrintResourceList(
+		struct {
+			ConnectivityRules []*connectivityrulev1.ConnectivityRule
+			NextPageToken     string
+		}{
+			ConnectivityRules: res.ConnectivityRules,
+			NextPageToken:     res.GetNextPageToken(),
+		},
+		printer.PrintResourceOptions{
+			Fields:     []string{"Id", "State"},
+			SpecFields: []string{},
+		},
+		printer.TableOptions{},
+	)
 }
 
 // GetConnectivityRule retrieves details of a specific connectivity rule by ID.
@@ -70,7 +83,8 @@ func GetConnectivityRule(ctx context.Context, params GetConnectivityRuleParams) 
 	if err != nil {
 		return err
 	}
-	return params.Printer.PrintStructured(res.ConnectivityRule, printer.StructuredOptions{})
+
+	return params.Printer.PrintResource(res.ConnectivityRule, printer.PrintResourceOptions{})
 }
 
 // CreateConnectivityRule creates a new connectivity rule of the given type.
