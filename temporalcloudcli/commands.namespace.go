@@ -315,7 +315,6 @@ type (
 		ApiKeyAuthEnabled                  bool
 		EnableDeleteProtection             bool
 		AsyncOperationID                   string
-		Idempotent                         bool
 		CACertificateOptions               CaCertificateOptions
 		CertificateFilterOptions           CertificateFilterOptions
 		SearchAttribute                    []string
@@ -436,7 +435,6 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		ApiKeyAuthEnabled:                  c.ApiKeyAuthEnabled,
 		EnableDeleteProtection:             c.EnableDeleteProtection,
 		AsyncOperationID:                   c.AsyncOperationId,
-		Idempotent:                         c.Idempotent,
 		CACertificateOptions:               c.CaCertificateOptions,
 		CertificateFilterOptions:           c.CertificateFilterOptions,
 		SearchAttribute:                    c.SearchAttribute,
