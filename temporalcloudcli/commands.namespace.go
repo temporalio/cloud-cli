@@ -408,7 +408,7 @@ func CreateNamespace(ctx context.Context, params CreateNamespaceParams) error {
 
 	spec.SearchAttributes = searchAttrs
 
-	if err := params.Prompter.PromptApply(nil, spec, false); err != nil {
+	if err := params.Prompter.PromptApply(&namespacev1.NamespaceSpec{}, spec, false); err != nil {
 		return err
 	}
 

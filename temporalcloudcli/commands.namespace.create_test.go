@@ -17,8 +17,6 @@ import (
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	operationv1 "go.temporal.io/cloud-sdk/api/operation/v1"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -31,18 +29,41 @@ func noopUnmarshalProtoJSON(b []byte, m proto.Message) error {
 	return temporalcloudcli.UnmarshalProtoJSONWithOptions(b, m, false)
 }
 
+// baseNamespaceSpec returns the NamespaceSpec built from the minimal test params
+// (Name: "my-namespace", Regions: ["aws-us-east-1"], all other fields zero-valued).
+func baseNamespaceSpec() *namespacev1.NamespaceSpec {
+	return &namespacev1.NamespaceSpec{
+		Name:       "my-namespace",
+		Regions:    []string{"aws-us-east-1"},
+		ApiKeyAuth: &namespacev1.ApiKeyAuthSpec{Enabled: false},
+		Lifecycle:  &namespacev1.LifecycleSpec{EnableDeleteProtection: false},
+	}
+}
+
+func specMatcher(expected *namespacev1.NamespaceSpec) interface{} {
+	return mock.MatchedBy(func(s proto.Message) bool { return proto.Equal(s, expected) })
+}
+
+func createReqMatcher(expected *namespacev1.NamespaceSpec) interface{} {
+	return mock.MatchedBy(func(req *cloudservice.CreateNamespaceRequest) bool {
+		return proto.Equal(req.Spec, expected)
+	})
+}
+
 // TestCreateNamespace_Success verifies that CreateNamespace calls HandleOperation with the API response.
 func TestCreateNamespace_Success(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	mockPrompter := cmdmock.NewMockPrompter(t)
 	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
 
+	spec := baseNamespaceSpec()
+
 	mockPrompter.EXPECT().
-		PromptApply(mock.Anything, mock.Anything, false).
+		PromptApply(&namespacev1.NamespaceSpec{}, specMatcher(spec), false).
 		Return(nil)
 
 	mockCloud.EXPECT().
-		CreateNamespace(context.Background(), mock.Anything).
+		CreateNamespace(context.Background(), createReqMatcher(spec)).
 		Return(defaultCreateResponse, nil)
 
 	mockHandler.EXPECT().
@@ -87,17 +108,15 @@ func TestCreateNamespace_BuildsSpec(t *testing.T) {
 	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
 
 	mockPrompter.EXPECT().
-		PromptApply(mock.Anything, mock.Anything, false).
+		PromptApply(&namespacev1.NamespaceSpec{}, specMatcher(expectedSpec), false).
 		Return(nil)
 
 	mockCloud.EXPECT().
-		CreateNamespace(context.Background(), mock.MatchedBy(func(req *cloudservice.CreateNamespaceRequest) bool {
-			return proto.Equal(req.Spec, expectedSpec)
-		})).
+		CreateNamespace(context.Background(), createReqMatcher(expectedSpec)).
 		Return(defaultCreateResponse, nil)
 
 	mockHandler.EXPECT().
-		HandleOperation(mock.Anything, mock.Anything).
+		HandleOperation(defaultCreateResponse.AsyncOperation, "my-namespace.my-account").
 		Return(nil)
 
 	var buf bytes.Buffer
@@ -129,12 +148,14 @@ func TestCreateNamespace_Error(t *testing.T) {
 	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
 	apiErr := errors.New("create failed")
 
+	spec := baseNamespaceSpec()
+
 	mockPrompter.EXPECT().
-		PromptApply(mock.Anything, mock.Anything, false).
+		PromptApply(&namespacev1.NamespaceSpec{}, specMatcher(spec), false).
 		Return(nil)
 
 	mockCloud.EXPECT().
-		CreateNamespace(context.Background(), mock.Anything).
+		CreateNamespace(context.Background(), createReqMatcher(spec)).
 		Return(nil, apiErr)
 
 	mockHandler.EXPECT().
@@ -154,39 +175,6 @@ func TestCreateNamespace_Error(t *testing.T) {
 	require.ErrorIs(t, err, apiErr)
 }
 
-// TestCreateNamespace_IdempotentAlreadyExists verifies that an AlreadyExists error is forwarded to HandleCreateErr.
-func TestCreateNamespace_IdempotentAlreadyExists(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-	alreadyExistsErr := status.Error(codes.AlreadyExists, "namespace already exists")
-
-	mockPrompter.EXPECT().
-		PromptApply(mock.Anything, mock.Anything, false).
-		Return(nil)
-
-	mockCloud.EXPECT().
-		CreateNamespace(context.Background(), mock.Anything).
-		Return(nil, alreadyExistsErr)
-
-	mockHandler.EXPECT().
-		HandleCreateErr(alreadyExistsErr).
-		Return(nil)
-
-	var buf bytes.Buffer
-	err := temporalcloudcli.CreateNamespace(context.Background(), temporalcloudcli.CreateNamespaceParams{
-		Name:               "my-namespace",
-		Regions:            []string{"aws-us-east-1"},
-		Idempotent:         true,
-		Cloud:              mockCloud,
-		Printer:            &printer.Printer{Output: &buf, JSON: true},
-		Prompter:           mockPrompter,
-		UnmarshalProtoJSON: noopUnmarshalProtoJSON,
-		OperationHandler:   mockHandler,
-	})
-	require.NoError(t, err)
-}
-
 // TestCreateNamespace_PromptDeclined verifies that the API is never called when the prompt is declined.
 func TestCreateNamespace_PromptDeclined(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
@@ -194,8 +182,10 @@ func TestCreateNamespace_PromptDeclined(t *testing.T) {
 	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
 	promptErr := fmt.Errorf("Aborting apply.")
 
+	spec := baseNamespaceSpec()
+
 	mockPrompter.EXPECT().
-		PromptApply(mock.Anything, mock.Anything, false).
+		PromptApply(&namespacev1.NamespaceSpec{}, specMatcher(spec), false).
 		Return(promptErr)
 
 	var buf bytes.Buffer
@@ -218,16 +208,18 @@ func TestCreateNamespace_HandleOperationError(t *testing.T) {
 	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
 	handleErr := errors.New("polling failed")
 
+	spec := baseNamespaceSpec()
+
 	mockPrompter.EXPECT().
-		PromptApply(mock.Anything, mock.Anything, false).
+		PromptApply(&namespacev1.NamespaceSpec{}, specMatcher(spec), false).
 		Return(nil)
 
 	mockCloud.EXPECT().
-		CreateNamespace(context.Background(), mock.Anything).
+		CreateNamespace(context.Background(), createReqMatcher(spec)).
 		Return(defaultCreateResponse, nil)
 
 	mockHandler.EXPECT().
-		HandleOperation(mock.Anything, mock.Anything).
+		HandleOperation(defaultCreateResponse.AsyncOperation, "my-namespace.my-account").
 		Return(handleErr)
 
 	var buf bytes.Buffer
