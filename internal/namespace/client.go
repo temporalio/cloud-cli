@@ -65,11 +65,6 @@ func (c *Client) GetNamespaces(ctx context.Context, params GetNamespacesParams) 
 	return res.Namespaces, res.NextPageToken, nil
 }
 
-type CreateNamespaceParams struct {
-	Spec             *namespacev1.NamespaceSpec
-	AsyncOperationID string
-}
-
 type UpdateNamespaceParams struct {
 	Namespace        string
 	Spec             *namespacev1.NamespaceSpec

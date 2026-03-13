@@ -8,8 +8,6 @@ import (
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/temporalio/cloud-cli/internal/namespace"
@@ -329,7 +327,7 @@ type (
 		Cloud              cloudservice.CloudServiceClient
 		Printer            *printer.Printer
 		Prompter           Prompter
-		HandleResult       func(op *operation.AsyncOperation, namespaceID string) error
+		OperationHandler   AsyncOperationHandler
 		UnmarshalProtoJSON func([]byte, proto.Message) error
 	}
 )
@@ -414,20 +412,15 @@ func CreateNamespace(ctx context.Context, params CreateNamespaceParams) error {
 		return err
 	}
 
-	res, err := params.Cloud.CreateNamespace(ctx, &cloudservice.CreateNamespaceRequest{
+	createNamespace := wrapCreateOperation(
+		params.Cloud.CreateNamespace,
+		params.OperationHandler,
+		func(res *cloudservice.CreateNamespaceResponse) string { return res.GetNamespace() },
+	)
+	return createNamespace(ctx, &cloudservice.CreateNamespaceRequest{
 		Spec:             spec,
 		AsyncOperationId: params.AsyncOperationID,
 	})
-	if err != nil {
-		if params.Idempotent {
-			if s, ok := status.FromError(err); ok && s.Code() == codes.AlreadyExists {
-				return params.Printer.PrintStructured(newUnchangedResult(params.Name), printer.StructuredOptions{})
-			}
-		}
-		return err
-	}
-
-	return params.HandleResult(res.GetAsyncOperation(), res.GetNamespace())
 }
 
 func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) error {
@@ -455,20 +448,7 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		Printer:                            cctx.Printer,
 		Prompter:                           newPrompter(cctx),
 		UnmarshalProtoJSON:                 cctx.UnmarshalProtoJSON,
-		// TODO: Use AsyncOperationHandler once it's updated to be able to extract the correct ID for namespaces.
-		HandleResult: func(op *operation.AsyncOperation, namespaceID string) error {
-			if c.Async {
-				return cctx.Printer.PrintStructured(MutationResult{
-					AsyncOp: op,
-					ID:      namespaceID,
-				}, printer.StructuredOptions{})
-			}
-			poller, err := getPoller(cctx, c.ClientOptions)
-			if err != nil {
-				return err
-			}
-			return poller.PollAsyncOperation(cctx, op.Id, namespaceID)
-		},
+		OperationHandler:                   NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
