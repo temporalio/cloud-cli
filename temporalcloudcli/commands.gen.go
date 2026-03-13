@@ -69,7 +69,7 @@ type AsyncOperationOptions struct {
 
 func (v *AsyncOperationOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.BoolVar(&v.Idempotent, "idempotent", false, "Succeed silently if the resource already matches the specification. Without this flag, the command errors when no changes are needed.")
+	f.BoolVar(&v.Idempotent, "idempotent", false, "Succeed silently if the resource already exists or matches the specification. Without this flag, the command errors when no changes are needed.")
 	f.StringVar(&v.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
 	f.BoolVar(&v.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
 }

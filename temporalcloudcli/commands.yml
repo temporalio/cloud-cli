@@ -1511,7 +1511,7 @@ option-sets:
       - name: idempotent
         type: bool
         description: |
-          Succeed silently if the resource already matches the specification.
+          Succeed silently if the resource already exists or matches the specification.
           Without this flag, the command errors when no changes are needed.
       - name: async-operation-id
         type: string
