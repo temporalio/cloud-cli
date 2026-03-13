@@ -73,7 +73,7 @@ func TestAsyncOperationHandler_PollingError(t *testing.T) {
 	require.ErrorIs(t, err, pollingErr)
 }
 
-func TestAsyncOperationHandler_HandleErr_NothingToChange_Idempotent(t *testing.T) {
+func TestAsyncOperationHandler_HandleUpdateErr_NothingToChange_Idempotent(t *testing.T) {
 	var buf bytes.Buffer
 	cctx := newTestCommandContext(t, &buf)
 	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
@@ -88,7 +88,7 @@ func TestAsyncOperationHandler_HandleErr_NothingToChange_Idempotent(t *testing.T
 	assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, out)
 }
 
-func TestAsyncOperationHandler_HandleErr_NothingToChange_NotIdempotent(t *testing.T) {
+func TestAsyncOperationHandler_HandleUpdateErr_NothingToChange_NotIdempotent(t *testing.T) {
 	var buf bytes.Buffer
 	cctx := newTestCommandContext(t, &buf)
 	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
@@ -100,7 +100,7 @@ func TestAsyncOperationHandler_HandleErr_NothingToChange_NotIdempotent(t *testin
 	assert.Empty(t, buf.String())
 }
 
-func TestAsyncOperationHandler_HandleErr_OtherError(t *testing.T) {
+func TestAsyncOperationHandler_HandleUpdateErr_OtherError(t *testing.T) {
 	var buf bytes.Buffer
 	cctx := newTestCommandContext(t, &buf)
 	otherErr := errors.New("some other error")
@@ -109,5 +109,59 @@ func TestAsyncOperationHandler_HandleErr_OtherError(t *testing.T) {
 
 	err := runner.HandleUpdateErr(otherErr)
 	require.ErrorIs(t, err, otherErr)
+	assert.Empty(t, buf.String())
+}
+
+func TestAsyncOperationHandler_HandleCreateErr_AlreadyExists_Idempotent(t *testing.T) {
+	var buf bytes.Buffer
+	cctx := newTestCommandContext(t, &buf)
+	alreadyExistsErr := status.Error(codes.AlreadyExists, "already exists")
+
+	handler := temporalcloudcli.NewOperationHandler(cctx, temporalcloudcli.AsyncOperationOptions{Idempotent: true}, temporalcloudcli.ClientOptions{})
+
+	err := handler.HandleCreateErr(alreadyExistsErr)
+	require.NoError(t, err)
+
+	var out temporalcloudcli.Result
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, out)
+}
+
+func TestAsyncOperationHandler_HandleCreateErr_AlreadyExists_NotIdempotent(t *testing.T) {
+	var buf bytes.Buffer
+	cctx := newTestCommandContext(t, &buf)
+	alreadyExistsErr := status.Error(codes.AlreadyExists, "already exists")
+
+	handler := temporalcloudcli.NewOperationHandler(cctx, temporalcloudcli.AsyncOperationOptions{Idempotent: false}, temporalcloudcli.ClientOptions{})
+
+	err := handler.HandleCreateErr(alreadyExistsErr)
+	require.ErrorIs(t, err, alreadyExistsErr)
+	assert.Empty(t, buf.String())
+}
+
+func TestAsyncOperationHandler_HandleDeleteErr_NotFound_Idempotent(t *testing.T) {
+	var buf bytes.Buffer
+	cctx := newTestCommandContext(t, &buf)
+	notFoundErr := status.Error(codes.NotFound, "not found")
+
+	handler := temporalcloudcli.NewOperationHandler(cctx, temporalcloudcli.AsyncOperationOptions{Idempotent: true}, temporalcloudcli.ClientOptions{})
+
+	err := handler.HandleDeleteErr(notFoundErr)
+	require.NoError(t, err)
+
+	var out temporalcloudcli.Result
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, out)
+}
+
+func TestAsyncOperationHandler_HandleDeleteErr_NotFound_NotIdempotent(t *testing.T) {
+	var buf bytes.Buffer
+	cctx := newTestCommandContext(t, &buf)
+	notFoundErr := status.Error(codes.NotFound, "not found")
+
+	handler := temporalcloudcli.NewOperationHandler(cctx, temporalcloudcli.AsyncOperationOptions{Idempotent: false}, temporalcloudcli.ClientOptions{})
+
+	err := handler.HandleDeleteErr(notFoundErr)
+	require.ErrorIs(t, err, notFoundErr)
 	assert.Empty(t, buf.String())
 }
