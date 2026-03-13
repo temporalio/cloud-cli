@@ -61,7 +61,7 @@ func SetRetention(ctx context.Context, params SetRetentionParams) error {
 	if params.ResourceVersion != "" {
 		rv = params.ResourceVersion
 	}
-	updateNamespace := runUpdateOperation(params.Cloud.UpdateNamespace, params.OperationHandler, params.Namespace)
+	updateNamespace := wrapUpdateOperation(params.Cloud.UpdateNamespace, params.OperationHandler, params.Namespace)
 	updateParams := &cloudservice.UpdateNamespaceRequest{
 		Namespace:        params.Namespace,
 		Spec:             newSpec,

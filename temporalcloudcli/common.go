@@ -204,9 +204,9 @@ type AsyncOperationResponse interface {
 	GetAsyncOperation() *operation.AsyncOperation
 }
 
-// runUpdateOperation wraps a gRPC call that returns an AsyncOperationResponse,
+// wrapUpdateOperation wraps a gRPC call that returns an AsyncOperationResponse,
 // delegating result dispatch and error handling to an AsyncOperationHandler.
-func runUpdateOperation[Req any, Res AsyncOperationResponse](
+func wrapUpdateOperation[Req any, Res AsyncOperationResponse](
 	fn func(context.Context, Req, ...grpc.CallOption) (Res, error),
 	handler AsyncOperationHandler,
 	resourceID string,
@@ -221,7 +221,7 @@ func runUpdateOperation[Req any, Res AsyncOperationResponse](
 	}
 }
 
-func runCreateOperation[Req any, Res AsyncOperationResponse](
+func wrapCreateOperation[Req any, Res AsyncOperationResponse](
 	fn func(context.Context, Req, ...grpc.CallOption) (Res, error),
 	handler AsyncOperationHandler,
 	idFn func(Res) string,

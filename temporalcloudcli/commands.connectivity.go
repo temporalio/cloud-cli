@@ -100,7 +100,7 @@ func CreateConnectivityRule(ctx context.Context, params CreateConnectivityRulePa
 		return err
 	}
 
-	createRule := runCreateOperation(
+	createRule := wrapCreateOperation(
 		params.Cloud.CreateConnectivityRule,
 		params.OperationHandler,
 		func(res *cloudservice.CreateConnectivityRuleResponse) string { return res.GetConnectivityRuleId() },
@@ -131,7 +131,7 @@ func DeleteConnectivityRule(ctx context.Context, params DeleteConnectivityRulePa
 		rv = rule.ResourceVersion
 	}
 
-	deleteConnectivityRule := runUpdateOperation(params.Cloud.DeleteConnectivityRule, params.OperationHandler, params.ID)
+	deleteConnectivityRule := wrapUpdateOperation(params.Cloud.DeleteConnectivityRule, params.OperationHandler, params.ID)
 	return deleteConnectivityRule(ctx, &cloudservice.DeleteConnectivityRuleRequest{
 		ConnectivityRuleId: params.ID,
 		ResourceVersion:    rv,
