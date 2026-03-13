@@ -3,6 +3,7 @@ package temporalcloudcli_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -37,8 +38,14 @@ func TestListConnectivityRules_Success(t *testing.T) {
 		Printer: &printer.Printer{Output: &buf, JSON: true},
 	})
 	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "rule-1")
-	assert.Contains(t, buf.String(), "rule-2")
+
+	type listConnectivityRulesOutput struct {
+		ConnectivityRules []*connectivityrulev1.ConnectivityRule `json:"connectivityRules"`
+		NextPageToken     string                                 `json:"nextPageToken"`
+	}
+	var out listConnectivityRulesOutput
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	assert.Equal(t, listConnectivityRulesOutput{ConnectivityRules: rules, NextPageToken: ""}, out)
 }
 
 // TestListConnectivityRules_WithNamespace verifies that the namespace filter is passed through.
@@ -103,7 +110,10 @@ func TestGetConnectivityRule_Success(t *testing.T) {
 		Printer: &printer.Printer{Output: &buf, JSON: true},
 	})
 	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "rule-1")
+
+	var out connectivityrulev1.ConnectivityRule
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	assert.Equal(t, connectivityrulev1.ConnectivityRule{Id: "rule-1"}, out)
 }
 
 // TestGetConnectivityRule_Error verifies that an API error propagates.
