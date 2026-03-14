@@ -1464,6 +1464,62 @@ commands:
         description: |
           Filter users by the namespace they have access to.
 
+  # Account commands
+  - name: cloud account
+    summary: Manage Temporal Cloud account
+    description: |
+      Manage the Temporal Cloud account.
+    has-init: false
+    docs:
+      keywords:
+        - account
+        - management
+      description-header: Account Management Commands
+      tags:
+        - account
+
+  - name: cloud account audit-log
+    summary: Manage audit logs
+    description: |
+      Commands for working with account audit logs.
+    has-init: false
+    docs:
+      keywords:
+        - audit-log
+        - account
+      description-header: Audit Log Commands
+      tags:
+        - account
+
+  - name: cloud account audit-log get
+    summary: Get audit logs
+    description: |
+      Returns a paginated list of audit logs for the account, optionally filtered by time range.
+
+      Example:
+        temporal cloud account audit-log get --page-size 50
+        temporal cloud account audit-log get --start-time 2024-01-01T00:00:00Z --end-time 2024-02-01T00:00:00Z
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of logs to retrieve per page. Cannot exceed 1000. Defaults to 100.
+      - name: page-token
+        type: string
+        description: |
+          Page token from a previous response to retrieve the next page.
+      - name: start-time
+        type: timestamp
+        description: |
+          Filter for logs at or after this UTC time (RFC3339 format, e.g. 2024-01-01T00:00:00Z). Defaults to 30 days ago.
+      - name: end-time
+        type: timestamp
+        description: |
+          Filter for logs before this UTC time (RFC3339 format, e.g. 2024-02-01T00:00:00Z). Defaults to current time.
+
 option-sets:
   - name: client
     options:
