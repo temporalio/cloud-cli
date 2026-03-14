@@ -187,11 +187,11 @@ func NewCloudAccountAuditLogCommand(cctx *CommandContext, parent *CloudAccountCo
 	s.Command.Short = "Manage audit logs"
 	s.Command.Long = "Commands for working with account audit logs."
 	s.Command.Args = cobra.NoArgs
-	s.Command.AddCommand(&NewCloudAccountAuditLogGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudAccountAuditLogListCommand(cctx, &s).Command)
 	return &s
 }
 
-type CloudAccountAuditLogGetCommand struct {
+type CloudAccountAuditLogListCommand struct {
 	Parent  *CloudAccountAuditLogCommand
 	Command cobra.Command
 	ClientOptions
@@ -201,13 +201,13 @@ type CloudAccountAuditLogGetCommand struct {
 	EndTime   cliext.FlagTimestamp
 }
 
-func NewCloudAccountAuditLogGetCommand(cctx *CommandContext, parent *CloudAccountAuditLogCommand) *CloudAccountAuditLogGetCommand {
-	var s CloudAccountAuditLogGetCommand
+func NewCloudAccountAuditLogListCommand(cctx *CommandContext, parent *CloudAccountAuditLogCommand) *CloudAccountAuditLogListCommand {
+	var s CloudAccountAuditLogListCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "get [flags]"
-	s.Command.Short = "Get audit logs"
-	s.Command.Long = "Returns a paginated list of audit logs for the account, optionally filtered by time range.\n\nExample:\n  temporal cloud account audit-log get --page-size 50\n  temporal cloud account audit-log get --start-time 2024-01-01T00:00:00Z --end-time 2024-02-01T00:00:00Z"
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List audit logs"
+	s.Command.Long = "Returns a paginated list of audit logs for the account, optionally filtered by time range.\n\nExample:\n  temporal cloud account audit-log list --page-size 50\n  temporal cloud account audit-log list --start-time 2024-01-01T00:00:00Z --end-time 2024-02-01T00:00:00Z"
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of logs to retrieve per page. Cannot exceed 1000. Defaults to 100.")
 	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Page token from a previous response to retrieve the next page.")

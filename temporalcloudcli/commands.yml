@@ -1491,14 +1491,14 @@ commands:
       tags:
         - account
 
-  - name: cloud account audit-log get
-    summary: Get audit logs
+  - name: cloud account audit-log list
+    summary: List audit logs
     description: |
       Returns a paginated list of audit logs for the account, optionally filtered by time range.
 
       Example:
-        temporal cloud account audit-log get --page-size 50
-        temporal cloud account audit-log get --start-time 2024-01-01T00:00:00Z --end-time 2024-02-01T00:00:00Z
+        temporal cloud account audit-log list --page-size 50
+        temporal cloud account audit-log list --start-time 2024-01-01T00:00:00Z --end-time 2024-02-01T00:00:00Z
     has-init: false
     option-sets:
       - client

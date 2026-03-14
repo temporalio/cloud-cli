@@ -3,6 +3,7 @@ package temporalcloudcli_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -18,17 +19,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetAuditLogs_Success(t *testing.T) {
+func TestListAuditLogs_Success(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 
+	expected := struct {
+		AuditLogs []*auditlogv1.LogRecord `json:"auditLogs"`
+		NextPageToken string              `json:"nextPageToken"`
+	}{
+		AuditLogs: []*auditlogv1.LogRecord{
+			{LogId: "log-1", Operation: "CreateNamespace"},
+			{LogId: "log-2", Operation: "DeleteNamespace"},
+		},
+		NextPageToken: "next-token",
+	}
 	mockCloud.EXPECT().
 		GetAuditLogs(context.Background(), &cloudservice.GetAuditLogsRequest{}).
 		Return(&cloudservice.GetAuditLogsResponse{
-			Logs: []*auditlogv1.LogRecord{
-				{LogId: "log-1", Operation: "CreateNamespace"},
-				{LogId: "log-2", Operation: "DeleteNamespace"},
-			},
-			NextPageToken: "next-token",
+			Logs:          expected.AuditLogs,
+			NextPageToken: expected.NextPageToken,
 		}, nil)
 
 	var buf bytes.Buffer
@@ -37,8 +45,13 @@ func TestGetAuditLogs_Success(t *testing.T) {
 		Printer: &printer.Printer{Output: &buf, JSON: true},
 	})
 	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "log-1")
-	assert.Contains(t, buf.String(), "next-token")
+
+	var out struct {
+		AuditLogs []*auditlogv1.LogRecord `json:"auditLogs"`
+		NextPageToken string              `json:"nextPageToken"`
+	}
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	assert.Equal(t, expected, out)
 }
 
 func TestGetAuditLogs_WithPagination(t *testing.T) {
