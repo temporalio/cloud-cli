@@ -182,6 +182,41 @@ make all   # gen + build + test (unit tests only; integration tests need -tags=i
 
 ## Best Practices
 
+### Targeted `set` Commands on Map Fields Are Additive
+
+When a `set` command targets a map field (e.g. namespace permissions), changes must be **merged into the existing map** rather than replacing it wholesale. Provide empty-value syntax to remove an entry (e.g. `namespace=`).
+
+```go
+// Good: merge changes into existing map; empty permission = remove
+func applyNamespaceAccessChanges(existing map[string]*identityv1.NamespaceAccess, changes []string) (map[string]*identityv1.NamespaceAccess, error) {
+    result := make(map[string]*identityv1.NamespaceAccess, len(existing))
+    for k, v := range existing {
+        result[k] = v
+    }
+    for _, a := range changes {
+        ns, perm, _ := strings.Cut(a, "=")
+        if perm == "" {
+            delete(result, ns)
+        } else {
+            result[ns] = &identityv1.NamespaceAccess{Permission: permissionNames[perm]}
+        }
+    }
+    ...
+}
+```
+
+**Validate inputs before any API call** using a dry-run (nil existing map) so format errors are returned immediately without network round-trips:
+
+```go
+// Validate before API calls — applyNamespaceAccessChanges(nil, ...) is safe (range over nil map is a no-op)
+if _, err := applyNamespaceAccessChanges(nil, params.NamespaceAccesses); err != nil {
+    return err
+}
+user, err := resolveUser(...)  // only called after inputs are known-good
+...
+accesses, _ := applyNamespaceAccessChanges(user.Spec.Access.NamespaceAccesses, params.NamespaceAccesses)
+```
+
 ### Server-side vs Client-side Responsibility
 
 **Don't implement client-side validation that the server handles:**

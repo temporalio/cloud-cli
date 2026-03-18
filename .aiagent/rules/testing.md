@@ -97,6 +97,28 @@ func (s *SharedServerSuite) TestMyCommand() {
 
 See `temporalcloudcli/commands.namespace.retention_test.go` for the canonical unit test pattern.
 
+## Testing Editor-Based Commands
+
+`runEditorForJSONEditForProtos` launches a real `$EDITOR` process — it cannot be called in unit tests. Inject the editor as a function field on the `XxxParams` struct:
+
+```go
+type EditFooParams struct {
+    // RunEditor opens the existing spec in an editor and writes the result into target.
+    // Injected so the function is unit-testable without a real editor process.
+    RunEditor func(existing, target proto.Message) error
+    ...
+}
+```
+
+Production wires `runEditorForJSONEditForProtos`; tests pass a lambda using `proto.Merge`:
+
+```go
+RunEditor: func(existing, target proto.Message) error {
+    proto.Merge(target, editedSpec)
+    return nil
+},
+```
+
 ## Common Test Patterns
 
 **Always set `AutoConfirm: true`** to bypass prompts unless testing prompt behavior:

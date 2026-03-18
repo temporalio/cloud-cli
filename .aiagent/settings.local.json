@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go mod:*)",
+      "Bash(go list:*)",
+      "Bash(cut -d'\\(' -f3)",
+      "Bash(make gen:*)",
+      "Bash(git add:*)",
+      "Bash(make all:*)",
+      "Bash(go build:*)",
+      "Bash(go test:*)",
+      "Bash(find ~/go/pkg/mod/github.com/temporalio/cli*/cmd/gen-commands -name *.go)",
+      "Bash(find ~/go/pkg/mod/github.com/temporalio/cli* -name *.go -path */gen-commands/*)",
+      "Bash(grep NamespaceAccess_PERMISSION_ /Users/abhinavtemporal.io/go/pkg/mod/go.temporal.io/cloud-sdk@v*/api/identity/v1/message.pb.go)"
+    ]
+  }
+}
