@@ -18,12 +18,12 @@ import (
 // The keys are the exact strings accepted by --account-role and --namespace-access flags.
 var (
 	accountRoleNames = map[string]identityv1.AccountAccess_Role{
-		"owner":        identityv1.AccountAccess_ROLE_OWNER,
-		"admin":        identityv1.AccountAccess_ROLE_ADMIN,
-		"developer":    identityv1.AccountAccess_ROLE_DEVELOPER,
+		"owner":         identityv1.AccountAccess_ROLE_OWNER,
+		"admin":         identityv1.AccountAccess_ROLE_ADMIN,
+		"developer":     identityv1.AccountAccess_ROLE_DEVELOPER,
 		"finance-admin": identityv1.AccountAccess_ROLE_FINANCE_ADMIN,
-		"read":         identityv1.AccountAccess_ROLE_READ,
-		"metrics-read": identityv1.AccountAccess_ROLE_METRICS_READ,
+		"read":          identityv1.AccountAccess_ROLE_READ,
+		"metrics-read":  identityv1.AccountAccess_ROLE_METRICS_READ,
 	}
 
 	namespacePermissionNames = map[string]identityv1.NamespaceAccess_Permission{
@@ -36,8 +36,8 @@ var (
 type (
 	SetNamespacePermissionsParams struct {
 		// Exactly one of UserID or UserEmail must be set.
-		UserID            string
-		UserEmail         string
+		UserID    string
+		UserEmail string
 		// NamespaceAccesses lists changes to apply in "namespace=permission" format.
 		// Each entry adds or overwrites a namespace; an empty permission (e.g. "testns=") removes it.
 		NamespaceAccesses []string
@@ -108,10 +108,10 @@ type (
 	}
 
 	InviteUserParams struct {
-		Email             string
-		AccountRole       string
-		NamespaceAccesses []string // format: "namespace=permission"
-		AsyncOperationID  string
+		Email            string
+		AccountAccess    *identityv1.AccountAccess
+		NmspaceAccesses  map[string]*identityv1.NamespaceAccess
+		AsyncOperationID string
 
 		Cloud            cloudservice.CloudServiceClient
 		OperationHandler AsyncOperationHandler
@@ -346,21 +346,11 @@ func GetUser(ctx context.Context, params GetUserParams) error {
 }
 
 func InviteUser(ctx context.Context, params InviteUserParams) error {
-	accountAccess, err := parseAccountRole(params.AccountRole)
-	if err != nil {
-		return err
-	}
-
-	namespaceAccesses, err := parseNamespaceAccesses(params.NamespaceAccesses)
-	if err != nil {
-		return err
-	}
-
 	spec := &identityv1.UserSpec{
 		Email: params.Email,
 		Access: &identityv1.Access{
-			AccountAccess:     accountAccess,
-			NamespaceAccesses: namespaceAccesses,
+			AccountAccess:     params.AccountAccess,
+			NamespaceAccesses: params.NmspaceAccesses,
 		},
 	}
 
@@ -559,6 +549,16 @@ func (c *CloudUserInviteCommand) run(cctx *CommandContext, _ []string) error {
 		return err
 	}
 
+	accountAccess, err := parseAccountRole(c.AccountRole)
+	if err != nil {
+		return err
+	}
+
+	namespaceAccesses, err := parseNamespaceAccesses(c.NamespaceAccess)
+	if err != nil {
+		return err
+	}
+
 	yes, err := cctx.promptYes("Invite (y/yes)?", cctx.RootCommand.AutoConfirm)
 	if err != nil {
 		return err
@@ -568,12 +568,12 @@ func (c *CloudUserInviteCommand) run(cctx *CommandContext, _ []string) error {
 	}
 
 	return InviteUser(cctx.Context, InviteUserParams{
-		Email:             c.Email,
-		AccountRole:       c.AccountRole,
-		NamespaceAccesses: c.NamespaceAccess,
-		AsyncOperationID:  c.AsyncOperationId,
-		Cloud:             cloudClient.CloudService(),
-		OperationHandler:  NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.Email, c.ClientOptions),
+		Email:            c.Email,
+		AccountAccess:    accountAccess,
+		NmspaceAccesses:  namespaceAccesses,
+		AsyncOperationID: c.AsyncOperationId,
+		Cloud:            cloudClient.CloudService(),
+		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.Email, c.ClientOptions),
 	})
 }
 

@@ -1135,11 +1135,13 @@ func TestInviteUser_Success(t *testing.T) {
 	mockHandler.EXPECT().Handle(op).Return(nil)
 
 	err := temporalcloudcli.InviteUser(context.Background(), temporalcloudcli.InviteUserParams{
-		Email:             "alice@example.com",
-		AccountRole:       "developer",
-		NamespaceAccesses: []string{"my-ns.my-account=write"},
-		Cloud:             mockCloud,
-		OperationHandler:  mockHandler,
+		Email:         "alice@example.com",
+		AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_DEVELOPER},
+		NmspaceAccesses: map[string]*identityv1.NamespaceAccess{
+			"my-ns.my-account": {Permission: identityv1.NamespaceAccess_PERMISSION_WRITE},
+		},
+		Cloud:            mockCloud,
+		OperationHandler: mockHandler,
 	})
 	require.NoError(t, err)
 }
@@ -1167,48 +1169,6 @@ func TestInviteUser_NoAccess(t *testing.T) {
 		OperationHandler: mockHandler,
 	})
 	require.NoError(t, err)
-}
-
-// TestInviteUser_InvalidAccountRole verifies that an unrecognized role returns an error before calling the API.
-func TestInviteUser_InvalidAccountRole(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-
-	err := temporalcloudcli.InviteUser(context.Background(), temporalcloudcli.InviteUserParams{
-		Email:            "alice@example.com",
-		AccountRole:      "superuser",
-		Cloud:            mockCloud,
-		OperationHandler: mockHandler,
-	})
-	require.ErrorContains(t, err, "invalid account role")
-}
-
-// TestInviteUser_InvalidNamespaceAccess verifies that a malformed namespace-access returns an error.
-func TestInviteUser_InvalidNamespaceAccess(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-
-	err := temporalcloudcli.InviteUser(context.Background(), temporalcloudcli.InviteUserParams{
-		Email:             "alice@example.com",
-		NamespaceAccesses: []string{"my-ns.my-account"},
-		Cloud:             mockCloud,
-		OperationHandler:  mockHandler,
-	})
-	require.ErrorContains(t, err, "must be in the format")
-}
-
-// TestInviteUser_InvalidNamespacePermission verifies that an unrecognized permission returns an error.
-func TestInviteUser_InvalidNamespacePermission(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-
-	err := temporalcloudcli.InviteUser(context.Background(), temporalcloudcli.InviteUserParams{
-		Email:             "alice@example.com",
-		NamespaceAccesses: []string{"my-ns.my-account=superwrite"},
-		Cloud:             mockCloud,
-		OperationHandler:  mockHandler,
-	})
-	require.ErrorContains(t, err, "invalid permission")
 }
 
 // TestInviteUser_APIError verifies that a CreateUser error is forwarded through HandleErr.
