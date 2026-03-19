@@ -69,9 +69,21 @@ type AsyncOperationOptions struct {
 
 func (v *AsyncOperationOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.BoolVar(&v.Idempotent, "idempotent", false, "Succeed silently if the namespace already matches the specification. Without this flag, the command errors when no changes are needed.")
+	f.BoolVar(&v.Idempotent, "idempotent", false, "Succeed silently if the resource already matches the specification. Without this flag, the command errors when no changes are needed.")
 	f.StringVar(&v.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
 	f.BoolVar(&v.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
+}
+
+type UserIdentificationOptions struct {
+	UserId    string
+	UserEmail string
+	FlagSet   *pflag.FlagSet
+}
+
+func (v *UserIdentificationOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.UserId, "user-id", "", "The ID of the user. Mutually exclusive with --user-email.")
+	f.StringVar(&v.UserEmail, "user-email", "", "The email address of the user. Mutually exclusive with --user-id.")
 }
 
 type CloudCommand struct {
@@ -96,6 +108,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.Command.AddCommand(&NewCloudLoginCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLogoutCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudWhoamiCommand(cctx, &s).Command)
 	s.Command.PersistentFlags().StringVar(&s.ConfigDir, "config-dir", "", "Directory path where CLI configuration files are stored, including authentication tokens and settings.")
 	s.Command.PersistentFlags().BoolVar(&s.DisablePopUp, "disable-pop-up", false, "Prevent the CLI from opening a browser window during authentication. Useful for headless environments or when using alternative auth methods.")
@@ -1428,6 +1441,305 @@ func NewCloudNamespaceTagUpdateCommand(cctx *CommandContext, parent *CloudNamesp
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+}
+
+func NewCloudUserCommand(cctx *CommandContext, parent *CloudCommand) *CloudUserCommand {
+	var s CloudUserCommand
+	s.Parent = parent
+	s.Command.Use = "user"
+	s.Command.Short = "Manage Temporal Cloud users"
+	s.Command.Long = "Commands for managing Temporal Cloud users."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudUserApplyCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserEditCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserInviteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserSetAccountRoleCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserSetNamespacePermissionsCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudUserApplyCommand struct {
+	Parent  *CloudUserCommand
+	Command cobra.Command
+	ClientOptions
+	DiffOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Spec string
+}
+
+func NewCloudUserApplyCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserApplyCommand {
+	var s CloudUserApplyCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "apply [flags]"
+	s.Command.Short = "Create or update a user from a specification"
+	if hasHighlighting {
+		s.Command.Long = "Apply a user configuration to Temporal Cloud. Creates a new user invitation\nif the email does not exist, or updates the existing user to match the specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample with inline JSON:\n\n\x1b[1mcloud user apply --spec '{\"email\": \"alice@example.com\", \"access\": {\"account_access\": {\"role\": \"developer\"}}}'\x1b[0m\n\nExample with file path:\n\n\x1b[1mcloud user apply --spec @user-spec.json\x1b[0m"
+	} else {
+		s.Command.Long = "Apply a user configuration to Temporal Cloud. Creates a new user invitation\nif the email does not exist, or updates the existing user to match the specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample with inline JSON:\n\n```\ncloud user apply --spec '{\"email\": \"alice@example.com\", \"access\": {\"account_access\": {\"role\": \"developer\"}}}'\n```\n\nExample with file path:\n\n```\ncloud user apply --spec @user-spec.json\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Spec, "spec", "", "User configuration in JSON format. Provide inline JSON directly, or use '@path/to/file.json' to load from a file. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "spec")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserDeleteCommand struct {
+	Parent  *CloudUserCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	UserIdentificationOptions
+}
+
+func NewCloudUserDeleteCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserDeleteCommand {
+	var s CloudUserDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a Temporal Cloud user"
+	if hasHighlighting {
+		s.Command.Long = "Delete a Temporal Cloud user. This action is irreversible.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n\x1b[1mcloud user delete --user-id my-user-id\ncloud user delete --user-email alice@example.com\x1b[0m"
+	} else {
+		s.Command.Long = "Delete a Temporal Cloud user. This action is irreversible.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n```\ncloud user delete --user-id my-user-id\ncloud user delete --user-email alice@example.com\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserEditCommand struct {
+	Parent  *CloudUserCommand
+	Command cobra.Command
+	ClientOptions
+	DiffOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	UserIdentificationOptions
+}
+
+func NewCloudUserEditCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserEditCommand {
+	var s CloudUserEditCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "edit [flags]"
+	s.Command.Short = "Interactively edit a user configuration"
+	if hasHighlighting {
+		s.Command.Long = "Open a user configuration in your default editor for interactive\nmodification. After saving and closing the editor, the changes are\napplied to Temporal Cloud.\n\nThe editor is determined by the EDITOR environment variable, falling\nback to 'vi' if not set.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n\x1b[1mcloud user edit --user-id my-user-id\ncloud user edit --user-email alice@example.com\x1b[0m"
+	} else {
+		s.Command.Long = "Open a user configuration in your default editor for interactive\nmodification. After saving and closing the editor, the changes are\napplied to Temporal Cloud.\n\nThe editor is determined by the EDITOR environment variable, falling\nback to 'vi' if not set.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n```\ncloud user edit --user-id my-user-id\ncloud user edit --user-email alice@example.com\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserGetCommand struct {
+	Parent  *CloudUserCommand
+	Command cobra.Command
+	ClientOptions
+	UserIdentificationOptions
+}
+
+func NewCloudUserGetCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserGetCommand {
+	var s CloudUserGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Retrieve user details"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the configuration and status of a Temporal Cloud user.\n\nExample:\n\n\x1b[1mcloud user get --user-id my-user-id\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the configuration and status of a Temporal Cloud user.\n\nExample:\n\n```\ncloud user get --user-id my-user-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserInviteCommand struct {
+	Parent  *CloudUserCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	Email           string
+	AccountRole     string
+	NamespaceAccess []string
+}
+
+func NewCloudUserInviteCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserInviteCommand {
+	var s CloudUserInviteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "invite [flags]"
+	s.Command.Short = "Invite a user to Temporal Cloud"
+	if hasHighlighting {
+		s.Command.Long = "Invite a user to Temporal Cloud by email. Optionally assign an account-level\nrole and namespace-level access permissions.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\n\nExample:\n\n\x1b[1mcloud user invite --email alice@example.com --account-role developer \\\n  --namespace-access my-namespace.my-account=write\x1b[0m"
+	} else {
+		s.Command.Long = "Invite a user to Temporal Cloud by email. Optionally assign an account-level\nrole and namespace-level access permissions.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\n\nExample:\n\n```\ncloud user invite --email alice@example.com --account-role developer \\\n  --namespace-access my-namespace.my-account=write\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Email, "email", "", "The email address of the user to invite. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "email")
+	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
+	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserListCommand struct {
+	Parent  *CloudUserCommand
+	Command cobra.Command
+	ClientOptions
+	PageSize  int
+	PageToken string
+	Email     string
+	Namespace string
+}
+
+func NewCloudUserListCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserListCommand {
+	var s CloudUserListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List Temporal Cloud users"
+	if hasHighlighting {
+		s.Command.Long = "List all Temporal Cloud users accessible with the current\nauthentication credentials.\n\nExample:\n\n\x1b[1mcloud user list\x1b[0m"
+	} else {
+		s.Command.Long = "List all Temporal Cloud users accessible with the current\nauthentication credentials.\n\nExample:\n\n```\ncloud user list\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of users to return per page. Use for paginated results.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results in a paginated list.")
+	s.Command.Flags().StringVar(&s.Email, "email", "", "Filter users by email address.")
+	s.Command.Flags().StringVar(&s.Namespace, "namespace", "", "Filter users by the namespace they have access to.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserSetAccountRoleCommand struct {
+	Parent  *CloudUserCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	UserIdentificationOptions
+	AccountRole string
+}
+
+func NewCloudUserSetAccountRoleCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserSetAccountRoleCommand {
+	var s CloudUserSetAccountRoleCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set-account-role [flags]"
+	s.Command.Short = "Set the account role for a user"
+	if hasHighlighting {
+		s.Command.Long = "Set the account-level role for a Temporal Cloud user.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n\x1b[1mcloud user set-account-role --user-id my-user-id --account-role developer\ncloud user set-account-role --user-email alice@example.com --account-role admin\x1b[0m"
+	} else {
+		s.Command.Long = "Set the account-level role for a Temporal Cloud user.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n```\ncloud user set-account-role --user-id my-user-id --account-role developer\ncloud user set-account-role --user-email alice@example.com --account-role admin\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "account-role")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserSetNamespacePermissionsCommand struct {
+	Parent  *CloudUserCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	UserIdentificationOptions
+	NamespaceAccess []string
+}
+
+func NewCloudUserSetNamespacePermissionsCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserSetNamespacePermissionsCommand {
+	var s CloudUserSetNamespacePermissionsCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set-namespace-permissions [flags]"
+	s.Command.Short = "Set namespace permissions for a user"
+	if hasHighlighting {
+		s.Command.Long = "Add, update, or remove namespace-level permissions for a Temporal Cloud user.\nChanges are applied additively: namespaces not listed are left unchanged.\n\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\nTo remove access to a namespace, pass an empty permission: 'namespace='.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n\x1b[1m# Grant write access to my-namespace and read access to other-namespace:\ncloud user set-namespace-permissions --user-id my-user-id \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\n\n# Remove access to a namespace:\ncloud user set-namespace-permissions --user-id my-user-id \\\n  --namespace-access my-namespace.my-account=\x1b[0m"
+	} else {
+		s.Command.Long = "Add, update, or remove namespace-level permissions for a Temporal Cloud user.\nChanges are applied additively: namespaces not listed are left unchanged.\n\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\nTo remove access to a namespace, pass an empty permission: 'namespace='.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n```\n# Grant write access to my-namespace and read access to other-namespace:\ncloud user set-namespace-permissions --user-id my-user-id \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\n\n# Remove access to a namespace:\ncloud user set-namespace-permissions --user-id my-user-id \\\n  --namespace-access my-namespace.my-account=\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access change in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated. Use an empty permission (e.g. 'testns=') to remove access to a namespace. Changes are additive: namespaces not listed are left unchanged. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace-access")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

@@ -1045,6 +1045,243 @@ commands:
         description: |
           The target region to failover to (e.g., aws-us-west-2).
 
+  # User commands
+  - name: cloud user
+    summary: Manage Temporal Cloud users
+    description: |
+      Commands for managing Temporal Cloud users.
+    has-init: false
+    docs:
+      keywords:
+        - user
+        - management
+      description-header: User Management Commands
+      tags:
+        - users
+  - name: cloud user get
+    summary: Retrieve user details
+    description: |
+      Retrieve the configuration and status of a Temporal Cloud user.
+
+      Example:
+
+      ```
+      cloud user get --user-id my-user-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - user-identification
+  - name: cloud user set-namespace-permissions
+    summary: Set namespace permissions for a user
+    description: |
+      Add, update, or remove namespace-level permissions for a Temporal Cloud user.
+      Changes are applied additively: namespaces not listed are left unchanged.
+
+      Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+      To remove access to a namespace, pass an empty permission: 'namespace='.
+
+      Specify the user with either --user-id or --user-email (not both).
+
+      Example:
+
+      ```
+      # Grant write access to my-namespace and read access to other-namespace:
+      cloud user set-namespace-permissions --user-id my-user-id \
+        --namespace-access my-namespace.my-account=write \
+        --namespace-access other-namespace.my-account=read
+
+      # Remove access to a namespace:
+      cloud user set-namespace-permissions --user-id my-user-id \
+        --namespace-access my-namespace.my-account=
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - user-identification
+    options:
+      - name: namespace-access
+        type: string[]
+        required: true
+        description: |
+          Namespace access change in the format 'namespace=permission'.
+          Permission must be one of: admin, write, read. Can be repeated.
+          Use an empty permission (e.g. 'testns=') to remove access to a namespace.
+          Changes are additive: namespaces not listed are left unchanged.
+  - name: cloud user set-account-role
+    summary: Set the account role for a user
+    description: |
+      Set the account-level role for a Temporal Cloud user.
+
+      Account roles: owner, admin, developer, finance-admin, read, metrics-read.
+
+      Specify the user with either --user-id or --user-email (not both).
+
+      Example:
+
+      ```
+      cloud user set-account-role --user-id my-user-id --account-role developer
+      cloud user set-account-role --user-email alice@example.com --account-role admin
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - user-identification
+    options:
+      - name: account-role
+        type: string
+        required: true
+        description: |
+          The account-level role to assign. Valid values: owner, admin, developer,
+          finance-admin, read, metrics-read.
+  - name: cloud user delete
+    summary: Delete a Temporal Cloud user
+    description: |
+      Delete a Temporal Cloud user. This action is irreversible.
+
+      Specify the user with either --user-id or --user-email (not both).
+
+      Example:
+
+      ```
+      cloud user delete --user-id my-user-id
+      cloud user delete --user-email alice@example.com
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - user-identification
+  - name: cloud user edit
+    summary: Interactively edit a user configuration
+    description: |
+      Open a user configuration in your default editor for interactive
+      modification. After saving and closing the editor, the changes are
+      applied to Temporal Cloud.
+
+      The editor is determined by the EDITOR environment variable, falling
+      back to 'vi' if not set.
+
+      Specify the user with either --user-id or --user-email (not both).
+
+      Example:
+
+      ```
+      cloud user edit --user-id my-user-id
+      cloud user edit --user-email alice@example.com
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+      - async-operation
+      - resource-version
+      - user-identification
+  - name: cloud user apply
+    summary: Create or update a user from a specification
+    description: |
+      Apply a user configuration to Temporal Cloud. Creates a new user invitation
+      if the email does not exist, or updates the existing user to match the specification.
+
+      The specification can be provided as inline JSON or loaded from a file
+      by prefixing the path with '@'.
+
+      Example with inline JSON:
+
+      ```
+      cloud user apply --spec '{"email": "alice@example.com", "access": {"account_access": {"role": "developer"}}}'
+      ```
+
+      Example with file path:
+
+      ```
+      cloud user apply --spec @user-spec.json
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+      - async-operation
+      - resource-version
+    options:
+      - name: spec
+        type: string
+        required: true
+        description: |
+          User configuration in JSON format. Provide inline JSON directly,
+          or use '@path/to/file.json' to load from a file.
+  - name: cloud user invite
+    summary: Invite a user to Temporal Cloud
+    description: |
+      Invite a user to Temporal Cloud by email. Optionally assign an account-level
+      role and namespace-level access permissions.
+
+      Account roles: owner, admin, developer, finance-admin, read, metrics-read.
+      Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+
+      Example:
+
+      ```
+      cloud user invite --email alice@example.com --account-role developer \
+        --namespace-access my-namespace.my-account=write
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: email
+        type: string
+        required: true
+        description: |
+          The email address of the user to invite.
+      - name: account-role
+        type: string
+        description: |
+          The account-level role to assign. Valid values: owner, admin, developer,
+          finance-admin, read, metrics-read.
+      - name: namespace-access
+        type: string[]
+        description: |
+          Namespace access to grant, in the format 'namespace=permission'.
+          Permission must be one of: admin, write, read. Can be repeated.
+  - name: cloud user list
+    summary: List Temporal Cloud users
+    description: |
+      List all Temporal Cloud users accessible with the current
+      authentication credentials.
+
+      Example:
+
+      ```
+      cloud user list
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of users to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
+      - name: email
+        type: string
+        description: |
+          Filter users by email address.
+      - name: namespace
+        type: string
+        description: |
+          Filter users by the namespace they have access to.
+
 option-sets:
   - name: client
     options:
@@ -1092,7 +1329,7 @@ option-sets:
       - name: idempotent
         type: bool
         description: |
-          Succeed silently if the namespace already matches the specification.
+          Succeed silently if the resource already matches the specification.
           Without this flag, the command errors when no changes are needed.
       - name: async-operation-id
         type: string
@@ -1104,3 +1341,13 @@ option-sets:
         description: |
           Return immediately after initiating the operation instead of waiting
           for completion. Use the returned operation ID to check status later.
+  - name: user-identification
+    options:
+      - name: user-id
+        type: string
+        description: |
+          The ID of the user. Mutually exclusive with --user-email.
+      - name: user-email
+        type: string
+        description: |
+          The email address of the user. Mutually exclusive with --user-id.
