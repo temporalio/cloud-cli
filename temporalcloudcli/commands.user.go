@@ -35,9 +35,7 @@ var (
 
 type (
 	SetNamespacePermissionsParams struct {
-		// Exactly one of UserID or UserEmail must be set.
-		UserID    string
-		UserEmail string
+		UserIdentification UserIdentificationOptions
 		// NamespaceAccesses lists changes to apply in "namespace=permission" format.
 		// Each entry adds or overwrites a namespace; an empty permission (e.g. "testns=") removes it.
 		NamespaceAccesses []string
@@ -50,12 +48,10 @@ type (
 	}
 
 	SetAccountRoleParams struct {
-		// Exactly one of UserID or UserEmail must be set.
-		UserID           string
-		UserEmail        string
-		AccountRole      string
-		ResourceVersion  string
-		AsyncOperationID string
+		UserIdentification UserIdentificationOptions
+		AccountRole        string
+		ResourceVersion    string
+		AsyncOperationID   string
 
 		Cloud            cloudservice.CloudServiceClient
 		Prompter         Prompter
@@ -63,23 +59,19 @@ type (
 	}
 
 	DeleteUserParams struct {
-		// Exactly one of UserID or UserEmail must be set.
-		UserID           string
-		UserEmail        string
-		ResourceVersion  string
-		AsyncOperationID string
+		UserIdentification UserIdentificationOptions
+		ResourceVersion    string
+		AsyncOperationID   string
 
 		Cloud            cloudservice.CloudServiceClient
 		OperationHandler AsyncOperationHandler
 	}
 
 	EditUserParams struct {
-		// Exactly one of UserID or UserEmail must be set.
-		UserID           string
-		UserEmail        string
-		ResourceVersion  string
-		AsyncOperationID string
-		VerboseDiff      bool
+		UserIdentification UserIdentificationOptions
+		ResourceVersion    string
+		AsyncOperationID   string
+		VerboseDiff        bool
 
 		Cloud            cloudservice.CloudServiceClient
 		Prompter         Prompter
@@ -101,7 +93,7 @@ type (
 	}
 
 	GetUserParams struct {
-		UserID string
+		UserIdentification UserIdentificationOptions
 
 		Cloud   cloudservice.CloudServiceClient
 		Printer *printer.Printer
@@ -129,11 +121,8 @@ type (
 )
 
 func SetNamespacePermissions(ctx context.Context, params SetNamespacePermissionsParams) error {
-	if params.UserID == "" && params.UserEmail == "" {
-		return errors.New("must provide either --user-id or --user-email")
-	}
-	if params.UserID != "" && params.UserEmail != "" {
-		return errors.New("cannot provide both --user-id and --user-email")
+	if err := validateUserIdentification(params.UserIdentification); err != nil {
+		return err
 	}
 
 	// Validate changes before making any API calls.
@@ -141,7 +130,7 @@ func SetNamespacePermissions(ctx context.Context, params SetNamespacePermissions
 		return err
 	}
 
-	user, err := resolveUser(ctx, params.Cloud, params.UserID, params.UserEmail)
+	user, err := resolveUser(ctx, params.Cloud, params.UserIdentification)
 	if err != nil {
 		return err
 	}
@@ -151,7 +140,10 @@ func SetNamespacePermissions(ctx context.Context, params SetNamespacePermissions
 		newSpec.Access = &identityv1.Access{}
 	}
 
-	namespaceAccesses, _ := applyNamespaceAccessChanges(newSpec.Access.NamespaceAccesses, params.NamespaceAccesses)
+	namespaceAccesses, err := applyNamespaceAccessChanges(newSpec.Access.NamespaceAccesses, params.NamespaceAccesses)
+	if err != nil {
+		return err
+	}
 	newSpec.Access.NamespaceAccesses = namespaceAccesses
 
 	if err := params.Prompter.PromptApply(user.Spec, newSpec, false); err != nil {
@@ -173,19 +165,15 @@ func SetNamespacePermissions(ctx context.Context, params SetNamespacePermissions
 }
 
 func SetAccountRole(ctx context.Context, params SetAccountRoleParams) error {
-	if params.UserID == "" && params.UserEmail == "" {
-		return errors.New("must provide either --user-id or --user-email")
+	if err := validateUserIdentification(params.UserIdentification); err != nil {
+		return err
 	}
-	if params.UserID != "" && params.UserEmail != "" {
-		return errors.New("cannot provide both --user-id and --user-email")
-	}
-
 	accountAccess, err := parseAccountRole(params.AccountRole)
 	if err != nil {
 		return err
 	}
 
-	user, err := resolveUser(ctx, params.Cloud, params.UserID, params.UserEmail)
+	user, err := resolveUser(ctx, params.Cloud, params.UserIdentification)
 	if err != nil {
 		return err
 	}
@@ -215,14 +203,11 @@ func SetAccountRole(ctx context.Context, params SetAccountRoleParams) error {
 }
 
 func DeleteUser(ctx context.Context, params DeleteUserParams) error {
-	if params.UserID == "" && params.UserEmail == "" {
-		return errors.New("must provide either --user-id or --user-email")
-	}
-	if params.UserID != "" && params.UserEmail != "" {
-		return errors.New("cannot provide both --user-id and --user-email")
+	if err := validateUserIdentification(params.UserIdentification); err != nil {
+		return err
 	}
 
-	user, err := resolveUser(ctx, params.Cloud, params.UserID, params.UserEmail)
+	user, err := resolveUser(ctx, params.Cloud, params.UserIdentification)
 	if err != nil {
 		return err
 	}
@@ -241,14 +226,11 @@ func DeleteUser(ctx context.Context, params DeleteUserParams) error {
 }
 
 func EditUser(ctx context.Context, params EditUserParams) error {
-	if params.UserID == "" && params.UserEmail == "" {
-		return errors.New("must provide either --user-id or --user-email")
-	}
-	if params.UserID != "" && params.UserEmail != "" {
-		return errors.New("cannot provide both --user-id and --user-email")
+	if err := validateUserIdentification(params.UserIdentification); err != nil {
+		return err
 	}
 
-	user, err := resolveUser(ctx, params.Cloud, params.UserID, params.UserEmail)
+	user, err := resolveUser(ctx, params.Cloud, params.UserIdentification)
 	if err != nil {
 		return err
 	}
@@ -278,20 +260,20 @@ func EditUser(ctx context.Context, params EditUserParams) error {
 
 // resolveUser fetches a user by ID or by email (via GetUsers).
 // Exactly one of userID or email should be non-empty.
-func resolveUser(ctx context.Context, cloud cloudservice.CloudServiceClient, userID, email string) (*identityv1.User, error) {
-	if userID != "" {
-		res, err := cloud.GetUser(ctx, &cloudservice.GetUserRequest{UserId: userID})
+func resolveUser(ctx context.Context, cloud cloudservice.CloudServiceClient, identification UserIdentificationOptions) (*identityv1.User, error) {
+	if identification.UserId != "" {
+		res, err := cloud.GetUser(ctx, &cloudservice.GetUserRequest{UserId: identification.UserId})
 		if err != nil {
 			return nil, err
 		}
 		return res.User, nil
 	}
-	res, err := cloud.GetUsers(ctx, &cloudservice.GetUsersRequest{Email: email})
+	res, err := cloud.GetUsers(ctx, &cloudservice.GetUsersRequest{Email: identification.UserEmail})
 	if err != nil {
 		return nil, err
 	}
 	if len(res.Users) == 0 {
-		return nil, fmt.Errorf("no user found with email %q", email)
+		return nil, fmt.Errorf("no user found with email %q", identification.UserEmail)
 	}
 	return res.Users[0], nil
 }
@@ -338,11 +320,14 @@ func ApplyUser(ctx context.Context, params ApplyUserParams) error {
 }
 
 func GetUser(ctx context.Context, params GetUserParams) error {
-	res, err := params.Cloud.GetUser(ctx, &cloudservice.GetUserRequest{UserId: params.UserID})
+	if err := validateUserIdentification(params.UserIdentification); err != nil {
+		return err
+	}
+	user, err := resolveUser(ctx, params.Cloud, params.UserIdentification)
 	if err != nil {
 		return err
 	}
-	return params.Printer.PrintResource(res.User, printer.PrintResourceOptions{})
+	return params.Printer.PrintResource(user, printer.PrintResourceOptions{})
 }
 
 func InviteUser(ctx context.Context, params InviteUserParams) error {
@@ -389,11 +374,8 @@ func ListUsers(ctx context.Context, params ListUsersParams) error {
 }
 
 func (c *CloudUserSetNamespacePermissionsCommand) run(cctx *CommandContext, _ []string) error {
-	if c.UserId == "" && c.UserEmail == "" {
-		return errors.New("must provide either --user-id or --user-email")
-	}
-	if c.UserId != "" && c.UserEmail != "" {
-		return errors.New("cannot provide both --user-id and --user-email")
+	if err := validateUserIdentification(c.UserIdentificationOptions); err != nil {
+		return err
 	}
 
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
@@ -406,23 +388,19 @@ func (c *CloudUserSetNamespacePermissionsCommand) run(cctx *CommandContext, _ []
 		resourceID = c.UserEmail
 	}
 	return SetNamespacePermissions(cctx.Context, SetNamespacePermissionsParams{
-		UserID:            c.UserId,
-		UserEmail:         c.UserEmail,
-		NamespaceAccesses: c.NamespaceAccess,
-		ResourceVersion:   c.ResourceVersion,
-		AsyncOperationID:  c.AsyncOperationId,
-		Cloud:             cloudClient.CloudService(),
-		Prompter:          newPrompter(cctx),
-		OperationHandler:  NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, resourceID, c.ClientOptions),
+		UserIdentification: c.UserIdentificationOptions,
+		NamespaceAccesses:  c.NamespaceAccess,
+		ResourceVersion:    c.ResourceVersion,
+		AsyncOperationID:   c.AsyncOperationId,
+		Cloud:              cloudClient.CloudService(),
+		Prompter:           newPrompter(cctx),
+		OperationHandler:   NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, resourceID, c.ClientOptions),
 	})
 }
 
 func (c *CloudUserSetAccountRoleCommand) run(cctx *CommandContext, _ []string) error {
-	if c.UserId == "" && c.UserEmail == "" {
-		return errors.New("must provide either --user-id or --user-email")
-	}
-	if c.UserId != "" && c.UserEmail != "" {
-		return errors.New("cannot provide both --user-id and --user-email")
+	if err := validateUserIdentification(c.UserIdentificationOptions); err != nil {
+		return err
 	}
 
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
@@ -435,23 +413,19 @@ func (c *CloudUserSetAccountRoleCommand) run(cctx *CommandContext, _ []string) e
 		resourceID = c.UserEmail
 	}
 	return SetAccountRole(cctx.Context, SetAccountRoleParams{
-		UserID:           c.UserId,
-		UserEmail:        c.UserEmail,
-		AccountRole:      c.AccountRole,
-		ResourceVersion:  c.ResourceVersion,
-		AsyncOperationID: c.AsyncOperationId,
-		Cloud:            cloudClient.CloudService(),
-		Prompter:         newPrompter(cctx),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, resourceID, c.ClientOptions),
+		UserIdentification: c.UserIdentificationOptions,
+		AccountRole:        c.AccountRole,
+		ResourceVersion:    c.ResourceVersion,
+		AsyncOperationID:   c.AsyncOperationId,
+		Cloud:              cloudClient.CloudService(),
+		Prompter:           newPrompter(cctx),
+		OperationHandler:   NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, resourceID, c.ClientOptions),
 	})
 }
 
 func (c *CloudUserDeleteCommand) run(cctx *CommandContext, _ []string) error {
-	if c.UserId == "" && c.UserEmail == "" {
-		return errors.New("must provide either --user-id or --user-email")
-	}
-	if c.UserId != "" && c.UserEmail != "" {
-		return errors.New("cannot provide both --user-id and --user-email")
+	if err := validateUserIdentification(c.UserIdentificationOptions); err != nil {
+		return err
 	}
 
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
@@ -472,12 +446,11 @@ func (c *CloudUserDeleteCommand) run(cctx *CommandContext, _ []string) error {
 		resourceID = c.UserEmail
 	}
 	return DeleteUser(cctx.Context, DeleteUserParams{
-		UserID:           c.UserId,
-		UserEmail:        c.UserEmail,
-		ResourceVersion:  c.ResourceVersion,
-		AsyncOperationID: c.AsyncOperationId,
-		Cloud:            cloudClient.CloudService(),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, resourceID, c.ClientOptions),
+		UserIdentification: c.UserIdentificationOptions,
+		ResourceVersion:    c.ResourceVersion,
+		AsyncOperationID:   c.AsyncOperationId,
+		Cloud:              cloudClient.CloudService(),
+		OperationHandler:   NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, resourceID, c.ClientOptions),
 	})
 }
 
@@ -492,15 +465,14 @@ func (c *CloudUserEditCommand) run(cctx *CommandContext, _ []string) error {
 		resourceID = c.UserEmail
 	}
 	return EditUser(cctx.Context, EditUserParams{
-		UserID:           c.UserId,
-		UserEmail:        c.UserEmail,
-		ResourceVersion:  c.ResourceVersion,
-		AsyncOperationID: c.AsyncOperationId,
-		VerboseDiff:      c.VerboseDiff,
-		Cloud:            cloudClient.CloudService(),
-		Prompter:         newPrompter(cctx),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, resourceID, c.ClientOptions),
-		RunEditor:        runEditorForJSONEditForProtos,
+		UserIdentification: c.UserIdentificationOptions,
+		ResourceVersion:    c.ResourceVersion,
+		AsyncOperationID:   c.AsyncOperationId,
+		VerboseDiff:        c.VerboseDiff,
+		Cloud:              cloudClient.CloudService(),
+		Prompter:           newPrompter(cctx),
+		OperationHandler:   NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, resourceID, c.ClientOptions),
+		RunEditor:          runEditorForJSONEditForProtos,
 	})
 }
 
@@ -537,9 +509,9 @@ func (c *CloudUserGetCommand) run(cctx *CommandContext, _ []string) error {
 		return err
 	}
 	return GetUser(cctx.Context, GetUserParams{
-		UserID:  c.UserId,
-		Cloud:   cloudClient.CloudService(),
-		Printer: cctx.Printer,
+		UserIdentification: c.UserIdentificationOptions,
+		Cloud:              cloudClient.CloudService(),
+		Printer:            cctx.Printer,
 	})
 }
 
@@ -653,4 +625,14 @@ func applyNamespaceAccessChanges(existing map[string]*identityv1.NamespaceAccess
 		return nil, nil
 	}
 	return result, nil
+}
+
+func validateUserIdentification(identification UserIdentificationOptions) error {
+	if identification.UserId == "" && identification.UserEmail == "" {
+		return errors.New("must provide either --user-id or --user-email")
+	}
+	if identification.UserId != "" && identification.UserEmail != "" {
+		return errors.New("cannot provide both --user-id and --user-email")
+	}
+	return nil
 }

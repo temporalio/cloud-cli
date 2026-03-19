@@ -74,6 +74,18 @@ func (v *AsyncOperationOptions) BuildFlags(f *pflag.FlagSet) {
 	f.BoolVar(&v.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
 }
 
+type UserIdentificationOptions struct {
+	UserId    string
+	UserEmail string
+	FlagSet   *pflag.FlagSet
+}
+
+func (v *UserIdentificationOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.UserId, "user-id", "", "The ID of the user. Mutually exclusive with --user-email.")
+	f.StringVar(&v.UserEmail, "user-email", "", "The email address of the user. Mutually exclusive with --user-id.")
+}
+
 type CloudCommand struct {
 	Command cobra.Command
 	ClientOptions
@@ -1502,8 +1514,7 @@ type CloudUserDeleteCommand struct {
 	ClientOptions
 	AsyncOperationOptions
 	ResourceVersionOptions
-	UserId    string
-	UserEmail string
+	UserIdentificationOptions
 }
 
 func NewCloudUserDeleteCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserDeleteCommand {
@@ -1518,11 +1529,10 @@ func NewCloudUserDeleteCommand(cctx *CommandContext, parent *CloudUserCommand) *
 		s.Command.Long = "Delete a Temporal Cloud user. This action is irreversible.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n```\ncloud user delete --user-id my-user-id\ncloud user delete --user-email alice@example.com\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.UserId, "user-id", "", "The ID of the user to delete. Mutually exclusive with --user-email.")
-	s.Command.Flags().StringVar(&s.UserEmail, "user-email", "", "The email address of the user to delete. Mutually exclusive with --user-id.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1538,8 +1548,7 @@ type CloudUserEditCommand struct {
 	DiffOptions
 	AsyncOperationOptions
 	ResourceVersionOptions
-	UserId    string
-	UserEmail string
+	UserIdentificationOptions
 }
 
 func NewCloudUserEditCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserEditCommand {
@@ -1554,12 +1563,11 @@ func NewCloudUserEditCommand(cctx *CommandContext, parent *CloudUserCommand) *Cl
 		s.Command.Long = "Open a user configuration in your default editor for interactive\nmodification. After saving and closing the editor, the changes are\napplied to Temporal Cloud.\n\nThe editor is determined by the EDITOR environment variable, falling\nback to 'vi' if not set.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n```\ncloud user edit --user-id my-user-id\ncloud user edit --user-email alice@example.com\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.UserId, "user-id", "", "The ID of the user to edit. Mutually exclusive with --user-email.")
-	s.Command.Flags().StringVar(&s.UserEmail, "user-email", "", "The email address of the user to edit. Mutually exclusive with --user-id.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.DiffOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1572,7 +1580,7 @@ type CloudUserGetCommand struct {
 	Parent  *CloudUserCommand
 	Command cobra.Command
 	ClientOptions
-	UserId string
+	UserIdentificationOptions
 }
 
 func NewCloudUserGetCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserGetCommand {
@@ -1587,9 +1595,8 @@ func NewCloudUserGetCommand(cctx *CommandContext, parent *CloudUserCommand) *Clo
 		s.Command.Long = "Retrieve the configuration and status of a Temporal Cloud user.\n\nExample:\n\n```\ncloud user get --user-id my-user-id\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.UserId, "user-id", "", "The ID of the user to retrieve. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "user-id")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1675,8 +1682,7 @@ type CloudUserSetAccountRoleCommand struct {
 	ClientOptions
 	AsyncOperationOptions
 	ResourceVersionOptions
-	UserId      string
-	UserEmail   string
+	UserIdentificationOptions
 	AccountRole string
 }
 
@@ -1692,13 +1698,12 @@ func NewCloudUserSetAccountRoleCommand(cctx *CommandContext, parent *CloudUserCo
 		s.Command.Long = "Set the account-level role for a Temporal Cloud user.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n```\ncloud user set-account-role --user-id my-user-id --account-role developer\ncloud user set-account-role --user-email alice@example.com --account-role admin\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.UserId, "user-id", "", "The ID of the user. Mutually exclusive with --user-email.")
-	s.Command.Flags().StringVar(&s.UserEmail, "user-email", "", "The email address of the user. Mutually exclusive with --user-id.")
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "account-role")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -1713,8 +1718,7 @@ type CloudUserSetNamespacePermissionsCommand struct {
 	ClientOptions
 	AsyncOperationOptions
 	ResourceVersionOptions
-	UserId          string
-	UserEmail       string
+	UserIdentificationOptions
 	NamespaceAccess []string
 }
 
@@ -1730,13 +1734,12 @@ func NewCloudUserSetNamespacePermissionsCommand(cctx *CommandContext, parent *Cl
 		s.Command.Long = "Add, update, or remove namespace-level permissions for a Temporal Cloud user.\nChanges are applied additively: namespaces not listed are left unchanged.\n\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\nTo remove access to a namespace, pass an empty permission: 'namespace='.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n```\n# Grant write access to my-namespace and read access to other-namespace:\ncloud user set-namespace-permissions --user-id my-user-id \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\n\n# Remove access to a namespace:\ncloud user set-namespace-permissions --user-id my-user-id \\\n  --namespace-access my-namespace.my-account=\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.UserId, "user-id", "", "The ID of the user. Mutually exclusive with --user-email.")
-	s.Command.Flags().StringVar(&s.UserEmail, "user-email", "", "The email address of the user. Mutually exclusive with --user-id.")
 	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access change in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated. Use an empty permission (e.g. 'testns=') to remove access to a namespace. Changes are additive: namespaces not listed are left unchanged. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace-access")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

@@ -1071,12 +1071,7 @@ commands:
     has-init: false
     option-sets:
       - client
-    options:
-      - name: user-id
-        type: string
-        required: true
-        description: |
-          The ID of the user to retrieve.
+      - user-identification
   - name: cloud user set-namespace-permissions
     summary: Set namespace permissions for a user
     description: |
@@ -1105,15 +1100,8 @@ commands:
       - client
       - async-operation
       - resource-version
+      - user-identification
     options:
-      - name: user-id
-        type: string
-        description: |
-          The ID of the user. Mutually exclusive with --user-email.
-      - name: user-email
-        type: string
-        description: |
-          The email address of the user. Mutually exclusive with --user-id.
       - name: namespace-access
         type: string[]
         required: true
@@ -1142,15 +1130,8 @@ commands:
       - client
       - async-operation
       - resource-version
+      - user-identification
     options:
-      - name: user-id
-        type: string
-        description: |
-          The ID of the user. Mutually exclusive with --user-email.
-      - name: user-email
-        type: string
-        description: |
-          The email address of the user. Mutually exclusive with --user-id.
       - name: account-role
         type: string
         required: true
@@ -1175,15 +1156,7 @@ commands:
       - client
       - async-operation
       - resource-version
-    options:
-      - name: user-id
-        type: string
-        description: |
-          The ID of the user to delete. Mutually exclusive with --user-email.
-      - name: user-email
-        type: string
-        description: |
-          The email address of the user to delete. Mutually exclusive with --user-id.
+      - user-identification
   - name: cloud user edit
     summary: Interactively edit a user configuration
     description: |
@@ -1208,15 +1181,7 @@ commands:
       - diff
       - async-operation
       - resource-version
-    options:
-      - name: user-id
-        type: string
-        description: |
-          The ID of the user to edit. Mutually exclusive with --user-email.
-      - name: user-email
-        type: string
-        description: |
-          The email address of the user to edit. Mutually exclusive with --user-id.
+      - user-identification
   - name: cloud user apply
     summary: Create or update a user from a specification
     description: |
@@ -1376,3 +1341,13 @@ option-sets:
         description: |
           Return immediately after initiating the operation instead of waiting
           for completion. Use the returned operation ID to check status later.
+  - name: user-identification
+    options:
+      - name: user-id
+        type: string
+        description: |
+          The ID of the user. Mutually exclusive with --user-email.
+      - name: user-email
+        type: string
+        description: |
+          The email address of the user. Mutually exclusive with --user-id.
