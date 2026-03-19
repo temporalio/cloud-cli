@@ -100,10 +100,10 @@ type (
 	}
 
 	InviteUserParams struct {
-		Email            string
-		AccountAccess    *identityv1.AccountAccess
-		NmspaceAccesses  map[string]*identityv1.NamespaceAccess
-		AsyncOperationID string
+		Email             string
+		AccountAccess     *identityv1.AccountAccess
+		NamespaceAccesses map[string]*identityv1.NamespaceAccess
+		AsyncOperationID  string
 
 		Cloud            cloudservice.CloudServiceClient
 		OperationHandler AsyncOperationHandler
@@ -335,7 +335,7 @@ func InviteUser(ctx context.Context, params InviteUserParams) error {
 		Email: params.Email,
 		Access: &identityv1.Access{
 			AccountAccess:     params.AccountAccess,
-			NamespaceAccesses: params.NmspaceAccesses,
+			NamespaceAccesses: params.NamespaceAccesses,
 		},
 	}
 
@@ -540,12 +540,12 @@ func (c *CloudUserInviteCommand) run(cctx *CommandContext, _ []string) error {
 	}
 
 	return InviteUser(cctx.Context, InviteUserParams{
-		Email:            c.Email,
-		AccountAccess:    accountAccess,
-		NmspaceAccesses:  namespaceAccesses,
-		AsyncOperationID: c.AsyncOperationId,
-		Cloud:            cloudClient.CloudService(),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.Email, c.ClientOptions),
+		Email:             c.Email,
+		AccountAccess:     accountAccess,
+		NamespaceAccesses: namespaceAccesses,
+		AsyncOperationID:  c.AsyncOperationId,
+		Cloud:             cloudClient.CloudService(),
+		OperationHandler:  NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.Email, c.ClientOptions),
 	})
 }
 

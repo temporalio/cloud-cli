@@ -9,14 +9,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
-	"github.com/temporalio/cloud-cli/temporalcloudcli"
-	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
-	cmdmock "github.com/temporalio/cloud-cli/temporalcloudcli/mock"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	identityv1 "go.temporal.io/cloud-sdk/api/identity/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 	"google.golang.org/protobuf/proto"
+
+	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
+	"github.com/temporalio/cloud-cli/temporalcloudcli"
+	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
+	cmdmock "github.com/temporalio/cloud-cli/temporalcloudcli/mock"
 )
 
 func TestSetNamespacePermissions(t *testing.T) {
@@ -998,8 +999,8 @@ func TestGetUser(t *testing.T) {
 			var buf bytes.Buffer
 			err := temporalcloudcli.GetUser(context.Background(), temporalcloudcli.GetUserParams{
 				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: tt.userID},
-				Cloud:   mockCloud,
-				Printer: &printer.Printer{Output: &buf, JSON: true},
+				Cloud:              mockCloud,
+				Printer:            &printer.Printer{Output: &buf, JSON: true},
 			})
 			if tt.wantErr != nil {
 				require.ErrorIs(t, err, tt.wantErr)
@@ -1028,7 +1029,7 @@ func TestInviteUser(t *testing.T) {
 			params: temporalcloudcli.InviteUserParams{
 				Email:         "alice@example.com",
 				AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_DEVELOPER},
-				NmspaceAccesses: map[string]*identityv1.NamespaceAccess{
+				NamespaceAccesses: map[string]*identityv1.NamespaceAccess{
 					"my-ns.my-account": {Permission: identityv1.NamespaceAccess_PERMISSION_WRITE},
 				},
 			},
