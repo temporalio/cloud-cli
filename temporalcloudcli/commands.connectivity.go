@@ -20,7 +20,7 @@ type (
 		Printer *printer.Printer
 	}
 
-	DescribeConnectivityRuleParams struct {
+	GetConnectivityRuleParams struct {
 		ID string
 
 		Cloud   cloudservice.CloudServiceClient
@@ -83,8 +83,8 @@ func ListConnectivityRules(ctx context.Context, params ListConnectivityRulesPara
 	)
 }
 
-// DescribeConnectivityRule retrieves details of a specific connectivity rule by ID.
-func DescribeConnectivityRule(ctx context.Context, params DescribeConnectivityRuleParams) error {
+// GetConnectivityRule retrieves details of a specific connectivity rule by ID.
+func GetConnectivityRule(ctx context.Context, params GetConnectivityRuleParams) error {
 	res, err := params.Cloud.GetConnectivityRule(ctx, &cloudservice.GetConnectivityRuleRequest{
 		ConnectivityRuleId: params.ID,
 	})
@@ -195,12 +195,12 @@ func (c *CloudConnectivityListCommand) run(cctx *CommandContext, _ []string) err
 	})
 }
 
-func (c *CloudConnectivityDescribeCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudConnectivityGetCommand) run(cctx *CommandContext, _ []string) error {
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-	return DescribeConnectivityRule(cctx.Context, DescribeConnectivityRuleParams{
+	return GetConnectivityRule(cctx.Context, GetConnectivityRuleParams{
 		ID:      c.Id,
 		Cloud:   cloudClient.CloudService(),
 		Printer: cctx.Printer,

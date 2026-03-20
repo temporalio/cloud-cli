@@ -144,7 +144,7 @@ func NewCloudConnectivityCommand(cctx *CommandContext, parent *CloudCommand) *Cl
 	s.Command.Long = "Commands for managing connectivity rules for Temporal Cloud."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudConnectivityDeleteCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewCloudConnectivityDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudConnectivityGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudConnectivityListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudConnectivityPrivateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudConnectivityPublicCommand(cctx, &s).Command)
@@ -184,23 +184,23 @@ func NewCloudConnectivityDeleteCommand(cctx *CommandContext, parent *CloudConnec
 	return &s
 }
 
-type CloudConnectivityDescribeCommand struct {
+type CloudConnectivityGetCommand struct {
 	Parent  *CloudConnectivityCommand
 	Command cobra.Command
 	ClientOptions
 	ConnectivityRuleIdOptions
 }
 
-func NewCloudConnectivityDescribeCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityDescribeCommand {
-	var s CloudConnectivityDescribeCommand
+func NewCloudConnectivityGetCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityGetCommand {
+	var s CloudConnectivityGetCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "describe [flags]"
+	s.Command.Use = "get [flags]"
 	s.Command.Short = "Get details of a connectivity rule"
 	if hasHighlighting {
-		s.Command.Long = "Get details of a specific connectivity rule by its ID.\n\nExample:\n\n\x1b[1mcloud connectivity describe --id <connectivity-rule-id>\x1b[0m"
+		s.Command.Long = "Get details of a specific connectivity rule by its ID.\n\nExample:\n\n\x1b[1mcloud connectivity get --id <connectivity-rule-id>\x1b[0m"
 	} else {
-		s.Command.Long = "Get details of a specific connectivity rule by its ID.\n\nExample:\n\n```\ncloud connectivity describe --id <connectivity-rule-id>\n```"
+		s.Command.Long = "Get details of a specific connectivity rule by its ID.\n\nExample:\n\n```\ncloud connectivity get --id <connectivity-rule-id>\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())

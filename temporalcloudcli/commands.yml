@@ -1087,7 +1087,7 @@ commands:
         description: |
           Page token for pagination.
 
-  - name: cloud connectivity describe
+  - name: cloud connectivity get
     summary: Get details of a connectivity rule
     description: |
       Get details of a specific connectivity rule by its ID.
@@ -1095,7 +1095,7 @@ commands:
       Example:
 
       ```
-      cloud connectivity describe --id <connectivity-rule-id>
+      cloud connectivity get --id <connectivity-rule-id>
       ```
     has-init: false
     option-sets:

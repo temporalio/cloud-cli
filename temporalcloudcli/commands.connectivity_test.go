@@ -87,8 +87,8 @@ func TestListConnectivityRules_Error(t *testing.T) {
 	assert.Empty(t, buf.String())
 }
 
-// TestDescribeConnectivityRule_Success verifies that the rule is printed.
-func TestDescribeConnectivityRule_Success(t *testing.T) {
+// TestGetConnectivityRule_Success verifies that the rule is printed.
+func TestGetConnectivityRule_Success(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 
 	rule := &connectivityrulev1.ConnectivityRule{
@@ -104,7 +104,7 @@ func TestDescribeConnectivityRule_Success(t *testing.T) {
 		}, nil)
 
 	var buf bytes.Buffer
-	err := temporalcloudcli.DescribeConnectivityRule(context.Background(), temporalcloudcli.DescribeConnectivityRuleParams{
+	err := temporalcloudcli.GetConnectivityRule(context.Background(), temporalcloudcli.GetConnectivityRuleParams{
 		ID:      "rule-1",
 		Cloud:   mockCloud,
 		Printer: &printer.Printer{Output: &buf, JSON: true},
@@ -116,8 +116,8 @@ func TestDescribeConnectivityRule_Success(t *testing.T) {
 	assert.Equal(t, connectivityrulev1.ConnectivityRule{Id: "rule-1"}, out)
 }
 
-// TestDescribeConnectivityRule_Error verifies that an API error propagates.
-func TestDescribeConnectivityRule_Error(t *testing.T) {
+// TestGetConnectivityRule_Error verifies that an API error propagates.
+func TestGetConnectivityRule_Error(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	apiErr := errors.New("api error")
 
@@ -128,7 +128,7 @@ func TestDescribeConnectivityRule_Error(t *testing.T) {
 		Return(nil, apiErr)
 
 	var buf bytes.Buffer
-	err := temporalcloudcli.DescribeConnectivityRule(context.Background(), temporalcloudcli.DescribeConnectivityRuleParams{
+	err := temporalcloudcli.GetConnectivityRule(context.Background(), temporalcloudcli.GetConnectivityRuleParams{
 		ID:      "rule-1",
 		Cloud:   mockCloud,
 		Printer: &printer.Printer{Output: &buf, JSON: true},
