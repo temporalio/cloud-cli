@@ -69,7 +69,7 @@ func TestSetNamespacePermissions(t *testing.T) {
 						ResourceVersion: "rv-1",
 					}).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
 		},
 		{
@@ -101,7 +101,7 @@ func TestSetNamespacePermissions(t *testing.T) {
 						ResourceVersion: "rv-1",
 					}).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
 		},
 		{
@@ -141,7 +141,7 @@ func TestSetNamespacePermissions(t *testing.T) {
 						ResourceVersion: "rv-1",
 					}).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
 		},
 		{
@@ -259,7 +259,7 @@ func TestSetAccountRole(t *testing.T) {
 						ResourceVersion: "rv-1",
 					}).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
 		},
 		{
@@ -290,7 +290,7 @@ func TestSetAccountRole(t *testing.T) {
 						ResourceVersion: "rv-1",
 					}).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
 		},
 		{
@@ -318,7 +318,7 @@ func TestSetAccountRole(t *testing.T) {
 						ResourceVersion: "rv-1",
 					}).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
 		},
 		{
@@ -422,7 +422,7 @@ func TestDeleteUser(t *testing.T) {
 						ResourceVersion: "rv-1",
 					}).
 					Return(&cloudservice.DeleteUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
 		},
 		{
@@ -440,7 +440,7 @@ func TestDeleteUser(t *testing.T) {
 						ResourceVersion: "rv-1",
 					}).
 					Return(&cloudservice.DeleteUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
 		},
 		{
@@ -461,7 +461,7 @@ func TestDeleteUser(t *testing.T) {
 						ResourceVersion: "rv-override",
 					}).
 					Return(&cloudservice.DeleteUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
 		},
 		{
@@ -501,7 +501,7 @@ func TestDeleteUser(t *testing.T) {
 						ResourceVersion: "rv-1",
 					}).
 					Return(nil, apiErr)
-				handler.EXPECT().HandleErr(apiErr).Return(apiErr)
+				handler.EXPECT().HandleDeleteErr(apiErr).Return(apiErr)
 			},
 			wantErr: apiErr,
 		},
@@ -570,7 +570,7 @@ func TestEditUser(t *testing.T) {
 						ResourceVersion: "rv-1",
 					}).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
 			makeRunEditor: func(t *testing.T) func(proto.Message, proto.Message) error {
 				editedSpec := &identityv1.UserSpec{
@@ -608,7 +608,7 @@ func TestEditUser(t *testing.T) {
 						ResourceVersion: "rv-override",
 					}).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
 			makeRunEditor: func(t *testing.T) func(proto.Message, proto.Message) error {
 				editedSpec := &identityv1.UserSpec{
@@ -707,7 +707,7 @@ func TestEditUser(t *testing.T) {
 						ResourceVersion: "rv-1",
 					}).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
 			makeRunEditor: func(t *testing.T) func(proto.Message, proto.Message) error {
 				editedSpec := &identityv1.UserSpec{
@@ -807,7 +807,7 @@ func TestApplyUser(t *testing.T) {
 				cloud.EXPECT().
 					CreateUser(context.Background(), &cloudservice.CreateUserRequest{Spec: spec}).
 					Return(&cloudservice.CreateUserResponse{UserId: "user-new", AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-new").Return(nil)
 			},
 		},
 		{
@@ -840,7 +840,7 @@ func TestApplyUser(t *testing.T) {
 						ResourceVersion: "rv-1",
 					}).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
 		},
 		{
@@ -865,7 +865,7 @@ func TestApplyUser(t *testing.T) {
 						ResourceVersion: "rv-override",
 					}).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
 		},
 		{
@@ -908,7 +908,7 @@ func TestApplyUser(t *testing.T) {
 				cloud.EXPECT().
 					CreateUser(context.Background(), &cloudservice.CreateUserRequest{Spec: spec}).
 					Return(nil, createErr)
-				handler.EXPECT().HandleErr(createErr).Return(createErr)
+				handler.EXPECT().HandleCreateErr(createErr).Return(createErr)
 			},
 			wantErr: createErr,
 		},
@@ -1046,7 +1046,7 @@ func TestInviteUser(t *testing.T) {
 				cloud.EXPECT().
 					CreateUser(context.Background(), &cloudservice.CreateUserRequest{Spec: expectedSpec}).
 					Return(&cloudservice.CreateUserResponse{UserId: "user-1", AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
 		},
 		{
@@ -1061,7 +1061,7 @@ func TestInviteUser(t *testing.T) {
 						},
 					}).
 					Return(&cloudservice.CreateUserResponse{UserId: "user-2", AsyncOperation: op}, nil)
-				handler.EXPECT().Handle(op).Return(nil)
+				handler.EXPECT().HandleOperation(op, "user-2").Return(nil)
 			},
 		},
 		{
@@ -1076,7 +1076,7 @@ func TestInviteUser(t *testing.T) {
 						},
 					}).
 					Return(nil, apiErr)
-				handler.EXPECT().HandleErr(apiErr).Return(apiErr)
+				handler.EXPECT().HandleCreateErr(apiErr).Return(apiErr)
 			},
 			wantErr: apiErr,
 		},

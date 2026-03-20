@@ -61,7 +61,7 @@ func SetRetention(ctx context.Context, params SetRetentionParams) error {
 	if params.ResourceVersion != "" {
 		rv = params.ResourceVersion
 	}
-	updateNamespace := runAsyncOperation(params.Cloud.UpdateNamespace, params.OperationHandler)
+	updateNamespace := wrapUpdateOperation(params.Cloud.UpdateNamespace, params.OperationHandler, params.Namespace)
 	updateParams := &cloudservice.UpdateNamespaceRequest{
 		Namespace:        params.Namespace,
 		Spec:             newSpec,
@@ -95,6 +95,6 @@ func (c *CloudNamespaceRetentionSetCommand) run(cctx *CommandContext, _ []string
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
 		Prompter:         newPrompter(cctx),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }

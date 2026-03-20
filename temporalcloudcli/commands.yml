@@ -1045,6 +1045,147 @@ commands:
         description: |
           The target region to failover to (e.g., aws-us-west-2).
 
+  # Connectivity commands
+  - name: cloud connectivity
+    summary: Manage Temporal Cloud connectivity rules
+    description: |
+      Commands for managing connectivity rules for Temporal Cloud.
+    has-init: false
+    docs:
+      keywords:
+        - connectivity
+        - connectivity-rule
+      description-header: Connectivity Management Commands
+      tags:
+        - connectivity
+
+  - name: cloud connectivity list
+    summary: List connectivity rules
+    description: |
+      List connectivity rules, optionally filtered by namespace.
+
+      Example:
+
+      ```
+      cloud connectivity list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: namespace
+        type: string
+        short: n
+        description: |
+          Filter connectivity rules by namespace (e.g., 'my-namespace.my-account').
+      - name: page-size
+        type: int
+        description: |
+          Number of connectivity rules to return per page.
+      - name: page-token
+        type: string
+        description: |
+          Page token for pagination.
+
+  - name: cloud connectivity get
+    summary: Get details of a connectivity rule
+    description: |
+      Get details of a specific connectivity rule by its ID.
+
+      Example:
+
+      ```
+      cloud connectivity get --id <connectivity-rule-id>
+      ```
+    has-init: false
+    options:
+      - name: id
+        type: string
+        required: true
+        description: |
+          The ID of the connectivity rule.
+    option-sets:
+      - client
+
+  - name: cloud connectivity delete
+    summary: Delete a connectivity rule
+    description: |
+      Delete a connectivity rule by its ID.
+
+      Example:
+
+      ```
+      cloud connectivity delete --id <connectivity-rule-id>
+      ```
+    has-init: false
+    options:
+      - name: id
+        type: string
+        required: true
+        description: |
+          The ID of the connectivity rule.
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+
+  - name: cloud connectivity public
+    summary: Manage public connectivity rules
+    description: |
+      Commands for managing public connectivity rules.
+    has-init: false
+
+  - name: cloud connectivity public create
+    summary: Create a public connectivity rule
+    description: |
+      Create a new public internet connectivity rule.
+
+      Example:
+
+      ```
+      cloud connectivity public create
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+
+  - name: cloud connectivity private
+    summary: Manage private connectivity rules
+    description: |
+      Commands for managing private connectivity rules.
+    has-init: false
+
+  - name: cloud connectivity private create
+    summary: Create a private connectivity rule
+    description: |
+      Create a new private VPC connectivity rule. Requires --connection-id and --region.
+
+      Example:
+
+      ```
+      cloud connectivity private create --connection-id vpce-12345 --region aws-us-west-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: connection-id
+        type: string
+        required: true
+        description: |
+          The connection ID for private connectivity.
+      - name: region
+        type: string
+        required: true
+        description: |
+          The region for private connectivity.
+      - name: gcp-project-id
+        type: string
+        description: |
+          The GCP project ID (only for GCP private connectivity).
+
   # User commands
   - name: cloud user
     summary: Manage Temporal Cloud users
@@ -1351,3 +1492,4 @@ option-sets:
         type: string
         description: |
           The email address of the user. Mutually exclusive with --user-id.
+
