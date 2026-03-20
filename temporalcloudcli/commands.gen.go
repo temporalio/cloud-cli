@@ -254,6 +254,7 @@ func NewCloudAccountAuditLogCommand(cctx *CommandContext, parent *CloudAccountCo
 	s.Command.Long = "Commands for working with account audit logs."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudAccountAuditLogGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudAccountAuditLogSinkCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -279,6 +280,49 @@ func NewCloudAccountAuditLogGetCommand(cctx *CommandContext, parent *CloudAccoun
 	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Page token from a previous response to retrieve the next page.")
 	s.Command.Flags().Var(&s.StartTime, "start-time", "Filter for logs at or after this UTC time (RFC3339 format, e.g. 2024-01-01T00:00:00Z). Defaults to 30 days ago.")
 	s.Command.Flags().Var(&s.EndTime, "end-time", "Filter for logs before this UTC time (RFC3339 format, e.g. 2024-02-01T00:00:00Z). Defaults to current time.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudAccountAuditLogSinkCommand struct {
+	Parent  *CloudAccountAuditLogCommand
+	Command cobra.Command
+}
+
+func NewCloudAccountAuditLogSinkCommand(cctx *CommandContext, parent *CloudAccountAuditLogCommand) *CloudAccountAuditLogSinkCommand {
+	var s CloudAccountAuditLogSinkCommand
+	s.Parent = parent
+	s.Command.Use = "sink"
+	s.Command.Short = "Manage audit log sinks"
+	s.Command.Long = "Commands for working with account audit log sinks."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudAccountAuditLogSinkListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudAccountAuditLogSinkListCommand struct {
+	Parent  *CloudAccountAuditLogSinkCommand
+	Command cobra.Command
+	ClientOptions
+	PageSize  int
+	PageToken string
+}
+
+func NewCloudAccountAuditLogSinkListCommand(cctx *CommandContext, parent *CloudAccountAuditLogSinkCommand) *CloudAccountAuditLogSinkListCommand {
+	var s CloudAccountAuditLogSinkListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List audit log sinks"
+	s.Command.Long = "Returns a paginated list of audit log sinks for the account.\n\nExample:\n  temporal cloud account audit-log sink list\n  temporal cloud account audit-log sink list --page-size 50"
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of sinks to retrieve per page. Cannot exceed 1000. Defaults to 100.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Page token from a previous response to retrieve the next page.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {

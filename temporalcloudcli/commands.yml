@@ -2163,6 +2163,41 @@ commands:
           Filter for logs before this UTC time (RFC3339 format, e.g. 2024-02-01T00:00:00Z). Defaults to current time.
 
 
+  - name: cloud account audit-log sink
+    summary: Manage audit log sinks
+    description: |
+      Commands for working with account audit log sinks.
+    has-init: false
+    docs:
+      keywords:
+        - audit-log
+        - sink
+        - account
+      description-header: Audit Log Sink Commands
+      tags:
+        - account
+
+  - name: cloud account audit-log sink list
+    summary: List audit log sinks
+    description: |
+      Returns a paginated list of audit log sinks for the account.
+
+      Example:
+        temporal cloud account audit-log sink list
+        temporal cloud account audit-log sink list --page-size 50
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of sinks to retrieve per page. Cannot exceed 1000. Defaults to 100.
+      - name: page-token
+        type: string
+        description: |
+          Page token from a previous response to retrieve the next page.
+
   # API key commands
   - name: cloud apikey
     summary: Manage Temporal Cloud API keys
@@ -2446,7 +2481,6 @@ commands:
         required: true
         description: |
           The ID of the API key to enable.
-
 
 option-sets:
   - name: client
