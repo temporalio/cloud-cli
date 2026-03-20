@@ -3,7 +3,6 @@ package temporalcloudcli
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	connectivityrulev1 "go.temporal.io/cloud-sdk/api/connectivityrule/v1"
@@ -21,15 +20,22 @@ type (
 		Printer *printer.Printer
 	}
 
-	GetConnectivityRuleParams struct {
+	DescribeConnectivityRuleParams struct {
 		ID string
 
 		Cloud   cloudservice.CloudServiceClient
 		Printer *printer.Printer
 	}
 
-	CreateConnectivityRuleParams struct {
-		Type             string
+	CreatePublicConnectivityRuleParams struct {
+		AsyncOperationID string
+
+		Cloud            cloudservice.CloudServiceClient
+		Prompter         Prompter
+		OperationHandler AsyncOperationHandler
+	}
+
+	CreatePrivateConnectivityRuleParams struct {
 		ConnectionID     string
 		Region           string
 		GCPProjectID     string
@@ -77,8 +83,8 @@ func ListConnectivityRules(ctx context.Context, params ListConnectivityRulesPara
 	)
 }
 
-// GetConnectivityRule retrieves details of a specific connectivity rule by ID.
-func GetConnectivityRule(ctx context.Context, params GetConnectivityRuleParams) error {
+// DescribeConnectivityRule retrieves details of a specific connectivity rule by ID.
+func DescribeConnectivityRule(ctx context.Context, params DescribeConnectivityRuleParams) error {
 	res, err := params.Cloud.GetConnectivityRule(ctx, &cloudservice.GetConnectivityRuleRequest{
 		ConnectivityRuleId: params.ID,
 	})
@@ -89,11 +95,46 @@ func GetConnectivityRule(ctx context.Context, params GetConnectivityRuleParams) 
 	return params.Printer.PrintResource(res.ConnectivityRule, printer.PrintResourceOptions{})
 }
 
-// CreateConnectivityRule creates a new connectivity rule of the given type.
-func CreateConnectivityRule(ctx context.Context, params CreateConnectivityRuleParams) error {
-	spec, err := buildConnectivityRuleSpec(params)
-	if err != nil {
+// CreatePublicConnectivityRule creates a new public internet connectivity rule.
+func CreatePublicConnectivityRule(ctx context.Context, params CreatePublicConnectivityRuleParams) error {
+	spec := &connectivityrulev1.ConnectivityRuleSpec{
+		ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PublicRule{
+			PublicRule: &connectivityrulev1.PublicConnectivityRule{},
+		},
+	}
+
+	if err := params.Prompter.PromptApply(&connectivityrulev1.ConnectivityRuleSpec{}, spec, false); err != nil {
 		return err
+	}
+
+	createRule := wrapCreateOperation(
+		params.Cloud.CreateConnectivityRule,
+		params.OperationHandler,
+		func(res *cloudservice.CreateConnectivityRuleResponse) string { return res.GetConnectivityRuleId() },
+	)
+	return createRule(ctx, &cloudservice.CreateConnectivityRuleRequest{
+		Spec:             spec,
+		AsyncOperationId: params.AsyncOperationID,
+	})
+}
+
+// CreatePrivateConnectivityRule creates a new private VPC connectivity rule.
+func CreatePrivateConnectivityRule(ctx context.Context, params CreatePrivateConnectivityRuleParams) error {
+	if params.ConnectionID == "" {
+		return errors.New("--connection-id is required for private connectivity")
+	}
+	if params.Region == "" {
+		return errors.New("--region is required for private connectivity")
+	}
+
+	spec := &connectivityrulev1.ConnectivityRuleSpec{
+		ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PrivateRule{
+			PrivateRule: &connectivityrulev1.PrivateConnectivityRule{
+				ConnectionId: params.ConnectionID,
+				GcpProjectId: params.GCPProjectID,
+				Region:       params.Region,
+			},
+		},
 	}
 
 	if err := params.Prompter.PromptApply(&connectivityrulev1.ConnectivityRuleSpec{}, spec, false); err != nil {
@@ -140,36 +181,6 @@ func DeleteConnectivityRule(ctx context.Context, params DeleteConnectivityRulePa
 	})
 }
 
-// buildConnectivityRuleSpec builds a ConnectivityRuleSpec from the given params.
-func buildConnectivityRuleSpec(params CreateConnectivityRuleParams) (*connectivityrulev1.ConnectivityRuleSpec, error) {
-	switch params.Type {
-	case "public":
-		return &connectivityrulev1.ConnectivityRuleSpec{
-			ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PublicRule{
-				PublicRule: &connectivityrulev1.PublicConnectivityRule{},
-			},
-		}, nil
-	case "private":
-		if params.ConnectionID == "" {
-			return nil, errors.New("--connection-id is required for private connectivity")
-		}
-		if params.Region == "" {
-			return nil, errors.New("--region is required for private connectivity")
-		}
-		return &connectivityrulev1.ConnectivityRuleSpec{
-			ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PrivateRule{
-				PrivateRule: &connectivityrulev1.PrivateConnectivityRule{
-					ConnectionId: params.ConnectionID,
-					GcpProjectId: params.GCPProjectID,
-					Region:       params.Region,
-				},
-			},
-		}, nil
-	default:
-		return nil, fmt.Errorf("invalid connectivity rule type %q: must be \"public\" or \"private\"", params.Type)
-	}
-}
-
 func (c *CloudConnectivityListCommand) run(cctx *CommandContext, _ []string) error {
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
@@ -184,25 +195,37 @@ func (c *CloudConnectivityListCommand) run(cctx *CommandContext, _ []string) err
 	})
 }
 
-func (c *CloudConnectivityGetCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudConnectivityDescribeCommand) run(cctx *CommandContext, _ []string) error {
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-	return GetConnectivityRule(cctx.Context, GetConnectivityRuleParams{
+	return DescribeConnectivityRule(cctx.Context, DescribeConnectivityRuleParams{
 		ID:      c.Id,
 		Cloud:   cloudClient.CloudService(),
 		Printer: cctx.Printer,
 	})
 }
 
-func (c *CloudConnectivityCreateCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudConnectivityPublicCreateCommand) run(cctx *CommandContext, _ []string) error {
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-	return CreateConnectivityRule(cctx.Context, CreateConnectivityRuleParams{
-		Type:             c.Type,
+	return CreatePublicConnectivityRule(cctx.Context, CreatePublicConnectivityRuleParams{
+		AsyncOperationID: c.AsyncOperationId,
+		Cloud:            cloudClient.CloudService(),
+		Prompter:         newPrompter(cctx),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
+	})
+}
+
+func (c *CloudConnectivityPrivateCreateCommand) run(cctx *CommandContext, _ []string) error {
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	return CreatePrivateConnectivityRule(cctx.Context, CreatePrivateConnectivityRuleParams{
 		ConnectionID:     c.ConnectionId,
 		Region:           c.Region,
 		GCPProjectID:     c.GcpProjectId,

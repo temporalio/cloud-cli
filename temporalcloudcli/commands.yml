@@ -1087,7 +1087,7 @@ commands:
         description: |
           Page token for pagination.
 
-  - name: cloud connectivity get
+  - name: cloud connectivity describe
     summary: Get details of a connectivity rule
     description: |
       Get details of a specific connectivity rule by its ID.
@@ -1095,52 +1095,12 @@ commands:
       Example:
 
       ```
-      cloud connectivity get --id <connectivity-rule-id>
+      cloud connectivity describe --id <connectivity-rule-id>
       ```
     has-init: false
     option-sets:
       - client
       - connectivity-rule-id
-
-  - name: cloud connectivity create
-    summary: Create a new connectivity rule
-    description: |
-      Create a new connectivity rule. Use --type public for public internet access,
-      or --type private for private VPC access (requires --connection-id and --region).
-
-      Example (public):
-
-      ```
-      cloud connectivity create --type public
-      ```
-
-      Example (private):
-
-      ```
-      cloud connectivity create --type private --connection-id vpce-12345 --region aws-us-west-2
-      ```
-    has-init: false
-    option-sets:
-      - client
-      - async-operation
-    options:
-      - name: type
-        type: string
-        required: true
-        description: |
-          The connectivity rule type: "public" or "private".
-      - name: connection-id
-        type: string
-        description: |
-          The connection ID for private connectivity (required when --type=private).
-      - name: region
-        type: string
-        description: |
-          The region for private connectivity (required when --type=private).
-      - name: gcp-project-id
-        type: string
-        description: |
-          The GCP project ID (only for GCP private connectivity).
 
   - name: cloud connectivity delete
     summary: Delete a connectivity rule
@@ -1158,6 +1118,63 @@ commands:
       - async-operation
       - resource-version
       - connectivity-rule-id
+
+  - name: cloud connectivity public
+    summary: Manage public connectivity rules
+    description: |
+      Commands for managing public connectivity rules.
+    has-init: false
+
+  - name: cloud connectivity public create
+    summary: Create a public connectivity rule
+    description: |
+      Create a new public internet connectivity rule.
+
+      Example:
+
+      ```
+      cloud connectivity public create
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+
+  - name: cloud connectivity private
+    summary: Manage private connectivity rules
+    description: |
+      Commands for managing private connectivity rules.
+    has-init: false
+
+  - name: cloud connectivity private create
+    summary: Create a private connectivity rule
+    description: |
+      Create a new private VPC connectivity rule. Requires --connection-id and --region.
+
+      Example:
+
+      ```
+      cloud connectivity private create --connection-id vpce-12345 --region aws-us-west-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: connection-id
+        type: string
+        required: true
+        description: |
+          The connection ID for private connectivity.
+      - name: region
+        type: string
+        required: true
+        description: |
+          The region for private connectivity.
+      - name: gcp-project-id
+        type: string
+        description: |
+          The GCP project ID (only for GCP private connectivity).
 
   # User commands
   - name: cloud user

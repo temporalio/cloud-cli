@@ -143,48 +143,11 @@ func NewCloudConnectivityCommand(cctx *CommandContext, parent *CloudCommand) *Cl
 	s.Command.Short = "Manage Temporal Cloud connectivity rules"
 	s.Command.Long = "Commands for managing connectivity rules for Temporal Cloud."
 	s.Command.Args = cobra.NoArgs
-	s.Command.AddCommand(&NewCloudConnectivityCreateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudConnectivityDeleteCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewCloudConnectivityGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudConnectivityDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudConnectivityListCommand(cctx, &s).Command)
-	return &s
-}
-
-type CloudConnectivityCreateCommand struct {
-	Parent  *CloudConnectivityCommand
-	Command cobra.Command
-	ClientOptions
-	AsyncOperationOptions
-	Type         string
-	ConnectionId string
-	Region       string
-	GcpProjectId string
-}
-
-func NewCloudConnectivityCreateCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityCreateCommand {
-	var s CloudConnectivityCreateCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "create [flags]"
-	s.Command.Short = "Create a new connectivity rule"
-	if hasHighlighting {
-		s.Command.Long = "Create a new connectivity rule. Use --type public for public internet access,\nor --type private for private VPC access (requires --connection-id and --region).\n\nExample (public):\n\n\x1b[1mcloud connectivity create --type public\x1b[0m\n\nExample (private):\n\n\x1b[1mcloud connectivity create --type private --connection-id vpce-12345 --region aws-us-west-2\x1b[0m"
-	} else {
-		s.Command.Long = "Create a new connectivity rule. Use --type public for public internet access,\nor --type private for private VPC access (requires --connection-id and --region).\n\nExample (public):\n\n```\ncloud connectivity create --type public\n```\n\nExample (private):\n\n```\ncloud connectivity create --type private --connection-id vpce-12345 --region aws-us-west-2\n```"
-	}
-	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Type, "type", "", "The connectivity rule type: \"public\" or \"private\". Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "type")
-	s.Command.Flags().StringVar(&s.ConnectionId, "connection-id", "", "The connection ID for private connectivity (required when --type=private).")
-	s.Command.Flags().StringVar(&s.Region, "region", "", "The region for private connectivity (required when --type=private).")
-	s.Command.Flags().StringVar(&s.GcpProjectId, "gcp-project-id", "", "The GCP project ID (only for GCP private connectivity).")
-	s.ClientOptions.BuildFlags(s.Command.Flags())
-	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
+	s.Command.AddCommand(&NewCloudConnectivityPrivateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudConnectivityPublicCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -221,23 +184,23 @@ func NewCloudConnectivityDeleteCommand(cctx *CommandContext, parent *CloudConnec
 	return &s
 }
 
-type CloudConnectivityGetCommand struct {
+type CloudConnectivityDescribeCommand struct {
 	Parent  *CloudConnectivityCommand
 	Command cobra.Command
 	ClientOptions
 	ConnectivityRuleIdOptions
 }
 
-func NewCloudConnectivityGetCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityGetCommand {
-	var s CloudConnectivityGetCommand
+func NewCloudConnectivityDescribeCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityDescribeCommand {
+	var s CloudConnectivityDescribeCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "get [flags]"
+	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Get details of a connectivity rule"
 	if hasHighlighting {
-		s.Command.Long = "Get details of a specific connectivity rule by its ID.\n\nExample:\n\n\x1b[1mcloud connectivity get --id <connectivity-rule-id>\x1b[0m"
+		s.Command.Long = "Get details of a specific connectivity rule by its ID.\n\nExample:\n\n\x1b[1mcloud connectivity describe --id <connectivity-rule-id>\x1b[0m"
 	} else {
-		s.Command.Long = "Get details of a specific connectivity rule by its ID.\n\nExample:\n\n```\ncloud connectivity get --id <connectivity-rule-id>\n```"
+		s.Command.Long = "Get details of a specific connectivity rule by its ID.\n\nExample:\n\n```\ncloud connectivity describe --id <connectivity-rule-id>\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -275,6 +238,104 @@ func NewCloudConnectivityListCommand(cctx *CommandContext, parent *CloudConnecti
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of connectivity rules to return per page.")
 	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Page token for pagination.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudConnectivityPrivateCommand struct {
+	Parent  *CloudConnectivityCommand
+	Command cobra.Command
+}
+
+func NewCloudConnectivityPrivateCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityPrivateCommand {
+	var s CloudConnectivityPrivateCommand
+	s.Parent = parent
+	s.Command.Use = "private"
+	s.Command.Short = "Manage private connectivity rules"
+	s.Command.Long = "Commands for managing private connectivity rules."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudConnectivityPrivateCreateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudConnectivityPrivateCreateCommand struct {
+	Parent  *CloudConnectivityPrivateCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ConnectionId string
+	Region       string
+	GcpProjectId string
+}
+
+func NewCloudConnectivityPrivateCreateCommand(cctx *CommandContext, parent *CloudConnectivityPrivateCommand) *CloudConnectivityPrivateCreateCommand {
+	var s CloudConnectivityPrivateCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a private connectivity rule"
+	if hasHighlighting {
+		s.Command.Long = "Create a new private VPC connectivity rule. Requires --connection-id and --region.\n\nExample:\n\n\x1b[1mcloud connectivity private create --connection-id vpce-12345 --region aws-us-west-2\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new private VPC connectivity rule. Requires --connection-id and --region.\n\nExample:\n\n```\ncloud connectivity private create --connection-id vpce-12345 --region aws-us-west-2\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ConnectionId, "connection-id", "", "The connection ID for private connectivity. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "connection-id")
+	s.Command.Flags().StringVar(&s.Region, "region", "", "The region for private connectivity. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "region")
+	s.Command.Flags().StringVar(&s.GcpProjectId, "gcp-project-id", "", "The GCP project ID (only for GCP private connectivity).")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudConnectivityPublicCommand struct {
+	Parent  *CloudConnectivityCommand
+	Command cobra.Command
+}
+
+func NewCloudConnectivityPublicCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityPublicCommand {
+	var s CloudConnectivityPublicCommand
+	s.Parent = parent
+	s.Command.Use = "public"
+	s.Command.Short = "Manage public connectivity rules"
+	s.Command.Long = "Commands for managing public connectivity rules."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudConnectivityPublicCreateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudConnectivityPublicCreateCommand struct {
+	Parent  *CloudConnectivityPublicCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+}
+
+func NewCloudConnectivityPublicCreateCommand(cctx *CommandContext, parent *CloudConnectivityPublicCommand) *CloudConnectivityPublicCreateCommand {
+	var s CloudConnectivityPublicCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a public connectivity rule"
+	if hasHighlighting {
+		s.Command.Long = "Create a new public internet connectivity rule.\n\nExample:\n\n\x1b[1mcloud connectivity public create\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new public internet connectivity rule.\n\nExample:\n\n```\ncloud connectivity public create\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
