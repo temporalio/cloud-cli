@@ -155,7 +155,7 @@ func SetNamespacePermissions(ctx context.Context, params SetNamespacePermissions
 		rv = params.ResourceVersion
 	}
 
-	updateUser := runAsyncOperation(params.Cloud.UpdateUser, params.OperationHandler)
+	updateUser := wrapUpdateOperation(params.Cloud.UpdateUser, params.OperationHandler, user.Id)
 	return updateUser(ctx, &cloudservice.UpdateUserRequest{
 		UserId:           user.Id,
 		Spec:             newSpec,
@@ -193,7 +193,7 @@ func SetAccountRole(ctx context.Context, params SetAccountRoleParams) error {
 		rv = params.ResourceVersion
 	}
 
-	updateUser := runAsyncOperation(params.Cloud.UpdateUser, params.OperationHandler)
+	updateUser := wrapUpdateOperation(params.Cloud.UpdateUser, params.OperationHandler, user.Id)
 	return updateUser(ctx, &cloudservice.UpdateUserRequest{
 		UserId:           user.Id,
 		Spec:             newSpec,
@@ -217,7 +217,7 @@ func DeleteUser(ctx context.Context, params DeleteUserParams) error {
 		rv = params.ResourceVersion
 	}
 
-	deleteUser := runAsyncOperation(params.Cloud.DeleteUser, params.OperationHandler)
+	deleteUser := wrapDeleteOperation(params.Cloud.DeleteUser, params.OperationHandler, user.Id)
 	return deleteUser(ctx, &cloudservice.DeleteUserRequest{
 		UserId:           user.Id,
 		ResourceVersion:  rv,
@@ -249,7 +249,7 @@ func EditUser(ctx context.Context, params EditUserParams) error {
 		rv = params.ResourceVersion
 	}
 
-	updateUser := runAsyncOperation(params.Cloud.UpdateUser, params.OperationHandler)
+	updateUser := wrapUpdateOperation(params.Cloud.UpdateUser, params.OperationHandler, user.Id)
 	return updateUser(ctx, &cloudservice.UpdateUserRequest{
 		UserId:           user.Id,
 		Spec:             newSpec,
@@ -303,7 +303,7 @@ func ApplyUser(ctx context.Context, params ApplyUserParams) error {
 	}
 
 	if existingUserID != "" {
-		updateUser := runAsyncOperation(params.Cloud.UpdateUser, params.OperationHandler)
+		updateUser := wrapUpdateOperation(params.Cloud.UpdateUser, params.OperationHandler, existingUserID)
 		return updateUser(ctx, &cloudservice.UpdateUserRequest{
 			UserId:           existingUserID,
 			Spec:             params.Spec,
@@ -312,7 +312,7 @@ func ApplyUser(ctx context.Context, params ApplyUserParams) error {
 		})
 	}
 
-	createUser := runAsyncOperation(params.Cloud.CreateUser, params.OperationHandler)
+	createUser := wrapCreateOperation(params.Cloud.CreateUser, params.OperationHandler, func(res *cloudservice.CreateUserResponse) string { return res.GetUserId() })
 	return createUser(ctx, &cloudservice.CreateUserRequest{
 		Spec:             params.Spec,
 		AsyncOperationId: params.AsyncOperationID,
@@ -339,7 +339,7 @@ func InviteUser(ctx context.Context, params InviteUserParams) error {
 		},
 	}
 
-	createUser := runAsyncOperation(params.Cloud.CreateUser, params.OperationHandler)
+	createUser := wrapCreateOperation(params.Cloud.CreateUser, params.OperationHandler, func(res *cloudservice.CreateUserResponse) string { return res.GetUserId() })
 	return createUser(ctx, &cloudservice.CreateUserRequest{
 		Spec:             spec,
 		AsyncOperationId: params.AsyncOperationID,
@@ -383,10 +383,6 @@ func (c *CloudUserSetNamespacePermissionsCommand) run(cctx *CommandContext, _ []
 		return err
 	}
 
-	resourceID := c.UserId
-	if resourceID == "" {
-		resourceID = c.UserEmail
-	}
 	return SetNamespacePermissions(cctx.Context, SetNamespacePermissionsParams{
 		UserIdentification: c.UserIdentificationOptions,
 		NamespaceAccesses:  c.NamespaceAccess,
@@ -394,7 +390,7 @@ func (c *CloudUserSetNamespacePermissionsCommand) run(cctx *CommandContext, _ []
 		AsyncOperationID:   c.AsyncOperationId,
 		Cloud:              cloudClient.CloudService(),
 		Prompter:           newPrompter(cctx),
-		OperationHandler:   NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, resourceID, c.ClientOptions),
+		OperationHandler:   NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -408,10 +404,6 @@ func (c *CloudUserSetAccountRoleCommand) run(cctx *CommandContext, _ []string) e
 		return err
 	}
 
-	resourceID := c.UserId
-	if resourceID == "" {
-		resourceID = c.UserEmail
-	}
 	return SetAccountRole(cctx.Context, SetAccountRoleParams{
 		UserIdentification: c.UserIdentificationOptions,
 		AccountRole:        c.AccountRole,
@@ -419,7 +411,7 @@ func (c *CloudUserSetAccountRoleCommand) run(cctx *CommandContext, _ []string) e
 		AsyncOperationID:   c.AsyncOperationId,
 		Cloud:              cloudClient.CloudService(),
 		Prompter:           newPrompter(cctx),
-		OperationHandler:   NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, resourceID, c.ClientOptions),
+		OperationHandler:   NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -441,16 +433,12 @@ func (c *CloudUserDeleteCommand) run(cctx *CommandContext, _ []string) error {
 		return errors.New("Aborting delete.")
 	}
 
-	resourceID := c.UserId
-	if resourceID == "" {
-		resourceID = c.UserEmail
-	}
 	return DeleteUser(cctx.Context, DeleteUserParams{
 		UserIdentification: c.UserIdentificationOptions,
 		ResourceVersion:    c.ResourceVersion,
 		AsyncOperationID:   c.AsyncOperationId,
 		Cloud:              cloudClient.CloudService(),
-		OperationHandler:   NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, resourceID, c.ClientOptions),
+		OperationHandler:   NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -459,11 +447,6 @@ func (c *CloudUserEditCommand) run(cctx *CommandContext, _ []string) error {
 	if err != nil {
 		return err
 	}
-	// Use whichever identifier was provided as the resource ID for async op display.
-	resourceID := c.UserId
-	if resourceID == "" {
-		resourceID = c.UserEmail
-	}
 	return EditUser(cctx.Context, EditUserParams{
 		UserIdentification: c.UserIdentificationOptions,
 		ResourceVersion:    c.ResourceVersion,
@@ -471,7 +454,7 @@ func (c *CloudUserEditCommand) run(cctx *CommandContext, _ []string) error {
 		VerboseDiff:        c.VerboseDiff,
 		Cloud:              cloudClient.CloudService(),
 		Prompter:           newPrompter(cctx),
-		OperationHandler:   NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, resourceID, c.ClientOptions),
+		OperationHandler:   NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 		RunEditor:          runEditorForJSONEditForProtos,
 	})
 }
@@ -499,7 +482,7 @@ func (c *CloudUserApplyCommand) run(cctx *CommandContext, _ []string) error {
 		VerboseDiff:      c.VerboseDiff,
 		Cloud:            cloudClient.CloudService(),
 		Prompter:         newPrompter(cctx),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, spec.Email, c.ClientOptions),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -545,7 +528,7 @@ func (c *CloudUserInviteCommand) run(cctx *CommandContext, _ []string) error {
 		NamespaceAccesses: namespaceAccesses,
 		AsyncOperationID:  c.AsyncOperationId,
 		Cloud:             cloudClient.CloudService(),
-		OperationHandler:  NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.Email, c.ClientOptions),
+		OperationHandler:  NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
