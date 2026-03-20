@@ -2198,6 +2198,26 @@ commands:
         description: |
           Page token from a previous response to retrieve the next page.
 
+  - name: cloud account audit-log sink delete
+    summary: Delete an audit log sink
+    description: |
+      Delete an audit log sink for the account. This action is irreversible.
+
+      Example:
+        temporal cloud account audit-log sink delete --name my-sink
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        short: n
+        description: |
+          The name of the audit log sink to delete.
+
   # API key commands
   - name: cloud apikey
     summary: Manage Temporal Cloud API keys

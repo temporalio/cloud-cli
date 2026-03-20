@@ -301,7 +301,38 @@ func NewCloudAccountAuditLogSinkCommand(cctx *CommandContext, parent *CloudAccou
 	s.Command.Short = "Manage audit log sinks"
 	s.Command.Long = "Commands for working with account audit log sinks."
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudAccountAuditLogSinkDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudAccountAuditLogSinkListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudAccountAuditLogSinkDeleteCommand struct {
+	Parent  *CloudAccountAuditLogSinkCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Name string
+}
+
+func NewCloudAccountAuditLogSinkDeleteCommand(cctx *CommandContext, parent *CloudAccountAuditLogSinkCommand) *CloudAccountAuditLogSinkDeleteCommand {
+	var s CloudAccountAuditLogSinkDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete an audit log sink"
+	s.Command.Long = "Delete an audit log sink for the account. This action is irreversible.\n\nExample:\n  temporal cloud account audit-log sink delete --name my-sink"
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Name, "name", "n", "", "The name of the audit log sink to delete. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
