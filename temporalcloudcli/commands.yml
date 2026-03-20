@@ -1098,9 +1098,14 @@ commands:
       cloud connectivity get --id <connectivity-rule-id>
       ```
     has-init: false
+    options:
+      - name: id
+        type: string
+        required: true
+        description: |
+          The ID of the connectivity rule.
     option-sets:
       - client
-      - connectivity-rule-id
 
   - name: cloud connectivity delete
     summary: Delete a connectivity rule
@@ -1113,11 +1118,16 @@ commands:
       cloud connectivity delete --id <connectivity-rule-id>
       ```
     has-init: false
+    options:
+      - name: id
+        type: string
+        required: true
+        description: |
+          The ID of the connectivity rule.
     option-sets:
       - client
       - async-operation
       - resource-version
-      - connectivity-rule-id
 
   - name: cloud connectivity public
     summary: Manage public connectivity rules
@@ -1483,10 +1493,3 @@ option-sets:
         description: |
           The email address of the user. Mutually exclusive with --user-id.
 
-  - name: connectivity-rule-id
-    options:
-      - name: id
-        type: string
-        required: true
-        description: |
-          The ID of the connectivity rule.

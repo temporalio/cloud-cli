@@ -86,17 +86,6 @@ func (v *UserIdentificationOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringVar(&v.UserEmail, "user-email", "", "The email address of the user. Mutually exclusive with --user-id.")
 }
 
-type ConnectivityRuleIdOptions struct {
-	Id      string
-	FlagSet *pflag.FlagSet
-}
-
-func (v *ConnectivityRuleIdOptions) BuildFlags(f *pflag.FlagSet) {
-	v.FlagSet = f
-	f.StringVar(&v.Id, "id", "", "The ID of the connectivity rule. Required.")
-	_ = cobra.MarkFlagRequired(f, "id")
-}
-
 type CloudCommand struct {
 	Command cobra.Command
 	ClientOptions
@@ -157,7 +146,7 @@ type CloudConnectivityDeleteCommand struct {
 	ClientOptions
 	AsyncOperationOptions
 	ResourceVersionOptions
-	ConnectivityRuleIdOptions
+	Id string
 }
 
 func NewCloudConnectivityDeleteCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityDeleteCommand {
@@ -172,10 +161,11 @@ func NewCloudConnectivityDeleteCommand(cctx *CommandContext, parent *CloudConnec
 		s.Command.Long = "Delete a connectivity rule by its ID.\n\nExample:\n\n```\ncloud connectivity delete --id <connectivity-rule-id>\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Id, "id", "", "The ID of the connectivity rule. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "id")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
-	s.ConnectivityRuleIdOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -188,7 +178,7 @@ type CloudConnectivityGetCommand struct {
 	Parent  *CloudConnectivityCommand
 	Command cobra.Command
 	ClientOptions
-	ConnectivityRuleIdOptions
+	Id string
 }
 
 func NewCloudConnectivityGetCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityGetCommand {
@@ -203,8 +193,9 @@ func NewCloudConnectivityGetCommand(cctx *CommandContext, parent *CloudConnectiv
 		s.Command.Long = "Get details of a specific connectivity rule by its ID.\n\nExample:\n\n```\ncloud connectivity get --id <connectivity-rule-id>\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Id, "id", "", "The ID of the connectivity rule. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "id")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
-	s.ConnectivityRuleIdOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
