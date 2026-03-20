@@ -105,9 +105,9 @@ func TestAsyncOperationHandler_HandleUpdateErr_OtherError(t *testing.T) {
 	cctx := newTestCommandContext(t, &buf)
 	otherErr := errors.New("some other error")
 
-	runner := temporalcloudcli.NewOperationHandler(cctx, temporalcloudcli.AsyncOperationOptions{Idempotent: true}, temporalcloudcli.ClientOptions{})
+	handler := temporalcloudcli.NewOperationHandler(cctx, temporalcloudcli.AsyncOperationOptions{Idempotent: true}, temporalcloudcli.ClientOptions{})
 
-	err := runner.HandleUpdateErr(otherErr)
+	err := handler.HandleUpdateErr(otherErr)
 	require.ErrorIs(t, err, otherErr)
 	assert.Empty(t, buf.String())
 }

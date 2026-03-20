@@ -69,7 +69,7 @@ type AsyncOperationOptions struct {
 
 func (v *AsyncOperationOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.BoolVar(&v.Idempotent, "idempotent", false, "Succeed silently if the resource already matches the specification. Without this flag, the command errors when no changes are needed.")
+	f.BoolVar(&v.Idempotent, "idempotent", false, "Succeed silently if the resource already exists or matches the specification. Without this flag, the command errors when no changes are needed.")
 	f.StringVar(&v.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
 	f.BoolVar(&v.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
 }
@@ -84,6 +84,44 @@ func (v *UserIdentificationOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVar(&v.UserId, "user-id", "", "The ID of the user. Mutually exclusive with --user-email.")
 	f.StringVar(&v.UserEmail, "user-email", "", "The email address of the user. Mutually exclusive with --user-id.")
+}
+
+type CodecServerOptions struct {
+	CodecEndpoint                      string
+	CodecPassAccessToken               bool
+	CodecIncludeCrossOriginCredentials bool
+	FlagSet                            *pflag.FlagSet
+}
+
+func (v *CodecServerOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.CodecEndpoint, "codec-endpoint", "", "HTTPS codec server endpoint URL.")
+	f.BoolVar(&v.CodecPassAccessToken, "codec-pass-access-token", false, "Pass the user access token to the codec server endpoint.")
+	f.BoolVar(&v.CodecIncludeCrossOriginCredentials, "codec-include-cross-origin-credentials", false, "Include cross-origin credentials in codec server requests.")
+}
+
+type CaCertificateOptions struct {
+	CaCertificate     string
+	CaCertificateFile string
+	FlagSet           *pflag.FlagSet
+}
+
+func (v *CaCertificateOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.CaCertificate, "ca-certificate", "", "Base64-encoded CA certificate for mTLS authentication. Mutually exclusive with --ca-certificate-file.")
+	f.StringVar(&v.CaCertificateFile, "ca-certificate-file", "", "Path to a CA certificate PEM file for mTLS authentication. Mutually exclusive with --ca-certificate.")
+}
+
+type CertificateFilterOptions struct {
+	CertificateFilter     []string
+	CertificateFilterFile string
+	FlagSet               *pflag.FlagSet
+}
+
+func (v *CertificateFilterOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringArrayVar(&v.CertificateFilter, "certificate-filter", nil, "Certificate filter as a JSON object (e.g. '{\"commonName\":\"foo\"}'). Repeat to add multiple.")
+	f.StringVar(&v.CertificateFilterFile, "certificate-filter-file", "", "Path to a JSON file containing a certificate filter object.")
 }
 
 type CloudCommand struct {
@@ -418,6 +456,7 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.AddCommand(&NewCloudNamespaceCertCaCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCertFilterCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCodecCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCreateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceEditCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceGetCommand(cctx, &s).Command)
@@ -495,8 +534,7 @@ type CloudNamespaceCertCaCreateCommand struct {
 	NamespaceOptions
 	AsyncOperationOptions
 	ResourceVersionOptions
-	CaCertificateFile string
-	CaCertificate     string
+	CaCertificateOptions
 }
 
 func NewCloudNamespaceCertCaCreateCommand(cctx *CommandContext, parent *CloudNamespaceCertCaCommand) *CloudNamespaceCertCaCreateCommand {
@@ -511,12 +549,11 @@ func NewCloudNamespaceCertCaCreateCommand(cctx *CommandContext, parent *CloudNam
 		s.Command.Long = "Add client CA certificates to a Temporal Cloud namespace from a PEM file\nor base64 encoded string. These certificates are used to verify client\nconnections and enable mTLS authentication.\n\nSpecify either --ca-certificate-file or --ca-certificate, but not both.\n\nExample with file:\n\n```\ncloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem\n```\n\nExample with base64 encoded data:\n\n```\ncloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.CaCertificateFile, "ca-certificate-file", "", "Path to a CA certificate PEM file. Mutually exclusive with --ca-certificate.")
-	s.Command.Flags().StringVar(&s.CaCertificate, "ca-certificate", "", "Base64 encoded CA certificate data. Mutually exclusive with --ca-certificate-file.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.CaCertificateOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -532,8 +569,7 @@ type CloudNamespaceCertCaDeleteCommand struct {
 	NamespaceOptions
 	AsyncOperationOptions
 	ResourceVersionOptions
-	CaCertificateFile string
-	CaCertificate     string
+	CaCertificateOptions
 }
 
 func NewCloudNamespaceCertCaDeleteCommand(cctx *CommandContext, parent *CloudNamespaceCertCaCommand) *CloudNamespaceCertCaDeleteCommand {
@@ -548,12 +584,11 @@ func NewCloudNamespaceCertCaDeleteCommand(cctx *CommandContext, parent *CloudNam
 		s.Command.Long = "Delete client CA certificates from a Temporal Cloud namespace. This operation\nrequires confirmation and will remove the specified certificates from the\nnamespace configuration.\n\nSpecify either --ca-certificate-file or --ca-certificate, but not both.\n\nExample with file:\n\n```\ncloud namespace cert-ca delete --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem\n```\n\nExample with base64 encoded data:\n\n```\ncloud namespace cert-ca delete --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.CaCertificateFile, "ca-certificate-file", "", "Path to a CA certificate PEM file. Mutually exclusive with --ca-certificate.")
-	s.Command.Flags().StringVar(&s.CaCertificate, "ca-certificate", "", "Base64 encoded CA certificate data. Mutually exclusive with --ca-certificate-file.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.CaCertificateOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -824,6 +859,57 @@ func NewCloudNamespaceCodecSetCommand(cctx *CommandContext, parent *CloudNamespa
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCreateCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	CodecServerOptions
+	CaCertificateOptions
+	CertificateFilterOptions
+	Name                   string
+	Region                 []string
+	RetentionDays          int
+	ApiKeyAuthEnabled      bool
+	EnableDeleteProtection bool
+	SearchAttribute        []string
+	ConnectionRuleId       []string
+}
+
+func NewCloudNamespaceCreateCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceCreateCommand {
+	var s CloudNamespaceCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a new Temporal Cloud namespace"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Temporal Cloud namespace with the specified configuration.\n\nOptions are passed as individual flags. To create or update a namespace\nusing a full JSON specification, use 'namespace apply' instead.\n\nExample:\n\n\x1b[1mcloud namespace create --name my-namespace --region aws-us-east-1 --retention-days 30\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new Temporal Cloud namespace with the specified configuration.\n\nOptions are passed as individual flags. To create or update a namespace\nusing a full JSON specification, use 'namespace apply' instead.\n\nExample:\n\n```\ncloud namespace create --name my-namespace --region aws-us-east-1 --retention-days 30\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Name, "name", "n", "", "The name for the new namespace (becomes part of the namespace ID). Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringArrayVar(&s.Region, "region", nil, "Cloud region where the namespace will be hosted. Repeat to specify multiple regions for High Availability (e.g. --region aws-us-east-1 --region aws-us-west-2). Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "region")
+	s.Command.Flags().IntVar(&s.RetentionDays, "retention-days", 0, "Number of days to retain closed workflow history. If not specified, the server default applies.")
+	s.Command.Flags().BoolVar(&s.ApiKeyAuthEnabled, "api-key-auth-enabled", false, "Enable API key authentication for the namespace.")
+	s.Command.Flags().BoolVar(&s.EnableDeleteProtection, "enable-delete-protection", false, "Prevent accidental deletion of this namespace.")
+	s.Command.Flags().StringArrayVar(&s.SearchAttribute, "search-attribute", nil, "Custom search attribute as 'name=Type' (e.g. --search-attribute myAttr=Keyword). Valid types: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Repeat to add multiple.")
+	s.Command.Flags().StringArrayVar(&s.ConnectionRuleId, "connection-rule-id", nil, "Private connectivity rule ID. Repeat to specify multiple.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.CodecServerOptions.BuildFlags(s.Command.Flags())
+	s.CaCertificateOptions.BuildFlags(s.Command.Flags())
+	s.CertificateFilterOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

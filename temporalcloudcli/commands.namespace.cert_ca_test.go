@@ -178,7 +178,7 @@ func TestCloudNamespaceCertCaCreateCommand_InvalidInput(t *testing.T) {
 				cmd.Async = true
 			},
 			assertError: func(t *testing.T, err error) {
-				assert.True(t, os.IsNotExist(err))
+				assert.True(t, errors.Is(err, os.ErrNotExist))
 			},
 		},
 		{
@@ -675,7 +675,7 @@ func TestCloudNamespaceCertCaDeleteCommand_InvalidInput(t *testing.T) {
 				cmd.Async = true
 			},
 			assertError: func(t *testing.T, err error) {
-				assert.True(t, os.IsNotExist(err))
+				assert.True(t, errors.Is(err, os.ErrNotExist))
 			},
 		},
 		{
