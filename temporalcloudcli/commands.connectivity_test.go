@@ -409,6 +409,8 @@ func TestDeleteConnectivityRule_GetError(t *testing.T) {
 		}).
 		Return(nil, apiErr)
 
+	mockHandler.EXPECT().HandleDeleteErr(apiErr).Return(apiErr)
+
 	err := temporalcloudcli.DeleteConnectivityRule(context.Background(), temporalcloudcli.DeleteConnectivityRuleParams{
 		ID:               "rule-1",
 		Cloud:            mockCloud,

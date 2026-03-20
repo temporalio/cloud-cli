@@ -118,8 +118,9 @@ func DeleteConnectivityRule(ctx context.Context, params DeleteConnectivityRulePa
 		ConnectivityRuleId: params.ID,
 	})
 	if err != nil {
-		return err
+		return params.OperationHandler.HandleDeleteErr(err)
 	}
+
 	rule := res.ConnectivityRule
 
 	if err := params.Prompter.PromptApply(rule.Spec, &connectivityrulev1.ConnectivityRuleSpec{}, false); err != nil {
