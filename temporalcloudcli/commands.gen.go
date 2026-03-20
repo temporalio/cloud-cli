@@ -143,6 +143,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 		s.Command.Long = "The Temporal Cloud CLI provides commands for managing and operating Temporal Cloud resources,\nincluding namespaces, users, and account settings.\n\nExample:\n\n```\ncloud namespace get --namespace my-namespace.my-account\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudAccountCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudConnectivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLoginCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLogoutCommand(cctx, &s).Command)
@@ -155,6 +156,69 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
 	s.CommonOptions.BuildFlags(s.Command.PersistentFlags())
 	s.initCommand(cctx)
+	return &s
+}
+
+type CloudAccountCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+}
+
+func NewCloudAccountCommand(cctx *CommandContext, parent *CloudCommand) *CloudAccountCommand {
+	var s CloudAccountCommand
+	s.Parent = parent
+	s.Command.Use = "account"
+	s.Command.Short = "Manage Temporal Cloud account"
+	s.Command.Long = "Manage the Temporal Cloud account."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudAccountAuditLogCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudAccountAuditLogCommand struct {
+	Parent  *CloudAccountCommand
+	Command cobra.Command
+}
+
+func NewCloudAccountAuditLogCommand(cctx *CommandContext, parent *CloudAccountCommand) *CloudAccountAuditLogCommand {
+	var s CloudAccountAuditLogCommand
+	s.Parent = parent
+	s.Command.Use = "audit-log"
+	s.Command.Short = "Manage audit logs"
+	s.Command.Long = "Commands for working with account audit logs."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudAccountAuditLogGetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudAccountAuditLogGetCommand struct {
+	Parent  *CloudAccountAuditLogCommand
+	Command cobra.Command
+	ClientOptions
+	PageSize  int
+	PageToken string
+	StartTime cliext.FlagTimestamp
+	EndTime   cliext.FlagTimestamp
+}
+
+func NewCloudAccountAuditLogGetCommand(cctx *CommandContext, parent *CloudAccountAuditLogCommand) *CloudAccountAuditLogGetCommand {
+	var s CloudAccountAuditLogGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get audit logs"
+	s.Command.Long = "Returns a paginated list of audit logs for the account, optionally filtered by time range.\n\nExample:\n  temporal cloud account audit-log get --page-size 50\n  temporal cloud account audit-log get --start-time 2024-01-01T00:00:00Z --end-time 2024-02-01T00:00:00Z"
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of logs to retrieve per page. Cannot exceed 1000. Defaults to 100.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Page token from a previous response to retrieve the next page.")
+	s.Command.Flags().Var(&s.StartTime, "start-time", "Filter for logs at or after this UTC time (RFC3339 format, e.g. 2024-01-01T00:00:00Z). Defaults to 30 days ago.")
+	s.Command.Flags().Var(&s.EndTime, "end-time", "Filter for logs before this UTC time (RFC3339 format, e.g. 2024-02-01T00:00:00Z). Defaults to current time.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
