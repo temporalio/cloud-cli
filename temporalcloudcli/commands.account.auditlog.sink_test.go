@@ -40,14 +40,16 @@ func TestListAuditLogSinks_Success(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	var out struct {
+	type listResponse struct {
 		Sinks         []*accountv1.AuditLogSink `json:"sinks"`
 		NextPageToken string                    `json:"nextPageToken"`
 	}
+	var out listResponse
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
-	assert.Equal(t, "sink-1", out.Sinks[0].Name)
-	assert.Equal(t, "sink-2", out.Sinks[1].Name)
-	assert.Equal(t, "next-token", out.NextPageToken)
+	assert.Equal(t, listResponse{
+		Sinks:         sinks,
+		NextPageToken: "next-token",
+	}, out)
 }
 
 func TestListAuditLogSinks_WithPagination(t *testing.T) {
