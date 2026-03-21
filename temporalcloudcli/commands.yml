@@ -2214,9 +2214,46 @@ commands:
       - name: name
         type: string
         required: true
-        short: n
         description: |
           The name of the audit log sink to delete.
+
+  - name: cloud account audit-log sink enable
+    summary: Enable an audit log sink
+    description: |
+      Enable an audit log sink for the account.
+
+      Example:
+        temporal cloud account audit-log sink enable --name my-sink
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the audit log sink to enable.
+
+  - name: cloud account audit-log sink disable
+    summary: Disable an audit log sink
+    description: |
+      Disable an audit log sink for the account.
+
+      Example:
+        temporal cloud account audit-log sink disable --name my-sink
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the audit log sink to disable.
 
   # API key commands
   - name: cloud apikey
