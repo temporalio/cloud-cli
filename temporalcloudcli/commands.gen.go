@@ -604,7 +604,6 @@ type CloudAccountAuditLogSinkPubsubCreateCommand struct {
 	ServiceAccountId string
 	TopicName        string
 	GcpProjectId     string
-	Enabled          bool
 }
 
 func NewCloudAccountAuditLogSinkPubsubCreateCommand(cctx *CommandContext, parent *CloudAccountAuditLogSinkPubsubCommand) *CloudAccountAuditLogSinkPubsubCreateCommand {
@@ -614,9 +613,9 @@ func NewCloudAccountAuditLogSinkPubsubCreateCommand(cctx *CommandContext, parent
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create a PubSub audit log sink"
 	if hasHighlighting {
-		s.Command.Long = "Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub create \\\n  --name my-sink \\\n  --service-account-id my-sa@project.iam.gserviceaccount.com \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project \\\n  --enabled\x1b[0m"
+		s.Command.Long = "Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub create \\\n  --name my-sink \\\n  --service-account-id my-sa@project.iam.gserviceaccount.com \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\x1b[0m"
 	} else {
-		s.Command.Long = "Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub create \\\n  --name my-sink \\\n  --service-account-id my-sa@project.iam.gserviceaccount.com \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project \\\n  --enabled\n```"
+		s.Command.Long = "Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub create \\\n  --name my-sink \\\n  --service-account-id my-sa@project.iam.gserviceaccount.com \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the audit log sink. Required.")
@@ -627,7 +626,6 @@ func NewCloudAccountAuditLogSinkPubsubCreateCommand(cctx *CommandContext, parent
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "topic-name")
 	s.Command.Flags().StringVar(&s.GcpProjectId, "gcp-project-id", "", "The GCP project ID of the PubSub topic and service account. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "gcp-project-id")
-	s.Command.Flags().BoolVar(&s.Enabled, "enabled", false, "Enable the sink immediately after creation.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {

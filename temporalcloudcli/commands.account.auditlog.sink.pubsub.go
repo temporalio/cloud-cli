@@ -16,7 +16,6 @@ type CreateAuditLogSinkPubSubParams struct {
 	ServiceAccountID string
 	TopicName        string
 	GCPProjectID     string
-	Enabled          bool
 	AsyncOperationID string
 
 	Cloud            cloudservice.CloudServiceClient
@@ -27,7 +26,7 @@ type CreateAuditLogSinkPubSubParams struct {
 func CreateAuditLogSinkPubSub(ctx context.Context, params CreateAuditLogSinkPubSubParams) error {
 	spec := &accountv1.AuditLogSinkSpec{
 		Name:    params.Name,
-		Enabled: params.Enabled,
+		Enabled: true,
 		SinkType: &accountv1.AuditLogSinkSpec_PubSubSink{
 			PubSubSink: &sinkv1.PubSubSpec{
 				ServiceAccountId: params.ServiceAccountID,
@@ -156,7 +155,6 @@ func (c *CloudAccountAuditLogSinkPubsubCreateCommand) run(cctx *CommandContext, 
 		ServiceAccountID: c.ServiceAccountId,
 		TopicName:        c.TopicName,
 		GCPProjectID:     c.GcpProjectId,
-		Enabled:          c.Enabled,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
 		Prompter:         newPrompter(cctx),

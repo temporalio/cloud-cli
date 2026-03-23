@@ -2424,8 +2424,7 @@ commands:
         --name my-sink \
         --service-account-id my-sa@project.iam.gserviceaccount.com \
         --topic-name my-topic \
-        --gcp-project-id my-project \
-        --enabled
+        --gcp-project-id my-project
       ```
     has-init: false
     option-sets:
@@ -2453,10 +2452,6 @@ commands:
         required: true
         description: |
           The GCP project ID of the PubSub topic and service account.
-      - name: enabled
-        type: bool
-        description: |
-          Enable the sink immediately after creation.
 
   - name: cloud account audit-log sink pubsub update
     summary: Update a PubSub audit log sink
