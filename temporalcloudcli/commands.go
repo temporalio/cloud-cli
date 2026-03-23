@@ -88,14 +88,6 @@ type NamespaceClient interface {
 	AddRegion(context.Context, namespace.AddRegionParams) (*operation.AsyncOperation, error)
 	RemoveRegion(context.Context, namespace.RemoveRegionParams) (*operation.AsyncOperation, error)
 	Failover(context.Context, namespace.FailoverParams) (*operation.AsyncOperation, error)
-	GetExportSink(context.Context, string, string) (*namespacev1.ExportSink, error)
-	ListExportSinks(context.Context, string) ([]*namespacev1.ExportSink, error)
-	CreateExportSink(context.Context, namespace.CreateExportSinkParams) (*operation.AsyncOperation, error)
-	UpdateExportSink(context.Context, namespace.UpdateExportSinkParams) (*operation.AsyncOperation, error)
-	ValidateExportSink(context.Context, namespace.ValidateExportSinkParams) error
-	EnableExportSink(context.Context, namespace.EnableExportSinkParams) (*operation.AsyncOperation, error)
-	DisableExportSink(context.Context, namespace.DisableExportSinkParams) (*operation.AsyncOperation, error)
-	DeleteExportSink(context.Context, namespace.DeleteExportSinkParams) (*operation.AsyncOperation, error)
 }
 
 type Poller interface {
