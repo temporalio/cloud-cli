@@ -64,7 +64,7 @@ func TestCreateAuditLogSinkPubSub_Success(t *testing.T) {
 		Name:             "my-sink",
 		ServiceAccountID: "my-sa@project.iam.gserviceaccount.com",
 		TopicName:        "my-topic",
-		GcpProjectID:     "my-project",
+		GCPProjectID:     "my-project",
 		Enabled:          true,
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
@@ -90,7 +90,7 @@ func TestCreateAuditLogSinkPubSub_PromptDeclined(t *testing.T) {
 		Name:             "my-sink",
 		ServiceAccountID: "my-sa@project.iam.gserviceaccount.com",
 		TopicName:        "my-topic",
-		GcpProjectID:     "my-project",
+		GCPProjectID:     "my-project",
 		Enabled:          true,
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
@@ -124,7 +124,7 @@ func TestCreateAuditLogSinkPubSub_APIError(t *testing.T) {
 		Name:             "my-sink",
 		ServiceAccountID: "my-sa@project.iam.gserviceaccount.com",
 		TopicName:        "my-topic",
-		GcpProjectID:     "my-project",
+		GCPProjectID:     "my-project",
 		Enabled:          true,
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
@@ -208,10 +208,10 @@ func TestUpdateAuditLogSinkPubSub_ResourceVersionOverride(t *testing.T) {
 		Return(nil)
 
 	err := temporalcloudcli.UpdateAuditLogSinkPubSub(context.Background(), temporalcloudcli.UpdateAuditLogSinkPubSubParams{
-		Name:            "my-sink",
-		ResourceVersion: "rv-override",
-		Cloud:           mockCloud,
-		Prompter:        mockPrompter,
+		Name:             "my-sink",
+		ResourceVersion:  "rv-override",
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
 		OperationHandler: mockHandler,
 	})
 	require.NoError(t, err)
@@ -324,7 +324,7 @@ func TestValidateAuditLogSinkPubSub_Success(t *testing.T) {
 	err := temporalcloudcli.ValidateAuditLogSinkPubSub(context.Background(), temporalcloudcli.ValidateAuditLogSinkPubSubParams{
 		ServiceAccountID: "my-sa@project.iam.gserviceaccount.com",
 		TopicName:        "my-topic",
-		GcpProjectID:     "my-project",
+		GCPProjectID:     "my-project",
 		Cloud:            mockCloud,
 		Printer:          &printer.Printer{Output: &buf},
 	})
@@ -355,7 +355,7 @@ func TestValidateAuditLogSinkPubSub_APIError(t *testing.T) {
 	err := temporalcloudcli.ValidateAuditLogSinkPubSub(context.Background(), temporalcloudcli.ValidateAuditLogSinkPubSubParams{
 		ServiceAccountID: "my-sa@project.iam.gserviceaccount.com",
 		TopicName:        "my-topic",
-		GcpProjectID:     "my-project",
+		GCPProjectID:     "my-project",
 		Cloud:            mockCloud,
 		Printer:          &printer.Printer{Output: &buf},
 	})
