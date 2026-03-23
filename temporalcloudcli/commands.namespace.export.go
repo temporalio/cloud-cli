@@ -88,6 +88,7 @@ type (
 		AsyncOperationID string
 
 		Cloud            cloudservice.CloudServiceClient
+		Prompter         Prompter
 		OperationHandler AsyncOperationHandler
 	}
 
@@ -129,6 +130,7 @@ type (
 		AsyncOperationID string
 
 		Cloud            cloudservice.CloudServiceClient
+		Prompter         Prompter
 		OperationHandler AsyncOperationHandler
 	}
 
@@ -325,9 +327,10 @@ func UpdateS3ExportSink(ctx context.Context, params UpdateS3ExportSinkParams) er
 		rv = params.ResourceVersion
 	}
 
-	spec := &namespacev1.ExportSinkSpec{
+	oldSpec := sink.Spec
+	newSpec := &namespacev1.ExportSinkSpec{
 		Name:    params.SinkName,
-		Enabled: sink.GetSpec().GetEnabled(),
+		Enabled: oldSpec.GetEnabled(),
 		S3: &sinkv1.S3Spec{
 			RoleName:     params.RoleName,
 			BucketName:   params.BucketName,
@@ -336,10 +339,15 @@ func UpdateS3ExportSink(ctx context.Context, params UpdateS3ExportSinkParams) er
 			KmsArn:       params.KmsArn,
 		},
 	}
+
+	if err := params.Prompter.PromptApply(oldSpec, newSpec, false); err != nil {
+		return err
+	}
+
 	updateSink := wrapUpdateOperation(params.Cloud.UpdateNamespaceExportSink, params.OperationHandler, params.SinkName)
 	return updateSink(ctx, &cloudservice.UpdateNamespaceExportSinkRequest{
 		Namespace:        params.Namespace,
-		Spec:             spec,
+		Spec:             newSpec,
 		ResourceVersion:  rv,
 		AsyncOperationId: params.AsyncOperationID,
 	})
@@ -410,9 +418,10 @@ func UpdateGCSExportSink(ctx context.Context, params UpdateGCSExportSinkParams) 
 		rv = params.ResourceVersion
 	}
 
-	spec := &namespacev1.ExportSinkSpec{
+	oldSpec := sink.Spec
+	newSpec := &namespacev1.ExportSinkSpec{
 		Name:    params.SinkName,
-		Enabled: sink.GetSpec().GetEnabled(),
+		Enabled: oldSpec.GetEnabled(),
 		Gcs: &sinkv1.GCSSpec{
 			SaId:         params.SaID,
 			BucketName:   params.BucketName,
@@ -420,10 +429,15 @@ func UpdateGCSExportSink(ctx context.Context, params UpdateGCSExportSinkParams) 
 			Region:       params.Region,
 		},
 	}
+
+	if err := params.Prompter.PromptApply(oldSpec, newSpec, false); err != nil {
+		return err
+	}
+
 	updateSink := wrapUpdateOperation(params.Cloud.UpdateNamespaceExportSink, params.OperationHandler, params.SinkName)
 	return updateSink(ctx, &cloudservice.UpdateNamespaceExportSinkRequest{
 		Namespace:        params.Namespace,
-		Spec:             spec,
+		Spec:             newSpec,
 		ResourceVersion:  rv,
 		AsyncOperationId: params.AsyncOperationID,
 	})
@@ -561,6 +575,7 @@ func (c *CloudNamespaceExportS3UpdateCommand) run(cctx *CommandContext, _ []stri
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
+		Prompter:         newPrompter(cctx),
 		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
@@ -617,6 +632,7 @@ func (c *CloudNamespaceExportGcsUpdateCommand) run(cctx *CommandContext, _ []str
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
+		Prompter:         newPrompter(cctx),
 		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
