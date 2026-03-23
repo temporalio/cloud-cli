@@ -197,7 +197,7 @@ func TestCreateApiKeyForServiceAccount_Success(t *testing.T) {
 			Token:          "tok-secret",
 			AsyncOperation: op,
 		}, nil)
-	mockRunner.EXPECT().Handle(op).Return(nil)
+	mockRunner.EXPECT().HandleOperation(op, "key-new").Return(nil)
 
 	err := temporalcloudcli.CreateApiKeyForServiceAccount(context.Background(), temporalcloudcli.CreateApiKeyForServiceAccountParams{
 		ServiceAccountId: "sa-456",
@@ -249,7 +249,7 @@ func TestCreateApiKeyForServiceAccount_ExpiryDuration(t *testing.T) {
 			Token:          "tok-dur",
 			AsyncOperation: op,
 		}, nil)
-	mockRunner.EXPECT().Handle(op).Return(nil)
+	mockRunner.EXPECT().HandleOperation(op, "key-dur").Return(nil)
 
 	err := temporalcloudcli.CreateApiKeyForServiceAccount(context.Background(), temporalcloudcli.CreateApiKeyForServiceAccountParams{
 		ServiceAccountId: "sa-456",
@@ -312,7 +312,7 @@ func TestCreateApiKeyForServiceAccount_ApiError(t *testing.T) {
 			},
 		}).
 		Return(nil, apiErr)
-	mockRunner.EXPECT().HandleErr(apiErr).Return(apiErr)
+	mockRunner.EXPECT().HandleCreateErr(apiErr).Return(apiErr)
 
 	err := temporalcloudcli.CreateApiKeyForServiceAccount(context.Background(), temporalcloudcli.CreateApiKeyForServiceAccountParams{
 		ServiceAccountId: "sa-456",
@@ -353,7 +353,7 @@ func TestCreateApiKeyForMe_Success(t *testing.T) {
 			Token:          "tok-me",
 			AsyncOperation: op,
 		}, nil)
-	mockRunner.EXPECT().Handle(op).Return(nil)
+	mockRunner.EXPECT().HandleOperation(op, "key-me").Return(nil)
 
 	err := temporalcloudcli.CreateApiKeyForMe(context.Background(), temporalcloudcli.CreateApiKeyForMeParams{
 		DisplayName:      "Personal Key",
@@ -424,7 +424,7 @@ func TestDeleteApiKey_Success(t *testing.T) {
 			ResourceVersion: "rv-1",
 		}).
 		Return(&cloudservice.DeleteApiKeyResponse{AsyncOperation: op}, nil)
-	mockRunner.EXPECT().Handle(op).Return(nil)
+	mockRunner.EXPECT().HandleOperation(op, "key-1").Return(nil)
 
 	err := temporalcloudcli.DeleteApiKey(context.Background(), temporalcloudcli.DeleteApiKeyParams{
 		KeyId:            "key-1",
@@ -451,7 +451,7 @@ func TestDeleteApiKey_ResourceVersionOverride(t *testing.T) {
 			ResourceVersion: "rv-override",
 		}).
 		Return(&cloudservice.DeleteApiKeyResponse{AsyncOperation: op}, nil)
-	mockRunner.EXPECT().Handle(op).Return(nil)
+	mockRunner.EXPECT().HandleOperation(op, "key-1").Return(nil)
 
 	err := temporalcloudcli.DeleteApiKey(context.Background(), temporalcloudcli.DeleteApiKeyParams{
 		KeyId:            "key-1",
@@ -504,7 +504,7 @@ func TestUpdateApiKey_DisplayName(t *testing.T) {
 			ResourceVersion: "rv-1",
 		}).
 		Return(&cloudservice.UpdateApiKeyResponse{AsyncOperation: op}, nil)
-	mockRunner.EXPECT().Handle(op).Return(nil)
+	mockRunner.EXPECT().HandleOperation(op, "key-1").Return(nil)
 
 	displayName := "New Name"
 	err := temporalcloudcli.UpdateApiKey(context.Background(), temporalcloudcli.UpdateApiKeyParams{
@@ -540,7 +540,7 @@ func TestUpdateApiKey_DisabledFlag(t *testing.T) {
 			ResourceVersion: "rv-1",
 		}).
 		Return(&cloudservice.UpdateApiKeyResponse{AsyncOperation: op}, nil)
-	mockRunner.EXPECT().Handle(op).Return(nil)
+	mockRunner.EXPECT().HandleOperation(op, "key-1").Return(nil)
 
 	disabled := true
 	err := temporalcloudcli.UpdateApiKey(context.Background(), temporalcloudcli.UpdateApiKeyParams{
@@ -621,7 +621,7 @@ func TestEditApiKey_Success(t *testing.T) {
 			ResourceVersion: "rv-1",
 		}).
 		Return(&cloudservice.UpdateApiKeyResponse{AsyncOperation: op}, nil)
-	mockRunner.EXPECT().Handle(op).Return(nil)
+	mockRunner.EXPECT().HandleOperation(op, "key-1").Return(nil)
 
 	err := temporalcloudcli.EditApiKey(context.Background(), temporalcloudcli.EditApiKeyParams{
 		KeyId:            "key-1",
@@ -661,7 +661,7 @@ func TestDisableApiKey_Success(t *testing.T) {
 			ResourceVersion: "rv-1",
 		}).
 		Return(&cloudservice.UpdateApiKeyResponse{AsyncOperation: op}, nil)
-	mockRunner.EXPECT().Handle(op).Return(nil)
+	mockRunner.EXPECT().HandleOperation(op, "key-1").Return(nil)
 
 	err := temporalcloudcli.DisableApiKey(context.Background(), temporalcloudcli.DisableApiKeyParams{
 		KeyId:            "key-1",
@@ -716,7 +716,7 @@ func TestEnableApiKey_Success(t *testing.T) {
 			ResourceVersion: "rv-1",
 		}).
 		Return(&cloudservice.UpdateApiKeyResponse{AsyncOperation: op}, nil)
-	mockRunner.EXPECT().Handle(op).Return(nil)
+	mockRunner.EXPECT().HandleOperation(op, "key-1").Return(nil)
 
 	err := temporalcloudcli.EnableApiKey(context.Background(), temporalcloudcli.EnableApiKeyParams{
 		KeyId:            "key-1",

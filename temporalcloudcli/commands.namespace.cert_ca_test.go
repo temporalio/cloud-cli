@@ -178,7 +178,7 @@ func TestCloudNamespaceCertCaCreateCommand_InvalidInput(t *testing.T) {
 				cmd.Async = true
 			},
 			assertError: func(t *testing.T, err error) {
-				assert.True(t, os.IsNotExist(err))
+				assert.True(t, errors.Is(err, os.ErrNotExist))
 			},
 		},
 		{
@@ -312,12 +312,10 @@ func TestCloudNamespaceCertCaCreateCommand_NothingToChange(t *testing.T) {
 				require.NoError(t, capturedErr)
 				var result struct {
 					Status string `json:"status"`
-					ID     string `json:"id"`
 				}
 				err := json.Unmarshal(buf.Bytes(), &result)
 				require.NoError(t, err)
 				assert.Equal(t, "unchanged", result.Status)
-				assert.Equal(t, "test-namespace.test-account", result.ID)
 			},
 		},
 		{
@@ -677,7 +675,7 @@ func TestCloudNamespaceCertCaDeleteCommand_InvalidInput(t *testing.T) {
 				cmd.Async = true
 			},
 			assertError: func(t *testing.T, err error) {
-				assert.True(t, os.IsNotExist(err))
+				assert.True(t, errors.Is(err, os.ErrNotExist))
 			},
 		},
 		{
@@ -817,12 +815,10 @@ func TestCloudNamespaceCertCaDeleteCommand_NothingToChange(t *testing.T) {
 				require.NoError(t, capturedErr)
 				var result struct {
 					Status string `json:"status"`
-					ID     string `json:"id"`
 				}
 				err := json.Unmarshal(buf.Bytes(), &result)
 				require.NoError(t, err)
 				assert.Equal(t, "unchanged", result.Status)
-				assert.Equal(t, "test-namespace.test-account", result.ID)
 			},
 		},
 		{

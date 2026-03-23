@@ -108,7 +108,7 @@ func TestSetRetention_Success(t *testing.T) {
 		}, nil)
 
 	mockRunner.EXPECT().
-		Handle(op).
+		HandleOperation(op, "my-namespace").
 		Return(nil)
 
 	err := temporalcloudcli.SetRetention(context.Background(), temporalcloudcli.SetRetentionParams{
@@ -209,7 +209,7 @@ func TestSetRetention_UpdateNamespaceError(t *testing.T) {
 		Return(nil, updateErr)
 
 	mockRunner.EXPECT().
-		HandleErr(updateErr).
+		HandleUpdateErr(updateErr).
 		Return(updateErr)
 
 	err := temporalcloudcli.SetRetention(context.Background(), temporalcloudcli.SetRetentionParams{

@@ -1656,63 +1656,12 @@ func (_m *MockAsyncOperationHandler) EXPECT() *MockAsyncOperationHandler_Expecte
 	return &MockAsyncOperationHandler_Expecter{mock: &_m.Mock}
 }
 
-// Handle provides a mock function for the type MockAsyncOperationHandler
-func (_mock *MockAsyncOperationHandler) Handle(op *operation.AsyncOperation) error {
-	ret := _mock.Called(op)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Handle")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*operation.AsyncOperation) error); ok {
-		r0 = returnFunc(op)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockAsyncOperationHandler_Handle_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Handle'
-type MockAsyncOperationHandler_Handle_Call struct {
-	*mock.Call
-}
-
-// Handle is a helper method to define mock.On call
-//   - op *operation.AsyncOperation
-func (_e *MockAsyncOperationHandler_Expecter) Handle(op interface{}) *MockAsyncOperationHandler_Handle_Call {
-	return &MockAsyncOperationHandler_Handle_Call{Call: _e.mock.On("Handle", op)}
-}
-
-func (_c *MockAsyncOperationHandler_Handle_Call) Run(run func(op *operation.AsyncOperation)) *MockAsyncOperationHandler_Handle_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *operation.AsyncOperation
-		if args[0] != nil {
-			arg0 = args[0].(*operation.AsyncOperation)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *MockAsyncOperationHandler_Handle_Call) Return(err error) *MockAsyncOperationHandler_Handle_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockAsyncOperationHandler_Handle_Call) RunAndReturn(run func(op *operation.AsyncOperation) error) *MockAsyncOperationHandler_Handle_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// HandleErr provides a mock function for the type MockAsyncOperationHandler
-func (_mock *MockAsyncOperationHandler) HandleErr(err error) error {
+// HandleCreateErr provides a mock function for the type MockAsyncOperationHandler
+func (_mock *MockAsyncOperationHandler) HandleCreateErr(err error) error {
 	ret := _mock.Called(err)
 
 	if len(ret) == 0 {
-		panic("no return value specified for HandleErr")
+		panic("no return value specified for HandleCreateErr")
 	}
 
 	var r0 error
@@ -1724,18 +1673,18 @@ func (_mock *MockAsyncOperationHandler) HandleErr(err error) error {
 	return r0
 }
 
-// MockAsyncOperationHandler_HandleErr_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandleErr'
-type MockAsyncOperationHandler_HandleErr_Call struct {
+// MockAsyncOperationHandler_HandleCreateErr_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandleCreateErr'
+type MockAsyncOperationHandler_HandleCreateErr_Call struct {
 	*mock.Call
 }
 
-// HandleErr is a helper method to define mock.On call
+// HandleCreateErr is a helper method to define mock.On call
 //   - err error
-func (_e *MockAsyncOperationHandler_Expecter) HandleErr(err interface{}) *MockAsyncOperationHandler_HandleErr_Call {
-	return &MockAsyncOperationHandler_HandleErr_Call{Call: _e.mock.On("HandleErr", err)}
+func (_e *MockAsyncOperationHandler_Expecter) HandleCreateErr(err interface{}) *MockAsyncOperationHandler_HandleCreateErr_Call {
+	return &MockAsyncOperationHandler_HandleCreateErr_Call{Call: _e.mock.On("HandleCreateErr", err)}
 }
 
-func (_c *MockAsyncOperationHandler_HandleErr_Call) Run(run func(err error)) *MockAsyncOperationHandler_HandleErr_Call {
+func (_c *MockAsyncOperationHandler_HandleCreateErr_Call) Run(run func(err error)) *MockAsyncOperationHandler_HandleCreateErr_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 error
 		if args[0] != nil {
@@ -1748,12 +1697,171 @@ func (_c *MockAsyncOperationHandler_HandleErr_Call) Run(run func(err error)) *Mo
 	return _c
 }
 
-func (_c *MockAsyncOperationHandler_HandleErr_Call) Return(err1 error) *MockAsyncOperationHandler_HandleErr_Call {
+func (_c *MockAsyncOperationHandler_HandleCreateErr_Call) Return(err1 error) *MockAsyncOperationHandler_HandleCreateErr_Call {
 	_c.Call.Return(err1)
 	return _c
 }
 
-func (_c *MockAsyncOperationHandler_HandleErr_Call) RunAndReturn(run func(err error) error) *MockAsyncOperationHandler_HandleErr_Call {
+func (_c *MockAsyncOperationHandler_HandleCreateErr_Call) RunAndReturn(run func(err error) error) *MockAsyncOperationHandler_HandleCreateErr_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// HandleDeleteErr provides a mock function for the type MockAsyncOperationHandler
+func (_mock *MockAsyncOperationHandler) HandleDeleteErr(err error) error {
+	ret := _mock.Called(err)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HandleDeleteErr")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(error) error); ok {
+		r0 = returnFunc(err)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockAsyncOperationHandler_HandleDeleteErr_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandleDeleteErr'
+type MockAsyncOperationHandler_HandleDeleteErr_Call struct {
+	*mock.Call
+}
+
+// HandleDeleteErr is a helper method to define mock.On call
+//   - err error
+func (_e *MockAsyncOperationHandler_Expecter) HandleDeleteErr(err interface{}) *MockAsyncOperationHandler_HandleDeleteErr_Call {
+	return &MockAsyncOperationHandler_HandleDeleteErr_Call{Call: _e.mock.On("HandleDeleteErr", err)}
+}
+
+func (_c *MockAsyncOperationHandler_HandleDeleteErr_Call) Run(run func(err error)) *MockAsyncOperationHandler_HandleDeleteErr_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 error
+		if args[0] != nil {
+			arg0 = args[0].(error)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockAsyncOperationHandler_HandleDeleteErr_Call) Return(err1 error) *MockAsyncOperationHandler_HandleDeleteErr_Call {
+	_c.Call.Return(err1)
+	return _c
+}
+
+func (_c *MockAsyncOperationHandler_HandleDeleteErr_Call) RunAndReturn(run func(err error) error) *MockAsyncOperationHandler_HandleDeleteErr_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// HandleOperation provides a mock function for the type MockAsyncOperationHandler
+func (_mock *MockAsyncOperationHandler) HandleOperation(op *operation.AsyncOperation, id string) error {
+	ret := _mock.Called(op, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HandleOperation")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*operation.AsyncOperation, string) error); ok {
+		r0 = returnFunc(op, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockAsyncOperationHandler_HandleOperation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandleOperation'
+type MockAsyncOperationHandler_HandleOperation_Call struct {
+	*mock.Call
+}
+
+// HandleOperation is a helper method to define mock.On call
+//   - op *operation.AsyncOperation
+//   - id string
+func (_e *MockAsyncOperationHandler_Expecter) HandleOperation(op interface{}, id interface{}) *MockAsyncOperationHandler_HandleOperation_Call {
+	return &MockAsyncOperationHandler_HandleOperation_Call{Call: _e.mock.On("HandleOperation", op, id)}
+}
+
+func (_c *MockAsyncOperationHandler_HandleOperation_Call) Run(run func(op *operation.AsyncOperation, id string)) *MockAsyncOperationHandler_HandleOperation_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *operation.AsyncOperation
+		if args[0] != nil {
+			arg0 = args[0].(*operation.AsyncOperation)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockAsyncOperationHandler_HandleOperation_Call) Return(err error) *MockAsyncOperationHandler_HandleOperation_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockAsyncOperationHandler_HandleOperation_Call) RunAndReturn(run func(op *operation.AsyncOperation, id string) error) *MockAsyncOperationHandler_HandleOperation_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// HandleUpdateErr provides a mock function for the type MockAsyncOperationHandler
+func (_mock *MockAsyncOperationHandler) HandleUpdateErr(err error) error {
+	ret := _mock.Called(err)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HandleUpdateErr")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(error) error); ok {
+		r0 = returnFunc(err)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockAsyncOperationHandler_HandleUpdateErr_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandleUpdateErr'
+type MockAsyncOperationHandler_HandleUpdateErr_Call struct {
+	*mock.Call
+}
+
+// HandleUpdateErr is a helper method to define mock.On call
+//   - err error
+func (_e *MockAsyncOperationHandler_Expecter) HandleUpdateErr(err interface{}) *MockAsyncOperationHandler_HandleUpdateErr_Call {
+	return &MockAsyncOperationHandler_HandleUpdateErr_Call{Call: _e.mock.On("HandleUpdateErr", err)}
+}
+
+func (_c *MockAsyncOperationHandler_HandleUpdateErr_Call) Run(run func(err error)) *MockAsyncOperationHandler_HandleUpdateErr_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 error
+		if args[0] != nil {
+			arg0 = args[0].(error)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockAsyncOperationHandler_HandleUpdateErr_Call) Return(err1 error) *MockAsyncOperationHandler_HandleUpdateErr_Call {
+	_c.Call.Return(err1)
+	return _c
+}
+
+func (_c *MockAsyncOperationHandler_HandleUpdateErr_Call) RunAndReturn(run func(err error) error) *MockAsyncOperationHandler_HandleUpdateErr_Call {
 	_c.Call.Return(run)
 	return _c
 }

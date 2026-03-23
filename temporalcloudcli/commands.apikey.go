@@ -246,7 +246,7 @@ func CreateApiKeyForServiceAccount(ctx context.Context, params CreateApiKeyForSe
 		AsyncOperationId: params.AsyncOperationID,
 	})
 	if err != nil {
-		return params.OperationHandler.HandleErr(err)
+		return params.OperationHandler.HandleCreateErr(err)
 	}
 	// AIDEV-NOTE: The token is only returned on creation and cannot be retrieved again.
 	// Print it immediately before handling the async operation.
@@ -254,7 +254,7 @@ func CreateApiKeyForServiceAccount(ctx context.Context, params CreateApiKeyForSe
 		KeyId string `json:"keyId"`
 		Token string `json:"token"`
 	}{KeyId: res.KeyId, Token: res.Token}, printer.StructuredOptions{})
-	return params.OperationHandler.Handle(res.GetAsyncOperation())
+	return params.OperationHandler.HandleOperation(res.GetAsyncOperation(), res.KeyId)
 }
 
 func CreateApiKeyForMe(ctx context.Context, params CreateApiKeyForMeParams) error {
@@ -282,7 +282,7 @@ func CreateApiKeyForMe(ctx context.Context, params CreateApiKeyForMeParams) erro
 		AsyncOperationId: params.AsyncOperationID,
 	})
 	if err != nil {
-		return params.OperationHandler.HandleErr(err)
+		return params.OperationHandler.HandleCreateErr(err)
 	}
 	// AIDEV-NOTE: The token is only returned on creation and cannot be retrieved again.
 	// Print it immediately before handling the async operation.
@@ -290,7 +290,7 @@ func CreateApiKeyForMe(ctx context.Context, params CreateApiKeyForMeParams) erro
 		KeyId string `json:"keyId"`
 		Token string `json:"token"`
 	}{KeyId: res.KeyId, Token: res.Token}, printer.StructuredOptions{})
-	return params.OperationHandler.Handle(res.GetAsyncOperation())
+	return params.OperationHandler.HandleOperation(res.GetAsyncOperation(), res.KeyId)
 }
 
 func DeleteApiKey(ctx context.Context, params DeleteApiKeyParams) error {
@@ -302,7 +302,7 @@ func DeleteApiKey(ctx context.Context, params DeleteApiKeyParams) error {
 	if params.ResourceVersion != "" {
 		rv = params.ResourceVersion
 	}
-	deleteApiKey := runAsyncOperation(params.Cloud.DeleteApiKey, params.OperationHandler)
+	deleteApiKey := wrapDeleteOperation(params.Cloud.DeleteApiKey, params.OperationHandler, params.KeyId)
 	return deleteApiKey(ctx, &cloudservice.DeleteApiKeyRequest{
 		KeyId:            params.KeyId,
 		ResourceVersion:  rv,
@@ -337,7 +337,7 @@ func UpdateApiKey(ctx context.Context, params UpdateApiKeyParams) error {
 		rv = params.ResourceVersion
 	}
 
-	updateApiKey := runAsyncOperation(params.Cloud.UpdateApiKey, params.OperationHandler)
+	updateApiKey := wrapUpdateOperation(params.Cloud.UpdateApiKey, params.OperationHandler, params.KeyId)
 	return updateApiKey(ctx, &cloudservice.UpdateApiKeyRequest{
 		KeyId:            params.KeyId,
 		Spec:             newSpec,
@@ -366,7 +366,7 @@ func EditApiKey(ctx context.Context, params EditApiKeyParams) error {
 		rv = params.ResourceVersion
 	}
 
-	updateApiKey := runAsyncOperation(params.Cloud.UpdateApiKey, params.OperationHandler)
+	updateApiKey := wrapUpdateOperation(params.Cloud.UpdateApiKey, params.OperationHandler, params.KeyId)
 	return updateApiKey(ctx, &cloudservice.UpdateApiKeyRequest{
 		KeyId:            params.KeyId,
 		Spec:             newSpec,
@@ -393,7 +393,7 @@ func DisableApiKey(ctx context.Context, params DisableApiKeyParams) error {
 		rv = params.ResourceVersion
 	}
 
-	updateApiKey := runAsyncOperation(params.Cloud.UpdateApiKey, params.OperationHandler)
+	updateApiKey := wrapUpdateOperation(params.Cloud.UpdateApiKey, params.OperationHandler, params.KeyId)
 	return updateApiKey(ctx, &cloudservice.UpdateApiKeyRequest{
 		KeyId:            params.KeyId,
 		Spec:             newSpec,
@@ -420,7 +420,7 @@ func EnableApiKey(ctx context.Context, params EnableApiKeyParams) error {
 		rv = params.ResourceVersion
 	}
 
-	updateApiKey := runAsyncOperation(params.Cloud.UpdateApiKey, params.OperationHandler)
+	updateApiKey := wrapUpdateOperation(params.Cloud.UpdateApiKey, params.OperationHandler, params.KeyId)
 	return updateApiKey(ctx, &cloudservice.UpdateApiKeyRequest{
 		KeyId:            params.KeyId,
 		Spec:             newSpec,
@@ -471,7 +471,7 @@ func (c *CloudApikeyCreateForServiceAccountCommand) run(cctx *CommandContext, _ 
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
 		Printer:          cctx.Printer,
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.ServiceAccountId, c.ClientOptions),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -488,7 +488,7 @@ func (c *CloudApikeyCreateForMeCommand) run(cctx *CommandContext, _ []string) er
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
 		Printer:          cctx.Printer,
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, "", c.ClientOptions),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -509,7 +509,7 @@ func (c *CloudApikeyDeleteCommand) run(cctx *CommandContext, _ []string) error {
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.KeyId, c.ClientOptions),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -541,7 +541,7 @@ func (c *CloudApikeyUpdateCommand) run(cctx *CommandContext, _ []string) error {
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
 		Prompter:         newPrompter(cctx),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.KeyId, c.ClientOptions),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -557,7 +557,7 @@ func (c *CloudApikeyEditCommand) run(cctx *CommandContext, _ []string) error {
 		VerboseDiff:      c.VerboseDiff,
 		Cloud:            cloudClient.CloudService(),
 		Prompter:         newPrompter(cctx),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.KeyId, c.ClientOptions),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 		RunEditor:        runEditorForJSONEditForProtos,
 	})
 }
@@ -573,7 +573,7 @@ func (c *CloudApikeyDisableCommand) run(cctx *CommandContext, _ []string) error 
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
 		Prompter:         newPrompter(cctx),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.KeyId, c.ClientOptions),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -588,6 +588,6 @@ func (c *CloudApikeyEnableCommand) run(cctx *CommandContext, _ []string) error {
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
 		Prompter:         newPrompter(cctx),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.KeyId, c.ClientOptions),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }

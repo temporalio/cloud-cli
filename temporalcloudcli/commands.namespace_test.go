@@ -31,6 +31,66 @@ func (s *SharedServerSuite) TestBasicNamespaceOperations() {
 	s.cleanupNamespaces()
 }
 
+func (s *SharedServerSuite) TestNamespaceCreate() {
+	s.cleanupNamespaces()
+	defer s.cleanupNamespaces()
+
+	namespaceName := s.generateRandomNamespaceName()
+
+	res := s.Execute(
+		"namespace",
+		fmt.Sprintf("--server=%s", s.server),
+		"create",
+		"--auto-confirm=true",
+		"--name", namespaceName,
+		"--region", "aws-us-east-1",
+		"--retention-days", "30",
+		"--api-key-auth-enabled",
+		"--search-attribute", "MyText=Text",
+		"--search-attribute", "MyKeyword=Keyword",
+		"--certificate-filter", `{"commonName":"test.temporal.io","organization":"Temporal"}`,
+		"--certificate-filter", `{"subjectAlternativeName":"*.temporal.io"}`,
+		"-o=json",
+	)
+	s.Suite.Require().NoError(res.Err)
+
+	buf, err := io.ReadAll(&res.Stdout)
+	s.Suite.Require().NoError(err)
+
+	result := &temporalcloudcli.MutationResult{}
+	err = json.Unmarshal(buf, result)
+	s.Suite.Require().NoError(err)
+	s.Suite.Require().NotEmpty(result.ID)
+	s.Suite.Require().NotNil(result.AsyncOp)
+
+	cloudClient := s.getCloudClient()
+	err = s.pollAsyncOperation(cloudClient, result.AsyncOp.Id)
+	s.Suite.Require().NoError(err)
+
+	// Verify the namespace was created with the expected spec
+	getNsRes, err := cloudClient.CloudService().GetNamespace(s.Context, &cloudservice.GetNamespaceRequest{
+		Namespace: result.ID,
+	})
+	s.Suite.Require().NoError(err)
+	s.Suite.Require().NotNil(getNsRes.Namespace)
+
+	gotSpec := getNsRes.Namespace.Spec
+	s.Suite.Equal(namespaceName, gotSpec.Name)
+	s.Suite.Equal([]string{"aws-us-east-1"}, gotSpec.Regions)
+	s.Suite.Equal(int32(30), gotSpec.RetentionDays)
+	s.Suite.Require().NotNil(gotSpec.ApiKeyAuth)
+	s.Suite.True(gotSpec.ApiKeyAuth.Enabled)
+
+	s.Suite.Equal(namespace.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_TEXT, gotSpec.SearchAttributes["MyText"])
+	s.Suite.Equal(namespace.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_KEYWORD, gotSpec.SearchAttributes["MyKeyword"])
+
+	s.Suite.Require().NotNil(gotSpec.MtlsAuth)
+	s.Suite.Require().Len(gotSpec.MtlsAuth.CertificateFilters, 2)
+	s.Suite.Equal("test.temporal.io", gotSpec.MtlsAuth.CertificateFilters[0].CommonName)
+	s.Suite.Equal("Temporal", gotSpec.MtlsAuth.CertificateFilters[0].Organization)
+	s.Suite.Equal("*.temporal.io", gotSpec.MtlsAuth.CertificateFilters[1].SubjectAlternativeName)
+}
+
 func (s *SharedServerSuite) testnamespaceCRUD() {
 	cloudClient := s.getCloudClient()
 	// create a new namespace
