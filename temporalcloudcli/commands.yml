@@ -2336,14 +2336,12 @@ commands:
     summary: Update a Kinesis audit log sink
     description: |
       Update an existing Kinesis audit log sink. Only the flags you provide are changed;
-      omitted string flags retain their current values. The --enabled flag always
-      reflects the value passed (default false disables the sink).
+      omitted string flags retain their current values. 
 
       Example:
         temporal cloud account audit-log sink kinesis update \
           --name my-sink \
-          --role-name arn:aws:iam::123456789012:role/NewRole \
-          --enabled=true
+          --role-name arn:aws:iam::123456789012:role/NewRole
     has-init: false
     option-sets:
       - client

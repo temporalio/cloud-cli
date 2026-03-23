@@ -68,7 +68,7 @@ func CreateAuditLogSinkKinesis(ctx context.Context, params CreateAuditLogSinkKin
 	createSink := wrapCreateOperation(
 		params.Cloud.CreateAccountAuditLogSink,
 		params.OperationHandler,
-		func(res *cloudservice.CreateAccountAuditLogSinkResponse) string { return params.Name },
+		func(_ *cloudservice.CreateAccountAuditLogSinkResponse) string { return params.Name },
 	)
 	return createSink(ctx, &cloudservice.CreateAccountAuditLogSinkRequest{
 		Spec:             spec,
