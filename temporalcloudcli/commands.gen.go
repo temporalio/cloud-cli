@@ -86,6 +86,17 @@ func (v *UserIdentificationOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringVar(&v.UserEmail, "user-email", "", "The email address of the user. Mutually exclusive with --user-id.")
 }
 
+type GroupIdOptions struct {
+	GroupId string
+	FlagSet *pflag.FlagSet
+}
+
+func (v *GroupIdOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.GroupId, "group-id", "", "The ID of the user group. Required.")
+	_ = cobra.MarkFlagRequired(f, "group-id")
+}
+
 type CloudCommand struct {
 	Command cobra.Command
 	ClientOptions
@@ -109,6 +120,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.Command.AddCommand(&NewCloudLogoutCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGroupCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudWhoamiCommand(cctx, &s).Command)
 	s.Command.PersistentFlags().StringVar(&s.ConfigDir, "config-dir", "", "Directory path where CLI configuration files are stored, including authentication tokens and settings.")
 	s.Command.PersistentFlags().BoolVar(&s.DisablePopUp, "disable-pop-up", false, "Prevent the CLI from opening a browser window during authentication. Useful for headless environments or when using alternative auth methods.")
@@ -1740,6 +1752,545 @@ func NewCloudUserSetNamespacePermissionsCommand(cctx *CommandContext, parent *Cl
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserGroupCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+}
+
+func NewCloudUserGroupCommand(cctx *CommandContext, parent *CloudCommand) *CloudUserGroupCommand {
+	var s CloudUserGroupCommand
+	s.Parent = parent
+	s.Command.Use = "user-group"
+	s.Command.Short = "Manage Temporal Cloud user groups"
+	s.Command.Long = "Commands for managing Temporal Cloud user groups."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudUserGroupApplyCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGroupCreateCloudGroupCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGroupCreateGoogleGroupCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGroupCreateScimGroupCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGroupDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGroupEditCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGroupGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGroupListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGroupMembersCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGroupSetAccountRoleCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGroupSetNamespacePermissionsCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGroupUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudUserGroupApplyCommand struct {
+	Parent  *CloudUserGroupCommand
+	Command cobra.Command
+	ClientOptions
+	DiffOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Spec string
+}
+
+func NewCloudUserGroupApplyCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupApplyCommand {
+	var s CloudUserGroupApplyCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "apply [flags]"
+	s.Command.Short = "Create or update a user group from a specification"
+	if hasHighlighting {
+		s.Command.Long = "Apply a user group configuration to Temporal Cloud. Creates a new user group\nif no group with the given display name exists, or updates the existing one\nto match the specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample with inline JSON:\n\n\x1b[1mcloud user-group apply --spec '{\"display_name\": \"Engineering\", \"cloud_group\": {}, \"access\": {\"account_access\": {\"role\": \"developer\"}}}'\x1b[0m\n\nExample with file path:\n\n\x1b[1mcloud user-group apply --spec @user-group-spec.json\x1b[0m"
+	} else {
+		s.Command.Long = "Apply a user group configuration to Temporal Cloud. Creates a new user group\nif no group with the given display name exists, or updates the existing one\nto match the specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample with inline JSON:\n\n```\ncloud user-group apply --spec '{\"display_name\": \"Engineering\", \"cloud_group\": {}, \"access\": {\"account_access\": {\"role\": \"developer\"}}}'\n```\n\nExample with file path:\n\n```\ncloud user-group apply --spec @user-group-spec.json\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Spec, "spec", "", "User group configuration in JSON format. Provide inline JSON directly, or use '@path/to/file.json' to load from a file. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "spec")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserGroupCreateCloudGroupCommand struct {
+	Parent  *CloudUserGroupCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	DisplayName     string
+	AccountRole     string
+	NamespaceAccess []string
+}
+
+func NewCloudUserGroupCreateCloudGroupCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupCreateCloudGroupCommand {
+	var s CloudUserGroupCreateCloudGroupCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create-cloud-group [flags]"
+	s.Command.Short = "Create a Temporal Cloud-managed user group"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Temporal Cloud-managed user group. Members can be managed\nusing the add-member and remove-member commands.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\n\nExample:\n\n\x1b[1mcloud user-group create-cloud-group --display-name \"Engineering\" \\\n  --account-role developer \\\n  --namespace-access my-namespace.my-account=write\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new Temporal Cloud-managed user group. Members can be managed\nusing the add-member and remove-member commands.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\n\nExample:\n\n```\ncloud user-group create-cloud-group --display-name \"Engineering\" \\\n  --account-role developer \\\n  --namespace-access my-namespace.my-account=write\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.DisplayName, "display-name", "", "The display name of the user group. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "display-name")
+	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
+	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserGroupCreateGoogleGroupCommand struct {
+	Parent  *CloudUserGroupCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	DisplayName      string
+	GoogleGroupEmail string
+	AccountRole      string
+	NamespaceAccess  []string
+}
+
+func NewCloudUserGroupCreateGoogleGroupCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupCreateGoogleGroupCommand {
+	var s CloudUserGroupCreateGoogleGroupCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create-google-group [flags]"
+	s.Command.Short = "Create a Google-group-backed user group"
+	if hasHighlighting {
+		s.Command.Long = "Create a new user group backed by a Google Group. Members are managed\nvia the Google Group itself.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\n\nExample:\n\n\x1b[1mcloud user-group create-google-group --display-name \"Platform\" \\\n  --google-group-email platform@example.com \\\n  --account-role developer\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new user group backed by a Google Group. Members are managed\nvia the Google Group itself.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\n\nExample:\n\n```\ncloud user-group create-google-group --display-name \"Platform\" \\\n  --google-group-email platform@example.com \\\n  --account-role developer\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.DisplayName, "display-name", "", "The display name of the user group. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "display-name")
+	s.Command.Flags().StringVar(&s.GoogleGroupEmail, "google-group-email", "", "The email address of the Google Group. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "google-group-email")
+	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
+	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserGroupCreateScimGroupCommand struct {
+	Parent  *CloudUserGroupCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	DisplayName     string
+	ScimIdpId       string
+	AccountRole     string
+	NamespaceAccess []string
+}
+
+func NewCloudUserGroupCreateScimGroupCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupCreateScimGroupCommand {
+	var s CloudUserGroupCreateScimGroupCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create-scim-group [flags]"
+	s.Command.Short = "Create a SCIM-backed user group"
+	if hasHighlighting {
+		s.Command.Long = "Create a new user group backed by a SCIM identity provider group.\nMembers are managed via the upstream identity provider.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\n\nExample:\n\n\x1b[1mcloud user-group create-scim-group --display-name \"Security\" \\\n  --scim-idp-id idp-group-id-123 \\\n  --account-role read\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new user group backed by a SCIM identity provider group.\nMembers are managed via the upstream identity provider.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\n\nExample:\n\n```\ncloud user-group create-scim-group --display-name \"Security\" \\\n  --scim-idp-id idp-group-id-123 \\\n  --account-role read\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.DisplayName, "display-name", "", "The display name of the user group. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "display-name")
+	s.Command.Flags().StringVar(&s.ScimIdpId, "scim-idp-id", "", "The identity provider ID for the SCIM group. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "scim-idp-id")
+	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
+	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserGroupDeleteCommand struct {
+	Parent  *CloudUserGroupCommand
+	Command cobra.Command
+	ClientOptions
+	GroupIdOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+}
+
+func NewCloudUserGroupDeleteCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupDeleteCommand {
+	var s CloudUserGroupDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a Temporal Cloud user group"
+	if hasHighlighting {
+		s.Command.Long = "Delete a Temporal Cloud user group. This action is irreversible.\n\nExample:\n\n\x1b[1mcloud user-group delete --group-id my-group-id\x1b[0m"
+	} else {
+		s.Command.Long = "Delete a Temporal Cloud user group. This action is irreversible.\n\nExample:\n\n```\ncloud user-group delete --group-id my-group-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.GroupIdOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserGroupEditCommand struct {
+	Parent  *CloudUserGroupCommand
+	Command cobra.Command
+	ClientOptions
+	DiffOptions
+	GroupIdOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+}
+
+func NewCloudUserGroupEditCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupEditCommand {
+	var s CloudUserGroupEditCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "edit [flags]"
+	s.Command.Short = "Interactively edit a user group configuration"
+	if hasHighlighting {
+		s.Command.Long = "Open a user group configuration in your default editor for interactive\nmodification. After saving and closing the editor, the changes are\napplied to Temporal Cloud.\n\nThe editor is determined by the EDITOR environment variable, falling\nback to 'vi' if not set.\n\nExample:\n\n\x1b[1mcloud user-group edit --group-id my-group-id\x1b[0m"
+	} else {
+		s.Command.Long = "Open a user group configuration in your default editor for interactive\nmodification. After saving and closing the editor, the changes are\napplied to Temporal Cloud.\n\nThe editor is determined by the EDITOR environment variable, falling\nback to 'vi' if not set.\n\nExample:\n\n```\ncloud user-group edit --group-id my-group-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.GroupIdOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserGroupGetCommand struct {
+	Parent  *CloudUserGroupCommand
+	Command cobra.Command
+	ClientOptions
+	GroupIdOptions
+}
+
+func NewCloudUserGroupGetCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupGetCommand {
+	var s CloudUserGroupGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Retrieve user group details"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the configuration and status of a Temporal Cloud user group.\n\nExample:\n\n\x1b[1mcloud user-group get --group-id my-group-id\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the configuration and status of a Temporal Cloud user group.\n\nExample:\n\n```\ncloud user-group get --group-id my-group-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.GroupIdOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserGroupListCommand struct {
+	Parent  *CloudUserGroupCommand
+	Command cobra.Command
+	ClientOptions
+	PageSize                int
+	PageToken               string
+	Namespace               string
+	DisplayName             string
+	GoogleGroupEmailAddress string
+	ScimGroupIdpId          string
+}
+
+func NewCloudUserGroupListCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupListCommand {
+	var s CloudUserGroupListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List Temporal Cloud user groups"
+	if hasHighlighting {
+		s.Command.Long = "List all Temporal Cloud user groups accessible with the current\nauthentication credentials.\n\nExample:\n\n\x1b[1mcloud user-group list\x1b[0m"
+	} else {
+		s.Command.Long = "List all Temporal Cloud user groups accessible with the current\nauthentication credentials.\n\nExample:\n\n```\ncloud user-group list\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of user groups to return per page. Use for paginated results.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results in a paginated list.")
+	s.Command.Flags().StringVar(&s.Namespace, "namespace", "", "Filter user groups by the namespace they have access to.")
+	s.Command.Flags().StringVar(&s.DisplayName, "display-name", "", "Filter user groups by display name.")
+	s.Command.Flags().StringVar(&s.GoogleGroupEmailAddress, "google-group-email-address", "", "Filter user groups by Google group email address.")
+	s.Command.Flags().StringVar(&s.ScimGroupIdpId, "scim-group-idp-id", "", "Filter user groups by SCIM group IDP ID.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserGroupMembersCommand struct {
+	Parent  *CloudUserGroupCommand
+	Command cobra.Command
+}
+
+func NewCloudUserGroupMembersCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupMembersCommand {
+	var s CloudUserGroupMembersCommand
+	s.Parent = parent
+	s.Command.Use = "members"
+	s.Command.Short = "Manage Temporal Cloud user group members"
+	s.Command.Long = "Commands for managing members of Temporal Cloud user groups."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudUserGroupMembersAddCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGroupMembersListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGroupMembersRemoveCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudUserGroupMembersAddCommand struct {
+	Parent  *CloudUserGroupMembersCommand
+	Command cobra.Command
+	ClientOptions
+	GroupIdOptions
+	AsyncOperationOptions
+	UserIdentificationOptions
+}
+
+func NewCloudUserGroupMembersAddCommand(cctx *CommandContext, parent *CloudUserGroupMembersCommand) *CloudUserGroupMembersAddCommand {
+	var s CloudUserGroupMembersAddCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "add [flags]"
+	s.Command.Short = "Add a member to a Temporal Cloud user group"
+	if hasHighlighting {
+		s.Command.Long = "Add a user to a Temporal Cloud user group.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n\x1b[1mcloud user-group members add --group-id my-group-id --user-id my-user-id\ncloud user-group members add --group-id my-group-id --user-email alice@example.com\x1b[0m"
+	} else {
+		s.Command.Long = "Add a user to a Temporal Cloud user group.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n```\ncloud user-group members add --group-id my-group-id --user-id my-user-id\ncloud user-group members add --group-id my-group-id --user-email alice@example.com\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.GroupIdOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserGroupMembersListCommand struct {
+	Parent  *CloudUserGroupMembersCommand
+	Command cobra.Command
+	ClientOptions
+	GroupIdOptions
+	PageSize  int
+	PageToken string
+}
+
+func NewCloudUserGroupMembersListCommand(cctx *CommandContext, parent *CloudUserGroupMembersCommand) *CloudUserGroupMembersListCommand {
+	var s CloudUserGroupMembersListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List members of a Temporal Cloud user group"
+	if hasHighlighting {
+		s.Command.Long = "List all members of a Temporal Cloud user group.\n\nExample:\n\n\x1b[1mcloud user-group members list --group-id my-group-id\x1b[0m"
+	} else {
+		s.Command.Long = "List all members of a Temporal Cloud user group.\n\nExample:\n\n```\ncloud user-group members list --group-id my-group-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of members to return per page. Use for paginated results.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results in a paginated list.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.GroupIdOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserGroupMembersRemoveCommand struct {
+	Parent  *CloudUserGroupMembersCommand
+	Command cobra.Command
+	ClientOptions
+	GroupIdOptions
+	AsyncOperationOptions
+	UserIdentificationOptions
+}
+
+func NewCloudUserGroupMembersRemoveCommand(cctx *CommandContext, parent *CloudUserGroupMembersCommand) *CloudUserGroupMembersRemoveCommand {
+	var s CloudUserGroupMembersRemoveCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "remove [flags]"
+	s.Command.Short = "Remove a member from a Temporal Cloud user group"
+	if hasHighlighting {
+		s.Command.Long = "Remove a user from a Temporal Cloud user group.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n\x1b[1mcloud user-group members remove --group-id my-group-id --user-id my-user-id\ncloud user-group members remove --group-id my-group-id --user-email alice@example.com\x1b[0m"
+	} else {
+		s.Command.Long = "Remove a user from a Temporal Cloud user group.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n```\ncloud user-group members remove --group-id my-group-id --user-id my-user-id\ncloud user-group members remove --group-id my-group-id --user-email alice@example.com\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.GroupIdOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserGroupSetAccountRoleCommand struct {
+	Parent  *CloudUserGroupCommand
+	Command cobra.Command
+	ClientOptions
+	GroupIdOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	AccountRole string
+}
+
+func NewCloudUserGroupSetAccountRoleCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupSetAccountRoleCommand {
+	var s CloudUserGroupSetAccountRoleCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set-account-role [flags]"
+	s.Command.Short = "Set the account role for a user group"
+	if hasHighlighting {
+		s.Command.Long = "Set the account-level role for a Temporal Cloud user group.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\n\nExample:\n\n\x1b[1mcloud user-group set-account-role --group-id my-group-id --account-role developer\x1b[0m"
+	} else {
+		s.Command.Long = "Set the account-level role for a Temporal Cloud user group.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\n\nExample:\n\n```\ncloud user-group set-account-role --group-id my-group-id --account-role developer\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "account-role")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.GroupIdOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserGroupSetNamespacePermissionsCommand struct {
+	Parent  *CloudUserGroupCommand
+	Command cobra.Command
+	ClientOptions
+	GroupIdOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	NamespaceAccess []string
+}
+
+func NewCloudUserGroupSetNamespacePermissionsCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupSetNamespacePermissionsCommand {
+	var s CloudUserGroupSetNamespacePermissionsCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set-namespace-permissions [flags]"
+	s.Command.Short = "Set namespace permissions for a user group"
+	if hasHighlighting {
+		s.Command.Long = "Add, update, or remove namespace-level permissions for a Temporal Cloud user group.\nChanges are applied additively: namespaces not listed are left unchanged.\n\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\nTo remove access to a namespace, pass an empty permission: 'namespace='.\n\nExample:\n\n\x1b[1mcloud user-group set-namespace-permissions --group-id my-group-id \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\x1b[0m"
+	} else {
+		s.Command.Long = "Add, update, or remove namespace-level permissions for a Temporal Cloud user group.\nChanges are applied additively: namespaces not listed are left unchanged.\n\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\nTo remove access to a namespace, pass an empty permission: 'namespace='.\n\nExample:\n\n```\ncloud user-group set-namespace-permissions --group-id my-group-id \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access change in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated. Use an empty permission (e.g. 'testns=') to remove access to a namespace. Changes are additive: namespaces not listed are left unchanged. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace-access")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.GroupIdOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserGroupUpdateCommand struct {
+	Parent  *CloudUserGroupCommand
+	Command cobra.Command
+	ClientOptions
+	GroupIdOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	AccountRole     string
+	NamespaceAccess []string
+}
+
+func NewCloudUserGroupUpdateCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupUpdateCommand {
+	var s CloudUserGroupUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update a Temporal Cloud user group"
+	if hasHighlighting {
+		s.Command.Long = "Update an existing Temporal Cloud user group's access settings.\n\nProvide at least one of --account-role or --namespace-access.\n\nExample:\n\n\x1b[1mcloud user-group update --group-id my-group-id --account-role developer\ncloud user-group update --group-id my-group-id \\\n  --namespace-access my-namespace.my-account=write\ncloud user-group update --group-id my-group-id --account-role admin \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\x1b[0m"
+	} else {
+		s.Command.Long = "Update an existing Temporal Cloud user group's access settings.\n\nProvide at least one of --account-role or --namespace-access.\n\nExample:\n\n```\ncloud user-group update --group-id my-group-id --account-role developer\ncloud user-group update --group-id my-group-id \\\n  --namespace-access my-namespace.my-account=write\ncloud user-group update --group-id my-group-id --account-role admin \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account role to assign to the group. Role must be one of: admin, developer, finance-admin, read.")
+	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access change in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated. Use an empty permission (e.g. 'testns=') to remove access to a namespace. Changes are additive: namespaces not listed are left unchanged.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.GroupIdOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
