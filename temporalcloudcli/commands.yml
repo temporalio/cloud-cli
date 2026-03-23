@@ -2470,7 +2470,7 @@ commands:
         --name my-sink \
         --service-account-id new-sa@project.iam.gserviceaccount.com \
         --topic-name new-topic \
-        --gcp-project-id new-project \
+        --gcp-project-id new-project
       ```
     has-init: false
     option-sets:
