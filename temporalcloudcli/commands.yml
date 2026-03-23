@@ -2397,6 +2397,77 @@ commands:
         description: |
           AWS region where the Kinesis stream is located (e.g. us-east-1).
 
+  - name: cloud account audit-log sink pubsub
+    summary: Manage PubSub audit log sinks
+    description: |
+      Commands for managing PubSub audit log sinks.
+    has-init: false
+    docs:
+      keywords:
+        - audit-log
+        - sink
+        - pubsub
+        - account
+      description-header: PubSub Audit Log Sink Commands
+      tags:
+        - account
+
+  - name: cloud account audit-log sink pubsub create
+    summary: Create a PubSub audit log sink
+    description: |
+      Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.
+
+      Example:
+
+      ```
+      temporal cloud account audit-log sink pubsub create \
+        --name my-sink \
+        --service-account-id my-sa@project.iam.gserviceaccount.com \
+        --topic-name my-topic \
+        --gcp-project-id my-project \
+        --enabled
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the audit log sink.
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The GCP service account ID that Temporal Cloud impersonates for writing
+          records to the customer's PubSub topic.
+      - name: topic-name
+        type: string
+        required: true
+        description: |
+          The destination PubSub topic name where audit logs will be sent.
+      - name: gcp-project-id
+        type: string
+        required: true
+        description: |
+          The GCP project ID of the PubSub topic and service account.
+      - name: enabled
+        type: bool
+        description: |
+          Enable the sink immediately after creation.
+    docs:
+      keywords:
+        - audit-log
+        - sink
+        - pubsub
+        - create
+        - account
+      description-header: Create PubSub Audit Log Sink
+      tags:
+        - account
+
   # API key commands
   - name: cloud apikey
     summary: Manage Temporal Cloud API keys
