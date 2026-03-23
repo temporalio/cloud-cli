@@ -6,7 +6,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
@@ -16,7 +15,6 @@ import (
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	operationv1 "go.temporal.io/cloud-sdk/api/operation/v1"
 	sinkv1 "go.temporal.io/cloud-sdk/api/sink/v1"
-	"google.golang.org/protobuf/proto"
 )
 
 func auditLogSink() *accountv1.AuditLogSink {
@@ -41,18 +39,6 @@ func auditLogSinkPubSubSpec() *accountv1.AuditLogSinkSpec {
 	}
 }
 
-func createSinkReqMatcher(expected *accountv1.AuditLogSinkSpec) interface{} {
-	return mock.MatchedBy(func(req *cloudservice.CreateAccountAuditLogSinkRequest) bool {
-		return proto.Equal(req.Spec, expected)
-	})
-}
-
-func updateSinkReqMatcher(expectedSpec *accountv1.AuditLogSinkSpec, expectedRV string) interface{} {
-	return mock.MatchedBy(func(req *cloudservice.UpdateAccountAuditLogSinkRequest) bool {
-		return proto.Equal(req.Spec, expectedSpec) && req.ResourceVersion == expectedRV
-	})
-}
-
 // TestCreateAuditLogSinkPubSub_Success verifies CreateAccountAuditLogSink is called and HandleOperation receives the async op.
 func TestCreateAuditLogSinkPubSub_Success(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
@@ -63,11 +49,11 @@ func TestCreateAuditLogSinkPubSub_Success(t *testing.T) {
 	op := &operationv1.AsyncOperation{Id: "op-123"}
 
 	mockPrompter.EXPECT().
-		PromptApply(&accountv1.AuditLogSinkSpec{}, mock.MatchedBy(func(s proto.Message) bool { return proto.Equal(s, spec) }), false).
+		PromptApply(&accountv1.AuditLogSinkSpec{}, spec, false).
 		Return(nil)
 
 	mockCloud.EXPECT().
-		CreateAccountAuditLogSink(context.Background(), createSinkReqMatcher(spec)).
+		CreateAccountAuditLogSink(context.Background(), &cloudservice.CreateAccountAuditLogSinkRequest{Spec: spec}).
 		Return(&cloudservice.CreateAccountAuditLogSinkResponse{AsyncOperation: op}, nil)
 
 	mockHandler.EXPECT().
@@ -97,7 +83,7 @@ func TestCreateAuditLogSinkPubSub_PromptDeclined(t *testing.T) {
 	spec := auditLogSinkPubSubSpec()
 
 	mockPrompter.EXPECT().
-		PromptApply(&accountv1.AuditLogSinkSpec{}, mock.MatchedBy(func(s proto.Message) bool { return proto.Equal(s, spec) }), false).
+		PromptApply(&accountv1.AuditLogSinkSpec{}, spec, false).
 		Return(promptErr)
 
 	err := temporalcloudcli.CreateAuditLogSinkPubSub(context.Background(), temporalcloudcli.CreateAuditLogSinkPubSubParams{
@@ -113,6 +99,40 @@ func TestCreateAuditLogSinkPubSub_PromptDeclined(t *testing.T) {
 	require.ErrorIs(t, err, promptErr)
 }
 
+// TestCreateAuditLogSinkPubSub_APIError verifies that a CreateAccountAuditLogSink error is forwarded to HandleCreateErr.
+func TestCreateAuditLogSinkPubSub_APIError(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	apiErr := errors.New("api error")
+
+	spec := auditLogSinkPubSubSpec()
+
+	mockPrompter.EXPECT().
+		PromptApply(&accountv1.AuditLogSinkSpec{}, spec, false).
+		Return(nil)
+
+	mockCloud.EXPECT().
+		CreateAccountAuditLogSink(context.Background(), &cloudservice.CreateAccountAuditLogSinkRequest{Spec: spec}).
+		Return(nil, apiErr)
+
+	mockHandler.EXPECT().
+		HandleCreateErr(apiErr).
+		Return(apiErr)
+
+	err := temporalcloudcli.CreateAuditLogSinkPubSub(context.Background(), temporalcloudcli.CreateAuditLogSinkPubSubParams{
+		Name:             "my-sink",
+		ServiceAccountID: "my-sa@project.iam.gserviceaccount.com",
+		TopicName:        "my-topic",
+		GcpProjectID:     "my-project",
+		Enabled:          true,
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
+		OperationHandler: mockHandler,
+	})
+	require.ErrorIs(t, err, apiErr)
+}
+
 // TestUpdateAuditLogSinkPubSub_Success verifies UpdateAccountAuditLogSink is called with the merged spec and HandleOperation receives the async op.
 func TestUpdateAuditLogSinkPubSub_Success(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
@@ -122,25 +142,24 @@ func TestUpdateAuditLogSinkPubSub_Success(t *testing.T) {
 	existing := auditLogSink()
 	op := &operationv1.AsyncOperation{Id: "op-456"}
 
-	updatedSpec := auditLogSinkPubSubSpec()
-	updatedSpec.GetPubSubSink().ServiceAccountId = "new-sa@project.iam.gserviceaccount.com"
-	updatedSpec.GetPubSubSink().TopicName = "new-topic"
-	updatedSpec.Enabled = true
+	oldSpec := auditLogSinkPubSubSpec()
+	newSpec := auditLogSinkPubSubSpec()
+	newSpec.GetPubSubSink().ServiceAccountId = "new-sa@project.iam.gserviceaccount.com"
+	newSpec.GetPubSubSink().TopicName = "new-topic"
 
 	mockCloud.EXPECT().
 		GetAccountAuditLogSink(context.Background(), &cloudservice.GetAccountAuditLogSinkRequest{Name: "my-sink"}).
 		Return(&cloudservice.GetAccountAuditLogSinkResponse{Sink: existing}, nil)
 
 	mockPrompter.EXPECT().
-		PromptApply(
-			mock.MatchedBy(func(s proto.Message) bool { return proto.Equal(s, existing.Spec) }),
-			mock.MatchedBy(func(s proto.Message) bool { return proto.Equal(s, updatedSpec) }),
-			false,
-		).
+		PromptApply(oldSpec, newSpec, false).
 		Return(nil)
 
 	mockCloud.EXPECT().
-		UpdateAccountAuditLogSink(context.Background(), updateSinkReqMatcher(updatedSpec, "rv-1")).
+		UpdateAccountAuditLogSink(context.Background(), &cloudservice.UpdateAccountAuditLogSinkRequest{
+			Spec:            newSpec,
+			ResourceVersion: "rv-1",
+		}).
 		Return(&cloudservice.UpdateAccountAuditLogSinkResponse{AsyncOperation: op}, nil)
 
 	mockHandler.EXPECT().
@@ -167,16 +186,21 @@ func TestUpdateAuditLogSinkPubSub_ResourceVersionOverride(t *testing.T) {
 	existing := auditLogSink()
 	op := &operationv1.AsyncOperation{Id: "op-789"}
 
+	spec := auditLogSinkPubSubSpec()
+
 	mockCloud.EXPECT().
 		GetAccountAuditLogSink(context.Background(), &cloudservice.GetAccountAuditLogSinkRequest{Name: "my-sink"}).
 		Return(&cloudservice.GetAccountAuditLogSinkResponse{Sink: existing}, nil)
 
 	mockPrompter.EXPECT().
-		PromptApply(mock.Anything, mock.Anything, false).
+		PromptApply(spec, spec, false).
 		Return(nil)
 
 	mockCloud.EXPECT().
-		UpdateAccountAuditLogSink(context.Background(), updateSinkReqMatcher(existing.Spec, "rv-override")).
+		UpdateAccountAuditLogSink(context.Background(), &cloudservice.UpdateAccountAuditLogSinkRequest{
+			Spec:            spec,
+			ResourceVersion: "rv-override",
+		}).
 		Return(&cloudservice.UpdateAccountAuditLogSinkResponse{AsyncOperation: op}, nil)
 
 	mockHandler.EXPECT().
@@ -184,10 +208,10 @@ func TestUpdateAuditLogSinkPubSub_ResourceVersionOverride(t *testing.T) {
 		Return(nil)
 
 	err := temporalcloudcli.UpdateAuditLogSinkPubSub(context.Background(), temporalcloudcli.UpdateAuditLogSinkPubSubParams{
-		Name:             "my-sink",
-		ResourceVersion:  "rv-override",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
+		Name:            "my-sink",
+		ResourceVersion: "rv-override",
+		Cloud:           mockCloud,
+		Prompter:        mockPrompter,
 		OperationHandler: mockHandler,
 	})
 	require.NoError(t, err)
@@ -221,13 +245,14 @@ func TestUpdateAuditLogSinkPubSub_PromptDeclined(t *testing.T) {
 	promptErr := errors.New("Aborting apply.")
 
 	existing := auditLogSink()
+	spec := auditLogSinkPubSubSpec()
 
 	mockCloud.EXPECT().
 		GetAccountAuditLogSink(context.Background(), &cloudservice.GetAccountAuditLogSinkRequest{Name: "my-sink"}).
 		Return(&cloudservice.GetAccountAuditLogSinkResponse{Sink: existing}, nil)
 
 	mockPrompter.EXPECT().
-		PromptApply(mock.Anything, mock.Anything, false).
+		PromptApply(spec, spec, false).
 		Return(promptErr)
 
 	err := temporalcloudcli.UpdateAuditLogSinkPubSub(context.Background(), temporalcloudcli.UpdateAuditLogSinkPubSubParams{
@@ -247,17 +272,21 @@ func TestUpdateAuditLogSinkPubSub_APIError(t *testing.T) {
 	apiErr := errors.New("api error")
 
 	existing := auditLogSink()
+	spec := auditLogSinkPubSubSpec()
 
 	mockCloud.EXPECT().
 		GetAccountAuditLogSink(context.Background(), &cloudservice.GetAccountAuditLogSinkRequest{Name: "my-sink"}).
 		Return(&cloudservice.GetAccountAuditLogSinkResponse{Sink: existing}, nil)
 
 	mockPrompter.EXPECT().
-		PromptApply(mock.Anything, mock.Anything, false).
+		PromptApply(spec, spec, false).
 		Return(nil)
 
 	mockCloud.EXPECT().
-		UpdateAccountAuditLogSink(context.Background(), mock.Anything).
+		UpdateAccountAuditLogSink(context.Background(), &cloudservice.UpdateAccountAuditLogSinkRequest{
+			Spec:            spec,
+			ResourceVersion: "rv-1",
+		}).
 		Return(nil, apiErr)
 
 	mockHandler.EXPECT().
@@ -277,7 +306,6 @@ func TestUpdateAuditLogSinkPubSub_APIError(t *testing.T) {
 func TestValidateAuditLogSinkPubSub_Success(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 
-	// Validate does not take name or enabled — build the expected spec without them.
 	spec := &accountv1.AuditLogSinkSpec{
 		SinkType: &accountv1.AuditLogSinkSpec_PubSubSink{
 			PubSubSink: &sinkv1.PubSubSpec{
@@ -289,9 +317,7 @@ func TestValidateAuditLogSinkPubSub_Success(t *testing.T) {
 	}
 
 	mockCloud.EXPECT().
-		ValidateAccountAuditLogSink(context.Background(), mock.MatchedBy(func(req *cloudservice.ValidateAccountAuditLogSinkRequest) bool {
-			return proto.Equal(req.Spec, spec)
-		})).
+		ValidateAccountAuditLogSink(context.Background(), &cloudservice.ValidateAccountAuditLogSinkRequest{Spec: spec}).
 		Return(&cloudservice.ValidateAccountAuditLogSinkResponse{}, nil)
 
 	var buf bytes.Buffer
@@ -311,8 +337,18 @@ func TestValidateAuditLogSinkPubSub_APIError(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 	apiErr := errors.New("validation failed")
 
+	spec := &accountv1.AuditLogSinkSpec{
+		SinkType: &accountv1.AuditLogSinkSpec_PubSubSink{
+			PubSubSink: &sinkv1.PubSubSpec{
+				ServiceAccountId: "my-sa@project.iam.gserviceaccount.com",
+				TopicName:        "my-topic",
+				GcpProjectId:     "my-project",
+			},
+		},
+	}
+
 	mockCloud.EXPECT().
-		ValidateAccountAuditLogSink(context.Background(), mock.Anything).
+		ValidateAccountAuditLogSink(context.Background(), &cloudservice.ValidateAccountAuditLogSinkRequest{Spec: spec}).
 		Return(nil, apiErr)
 
 	var buf bytes.Buffer
@@ -322,40 +358,6 @@ func TestValidateAuditLogSinkPubSub_APIError(t *testing.T) {
 		GcpProjectID:     "my-project",
 		Cloud:            mockCloud,
 		Printer:          &printer.Printer{Output: &buf},
-	})
-	require.ErrorIs(t, err, apiErr)
-}
-
-// TestCreateAuditLogSinkPubSub_APIError verifies that a CreateAccountAuditLogSink error is forwarded to HandleCreateErr.
-func TestCreateAuditLogSinkPubSub_APIError(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-	apiErr := errors.New("api error")
-
-	spec := auditLogSinkPubSubSpec()
-
-	mockPrompter.EXPECT().
-		PromptApply(&accountv1.AuditLogSinkSpec{}, mock.MatchedBy(func(s proto.Message) bool { return proto.Equal(s, spec) }), false).
-		Return(nil)
-
-	mockCloud.EXPECT().
-		CreateAccountAuditLogSink(context.Background(), createSinkReqMatcher(spec)).
-		Return(nil, apiErr)
-
-	mockHandler.EXPECT().
-		HandleCreateErr(apiErr).
-		Return(apiErr)
-
-	err := temporalcloudcli.CreateAuditLogSinkPubSub(context.Background(), temporalcloudcli.CreateAuditLogSinkPubSubParams{
-		Name:             "my-sink",
-		ServiceAccountID: "my-sa@project.iam.gserviceaccount.com",
-		TopicName:        "my-topic",
-		GcpProjectID:     "my-project",
-		Enabled:          true,
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
 	})
 	require.ErrorIs(t, err, apiErr)
 }
