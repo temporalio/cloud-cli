@@ -68,7 +68,7 @@ func AddUserGroupMember(ctx context.Context, params AddUserGroupMemberParams) er
 	if err != nil {
 		return err
 	}
-	add := runAsyncOperation(params.Cloud.AddUserGroupMember, params.OperationHandler)
+	add := wrapCreateOperation(params.Cloud.AddUserGroupMember, params.OperationHandler, func(_ *cloudservice.AddUserGroupMemberResponse) string { return params.GroupId })
 	return add(ctx, &cloudservice.AddUserGroupMemberRequest{
 		GroupId:          params.GroupId,
 		MemberId:         &identityv1.UserGroupMemberId{MemberType: &identityv1.UserGroupMemberId_UserId{UserId: user.Id}},
@@ -84,7 +84,7 @@ func RemoveUserGroupMember(ctx context.Context, params RemoveUserGroupMemberPara
 	if err != nil {
 		return err
 	}
-	remove := runAsyncOperation(params.Cloud.RemoveUserGroupMember, params.OperationHandler)
+	remove := wrapDeleteOperation(params.Cloud.RemoveUserGroupMember, params.OperationHandler, params.GroupId)
 	return remove(ctx, &cloudservice.RemoveUserGroupMemberRequest{
 		GroupId:          params.GroupId,
 		MemberId:         &identityv1.UserGroupMemberId{MemberType: &identityv1.UserGroupMemberId_UserId{UserId: user.Id}},
@@ -116,7 +116,7 @@ func (c *CloudUserGroupMembersAddCommand) run(cctx *CommandContext, _ []string) 
 		UserIdentification: c.UserIdentificationOptions,
 		AsyncOperationID:   c.AsyncOperationId,
 		Cloud:              cloudClient.CloudService(),
-		OperationHandler:   NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.GroupId, c.ClientOptions),
+		OperationHandler:   NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -130,6 +130,6 @@ func (c *CloudUserGroupMembersRemoveCommand) run(cctx *CommandContext, _ []strin
 		UserIdentification: c.UserIdentificationOptions,
 		AsyncOperationID:   c.AsyncOperationId,
 		Cloud:              cloudClient.CloudService(),
-		OperationHandler:   NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.GroupId, c.ClientOptions),
+		OperationHandler:   NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }

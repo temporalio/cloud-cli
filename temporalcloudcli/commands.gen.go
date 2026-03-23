@@ -69,7 +69,7 @@ type AsyncOperationOptions struct {
 
 func (v *AsyncOperationOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.BoolVar(&v.Idempotent, "idempotent", false, "Succeed silently if the resource already matches the specification. Without this flag, the command errors when no changes are needed.")
+	f.BoolVar(&v.Idempotent, "idempotent", false, "Succeed silently if the resource already exists or matches the specification. Without this flag, the command errors when no changes are needed.")
 	f.StringVar(&v.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
 	f.BoolVar(&v.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
 }
@@ -84,6 +84,44 @@ func (v *UserIdentificationOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVar(&v.UserId, "user-id", "", "The ID of the user. Mutually exclusive with --user-email.")
 	f.StringVar(&v.UserEmail, "user-email", "", "The email address of the user. Mutually exclusive with --user-id.")
+}
+
+type CodecServerOptions struct {
+	CodecEndpoint                      string
+	CodecPassAccessToken               bool
+	CodecIncludeCrossOriginCredentials bool
+	FlagSet                            *pflag.FlagSet
+}
+
+func (v *CodecServerOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.CodecEndpoint, "codec-endpoint", "", "HTTPS codec server endpoint URL.")
+	f.BoolVar(&v.CodecPassAccessToken, "codec-pass-access-token", false, "Pass the user access token to the codec server endpoint.")
+	f.BoolVar(&v.CodecIncludeCrossOriginCredentials, "codec-include-cross-origin-credentials", false, "Include cross-origin credentials in codec server requests.")
+}
+
+type CaCertificateOptions struct {
+	CaCertificate     string
+	CaCertificateFile string
+	FlagSet           *pflag.FlagSet
+}
+
+func (v *CaCertificateOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.CaCertificate, "ca-certificate", "", "Base64-encoded CA certificate for mTLS authentication. Mutually exclusive with --ca-certificate-file.")
+	f.StringVar(&v.CaCertificateFile, "ca-certificate-file", "", "Path to a CA certificate PEM file for mTLS authentication. Mutually exclusive with --ca-certificate.")
+}
+
+type CertificateFilterOptions struct {
+	CertificateFilter     []string
+	CertificateFilterFile string
+	FlagSet               *pflag.FlagSet
+}
+
+func (v *CertificateFilterOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringArrayVar(&v.CertificateFilter, "certificate-filter", nil, "Certificate filter as a JSON object (e.g. '{\"commonName\":\"foo\"}'). Repeat to add multiple.")
+	f.StringVar(&v.CertificateFilterFile, "certificate-filter-file", "", "Path to a JSON file containing a certificate filter object.")
 }
 
 type GroupIdOptions struct {
@@ -116,6 +154,8 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 		s.Command.Long = "The Temporal Cloud CLI provides commands for managing and operating Temporal Cloud resources,\nincluding namespaces, users, and account settings.\n\nExample:\n\n```\ncloud namespace get --namespace my-namespace.my-account\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudAccountCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudConnectivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLoginCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLogoutCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCommand(cctx, &s).Command)
@@ -128,6 +168,284 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
 	s.CommonOptions.BuildFlags(s.Command.PersistentFlags())
 	s.initCommand(cctx)
+	return &s
+}
+
+type CloudAccountCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+}
+
+func NewCloudAccountCommand(cctx *CommandContext, parent *CloudCommand) *CloudAccountCommand {
+	var s CloudAccountCommand
+	s.Parent = parent
+	s.Command.Use = "account"
+	s.Command.Short = "Manage Temporal Cloud account"
+	s.Command.Long = "Manage the Temporal Cloud account."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudAccountAuditLogCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudAccountAuditLogCommand struct {
+	Parent  *CloudAccountCommand
+	Command cobra.Command
+}
+
+func NewCloudAccountAuditLogCommand(cctx *CommandContext, parent *CloudAccountCommand) *CloudAccountAuditLogCommand {
+	var s CloudAccountAuditLogCommand
+	s.Parent = parent
+	s.Command.Use = "audit-log"
+	s.Command.Short = "Manage audit logs"
+	s.Command.Long = "Commands for working with account audit logs."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudAccountAuditLogGetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudAccountAuditLogGetCommand struct {
+	Parent  *CloudAccountAuditLogCommand
+	Command cobra.Command
+	ClientOptions
+	PageSize  int
+	PageToken string
+	StartTime cliext.FlagTimestamp
+	EndTime   cliext.FlagTimestamp
+}
+
+func NewCloudAccountAuditLogGetCommand(cctx *CommandContext, parent *CloudAccountAuditLogCommand) *CloudAccountAuditLogGetCommand {
+	var s CloudAccountAuditLogGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get audit logs"
+	s.Command.Long = "Returns a paginated list of audit logs for the account, optionally filtered by time range.\n\nExample:\n  temporal cloud account audit-log get --page-size 50\n  temporal cloud account audit-log get --start-time 2024-01-01T00:00:00Z --end-time 2024-02-01T00:00:00Z"
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of logs to retrieve per page. Cannot exceed 1000. Defaults to 100.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Page token from a previous response to retrieve the next page.")
+	s.Command.Flags().Var(&s.StartTime, "start-time", "Filter for logs at or after this UTC time (RFC3339 format, e.g. 2024-01-01T00:00:00Z). Defaults to 30 days ago.")
+	s.Command.Flags().Var(&s.EndTime, "end-time", "Filter for logs before this UTC time (RFC3339 format, e.g. 2024-02-01T00:00:00Z). Defaults to current time.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudConnectivityCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+}
+
+func NewCloudConnectivityCommand(cctx *CommandContext, parent *CloudCommand) *CloudConnectivityCommand {
+	var s CloudConnectivityCommand
+	s.Parent = parent
+	s.Command.Use = "connectivity"
+	s.Command.Short = "Manage Temporal Cloud connectivity rules"
+	s.Command.Long = "Commands for managing connectivity rules for Temporal Cloud."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudConnectivityDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudConnectivityGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudConnectivityListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudConnectivityPrivateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudConnectivityPublicCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudConnectivityDeleteCommand struct {
+	Parent  *CloudConnectivityCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Id string
+}
+
+func NewCloudConnectivityDeleteCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityDeleteCommand {
+	var s CloudConnectivityDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a connectivity rule"
+	if hasHighlighting {
+		s.Command.Long = "Delete a connectivity rule by its ID.\n\nExample:\n\n\x1b[1mcloud connectivity delete --id <connectivity-rule-id>\x1b[0m"
+	} else {
+		s.Command.Long = "Delete a connectivity rule by its ID.\n\nExample:\n\n```\ncloud connectivity delete --id <connectivity-rule-id>\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Id, "id", "", "The ID of the connectivity rule. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudConnectivityGetCommand struct {
+	Parent  *CloudConnectivityCommand
+	Command cobra.Command
+	ClientOptions
+	Id string
+}
+
+func NewCloudConnectivityGetCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityGetCommand {
+	var s CloudConnectivityGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get details of a connectivity rule"
+	if hasHighlighting {
+		s.Command.Long = "Get details of a specific connectivity rule by its ID.\n\nExample:\n\n\x1b[1mcloud connectivity get --id <connectivity-rule-id>\x1b[0m"
+	} else {
+		s.Command.Long = "Get details of a specific connectivity rule by its ID.\n\nExample:\n\n```\ncloud connectivity get --id <connectivity-rule-id>\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Id, "id", "", "The ID of the connectivity rule. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudConnectivityListCommand struct {
+	Parent  *CloudConnectivityCommand
+	Command cobra.Command
+	ClientOptions
+	Namespace string
+	PageSize  int
+	PageToken string
+}
+
+func NewCloudConnectivityListCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityListCommand {
+	var s CloudConnectivityListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List connectivity rules"
+	if hasHighlighting {
+		s.Command.Long = "List connectivity rules, optionally filtered by namespace.\n\nExample:\n\n\x1b[1mcloud connectivity list --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "List connectivity rules, optionally filtered by namespace.\n\nExample:\n\n```\ncloud connectivity list --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "Filter connectivity rules by namespace (e.g., 'my-namespace.my-account').")
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of connectivity rules to return per page.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Page token for pagination.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudConnectivityPrivateCommand struct {
+	Parent  *CloudConnectivityCommand
+	Command cobra.Command
+}
+
+func NewCloudConnectivityPrivateCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityPrivateCommand {
+	var s CloudConnectivityPrivateCommand
+	s.Parent = parent
+	s.Command.Use = "private"
+	s.Command.Short = "Manage private connectivity rules"
+	s.Command.Long = "Commands for managing private connectivity rules."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudConnectivityPrivateCreateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudConnectivityPrivateCreateCommand struct {
+	Parent  *CloudConnectivityPrivateCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ConnectionId string
+	Region       string
+	GcpProjectId string
+}
+
+func NewCloudConnectivityPrivateCreateCommand(cctx *CommandContext, parent *CloudConnectivityPrivateCommand) *CloudConnectivityPrivateCreateCommand {
+	var s CloudConnectivityPrivateCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a private connectivity rule"
+	if hasHighlighting {
+		s.Command.Long = "Create a new private VPC connectivity rule. Requires --connection-id and --region.\n\nExample:\n\n\x1b[1mcloud connectivity private create --connection-id vpce-12345 --region aws-us-west-2\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new private VPC connectivity rule. Requires --connection-id and --region.\n\nExample:\n\n```\ncloud connectivity private create --connection-id vpce-12345 --region aws-us-west-2\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ConnectionId, "connection-id", "", "The connection ID for private connectivity. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "connection-id")
+	s.Command.Flags().StringVar(&s.Region, "region", "", "The region for private connectivity. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "region")
+	s.Command.Flags().StringVar(&s.GcpProjectId, "gcp-project-id", "", "The GCP project ID (only for GCP private connectivity).")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudConnectivityPublicCommand struct {
+	Parent  *CloudConnectivityCommand
+	Command cobra.Command
+}
+
+func NewCloudConnectivityPublicCommand(cctx *CommandContext, parent *CloudConnectivityCommand) *CloudConnectivityPublicCommand {
+	var s CloudConnectivityPublicCommand
+	s.Parent = parent
+	s.Command.Use = "public"
+	s.Command.Short = "Manage public connectivity rules"
+	s.Command.Long = "Commands for managing public connectivity rules."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudConnectivityPublicCreateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudConnectivityPublicCreateCommand struct {
+	Parent  *CloudConnectivityPublicCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+}
+
+func NewCloudConnectivityPublicCreateCommand(cctx *CommandContext, parent *CloudConnectivityPublicCommand) *CloudConnectivityPublicCreateCommand {
+	var s CloudConnectivityPublicCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a public connectivity rule"
+	if hasHighlighting {
+		s.Command.Long = "Create a new public internet connectivity rule.\n\nExample:\n\n\x1b[1mcloud connectivity public create\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new public internet connectivity rule.\n\nExample:\n\n```\ncloud connectivity public create\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
@@ -214,6 +532,7 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.AddCommand(&NewCloudNamespaceCertCaCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCertFilterCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCodecCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCreateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceEditCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceGetCommand(cctx, &s).Command)
@@ -291,8 +610,7 @@ type CloudNamespaceCertCaCreateCommand struct {
 	NamespaceOptions
 	AsyncOperationOptions
 	ResourceVersionOptions
-	CaCertificateFile string
-	CaCertificate     string
+	CaCertificateOptions
 }
 
 func NewCloudNamespaceCertCaCreateCommand(cctx *CommandContext, parent *CloudNamespaceCertCaCommand) *CloudNamespaceCertCaCreateCommand {
@@ -307,12 +625,11 @@ func NewCloudNamespaceCertCaCreateCommand(cctx *CommandContext, parent *CloudNam
 		s.Command.Long = "Add client CA certificates to a Temporal Cloud namespace from a PEM file\nor base64 encoded string. These certificates are used to verify client\nconnections and enable mTLS authentication.\n\nSpecify either --ca-certificate-file or --ca-certificate, but not both.\n\nExample with file:\n\n```\ncloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem\n```\n\nExample with base64 encoded data:\n\n```\ncloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.CaCertificateFile, "ca-certificate-file", "", "Path to a CA certificate PEM file. Mutually exclusive with --ca-certificate.")
-	s.Command.Flags().StringVar(&s.CaCertificate, "ca-certificate", "", "Base64 encoded CA certificate data. Mutually exclusive with --ca-certificate-file.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.CaCertificateOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -328,8 +645,7 @@ type CloudNamespaceCertCaDeleteCommand struct {
 	NamespaceOptions
 	AsyncOperationOptions
 	ResourceVersionOptions
-	CaCertificateFile string
-	CaCertificate     string
+	CaCertificateOptions
 }
 
 func NewCloudNamespaceCertCaDeleteCommand(cctx *CommandContext, parent *CloudNamespaceCertCaCommand) *CloudNamespaceCertCaDeleteCommand {
@@ -344,12 +660,11 @@ func NewCloudNamespaceCertCaDeleteCommand(cctx *CommandContext, parent *CloudNam
 		s.Command.Long = "Delete client CA certificates from a Temporal Cloud namespace. This operation\nrequires confirmation and will remove the specified certificates from the\nnamespace configuration.\n\nSpecify either --ca-certificate-file or --ca-certificate, but not both.\n\nExample with file:\n\n```\ncloud namespace cert-ca delete --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem\n```\n\nExample with base64 encoded data:\n\n```\ncloud namespace cert-ca delete --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.CaCertificateFile, "ca-certificate-file", "", "Path to a CA certificate PEM file. Mutually exclusive with --ca-certificate.")
-	s.Command.Flags().StringVar(&s.CaCertificate, "ca-certificate", "", "Base64 encoded CA certificate data. Mutually exclusive with --ca-certificate-file.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.CaCertificateOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -620,6 +935,57 @@ func NewCloudNamespaceCodecSetCommand(cctx *CommandContext, parent *CloudNamespa
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCreateCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	CodecServerOptions
+	CaCertificateOptions
+	CertificateFilterOptions
+	Name                   string
+	Region                 []string
+	RetentionDays          int
+	ApiKeyAuthEnabled      bool
+	EnableDeleteProtection bool
+	SearchAttribute        []string
+	ConnectionRuleId       []string
+}
+
+func NewCloudNamespaceCreateCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceCreateCommand {
+	var s CloudNamespaceCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a new Temporal Cloud namespace"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Temporal Cloud namespace with the specified configuration.\n\nOptions are passed as individual flags. To create or update a namespace\nusing a full JSON specification, use 'namespace apply' instead.\n\nExample:\n\n\x1b[1mcloud namespace create --name my-namespace --region aws-us-east-1 --retention-days 30\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new Temporal Cloud namespace with the specified configuration.\n\nOptions are passed as individual flags. To create or update a namespace\nusing a full JSON specification, use 'namespace apply' instead.\n\nExample:\n\n```\ncloud namespace create --name my-namespace --region aws-us-east-1 --retention-days 30\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Name, "name", "n", "", "The name for the new namespace (becomes part of the namespace ID). Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringArrayVar(&s.Region, "region", nil, "Cloud region where the namespace will be hosted. Repeat to specify multiple regions for High Availability (e.g. --region aws-us-east-1 --region aws-us-west-2). Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "region")
+	s.Command.Flags().IntVar(&s.RetentionDays, "retention-days", 0, "Number of days to retain closed workflow history. If not specified, the server default applies.")
+	s.Command.Flags().BoolVar(&s.ApiKeyAuthEnabled, "api-key-auth-enabled", false, "Enable API key authentication for the namespace.")
+	s.Command.Flags().BoolVar(&s.EnableDeleteProtection, "enable-delete-protection", false, "Prevent accidental deletion of this namespace.")
+	s.Command.Flags().StringArrayVar(&s.SearchAttribute, "search-attribute", nil, "Custom search attribute as 'name=Type' (e.g. --search-attribute myAttr=Keyword). Valid types: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Repeat to add multiple.")
+	s.Command.Flags().StringArrayVar(&s.ConnectionRuleId, "connection-rule-id", nil, "Private connectivity rule ID. Repeat to specify multiple.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.CodecServerOptions.BuildFlags(s.Command.Flags())
+	s.CaCertificateOptions.BuildFlags(s.Command.Flags())
+	s.CertificateFilterOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

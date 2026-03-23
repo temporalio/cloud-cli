@@ -37,7 +37,7 @@ func TestDeleteUserGroup_Success(t *testing.T) {
 			ResourceVersion: "rv-1",
 		}).
 		Return(&cloudservice.DeleteUserGroupResponse{AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-1").Return(nil)
 
 	err := temporalcloudcli.DeleteUserGroup(context.Background(), temporalcloudcli.DeleteUserGroupParams{
 		GroupId:          "group-1",
@@ -63,7 +63,7 @@ func TestDeleteUserGroup_ResourceVersionOverride(t *testing.T) {
 			ResourceVersion: "rv-override",
 		}).
 		Return(&cloudservice.DeleteUserGroupResponse{AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-1").Return(nil)
 
 	err := temporalcloudcli.DeleteUserGroup(context.Background(), temporalcloudcli.DeleteUserGroupParams{
 		GroupId:          "group-1",
@@ -124,7 +124,7 @@ func TestUpdateUserGroup_AccountRole(t *testing.T) {
 			ResourceVersion: "rv-1",
 		}).
 		Return(&cloudservice.UpdateUserGroupResponse{AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-1").Return(nil)
 
 	err := temporalcloudcli.UpdateUserGroup(context.Background(), temporalcloudcli.UpdateUserGroupParams{
 		GroupId:          "group-1",
@@ -173,7 +173,7 @@ func TestUpdateUserGroup_NamespaceAccess(t *testing.T) {
 			ResourceVersion: "rv-1",
 		}).
 		Return(&cloudservice.UpdateUserGroupResponse{AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-1").Return(nil)
 
 	err := temporalcloudcli.UpdateUserGroup(context.Background(), temporalcloudcli.UpdateUserGroupParams{
 		GroupId:           "group-1",
@@ -273,7 +273,7 @@ func TestEditUserGroup_Success(t *testing.T) {
 			ResourceVersion: "rv-1",
 		}).
 		Return(&cloudservice.UpdateUserGroupResponse{AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-1").Return(nil)
 
 	err := temporalcloudcli.EditUserGroup(context.Background(), temporalcloudcli.EditUserGroupParams{
 		GroupId:          "group-1",
@@ -320,7 +320,7 @@ func TestSetUserGroupAccountRole_Success(t *testing.T) {
 			ResourceVersion: "rv-1",
 		}).
 		Return(&cloudservice.UpdateUserGroupResponse{AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-1").Return(nil)
 
 	err := temporalcloudcli.SetUserGroupAccountRole(context.Background(), temporalcloudcli.SetUserGroupAccountRoleParams{
 		GroupId:          "group-1",
@@ -386,7 +386,7 @@ func TestSetUserGroupNamespacePermissions_Success(t *testing.T) {
 			ResourceVersion: "rv-1",
 		}).
 		Return(&cloudservice.UpdateUserGroupResponse{AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-1").Return(nil)
 
 	err := temporalcloudcli.SetUserGroupNamespacePermissions(context.Background(), temporalcloudcli.SetUserGroupNamespacePermissionsParams{
 		GroupId:           "group-1",
@@ -432,7 +432,7 @@ func TestApplyUserGroup_Create(t *testing.T) {
 	mockCloud.EXPECT().
 		CreateUserGroup(context.Background(), &cloudservice.CreateUserGroupRequest{Spec: spec}).
 		Return(&cloudservice.CreateUserGroupResponse{GroupId: "group-1", AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-1").Return(nil)
 
 	err := temporalcloudcli.ApplyUserGroup(context.Background(), temporalcloudcli.ApplyUserGroupParams{
 		Spec:             spec,
@@ -476,7 +476,7 @@ func TestApplyUserGroup_Update(t *testing.T) {
 			ResourceVersion: "rv-1",
 		}).
 		Return(&cloudservice.UpdateUserGroupResponse{AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-1").Return(nil)
 
 	err := temporalcloudcli.ApplyUserGroup(context.Background(), temporalcloudcli.ApplyUserGroupParams{
 		Spec:             newSpec,
@@ -511,7 +511,7 @@ func TestApplyUserGroup_UpdateWithResourceVersion(t *testing.T) {
 			ResourceVersion: "rv-override",
 		}).
 		Return(&cloudservice.UpdateUserGroupResponse{AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-1").Return(nil)
 
 	err := temporalcloudcli.ApplyUserGroup(context.Background(), temporalcloudcli.ApplyUserGroupParams{
 		Spec:            newSpec,
@@ -585,7 +585,7 @@ func TestCreateCloudGroup_Success(t *testing.T) {
 	mockCloud.EXPECT().
 		CreateUserGroup(context.Background(), &cloudservice.CreateUserGroupRequest{Spec: expectedSpec}).
 		Return(&cloudservice.CreateUserGroupResponse{GroupId: "group-1", AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-1").Return(nil)
 
 	err := temporalcloudcli.CreateCloudGroup(context.Background(), temporalcloudcli.CreateCloudGroupParams{
 		DisplayName:   "Engineering",
@@ -615,7 +615,7 @@ func TestCreateCloudGroup_AsyncOperationID(t *testing.T) {
 			AsyncOperationId: "my-op-id",
 		}).
 		Return(&cloudservice.CreateUserGroupResponse{GroupId: "group-2", AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-2").Return(nil)
 
 	err := temporalcloudcli.CreateCloudGroup(context.Background(), temporalcloudcli.CreateCloudGroupParams{
 		DisplayName:      "Platform",
@@ -639,7 +639,7 @@ func TestCreateCloudGroup_APIError(t *testing.T) {
 	mockCloud.EXPECT().
 		CreateUserGroup(context.Background(), &cloudservice.CreateUserGroupRequest{Spec: expectedSpec}).
 		Return(nil, apiErr)
-	mockHandler.EXPECT().HandleErr(apiErr).Return(apiErr)
+	mockHandler.EXPECT().HandleCreateErr(apiErr).Return(apiErr)
 
 	err := temporalcloudcli.CreateCloudGroup(context.Background(), temporalcloudcli.CreateCloudGroupParams{
 		DisplayName:      "Engineering",
@@ -667,7 +667,7 @@ func TestCreateGoogleGroup_Success(t *testing.T) {
 	mockCloud.EXPECT().
 		CreateUserGroup(context.Background(), &cloudservice.CreateUserGroupRequest{Spec: expectedSpec}).
 		Return(&cloudservice.CreateUserGroupResponse{GroupId: "group-3", AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-3").Return(nil)
 
 	err := temporalcloudcli.CreateGoogleGroup(context.Background(), temporalcloudcli.CreateGoogleGroupParams{
 		DisplayName:      "Platform",
@@ -694,7 +694,7 @@ func TestCreateGoogleGroup_APIError(t *testing.T) {
 	mockCloud.EXPECT().
 		CreateUserGroup(context.Background(), &cloudservice.CreateUserGroupRequest{Spec: expectedSpec}).
 		Return(nil, apiErr)
-	mockHandler.EXPECT().HandleErr(apiErr).Return(apiErr)
+	mockHandler.EXPECT().HandleCreateErr(apiErr).Return(apiErr)
 
 	err := temporalcloudcli.CreateGoogleGroup(context.Background(), temporalcloudcli.CreateGoogleGroupParams{
 		DisplayName:      "Platform",
@@ -720,7 +720,7 @@ func TestCreateSCIMGroup_Success(t *testing.T) {
 	mockCloud.EXPECT().
 		CreateUserGroup(context.Background(), &cloudservice.CreateUserGroupRequest{Spec: expectedSpec}).
 		Return(&cloudservice.CreateUserGroupResponse{GroupId: "group-4", AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-4").Return(nil)
 
 	err := temporalcloudcli.CreateSCIMGroup(context.Background(), temporalcloudcli.CreateSCIMGroupParams{
 		DisplayName:      "Security",
@@ -746,7 +746,7 @@ func TestCreateSCIMGroup_APIError(t *testing.T) {
 	mockCloud.EXPECT().
 		CreateUserGroup(context.Background(), &cloudservice.CreateUserGroupRequest{Spec: expectedSpec}).
 		Return(nil, apiErr)
-	mockHandler.EXPECT().HandleErr(apiErr).Return(apiErr)
+	mockHandler.EXPECT().HandleCreateErr(apiErr).Return(apiErr)
 
 	err := temporalcloudcli.CreateSCIMGroup(context.Background(), temporalcloudcli.CreateSCIMGroupParams{
 		DisplayName:      "Security",
@@ -1090,7 +1090,7 @@ func TestAddUserGroupMember_ByUserId(t *testing.T) {
 			MemberId: &identityv1.UserGroupMemberId{MemberType: &identityv1.UserGroupMemberId_UserId{UserId: "user-1"}},
 		}).
 		Return(&cloudservice.AddUserGroupMemberResponse{AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-1").Return(nil)
 
 	err := temporalcloudcli.AddUserGroupMember(context.Background(), temporalcloudcli.AddUserGroupMemberParams{
 		GroupId:            "group-1",
@@ -1115,7 +1115,7 @@ func TestAddUserGroupMember_ByUserEmail(t *testing.T) {
 			MemberId: &identityv1.UserGroupMemberId{MemberType: &identityv1.UserGroupMemberId_UserId{UserId: "user-1"}},
 		}).
 		Return(&cloudservice.AddUserGroupMemberResponse{AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-1").Return(nil)
 
 	err := temporalcloudcli.AddUserGroupMember(context.Background(), temporalcloudcli.AddUserGroupMemberParams{
 		GroupId:            "group-1",
@@ -1152,7 +1152,7 @@ func TestAddUserGroupMember_APIError(t *testing.T) {
 			MemberId: &identityv1.UserGroupMemberId{MemberType: &identityv1.UserGroupMemberId_UserId{UserId: "user-1"}},
 		}).
 		Return(nil, apiErr)
-	mockHandler.EXPECT().HandleErr(apiErr).Return(apiErr)
+	mockHandler.EXPECT().HandleCreateErr(apiErr).Return(apiErr)
 
 	err := temporalcloudcli.AddUserGroupMember(context.Background(), temporalcloudcli.AddUserGroupMemberParams{
 		GroupId:            "group-1",
@@ -1179,7 +1179,7 @@ func TestRemoveUserGroupMember_ByUserId(t *testing.T) {
 			MemberId: &identityv1.UserGroupMemberId{MemberType: &identityv1.UserGroupMemberId_UserId{UserId: "user-1"}},
 		}).
 		Return(&cloudservice.RemoveUserGroupMemberResponse{AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-1").Return(nil)
 
 	err := temporalcloudcli.RemoveUserGroupMember(context.Background(), temporalcloudcli.RemoveUserGroupMemberParams{
 		GroupId:            "group-1",
@@ -1204,7 +1204,7 @@ func TestRemoveUserGroupMember_ByUserEmail(t *testing.T) {
 			MemberId: &identityv1.UserGroupMemberId{MemberType: &identityv1.UserGroupMemberId_UserId{UserId: "user-1"}},
 		}).
 		Return(&cloudservice.RemoveUserGroupMemberResponse{AsyncOperation: op}, nil)
-	mockHandler.EXPECT().Handle(op).Return(nil)
+	mockHandler.EXPECT().HandleOperation(op, "group-1").Return(nil)
 
 	err := temporalcloudcli.RemoveUserGroupMember(context.Background(), temporalcloudcli.RemoveUserGroupMemberParams{
 		GroupId:            "group-1",
@@ -1241,7 +1241,7 @@ func TestRemoveUserGroupMember_APIError(t *testing.T) {
 			MemberId: &identityv1.UserGroupMemberId{MemberType: &identityv1.UserGroupMemberId_UserId{UserId: "user-1"}},
 		}).
 		Return(nil, apiErr)
-	mockHandler.EXPECT().HandleErr(apiErr).Return(apiErr)
+	mockHandler.EXPECT().HandleDeleteErr(apiErr).Return(apiErr)
 
 	err := temporalcloudcli.RemoveUserGroupMember(context.Background(), temporalcloudcli.RemoveUserGroupMemberParams{
 		GroupId:            "group-1",

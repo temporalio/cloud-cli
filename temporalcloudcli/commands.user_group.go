@@ -162,7 +162,7 @@ func ApplyUserGroup(ctx context.Context, params ApplyUserGroupParams) error {
 	}
 
 	if existingGroupID != "" {
-		update := runAsyncOperation(params.Cloud.UpdateUserGroup, params.OperationHandler)
+		update := wrapUpdateOperation(params.Cloud.UpdateUserGroup, params.OperationHandler, existingGroupID)
 		return update(ctx, &cloudservice.UpdateUserGroupRequest{
 			GroupId:          existingGroupID,
 			Spec:             params.Spec,
@@ -171,7 +171,7 @@ func ApplyUserGroup(ctx context.Context, params ApplyUserGroupParams) error {
 		})
 	}
 
-	create := runAsyncOperation(params.Cloud.CreateUserGroup, params.OperationHandler)
+	create := wrapCreateOperation(params.Cloud.CreateUserGroup, params.OperationHandler, func(res *cloudservice.CreateUserGroupResponse) string { return res.GetGroupId() })
 	return create(ctx, &cloudservice.CreateUserGroupRequest{
 		Spec:             params.Spec,
 		AsyncOperationId: params.AsyncOperationID,
@@ -189,7 +189,7 @@ func CreateCloudGroup(ctx context.Context, params CreateCloudGroupParams) error 
 			NamespaceAccesses: params.NamespaceAccesses,
 		}
 	}
-	create := runAsyncOperation(params.Cloud.CreateUserGroup, params.OperationHandler)
+	create := wrapCreateOperation(params.Cloud.CreateUserGroup, params.OperationHandler, func(res *cloudservice.CreateUserGroupResponse) string { return res.GetGroupId() })
 	return create(ctx, &cloudservice.CreateUserGroupRequest{
 		Spec:             spec,
 		AsyncOperationId: params.AsyncOperationID,
@@ -209,7 +209,7 @@ func CreateGoogleGroup(ctx context.Context, params CreateGoogleGroupParams) erro
 			NamespaceAccesses: params.NamespaceAccesses,
 		}
 	}
-	create := runAsyncOperation(params.Cloud.CreateUserGroup, params.OperationHandler)
+	create := wrapCreateOperation(params.Cloud.CreateUserGroup, params.OperationHandler, func(res *cloudservice.CreateUserGroupResponse) string { return res.GetGroupId() })
 	return create(ctx, &cloudservice.CreateUserGroupRequest{
 		Spec:             spec,
 		AsyncOperationId: params.AsyncOperationID,
@@ -229,7 +229,7 @@ func CreateSCIMGroup(ctx context.Context, params CreateSCIMGroupParams) error {
 			NamespaceAccesses: params.NamespaceAccesses,
 		}
 	}
-	create := runAsyncOperation(params.Cloud.CreateUserGroup, params.OperationHandler)
+	create := wrapCreateOperation(params.Cloud.CreateUserGroup, params.OperationHandler, func(res *cloudservice.CreateUserGroupResponse) string { return res.GetGroupId() })
 	return create(ctx, &cloudservice.CreateUserGroupRequest{
 		Spec:             spec,
 		AsyncOperationId: params.AsyncOperationID,
@@ -287,7 +287,7 @@ func DeleteUserGroup(ctx context.Context, params DeleteUserGroupParams) error {
 	if params.ResourceVersion != "" {
 		rv = params.ResourceVersion
 	}
-	del := runAsyncOperation(params.Cloud.DeleteUserGroup, params.OperationHandler)
+	del := wrapDeleteOperation(params.Cloud.DeleteUserGroup, params.OperationHandler, params.GroupId)
 	return del(ctx, &cloudservice.DeleteUserGroupRequest{
 		GroupId:          params.GroupId,
 		ResourceVersion:  rv,
@@ -336,7 +336,7 @@ func UpdateUserGroup(ctx context.Context, params UpdateUserGroupParams) error {
 	if params.ResourceVersion != "" {
 		rv = params.ResourceVersion
 	}
-	update := runAsyncOperation(params.Cloud.UpdateUserGroup, params.OperationHandler)
+	update := wrapUpdateOperation(params.Cloud.UpdateUserGroup, params.OperationHandler, params.GroupId)
 	return update(ctx, &cloudservice.UpdateUserGroupRequest{
 		GroupId:          params.GroupId,
 		Spec:             newSpec,
@@ -361,7 +361,7 @@ func EditUserGroup(ctx context.Context, params EditUserGroupParams) error {
 	if params.ResourceVersion != "" {
 		rv = params.ResourceVersion
 	}
-	update := runAsyncOperation(params.Cloud.UpdateUserGroup, params.OperationHandler)
+	update := wrapUpdateOperation(params.Cloud.UpdateUserGroup, params.OperationHandler, params.GroupId)
 	return update(ctx, &cloudservice.UpdateUserGroupRequest{
 		GroupId:          params.GroupId,
 		Spec:             newSpec,
@@ -391,7 +391,7 @@ func SetUserGroupAccountRole(ctx context.Context, params SetUserGroupAccountRole
 	if params.ResourceVersion != "" {
 		rv = params.ResourceVersion
 	}
-	update := runAsyncOperation(params.Cloud.UpdateUserGroup, params.OperationHandler)
+	update := wrapUpdateOperation(params.Cloud.UpdateUserGroup, params.OperationHandler, params.GroupId)
 	return update(ctx, &cloudservice.UpdateUserGroupRequest{
 		GroupId:          params.GroupId,
 		Spec:             newSpec,
@@ -425,7 +425,7 @@ func SetUserGroupNamespacePermissions(ctx context.Context, params SetUserGroupNa
 	if params.ResourceVersion != "" {
 		rv = params.ResourceVersion
 	}
-	update := runAsyncOperation(params.Cloud.UpdateUserGroup, params.OperationHandler)
+	update := wrapUpdateOperation(params.Cloud.UpdateUserGroup, params.OperationHandler, params.GroupId)
 	return update(ctx, &cloudservice.UpdateUserGroupRequest{
 		GroupId:          params.GroupId,
 		Spec:             newSpec,
@@ -456,7 +456,7 @@ func (c *CloudUserGroupApplyCommand) run(cctx *CommandContext, _ []string) error
 		VerboseDiff:      c.VerboseDiff,
 		Cloud:            cloudClient.CloudService(),
 		Prompter:         newPrompter(cctx),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, spec.DisplayName, c.ClientOptions),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -486,7 +486,7 @@ func (c *CloudUserGroupCreateCloudGroupCommand) run(cctx *CommandContext, _ []st
 		NamespaceAccesses: namespaceAccesses,
 		AsyncOperationID:  c.AsyncOperationId,
 		Cloud:             cloudClient.CloudService(),
-		OperationHandler:  NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.DisplayName, c.ClientOptions),
+		OperationHandler:  NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -517,7 +517,7 @@ func (c *CloudUserGroupCreateGoogleGroupCommand) run(cctx *CommandContext, _ []s
 		NamespaceAccesses: namespaceAccesses,
 		AsyncOperationID:  c.AsyncOperationId,
 		Cloud:             cloudClient.CloudService(),
-		OperationHandler:  NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.DisplayName, c.ClientOptions),
+		OperationHandler:  NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -548,7 +548,7 @@ func (c *CloudUserGroupCreateScimGroupCommand) run(cctx *CommandContext, _ []str
 		NamespaceAccesses: namespaceAccesses,
 		AsyncOperationID:  c.AsyncOperationId,
 		Cloud:             cloudClient.CloudService(),
-		OperationHandler:  NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.DisplayName, c.ClientOptions),
+		OperationHandler:  NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -569,7 +569,7 @@ func (c *CloudUserGroupDeleteCommand) run(cctx *CommandContext, _ []string) erro
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.GroupId, c.ClientOptions),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -586,7 +586,7 @@ func (c *CloudUserGroupUpdateCommand) run(cctx *CommandContext, _ []string) erro
 		AsyncOperationID:  c.AsyncOperationId,
 		Cloud:             cloudClient.CloudService(),
 		Prompter:          newPrompter(cctx),
-		OperationHandler:  NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.GroupId, c.ClientOptions),
+		OperationHandler:  NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -602,7 +602,7 @@ func (c *CloudUserGroupEditCommand) run(cctx *CommandContext, _ []string) error 
 		VerboseDiff:      c.VerboseDiff,
 		Cloud:            cloudClient.CloudService(),
 		Prompter:         newPrompter(cctx),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.GroupId, c.ClientOptions),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 		RunEditor:        runEditorForJSONEditForProtos,
 	})
 }
@@ -619,7 +619,7 @@ func (c *CloudUserGroupSetAccountRoleCommand) run(cctx *CommandContext, _ []stri
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
 		Prompter:         newPrompter(cctx),
-		OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.GroupId, c.ClientOptions),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
@@ -635,7 +635,7 @@ func (c *CloudUserGroupSetNamespacePermissionsCommand) run(cctx *CommandContext,
 		AsyncOperationID:  c.AsyncOperationId,
 		Cloud:             cloudClient.CloudService(),
 		Prompter:          newPrompter(cctx),
-		OperationHandler:  NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.GroupId, c.ClientOptions),
+		OperationHandler:  NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
