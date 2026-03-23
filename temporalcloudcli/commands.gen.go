@@ -657,9 +657,9 @@ func NewCloudAccountAuditLogSinkPubsubUpdateCommand(cctx *CommandContext, parent
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a PubSub audit log sink"
 	if hasHighlighting {
-		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-id new-sa@project.iam.gserviceaccount.com \\\n  --topic-name new-topic \\\n  --gcp-project-id new-project \\\n  --enabled\x1b[0m"
+		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-id new-sa@project.iam.gserviceaccount.com \\\n  --topic-name new-topic \\\n  --gcp-project-id new-project \\\x1b[0m"
 	} else {
-		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-id new-sa@project.iam.gserviceaccount.com \\\n  --topic-name new-topic \\\n  --gcp-project-id new-project \\\n  --enabled\n```"
+		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-id new-sa@project.iam.gserviceaccount.com \\\n  --topic-name new-topic \\\n  --gcp-project-id new-project \\\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the audit log sink to update. Required.")

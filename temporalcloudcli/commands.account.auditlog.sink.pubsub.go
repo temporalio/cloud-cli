@@ -15,7 +15,7 @@ type CreateAuditLogSinkPubSubParams struct {
 	Name             string
 	ServiceAccountID string
 	TopicName        string
-	GcpProjectID     string
+	GCPProjectID     string
 	Enabled          bool
 	AsyncOperationID string
 
@@ -32,7 +32,7 @@ func CreateAuditLogSinkPubSub(ctx context.Context, params CreateAuditLogSinkPubS
 			PubSubSink: &sinkv1.PubSubSpec{
 				ServiceAccountId: params.ServiceAccountID,
 				TopicName:        params.TopicName,
-				GcpProjectId:     params.GcpProjectID,
+				GcpProjectId:     params.GCPProjectID,
 			},
 		},
 	}
@@ -56,7 +56,7 @@ type UpdateAuditLogSinkPubSubParams struct {
 	Name             string
 	ServiceAccountID string
 	TopicName        string
-	GcpProjectID     string
+	GCPProjectID     string
 	ResourceVersion  string
 	AsyncOperationID string
 
@@ -83,8 +83,8 @@ func UpdateAuditLogSinkPubSub(ctx context.Context, params UpdateAuditLogSinkPubS
 	if params.TopicName != "" {
 		pubSub.TopicName = params.TopicName
 	}
-	if params.GcpProjectID != "" {
-		pubSub.GcpProjectId = params.GcpProjectID
+	if params.GCPProjectID != "" {
+		pubSub.GcpProjectId = params.GCPProjectID
 	}
 
 	if err := params.Prompter.PromptApply(sink.Spec, newSpec, false); err != nil {
@@ -106,7 +106,7 @@ func UpdateAuditLogSinkPubSub(ctx context.Context, params UpdateAuditLogSinkPubS
 type ValidateAuditLogSinkPubSubParams struct {
 	ServiceAccountID string
 	TopicName        string
-	GcpProjectID     string
+	GCPProjectID     string
 
 	Cloud   cloudservice.CloudServiceClient
 	Printer *printer.Printer
@@ -118,7 +118,7 @@ func ValidateAuditLogSinkPubSub(ctx context.Context, params ValidateAuditLogSink
 			PubSubSink: &sinkv1.PubSubSpec{
 				ServiceAccountId: params.ServiceAccountID,
 				TopicName:        params.TopicName,
-				GcpProjectId:     params.GcpProjectID,
+				GcpProjectId:     params.GCPProjectID,
 			},
 		},
 	}
@@ -137,7 +137,7 @@ func (c *CloudAccountAuditLogSinkPubsubValidateCommand) run(cctx *CommandContext
 	return ValidateAuditLogSinkPubSub(cctx.Context, ValidateAuditLogSinkPubSubParams{
 		ServiceAccountID: c.ServiceAccountId,
 		TopicName:        c.TopicName,
-		GcpProjectID:     c.GcpProjectId,
+		GCPProjectID:     c.GcpProjectId,
 		Cloud:            cloudClient.CloudService(),
 		Printer:          cctx.Printer,
 	})
@@ -152,7 +152,7 @@ func (c *CloudAccountAuditLogSinkPubsubCreateCommand) run(cctx *CommandContext, 
 		Name:             c.Name,
 		ServiceAccountID: c.ServiceAccountId,
 		TopicName:        c.TopicName,
-		GcpProjectID:     c.GcpProjectId,
+		GCPProjectID:     c.GcpProjectId,
 		Enabled:          c.Enabled,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
@@ -170,7 +170,7 @@ func (c *CloudAccountAuditLogSinkPubsubUpdateCommand) run(cctx *CommandContext, 
 		Name:             c.Name,
 		ServiceAccountID: c.ServiceAccountId,
 		TopicName:        c.TopicName,
-		GcpProjectID:     c.GcpProjectId,
+		GCPProjectID:     c.GcpProjectId,
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),

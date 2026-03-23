@@ -2481,7 +2481,6 @@ commands:
         --service-account-id new-sa@project.iam.gserviceaccount.com \
         --topic-name new-topic \
         --gcp-project-id new-project \
-        --enabled
       ```
     has-init: false
     option-sets:
