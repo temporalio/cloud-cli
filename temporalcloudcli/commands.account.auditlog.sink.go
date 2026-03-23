@@ -67,7 +67,8 @@ func ListAuditLogSinks(ctx context.Context, params ListAuditLogSinksParams) erro
 			NextPageToken: res.GetNextPageToken(),
 		},
 		printer.PrintResourceOptions{
-			Fields: []string{"Name", "State", "Health"},
+			Fields:     []string{"Name", "State", "Health"},
+			SpecFields: []string{"SinkType", "Enabled"},
 		},
 		printer.TableOptions{},
 	)
