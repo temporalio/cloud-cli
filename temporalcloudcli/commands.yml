@@ -2468,6 +2468,101 @@ commands:
       tags:
         - account
 
+  - name: cloud account audit-log sink pubsub update
+    summary: Update a PubSub audit log sink
+    description: |
+      Updates an existing PubSub audit log sink for the account.
+
+      Example:
+
+      ```
+      temporal cloud account audit-log sink pubsub update \
+        --name my-sink \
+        --service-account-id new-sa@project.iam.gserviceaccount.com \
+        --topic-name new-topic \
+        --gcp-project-id new-project \
+        --enabled
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - resource-version
+      - async-operation
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the audit log sink to update.
+      - name: service-account-id
+        type: string
+        description: |
+          The GCP service account ID that Temporal Cloud impersonates for writing
+          records to the customer's PubSub topic.
+      - name: topic-name
+        type: string
+        description: |
+          The destination PubSub topic name where audit logs will be sent.
+      - name: gcp-project-id
+        type: string
+        description: |
+          The GCP project ID of the PubSub topic and service account.
+    docs:
+      keywords:
+        - audit-log
+        - sink
+        - pubsub
+        - update
+        - account
+      description-header: Update PubSub Audit Log Sink
+      tags:
+        - account
+
+  - name: cloud account audit-log sink pubsub validate
+    summary: Validate a PubSub audit log sink
+    description: |
+      Validates a PubSub audit log sink specification without creating or modifying any resources.
+
+      Example:
+
+      ```
+      temporal cloud account audit-log sink pubsub validate \
+        --name my-sink \
+        --service-account-id my-sa@project.iam.gserviceaccount.com \
+        --topic-name my-topic \
+        --gcp-project-id my-project
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The GCP service account ID that Temporal Cloud impersonates for writing
+          records to the customer's PubSub topic.
+      - name: topic-name
+        type: string
+        required: true
+        description: |
+          The destination PubSub topic name where audit logs will be sent.
+      - name: gcp-project-id
+        type: string
+        required: true
+        description: |
+          The GCP project ID of the PubSub topic and service account.
+    docs:
+      keywords:
+        - audit-log
+        - sink
+        - pubsub
+        - validate
+        - account
+      description-header: Validate PubSub Audit Log Sink
+      tags:
+        - account
+
   # API key commands
   - name: cloud apikey
     summary: Manage Temporal Cloud API keys

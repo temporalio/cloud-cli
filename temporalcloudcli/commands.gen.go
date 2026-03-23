@@ -590,6 +590,8 @@ func NewCloudAccountAuditLogSinkPubsubCommand(cctx *CommandContext, parent *Clou
 	s.Command.Long = "Commands for managing PubSub audit log sinks."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudAccountAuditLogSinkPubsubCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudAccountAuditLogSinkPubsubUpdateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudAccountAuditLogSinkPubsubValidateCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -628,6 +630,82 @@ func NewCloudAccountAuditLogSinkPubsubCreateCommand(cctx *CommandContext, parent
 	s.Command.Flags().BoolVar(&s.Enabled, "enabled", false, "Enable the sink immediately after creation.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudAccountAuditLogSinkPubsubUpdateCommand struct {
+	Parent  *CloudAccountAuditLogSinkPubsubCommand
+	Command cobra.Command
+	ClientOptions
+	ResourceVersionOptions
+	AsyncOperationOptions
+	Name             string
+	ServiceAccountId string
+	TopicName        string
+	GcpProjectId     string
+}
+
+func NewCloudAccountAuditLogSinkPubsubUpdateCommand(cctx *CommandContext, parent *CloudAccountAuditLogSinkPubsubCommand) *CloudAccountAuditLogSinkPubsubUpdateCommand {
+	var s CloudAccountAuditLogSinkPubsubUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update a PubSub audit log sink"
+	if hasHighlighting {
+		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-id new-sa@project.iam.gserviceaccount.com \\\n  --topic-name new-topic \\\n  --gcp-project-id new-project \\\n  --enabled\x1b[0m"
+	} else {
+		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-id new-sa@project.iam.gserviceaccount.com \\\n  --topic-name new-topic \\\n  --gcp-project-id new-project \\\n  --enabled\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the audit log sink to update. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The GCP service account ID that Temporal Cloud impersonates for writing records to the customer's PubSub topic.")
+	s.Command.Flags().StringVar(&s.TopicName, "topic-name", "", "The destination PubSub topic name where audit logs will be sent.")
+	s.Command.Flags().StringVar(&s.GcpProjectId, "gcp-project-id", "", "The GCP project ID of the PubSub topic and service account.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudAccountAuditLogSinkPubsubValidateCommand struct {
+	Parent  *CloudAccountAuditLogSinkPubsubCommand
+	Command cobra.Command
+	ClientOptions
+	ServiceAccountId string
+	TopicName        string
+	GcpProjectId     string
+}
+
+func NewCloudAccountAuditLogSinkPubsubValidateCommand(cctx *CommandContext, parent *CloudAccountAuditLogSinkPubsubCommand) *CloudAccountAuditLogSinkPubsubValidateCommand {
+	var s CloudAccountAuditLogSinkPubsubValidateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "validate [flags]"
+	s.Command.Short = "Validate a PubSub audit log sink"
+	if hasHighlighting {
+		s.Command.Long = "Validates a PubSub audit log sink specification without creating or modifying any resources.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub validate \\\n  --name my-sink \\\n  --service-account-id my-sa@project.iam.gserviceaccount.com \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\x1b[0m"
+	} else {
+		s.Command.Long = "Validates a PubSub audit log sink specification without creating or modifying any resources.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub validate \\\n  --name my-sink \\\n  --service-account-id my-sa@project.iam.gserviceaccount.com \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The GCP service account ID that Temporal Cloud impersonates for writing records to the customer's PubSub topic. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-id")
+	s.Command.Flags().StringVar(&s.TopicName, "topic-name", "", "The destination PubSub topic name where audit logs will be sent. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "topic-name")
+	s.Command.Flags().StringVar(&s.GcpProjectId, "gcp-project-id", "", "The GCP project ID of the PubSub topic and service account. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "gcp-project-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
