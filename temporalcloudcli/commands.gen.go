@@ -613,9 +613,9 @@ func NewCloudAccountAuditLogSinkPubsubCreateCommand(cctx *CommandContext, parent
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create a PubSub audit log sink"
 	if hasHighlighting {
-		s.Command.Long = "Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub create \\\n  --name my-sink \\\n  --service-account-id my-sa@project.iam.gserviceaccount.com \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\x1b[0m"
+		s.Command.Long = "Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub create \\\n  --name my-sink \\\n  --service-account-id my-sa \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\x1b[0m"
 	} else {
-		s.Command.Long = "Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub create \\\n  --name my-sink \\\n  --service-account-id my-sa@project.iam.gserviceaccount.com \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\n```"
+		s.Command.Long = "Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub create \\\n  --name my-sink \\\n  --service-account-id my-sa \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the audit log sink. Required.")
@@ -655,9 +655,9 @@ func NewCloudAccountAuditLogSinkPubsubUpdateCommand(cctx *CommandContext, parent
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a PubSub audit log sink"
 	if hasHighlighting {
-		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-id new-sa@project.iam.gserviceaccount.com \\\n  --topic-name new-topic \\\n  --gcp-project-id new-project\x1b[0m"
+		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-id new-sa \\\n  --topic-name new-topic \\\n  --gcp-project-id new-project\x1b[0m"
 	} else {
-		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-id new-sa@project.iam.gserviceaccount.com \\\n  --topic-name new-topic \\\n  --gcp-project-id new-project\n```"
+		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-id new-sa \\\n  --topic-name new-topic \\\n  --gcp-project-id new-project\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the audit log sink to update. Required.")
@@ -692,9 +692,9 @@ func NewCloudAccountAuditLogSinkPubsubValidateCommand(cctx *CommandContext, pare
 	s.Command.Use = "validate [flags]"
 	s.Command.Short = "Validate a PubSub audit log sink"
 	if hasHighlighting {
-		s.Command.Long = "Validates a PubSub audit log sink specification without creating or modifying any resources.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub validate \\\n  --name my-sink \\\n  --service-account-id my-sa@project.iam.gserviceaccount.com \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\x1b[0m"
+		s.Command.Long = "Validates a PubSub audit log sink specification without creating or modifying any resources.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub validate \\\n  --name my-sink \\\n  --service-account-id my-sa \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\x1b[0m"
 	} else {
-		s.Command.Long = "Validates a PubSub audit log sink specification without creating or modifying any resources.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub validate \\\n  --name my-sink \\\n  --service-account-id my-sa@project.iam.gserviceaccount.com \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\n```"
+		s.Command.Long = "Validates a PubSub audit log sink specification without creating or modifying any resources.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub validate \\\n  --name my-sink \\\n  --service-account-id my-sa \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The GCP service account ID that Temporal Cloud impersonates for writing records to the customer's PubSub topic. Required.")

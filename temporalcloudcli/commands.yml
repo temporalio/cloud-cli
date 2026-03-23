@@ -2422,7 +2422,7 @@ commands:
       ```
       temporal cloud account audit-log sink pubsub create \
         --name my-sink \
-        --service-account-id my-sa@project.iam.gserviceaccount.com \
+        --service-account-id my-sa \
         --topic-name my-topic \
         --gcp-project-id my-project
       ```
@@ -2463,7 +2463,7 @@ commands:
       ```
       temporal cloud account audit-log sink pubsub update \
         --name my-sink \
-        --service-account-id new-sa@project.iam.gserviceaccount.com \
+        --service-account-id new-sa \
         --topic-name new-topic \
         --gcp-project-id new-project
       ```
@@ -2502,7 +2502,7 @@ commands:
       ```
       temporal cloud account audit-log sink pubsub validate \
         --name my-sink \
-        --service-account-id my-sa@project.iam.gserviceaccount.com \
+        --service-account-id my-sa \
         --topic-name my-topic \
         --gcp-project-id my-project
       ```
