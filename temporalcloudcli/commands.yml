@@ -2457,16 +2457,6 @@ commands:
         type: bool
         description: |
           Enable the sink immediately after creation.
-    docs:
-      keywords:
-        - audit-log
-        - sink
-        - pubsub
-        - create
-        - account
-      description-header: Create PubSub Audit Log Sink
-      tags:
-        - account
 
   - name: cloud account audit-log sink pubsub update
     summary: Update a PubSub audit log sink
@@ -2506,16 +2496,6 @@ commands:
         type: string
         description: |
           The GCP project ID of the PubSub topic and service account.
-    docs:
-      keywords:
-        - audit-log
-        - sink
-        - pubsub
-        - update
-        - account
-      description-header: Update PubSub Audit Log Sink
-      tags:
-        - account
 
   - name: cloud account audit-log sink pubsub validate
     summary: Validate a PubSub audit log sink
@@ -2551,16 +2531,6 @@ commands:
         required: true
         description: |
           The GCP project ID of the PubSub topic and service account.
-    docs:
-      keywords:
-        - audit-log
-        - sink
-        - pubsub
-        - validate
-        - account
-      description-header: Validate PubSub Audit Log Sink
-      tags:
-        - account
 
   # API key commands
   - name: cloud apikey

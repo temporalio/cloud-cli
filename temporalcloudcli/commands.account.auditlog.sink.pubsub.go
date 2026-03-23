@@ -44,7 +44,7 @@ func CreateAuditLogSinkPubSub(ctx context.Context, params CreateAuditLogSinkPubS
 	createSink := wrapCreateOperation(
 		params.Cloud.CreateAccountAuditLogSink,
 		params.OperationHandler,
-		func(_ *cloudservice.CreateAccountAuditLogSinkResponse) string { return params.Name },
+		func(res *cloudservice.CreateAccountAuditLogSinkResponse) string { return params.Name },
 	)
 	return createSink(ctx, &cloudservice.CreateAccountAuditLogSinkRequest{
 		Spec:             spec,
@@ -125,8 +125,11 @@ func ValidateAuditLogSinkPubSub(ctx context.Context, params ValidateAuditLogSink
 	if _, err := params.Cloud.ValidateAccountAuditLogSink(ctx, &cloudservice.ValidateAccountAuditLogSinkRequest{Spec: spec}); err != nil {
 		return err
 	}
-	params.Printer.Println("Validation successful.")
-	return nil
+
+	return params.Printer.PrintStructured(
+		struct{ Status string }{Status: "valid"},
+		printer.StructuredOptions{},
+	)
 }
 
 func (c *CloudAccountAuditLogSinkPubsubValidateCommand) run(cctx *CommandContext, _ []string) error {

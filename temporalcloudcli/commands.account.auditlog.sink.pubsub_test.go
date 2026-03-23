@@ -3,9 +3,11 @@ package temporalcloudcli_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
@@ -326,10 +328,13 @@ func TestValidateAuditLogSinkPubSub_Success(t *testing.T) {
 		TopicName:        "my-topic",
 		GCPProjectID:     "my-project",
 		Cloud:            mockCloud,
-		Printer:          &printer.Printer{Output: &buf},
+		Printer:          &printer.Printer{Output: &buf, JSON: true},
 	})
 	require.NoError(t, err)
-	require.Contains(t, buf.String(), "Validation successful.")
+
+	var out struct{ Status string }
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	assert.Equal(t, struct{ Status string }{Status: "valid"}, out)
 }
 
 // TestValidateAuditLogSinkPubSub_APIError verifies that a ValidateAccountAuditLogSink error is returned.
