@@ -247,7 +247,6 @@ func (_c *MockNamespaceClient_AddRegion_Call) RunAndReturn(run func(context1 con
 	return _c
 }
 
-
 // CreateSearchAttribute provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) CreateSearchAttribute(context1 context.Context, createSearchAttributeParams namespace.CreateSearchAttributeParams) (*operation.AsyncOperation, error) {
 	ret := _mock.Called(context1, createSearchAttributeParams)
@@ -520,7 +519,6 @@ func (_c *MockNamespaceClient_DeleteCodec_Call) RunAndReturn(run func(context1 c
 	return _c
 }
 
-
 // DeleteTags provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) DeleteTags(context1 context.Context, deleteTagsParams namespace.DeleteTagsParams) (*operation.AsyncOperation, error) {
 	ret := _mock.Called(context1, deleteTagsParams)
@@ -588,7 +586,6 @@ func (_c *MockNamespaceClient_DeleteTags_Call) RunAndReturn(run func(context1 co
 	_c.Call.Return(run)
 	return _c
 }
-
 
 // Failover provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) Failover(context1 context.Context, failoverParams namespace.FailoverParams) (*operation.AsyncOperation, error) {
@@ -725,7 +722,6 @@ func (_c *MockNamespaceClient_GetCodecServer_Call) RunAndReturn(run func(context
 	_c.Call.Return(run)
 	return _c
 }
-
 
 // GetNamespace provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) GetNamespace(context1 context.Context, s string) (*namespace0.Namespace, error) {
@@ -930,7 +926,6 @@ func (_c *MockNamespaceClient_ListCertFilters_Call) RunAndReturn(run func(contex
 	_c.Call.Return(run)
 	return _c
 }
-
 
 // ListRegions provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) ListRegions(context1 context.Context, s string) ([]namespace.RegionStatus, error) {
@@ -1408,7 +1403,6 @@ func (_c *MockNamespaceClient_SetTag_Call) RunAndReturn(run func(context1 contex
 	return _c
 }
 
-
 // UpdateHA provides a mock function for the type MockNamespaceClient
 func (_mock *MockNamespaceClient) UpdateHA(context1 context.Context, updateHAParams namespace.UpdateHAParams) (*operation.AsyncOperation, error) {
 	ret := _mock.Called(context1, updateHAParams)
@@ -1544,7 +1538,6 @@ func (_c *MockNamespaceClient_UpdateNamespace_Call) RunAndReturn(run func(contex
 	_c.Call.Return(run)
 	return _c
 }
-
 
 // NewMockPoller creates a new instance of MockPoller. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
