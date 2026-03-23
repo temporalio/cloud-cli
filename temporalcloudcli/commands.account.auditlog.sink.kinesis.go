@@ -17,7 +17,6 @@ type (
 		RoleName         string
 		DestinationURI   string
 		Region           string
-		Enabled          bool
 		AsyncOperationID string
 
 		Cloud            cloudservice.CloudServiceClient
@@ -58,7 +57,7 @@ func CreateAuditLogSinkKinesis(ctx context.Context, params CreateAuditLogSinkKin
 				Region:         params.Region,
 			},
 		},
-		Enabled: params.Enabled,
+		Enabled: true,
 	}
 
 	if err := params.Prompter.PromptApply(&accountv1.AuditLogSinkSpec{}, spec, false); err != nil {
@@ -150,7 +149,6 @@ func (c *CloudAccountAuditLogSinkKinesisCreateCommand) run(cctx *CommandContext,
 		RoleName:         c.RoleName,
 		DestinationURI:   c.DestinationUri,
 		Region:           c.Region,
-		Enabled:          c.Enabled,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
 		Prompter:         newPrompter(cctx),

@@ -57,7 +57,6 @@ func TestCreateAuditLogSinkKinesis_Success(t *testing.T) {
 		RoleName:         "arn:aws:iam::123456789012:role/MyRole",
 		DestinationURI:   "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 		Region:           "us-east-1",
-		Enabled:          true,
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
 		OperationHandler: mockRunner,
@@ -81,6 +80,7 @@ func TestCreateAuditLogSinkKinesis_PromptDeclined(t *testing.T) {
 				Region:         "us-east-1",
 			},
 		},
+		Enabled: true,
 	}
 
 	mockPrompter.EXPECT().
@@ -115,6 +115,7 @@ func TestCreateAuditLogSinkKinesis_CreateError(t *testing.T) {
 				Region:         "us-east-1",
 			},
 		},
+		Enabled: true,
 	}
 
 	mockPrompter.EXPECT().

@@ -453,7 +453,6 @@ type CloudAccountAuditLogSinkKinesisCreateCommand struct {
 	RoleName       string
 	DestinationUri string
 	Region         string
-	Enabled        bool
 }
 
 func NewCloudAccountAuditLogSinkKinesisCreateCommand(cctx *CommandContext, parent *CloudAccountAuditLogSinkKinesisCommand) *CloudAccountAuditLogSinkKinesisCreateCommand {
@@ -462,7 +461,7 @@ func NewCloudAccountAuditLogSinkKinesisCreateCommand(cctx *CommandContext, paren
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create a Kinesis audit log sink"
-	s.Command.Long = "Create an account audit log sink that streams audit events to Amazon Kinesis.\n\nTemporal Cloud assumes the specified IAM role to write events to the Kinesis\nstream identified by the destination URI.\n\nExample:\n  temporal cloud account audit-log sink kinesis create \\\n    --name my-sink \\\n    --role-name arn:aws:iam::123456789012:role/MyRole \\\n    --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \\\n    --region us-east-1 \\\n    --enabled"
+	s.Command.Long = "Create an account audit log sink that streams audit events to Amazon Kinesis.\n\nTemporal Cloud assumes the specified IAM role to write events to the Kinesis\nstream identified by the destination URI.\n\nExample:\n  temporal cloud account audit-log sink kinesis create \\\n    --name my-sink \\\n    --role-name arn:aws:iam::123456789012:role/MyRole \\\n    --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \\\n    --region us-east-1"
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Name of the audit log sink. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
@@ -472,7 +471,6 @@ func NewCloudAccountAuditLogSinkKinesisCreateCommand(cctx *CommandContext, paren
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "destination-uri")
 	s.Command.Flags().StringVar(&s.Region, "region", "", "AWS region where the Kinesis stream is located (e.g. us-east-1). Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "region")
-	s.Command.Flags().BoolVar(&s.Enabled, "enabled", false, "Enable the sink immediately after creation. Defaults to false.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {

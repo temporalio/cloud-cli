@@ -2300,8 +2300,7 @@ commands:
           --name my-sink \
           --role-name arn:aws:iam::123456789012:role/MyRole \
           --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \
-          --region us-east-1 \
-          --enabled
+          --region us-east-1
     has-init: false
     option-sets:
       - client
@@ -2327,10 +2326,6 @@ commands:
         required: true
         description: |
           AWS region where the Kinesis stream is located (e.g. us-east-1).
-      - name: enabled
-        type: bool
-        description: |
-          Enable the sink immediately after creation. Defaults to false.
 
   - name: cloud account audit-log sink kinesis update
     summary: Update a Kinesis audit log sink
