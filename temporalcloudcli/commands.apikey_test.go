@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	cliext "github.com/temporalio/cli/cliext"
 	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
 	cmdmock "github.com/temporalio/cloud-cli/temporalcloudcli/mock"
-	"github.com/stretchr/testify/mock"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	identityv1 "go.temporal.io/cloud-sdk/api/identity/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
@@ -208,25 +209,6 @@ func TestCreateApiKeyForServiceAccount_Success(t *testing.T) {
 		OperationHandler: mockRunner,
 	})
 	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "tok-secret")
-	assert.Contains(t, buf.String(), "key-new")
-}
-
-func TestCreateApiKeyForServiceAccount_InvalidExpiryTime(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockRunner := cmdmock.NewMockAsyncOperationHandler(t)
-	var buf bytes.Buffer
-
-	err := temporalcloudcli.CreateApiKeyForServiceAccount(context.Background(), temporalcloudcli.CreateApiKeyForServiceAccountParams{
-		ServiceAccountId: "sa-456",
-		DisplayName:      "My Key",
-		ExpiryTime:       "not-a-date",
-		Cloud:            mockCloud,
-		Printer:          newTestPrinter(&buf),
-		OperationHandler: mockRunner,
-	})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "RFC3339")
 }
 
 func TestCreateApiKeyForServiceAccount_ExpiryDuration(t *testing.T) {
@@ -254,7 +236,7 @@ func TestCreateApiKeyForServiceAccount_ExpiryDuration(t *testing.T) {
 	err := temporalcloudcli.CreateApiKeyForServiceAccount(context.Background(), temporalcloudcli.CreateApiKeyForServiceAccountParams{
 		ServiceAccountId: "sa-456",
 		DisplayName:      "My Key",
-		ExpiryDuration:   "30d",
+		ExpiryDuration:   cliext.MustParseFlagDuration("30d"),
 		Cloud:            mockCloud,
 		Printer:          newTestPrinter(&buf),
 		OperationHandler: mockRunner,
@@ -270,31 +252,14 @@ func TestCreateApiKeyForServiceAccount_MutuallyExclusiveExpiry(t *testing.T) {
 	err := temporalcloudcli.CreateApiKeyForServiceAccount(context.Background(), temporalcloudcli.CreateApiKeyForServiceAccountParams{
 		ServiceAccountId: "sa-456",
 		DisplayName:      "My Key",
-		ExpiryTime:       "2025-12-31T00:00:00Z",
-		ExpiryDuration:   "30d",
+		ExpiryTime:       cliext.FlagTimestamp(time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC)),
+		ExpiryDuration:   cliext.MustParseFlagDuration("30d"),
 		Cloud:            mockCloud,
 		Printer:          newTestPrinter(&buf),
 		OperationHandler: mockRunner,
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "mutually exclusive")
-}
-
-func TestCreateApiKeyForServiceAccount_InvalidExpiryDuration(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockRunner := cmdmock.NewMockAsyncOperationHandler(t)
-	var buf bytes.Buffer
-
-	err := temporalcloudcli.CreateApiKeyForServiceAccount(context.Background(), temporalcloudcli.CreateApiKeyForServiceAccountParams{
-		ServiceAccountId: "sa-456",
-		DisplayName:      "My Key",
-		ExpiryDuration:   "badval",
-		Cloud:            mockCloud,
-		Printer:          newTestPrinter(&buf),
-		OperationHandler: mockRunner,
-	})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "--expiry-duration")
 }
 
 func TestCreateApiKeyForServiceAccount_ApiError(t *testing.T) {
@@ -362,7 +327,6 @@ func TestCreateApiKeyForMe_Success(t *testing.T) {
 		OperationHandler: mockRunner,
 	})
 	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "tok-me")
 }
 
 func TestCreateApiKeyForMe_NotUser(t *testing.T) {

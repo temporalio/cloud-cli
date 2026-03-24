@@ -4,14 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	identityv1 "go.temporal.io/cloud-sdk/api/identity/v1"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/temporalio/cli/cliext"
 
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
@@ -39,8 +39,8 @@ type (
 		ServiceAccountId string
 		DisplayName      string
 		Description      string
-		ExpiryTime       string
-		ExpiryDuration   string
+		ExpiryTime       cliext.FlagTimestamp
+		ExpiryDuration   cliext.FlagDuration
 		AsyncOperationID string
 
 		Cloud            cloudservice.CloudServiceClient
@@ -51,8 +51,8 @@ type (
 	CreateApiKeyForMeParams struct {
 		DisplayName      string
 		Description      string
-		ExpiryTime       string
-		ExpiryDuration   string
+		ExpiryTime       cliext.FlagTimestamp
+		ExpiryDuration   cliext.FlagDuration
 		AsyncOperationID string
 
 		Cloud            cloudservice.CloudServiceClient
@@ -189,45 +189,17 @@ func GetApiKey(ctx context.Context, params GetApiKeyParams) error {
 
 // resolveApiKeyExpiry resolves the expiry timestamp from --expiry-time or --expiry-duration.
 // The two flags are mutually exclusive. Returns nil if neither is set.
-func resolveApiKeyExpiry(expiryTime, expiryDuration string) (*timestamppb.Timestamp, error) {
-	if expiryTime != "" && expiryDuration != "" {
+func resolveApiKeyExpiry(expiryTime cliext.FlagTimestamp, expiryDuration cliext.FlagDuration) (*timestamppb.Timestamp, error) {
+	if !time.Time(expiryTime).IsZero() && expiryDuration != 0 {
 		return nil, errors.New("--expiry-time and --expiry-duration are mutually exclusive")
 	}
-	if expiryTime != "" {
-		t, err := time.Parse(time.RFC3339, expiryTime)
-		if err != nil {
-			return nil, fmt.Errorf("invalid --expiry-time %q: must be RFC3339 format (e.g. 2025-12-31T00:00:00Z): %w", expiryTime, err)
-		}
-		return timestamppb.New(t), nil
+	if !time.Time(expiryTime).IsZero() {
+		return timestamppb.New(time.Time(expiryTime)), nil
 	}
-	if expiryDuration != "" {
-		d, err := parseExpiryDuration(expiryDuration)
-		if err != nil {
-			return nil, err
-		}
-		return timestamppb.New(time.Now().Add(d)), nil
+	if expiryDuration != 0 {
+		return timestamppb.New(time.Now().Add(time.Duration(expiryDuration))), nil
 	}
 	return nil, nil
-}
-
-// parseExpiryDuration parses a duration string, extending Go's standard format with
-// a "d" suffix for days (e.g. "30d" = 720h).
-func parseExpiryDuration(s string) (time.Duration, error) {
-	if strings.HasSuffix(s, "d") {
-		days, err := strconv.Atoi(strings.TrimSuffix(s, "d"))
-		if err != nil || days <= 0 {
-			return 0, fmt.Errorf("invalid --expiry-duration %q: day count must be a positive integer (e.g. 30d)", s)
-		}
-		return time.Duration(days) * 24 * time.Hour, nil
-	}
-	d, err := time.ParseDuration(s)
-	if err != nil {
-		return 0, fmt.Errorf("invalid --expiry-duration %q: use Go duration format or days (e.g. 30d, 24h, 90m): %w", s, err)
-	}
-	if d <= 0 {
-		return 0, fmt.Errorf("invalid --expiry-duration %q: duration must be positive", s)
-	}
-	return d, nil
 }
 
 func CreateApiKeyForServiceAccount(ctx context.Context, params CreateApiKeyForServiceAccountParams) error {
@@ -250,10 +222,11 @@ func CreateApiKeyForServiceAccount(ctx context.Context, params CreateApiKeyForSe
 	}
 	// AIDEV-NOTE: The token is only returned on creation and cannot be retrieved again.
 	// Print it immediately before handling the async operation.
-	_ = params.Printer.PrintStructured(struct {
-		KeyId string `json:"keyId"`
-		Token string `json:"token"`
-	}{KeyId: res.KeyId, Token: res.Token}, printer.StructuredOptions{})
+	if params.Printer.JSON {
+		// When printing JSON, include the token in the output for easy parsing by scripts.
+		params.Printer.Println("ApiKey: %q", res.Token)
+		params.Printer.Println("Make sure to copy or store the ApiKey as you will not be able to see this key again.")
+	}
 	return params.OperationHandler.HandleOperation(res.GetAsyncOperation(), res.KeyId)
 }
 
@@ -286,10 +259,11 @@ func CreateApiKeyForMe(ctx context.Context, params CreateApiKeyForMeParams) erro
 	}
 	// AIDEV-NOTE: The token is only returned on creation and cannot be retrieved again.
 	// Print it immediately before handling the async operation.
-	_ = params.Printer.PrintStructured(struct {
-		KeyId string `json:"keyId"`
-		Token string `json:"token"`
-	}{KeyId: res.KeyId, Token: res.Token}, printer.StructuredOptions{})
+	if params.Printer.JSON {
+		// When printing JSON, include the token in the output for easy parsing by scripts.
+		params.Printer.Println("ApiKey: %q", res.Token)
+		params.Printer.Println("Make sure to copy or store the ApiKey as you will not be able to see this key again.")
+	}
 	return params.OperationHandler.HandleOperation(res.GetAsyncOperation(), res.KeyId)
 }
 

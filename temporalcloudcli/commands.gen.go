@@ -266,8 +266,8 @@ type CloudApikeyCreateForMeCommand struct {
 	AsyncOperationOptions
 	DisplayName    string
 	Description    string
-	ExpiryTime     string
-	ExpiryDuration string
+	ExpiryTime     cliext.FlagTimestamp
+	ExpiryDuration cliext.FlagDuration
 }
 
 func NewCloudApikeyCreateForMeCommand(cctx *CommandContext, parent *CloudApikeyCommand) *CloudApikeyCreateForMeCommand {
@@ -285,8 +285,9 @@ func NewCloudApikeyCreateForMeCommand(cctx *CommandContext, parent *CloudApikeyC
 	s.Command.Flags().StringVar(&s.DisplayName, "display-name", "", "A human-readable display name for the API key. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "display-name")
 	s.Command.Flags().StringVar(&s.Description, "description", "", "An optional description for the API key.")
-	s.Command.Flags().StringVar(&s.ExpiryTime, "expiry-time", "", "Expiry time for the API key in RFC3339 format (e.g. 2025-12-31T00:00:00Z). Mutually exclusive with --expiry-duration.")
-	s.Command.Flags().StringVar(&s.ExpiryDuration, "expiry-duration", "", "Expiry duration relative to now (e.g. 30d, 24h, 90m). Supports days (d), hours (h), minutes (m), and seconds (s). Mutually exclusive with --expiry-time.")
+	s.Command.Flags().Var(&s.ExpiryTime, "expiry-time", "Expiry time for the API key in RFC3339 format (e.g. 2025-12-31T00:00:00Z). Mutually exclusive with --expiry-duration.")
+	s.ExpiryDuration = 0
+	s.Command.Flags().Var(&s.ExpiryDuration, "expiry-duration", "Expiry duration relative to now (e.g. 30d, 24h, 90m). Supports days (d), hours (h), minutes (m), and seconds (s). Mutually exclusive with --expiry-time.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -305,8 +306,8 @@ type CloudApikeyCreateForServiceAccountCommand struct {
 	ServiceAccountId string
 	DisplayName      string
 	Description      string
-	ExpiryTime       string
-	ExpiryDuration   string
+	ExpiryTime       cliext.FlagTimestamp
+	ExpiryDuration   cliext.FlagDuration
 }
 
 func NewCloudApikeyCreateForServiceAccountCommand(cctx *CommandContext, parent *CloudApikeyCommand) *CloudApikeyCreateForServiceAccountCommand {
@@ -326,8 +327,9 @@ func NewCloudApikeyCreateForServiceAccountCommand(cctx *CommandContext, parent *
 	s.Command.Flags().StringVar(&s.DisplayName, "display-name", "", "A human-readable display name for the API key. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "display-name")
 	s.Command.Flags().StringVar(&s.Description, "description", "", "An optional description for the API key.")
-	s.Command.Flags().StringVar(&s.ExpiryTime, "expiry-time", "", "Expiry time for the API key in RFC3339 format (e.g. 2025-12-31T00:00:00Z). Mutually exclusive with --expiry-duration.")
-	s.Command.Flags().StringVar(&s.ExpiryDuration, "expiry-duration", "", "Expiry duration relative to now (e.g. 30d, 24h, 90m). Supports days (d), hours (h), minutes (m), and seconds (s). Mutually exclusive with --expiry-time.")
+	s.Command.Flags().Var(&s.ExpiryTime, "expiry-time", "Expiry time for the API key in RFC3339 format (e.g. 2025-12-31T00:00:00Z). Mutually exclusive with --expiry-duration.")
+	s.ExpiryDuration = 0
+	s.Command.Flags().Var(&s.ExpiryDuration, "expiry-duration", "Expiry duration relative to now (e.g. 30d, 24h, 90m). Supports days (d), hours (h), minutes (m), and seconds (s). Mutually exclusive with --expiry-time.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {

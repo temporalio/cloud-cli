@@ -2048,12 +2048,12 @@ commands:
         description: |
           An optional description for the API key.
       - name: expiry-time
-        type: string
+        type: timestamp
         description: |
           Expiry time for the API key in RFC3339 format (e.g. 2025-12-31T00:00:00Z).
           Mutually exclusive with --expiry-duration.
       - name: expiry-duration
-        type: string
+        type: duration
         description: |
           Expiry duration relative to now (e.g. 30d, 24h, 90m).
           Supports days (d), hours (h), minutes (m), and seconds (s).
@@ -2085,12 +2085,12 @@ commands:
         description: |
           An optional description for the API key.
       - name: expiry-time
-        type: string
+        type: timestamp
         description: |
           Expiry time for the API key in RFC3339 format (e.g. 2025-12-31T00:00:00Z).
           Mutually exclusive with --expiry-duration.
       - name: expiry-duration
-        type: string
+        type: duration
         description: |
           Expiry duration relative to now (e.g. 30d, 24h, 90m).
           Supports days (d), hours (h), minutes (m), and seconds (s).
