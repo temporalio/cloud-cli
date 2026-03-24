@@ -11,6 +11,8 @@ Clone the repo, then run the following command from the root of the project to i
 $ go install ./cmd/temporal-cloud
 ```
 
+You should now be able to run cloud extension commands by running `temporal cloud`. 
+
 ## Testing
 In order to run the tests, you need a temporal cloud api key. Create one in the [cloud dashboard](https://cloud.temporal.io/) and place it in a .env file at the root directory of the repo as follows:
 ```
