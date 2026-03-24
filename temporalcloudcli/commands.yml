@@ -1941,6 +1941,292 @@ commands:
         description: |
           Filter for logs before this UTC time (RFC3339 format, e.g. 2024-02-01T00:00:00Z). Defaults to current time.
 
+
+  # API key commands
+  - name: cloud apikey
+    summary: Manage Temporal Cloud API keys
+    description: |
+      Commands for creating, listing, and managing Temporal Cloud API keys.
+
+      API keys authenticate requests to the Temporal Cloud API.
+    has-init: false
+    docs:
+      keywords:
+        - apikey
+        - api-key
+        - management
+      description-header: API Key Management Commands
+      tags:
+        - apikeys
+
+  - name: cloud apikey list
+    summary: List API keys
+    description: |
+      List API keys. Optionally filter by user ID, user email, or service account ID.
+      At most one filter may be specified.
+
+      Example:
+
+      ```
+      cloud apikey list
+      cloud apikey list --user-id my-user-id
+      cloud apikey list --service-account-id my-sa-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: user-id
+        type: string
+        description: |
+          Filter API keys by user ID. Mutually exclusive with --user-email and --service-account-id.
+      - name: user-email
+        type: string
+        description: |
+          Filter API keys by user email. Mutually exclusive with --user-id and --service-account-id.
+      - name: service-account-id
+        type: string
+        description: |
+          Filter API keys by service account ID. Mutually exclusive with --user-id and --user-email.
+      - name: page-size
+        type: int
+        description: |
+          Number of API keys to return per page.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results.
+
+  - name: cloud apikey get
+    summary: Get API key details
+    description: |
+      Retrieve the configuration and status of a Temporal Cloud API key.
+
+      Example:
+
+      ```
+      cloud apikey get --key-id my-key-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: key-id
+        type: string
+        required: true
+        description: |
+          The ID of the API key to retrieve.
+
+  - name: cloud apikey create-for-service-account
+    summary: Create an API key for a service account
+    description: |
+      Create a new API key owned by the specified service account.
+      The token is printed once on creation and cannot be retrieved again.
+
+      Example:
+
+      ```
+      cloud apikey create-for-service-account --service-account-id my-sa-id --display-name "My Key"
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account to create the API key for.
+      - name: display-name
+        type: string
+        required: true
+        description: |
+          A human-readable display name for the API key.
+      - name: description
+        type: string
+        description: |
+          An optional description for the API key.
+      - name: expiry-time
+        type: timestamp
+        description: |
+          Expiry time for the API key in RFC3339 format (e.g. 2025-12-31T00:00:00Z).
+          Mutually exclusive with --expiry-duration.
+      - name: expiry-duration
+        type: duration
+        description: |
+          Expiry duration relative to now (e.g. 30d, 24h, 90m).
+          Supports days (d), hours (h), minutes (m), and seconds (s).
+          Mutually exclusive with --expiry-time.
+
+  - name: cloud apikey create-for-me
+    summary: Create an API key for the current user
+    description: |
+      Create a new API key owned by the currently authenticated user.
+      The token is printed once on creation and cannot be retrieved again.
+
+      Example:
+
+      ```
+      cloud apikey create-for-me --display-name "My Key"
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: display-name
+        type: string
+        required: true
+        description: |
+          A human-readable display name for the API key.
+      - name: description
+        type: string
+        description: |
+          An optional description for the API key.
+      - name: expiry-time
+        type: timestamp
+        description: |
+          Expiry time for the API key in RFC3339 format (e.g. 2025-12-31T00:00:00Z).
+          Mutually exclusive with --expiry-duration.
+      - name: expiry-duration
+        type: duration
+        description: |
+          Expiry duration relative to now (e.g. 30d, 24h, 90m).
+          Supports days (d), hours (h), minutes (m), and seconds (s).
+          Mutually exclusive with --expiry-time.
+
+  - name: cloud apikey delete
+    summary: Delete an API key
+    description: |
+      Delete a Temporal Cloud API key. This action is irreversible.
+
+      Example:
+
+      ```
+      cloud apikey delete --key-id my-key-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: key-id
+        type: string
+        required: true
+        description: |
+          The ID of the API key to delete.
+
+  - name: cloud apikey update
+    summary: Update an API key
+    description: |
+      Update an API key's display name, description, or disabled status.
+      Only flags that are explicitly provided are changed.
+
+      Example:
+
+      ```
+      cloud apikey update --key-id my-key-id --display-name "New Name"
+      cloud apikey update --key-id my-key-id --disabled=true
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: key-id
+        type: string
+        required: true
+        description: |
+          The ID of the API key to update.
+      - name: display-name
+        type: string
+        description: |
+          New display name for the API key.
+      - name: description
+        type: string
+        description: |
+          New description for the API key.
+      - name: disabled
+        type: bool
+        description: |
+          Set to true to disable the API key, or false to enable it.
+
+  - name: cloud apikey edit
+    summary: Interactively edit an API key
+    description: |
+      Open an API key configuration in your default editor for interactive
+      modification. After saving and closing the editor, the changes are
+      applied to Temporal Cloud.
+
+      The editor is determined by the EDITOR environment variable, falling
+      back to 'vi' if not set.
+
+      Example:
+
+      ```
+      cloud apikey edit --key-id my-key-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+      - async-operation
+      - resource-version
+    options:
+      - name: key-id
+        type: string
+        required: true
+        description: |
+          The ID of the API key to edit.
+
+  - name: cloud apikey disable
+    summary: Disable an API key
+    description: |
+      Disable a Temporal Cloud API key. Disabled keys cannot be used for authentication.
+
+      Example:
+
+      ```
+      cloud apikey disable --key-id my-key-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: key-id
+        type: string
+        required: true
+        description: |
+          The ID of the API key to disable.
+
+  - name: cloud apikey enable
+    summary: Enable an API key
+    description: |
+      Enable a previously disabled Temporal Cloud API key.
+
+      Example:
+
+      ```
+      cloud apikey enable --key-id my-key-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: key-id
+        type: string
+        required: true
+        description: |
+          The ID of the API key to enable.
+
+
 option-sets:
   - name: client
     options:

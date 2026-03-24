@@ -155,6 +155,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudAccountCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudApikeyCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudConnectivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLoginCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLogoutCommand(cctx, &s).Command)
@@ -226,6 +227,356 @@ func NewCloudAccountAuditLogGetCommand(cctx *CommandContext, parent *CloudAccoun
 	s.Command.Flags().Var(&s.StartTime, "start-time", "Filter for logs at or after this UTC time (RFC3339 format, e.g. 2024-01-01T00:00:00Z). Defaults to 30 days ago.")
 	s.Command.Flags().Var(&s.EndTime, "end-time", "Filter for logs before this UTC time (RFC3339 format, e.g. 2024-02-01T00:00:00Z). Defaults to current time.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudApikeyCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+}
+
+func NewCloudApikeyCommand(cctx *CommandContext, parent *CloudCommand) *CloudApikeyCommand {
+	var s CloudApikeyCommand
+	s.Parent = parent
+	s.Command.Use = "apikey"
+	s.Command.Short = "Manage Temporal Cloud API keys"
+	s.Command.Long = "Commands for creating, listing, and managing Temporal Cloud API keys.\n\nAPI keys authenticate requests to the Temporal Cloud API."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudApikeyCreateForMeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudApikeyCreateForServiceAccountCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudApikeyDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudApikeyDisableCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudApikeyEditCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudApikeyEnableCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudApikeyGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudApikeyListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudApikeyUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudApikeyCreateForMeCommand struct {
+	Parent  *CloudApikeyCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	DisplayName    string
+	Description    string
+	ExpiryTime     cliext.FlagTimestamp
+	ExpiryDuration cliext.FlagDuration
+}
+
+func NewCloudApikeyCreateForMeCommand(cctx *CommandContext, parent *CloudApikeyCommand) *CloudApikeyCreateForMeCommand {
+	var s CloudApikeyCreateForMeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create-for-me [flags]"
+	s.Command.Short = "Create an API key for the current user"
+	if hasHighlighting {
+		s.Command.Long = "Create a new API key owned by the currently authenticated user.\nThe token is printed once on creation and cannot be retrieved again.\n\nExample:\n\n\x1b[1mcloud apikey create-for-me --display-name \"My Key\"\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new API key owned by the currently authenticated user.\nThe token is printed once on creation and cannot be retrieved again.\n\nExample:\n\n```\ncloud apikey create-for-me --display-name \"My Key\"\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.DisplayName, "display-name", "", "A human-readable display name for the API key. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "display-name")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "An optional description for the API key.")
+	s.Command.Flags().Var(&s.ExpiryTime, "expiry-time", "Expiry time for the API key in RFC3339 format (e.g. 2025-12-31T00:00:00Z). Mutually exclusive with --expiry-duration.")
+	s.ExpiryDuration = 0
+	s.Command.Flags().Var(&s.ExpiryDuration, "expiry-duration", "Expiry duration relative to now (e.g. 30d, 24h, 90m). Supports days (d), hours (h), minutes (m), and seconds (s). Mutually exclusive with --expiry-time.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudApikeyCreateForServiceAccountCommand struct {
+	Parent  *CloudApikeyCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ServiceAccountId string
+	DisplayName      string
+	Description      string
+	ExpiryTime       cliext.FlagTimestamp
+	ExpiryDuration   cliext.FlagDuration
+}
+
+func NewCloudApikeyCreateForServiceAccountCommand(cctx *CommandContext, parent *CloudApikeyCommand) *CloudApikeyCreateForServiceAccountCommand {
+	var s CloudApikeyCreateForServiceAccountCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create-for-service-account [flags]"
+	s.Command.Short = "Create an API key for a service account"
+	if hasHighlighting {
+		s.Command.Long = "Create a new API key owned by the specified service account.\nThe token is printed once on creation and cannot be retrieved again.\n\nExample:\n\n\x1b[1mcloud apikey create-for-service-account --service-account-id my-sa-id --display-name \"My Key\"\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new API key owned by the specified service account.\nThe token is printed once on creation and cannot be retrieved again.\n\nExample:\n\n```\ncloud apikey create-for-service-account --service-account-id my-sa-id --display-name \"My Key\"\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The ID of the service account to create the API key for. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-id")
+	s.Command.Flags().StringVar(&s.DisplayName, "display-name", "", "A human-readable display name for the API key. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "display-name")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "An optional description for the API key.")
+	s.Command.Flags().Var(&s.ExpiryTime, "expiry-time", "Expiry time for the API key in RFC3339 format (e.g. 2025-12-31T00:00:00Z). Mutually exclusive with --expiry-duration.")
+	s.ExpiryDuration = 0
+	s.Command.Flags().Var(&s.ExpiryDuration, "expiry-duration", "Expiry duration relative to now (e.g. 30d, 24h, 90m). Supports days (d), hours (h), minutes (m), and seconds (s). Mutually exclusive with --expiry-time.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudApikeyDeleteCommand struct {
+	Parent  *CloudApikeyCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	KeyId string
+}
+
+func NewCloudApikeyDeleteCommand(cctx *CommandContext, parent *CloudApikeyCommand) *CloudApikeyDeleteCommand {
+	var s CloudApikeyDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete an API key"
+	if hasHighlighting {
+		s.Command.Long = "Delete a Temporal Cloud API key. This action is irreversible.\n\nExample:\n\n\x1b[1mcloud apikey delete --key-id my-key-id\x1b[0m"
+	} else {
+		s.Command.Long = "Delete a Temporal Cloud API key. This action is irreversible.\n\nExample:\n\n```\ncloud apikey delete --key-id my-key-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.KeyId, "key-id", "", "The ID of the API key to delete. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "key-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudApikeyDisableCommand struct {
+	Parent  *CloudApikeyCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	KeyId string
+}
+
+func NewCloudApikeyDisableCommand(cctx *CommandContext, parent *CloudApikeyCommand) *CloudApikeyDisableCommand {
+	var s CloudApikeyDisableCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "disable [flags]"
+	s.Command.Short = "Disable an API key"
+	if hasHighlighting {
+		s.Command.Long = "Disable a Temporal Cloud API key. Disabled keys cannot be used for authentication.\n\nExample:\n\n\x1b[1mcloud apikey disable --key-id my-key-id\x1b[0m"
+	} else {
+		s.Command.Long = "Disable a Temporal Cloud API key. Disabled keys cannot be used for authentication.\n\nExample:\n\n```\ncloud apikey disable --key-id my-key-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.KeyId, "key-id", "", "The ID of the API key to disable. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "key-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudApikeyEditCommand struct {
+	Parent  *CloudApikeyCommand
+	Command cobra.Command
+	ClientOptions
+	DiffOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	KeyId string
+}
+
+func NewCloudApikeyEditCommand(cctx *CommandContext, parent *CloudApikeyCommand) *CloudApikeyEditCommand {
+	var s CloudApikeyEditCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "edit [flags]"
+	s.Command.Short = "Interactively edit an API key"
+	if hasHighlighting {
+		s.Command.Long = "Open an API key configuration in your default editor for interactive\nmodification. After saving and closing the editor, the changes are\napplied to Temporal Cloud.\n\nThe editor is determined by the EDITOR environment variable, falling\nback to 'vi' if not set.\n\nExample:\n\n\x1b[1mcloud apikey edit --key-id my-key-id\x1b[0m"
+	} else {
+		s.Command.Long = "Open an API key configuration in your default editor for interactive\nmodification. After saving and closing the editor, the changes are\napplied to Temporal Cloud.\n\nThe editor is determined by the EDITOR environment variable, falling\nback to 'vi' if not set.\n\nExample:\n\n```\ncloud apikey edit --key-id my-key-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.KeyId, "key-id", "", "The ID of the API key to edit. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "key-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudApikeyEnableCommand struct {
+	Parent  *CloudApikeyCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	KeyId string
+}
+
+func NewCloudApikeyEnableCommand(cctx *CommandContext, parent *CloudApikeyCommand) *CloudApikeyEnableCommand {
+	var s CloudApikeyEnableCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "enable [flags]"
+	s.Command.Short = "Enable an API key"
+	if hasHighlighting {
+		s.Command.Long = "Enable a previously disabled Temporal Cloud API key.\n\nExample:\n\n\x1b[1mcloud apikey enable --key-id my-key-id\x1b[0m"
+	} else {
+		s.Command.Long = "Enable a previously disabled Temporal Cloud API key.\n\nExample:\n\n```\ncloud apikey enable --key-id my-key-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.KeyId, "key-id", "", "The ID of the API key to enable. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "key-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudApikeyGetCommand struct {
+	Parent  *CloudApikeyCommand
+	Command cobra.Command
+	ClientOptions
+	KeyId string
+}
+
+func NewCloudApikeyGetCommand(cctx *CommandContext, parent *CloudApikeyCommand) *CloudApikeyGetCommand {
+	var s CloudApikeyGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get API key details"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the configuration and status of a Temporal Cloud API key.\n\nExample:\n\n\x1b[1mcloud apikey get --key-id my-key-id\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the configuration and status of a Temporal Cloud API key.\n\nExample:\n\n```\ncloud apikey get --key-id my-key-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.KeyId, "key-id", "", "The ID of the API key to retrieve. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "key-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudApikeyListCommand struct {
+	Parent  *CloudApikeyCommand
+	Command cobra.Command
+	ClientOptions
+	UserId           string
+	UserEmail        string
+	ServiceAccountId string
+	PageSize         int
+	PageToken        string
+}
+
+func NewCloudApikeyListCommand(cctx *CommandContext, parent *CloudApikeyCommand) *CloudApikeyListCommand {
+	var s CloudApikeyListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List API keys"
+	if hasHighlighting {
+		s.Command.Long = "List API keys. Optionally filter by user ID, user email, or service account ID.\nAt most one filter may be specified.\n\nExample:\n\n\x1b[1mcloud apikey list\ncloud apikey list --user-id my-user-id\ncloud apikey list --service-account-id my-sa-id\x1b[0m"
+	} else {
+		s.Command.Long = "List API keys. Optionally filter by user ID, user email, or service account ID.\nAt most one filter may be specified.\n\nExample:\n\n```\ncloud apikey list\ncloud apikey list --user-id my-user-id\ncloud apikey list --service-account-id my-sa-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.UserId, "user-id", "", "Filter API keys by user ID. Mutually exclusive with --user-email and --service-account-id.")
+	s.Command.Flags().StringVar(&s.UserEmail, "user-email", "", "Filter API keys by user email. Mutually exclusive with --user-id and --service-account-id.")
+	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "Filter API keys by service account ID. Mutually exclusive with --user-id and --user-email.")
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of API keys to return per page.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudApikeyUpdateCommand struct {
+	Parent  *CloudApikeyCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	KeyId       string
+	DisplayName string
+	Description string
+	Disabled    bool
+}
+
+func NewCloudApikeyUpdateCommand(cctx *CommandContext, parent *CloudApikeyCommand) *CloudApikeyUpdateCommand {
+	var s CloudApikeyUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update an API key"
+	if hasHighlighting {
+		s.Command.Long = "Update an API key's display name, description, or disabled status.\nOnly flags that are explicitly provided are changed.\n\nExample:\n\n\x1b[1mcloud apikey update --key-id my-key-id --display-name \"New Name\"\ncloud apikey update --key-id my-key-id --disabled=true\x1b[0m"
+	} else {
+		s.Command.Long = "Update an API key's display name, description, or disabled status.\nOnly flags that are explicitly provided are changed.\n\nExample:\n\n```\ncloud apikey update --key-id my-key-id --display-name \"New Name\"\ncloud apikey update --key-id my-key-id --disabled=true\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.KeyId, "key-id", "", "The ID of the API key to update. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "key-id")
+	s.Command.Flags().StringVar(&s.DisplayName, "display-name", "", "New display name for the API key.")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "New description for the API key.")
+	s.Command.Flags().BoolVar(&s.Disabled, "disabled", false, "Set to true to disable the API key, or false to enable it.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
