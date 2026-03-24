@@ -186,7 +186,7 @@ func ListExportSinks(ctx context.Context, params ListExportSinksParams) error {
 			Sinks []*namespacev1.ExportSink
 		}{Sinks: sinks},
 		printer.PrintResourceOptions{
-			Fields:     []string{"Name", "State"},
+			Fields:     []string{"Name", "State", "Health"},
 			SpecFields: []string{"Enabled"},
 		},
 		printer.TableOptions{},
