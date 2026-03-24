@@ -5,7 +5,12 @@ CLI Plugin for Temporal Cloud
 
 ### Using `go install`
 
-Clone the repo, then run the following command from the root of the project to install the cloud extension:
+#### Dependencies
+
+- [`temporal` CLI](https://temporal.io/setup/install-temporal-cli) 
+- [go][https://go.dev/doc/install] (check [go.mod](./go.mod) for the version)
+
+Clone the repo, then run the following command from the root of the project to build and install the cloud extension:
 
 ```sh
 $ go install ./cmd/temporal-cloud
