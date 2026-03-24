@@ -776,6 +776,227 @@ commands:
         description: |
           The new name for the search attribute.
 
+  # Namespace export commands
+  - name: cloud namespace export
+    summary: Manage workflow history export sinks for namespaces
+    description: |
+      Commands for managing workflow history export sinks for Temporal Cloud namespaces.
+
+      Export sinks define destinations (S3 or GCS) to which workflow history is exported.
+    has-init: false
+  - name: cloud namespace export get
+    summary: Get a workflow history export sink
+    description: |
+      Retrieve the configuration and status of a workflow history export sink for a
+      Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace export get --namespace my-namespace.my-account --sink-name my-sink
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - export-sink
+  - name: cloud namespace export list
+    summary: List workflow history export sinks for a namespace
+    description: |
+      List all workflow history export sinks configured for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace export list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace export delete
+    summary: Delete a workflow history export sink
+    description: |
+      Delete a workflow history export sink from a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace export delete --namespace my-namespace.my-account --sink-name my-sink
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+      - export-sink
+  - name: cloud namespace export enable
+    summary: Enable a workflow history export sink
+    description: |
+      Enable a previously disabled workflow history export sink for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      cloud namespace export enable --namespace my-namespace.my-account --sink-name my-sink
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+      - export-sink
+  - name: cloud namespace export disable
+    summary: Disable a workflow history export sink
+    description: |
+      Disable a workflow history export sink for a Temporal Cloud namespace.
+      The sink configuration is preserved and can be re-enabled later.
+
+      Example:
+
+      ```
+      cloud namespace export disable --namespace my-namespace.my-account --sink-name my-sink
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+      - export-sink
+  - name: cloud namespace export s3
+    summary: Manage S3 workflow history export sinks
+    description: |
+      Commands for managing S3 workflow history export sinks for Temporal Cloud namespaces.
+    has-init: false
+  - name: cloud namespace export s3 create
+    summary: Create an S3 workflow history export sink
+    description: |
+      Create a new S3 workflow history export sink for a Temporal Cloud namespace.
+      The sink is created in the enabled state.
+
+      Example:
+
+      ```
+      cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \
+        --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
+        --region us-east-1 --aws-account-id 123456789012
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - export-sink
+      - export-s3
+  - name: cloud namespace export s3 update
+    summary: Update an S3 workflow history export sink
+    description: |
+      Update the configuration of an existing S3 workflow history export sink.
+      The enabled/disabled state is preserved.
+
+      Example:
+
+      ```
+      cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \
+        --role-name arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket \
+        --region us-east-1 --aws-account-id 123456789012
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+      - export-sink
+      - export-s3
+  - name: cloud namespace export s3 validate
+    summary: Validate an S3 workflow history export sink configuration
+    description: |
+      Validate an S3 workflow history export sink configuration without creating or updating it.
+      A successful response means the configuration is valid.
+
+      Example:
+
+      ```
+      cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \
+        --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
+        --region us-east-1 --aws-account-id 123456789012
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - export-sink
+      - export-s3
+  - name: cloud namespace export gcs
+    summary: Manage GCS workflow history export sinks
+    description: |
+      Commands for managing GCS workflow history export sinks for Temporal Cloud namespaces.
+    has-init: false
+  - name: cloud namespace export gcs create
+    summary: Create a GCS workflow history export sink
+    description: |
+      Create a new GCS workflow history export sink for a Temporal Cloud namespace.
+      The sink is created in the enabled state.
+
+      Example:
+
+      ```
+      cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \
+        --sa-id my-service-account@my-project.iam.gserviceaccount.com \
+        --bucket-name my-bucket --gcp-project-id my-project --region us-central1
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - export-sink
+      - export-gcs
+  - name: cloud namespace export gcs update
+    summary: Update a GCS workflow history export sink
+    description: |
+      Update the configuration of an existing GCS workflow history export sink.
+      The enabled/disabled state is preserved.
+
+      Example:
+
+      ```
+      cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \
+        --sa-id my-service-account@my-project.iam.gserviceaccount.com \
+        --bucket-name my-bucket --gcp-project-id my-project --region us-central1
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+      - export-sink
+      - export-gcs
+  - name: cloud namespace export gcs validate
+    summary: Validate a GCS workflow history export sink configuration
+    description: |
+      Validate a GCS workflow history export sink configuration without creating or updating it.
+      A successful response means the configuration is valid.
+
+      Example:
+
+      ```
+      cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \
+        --sa-id my-service-account@my-project.iam.gserviceaccount.com \
+        --bucket-name my-bucket --gcp-project-id my-project --region us-central1
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - export-sink
+      - export-gcs
+
   # Namespace codec commands
   - name: cloud namespace codec
     summary: Manage codec server settings for namespaces
@@ -2339,3 +2560,58 @@ option-sets:
         required: true
         description: |
           The ID of the user group.
+  - name: export-sink
+    options:
+      - name: sink-name
+        type: string
+        required: true
+        description: |
+          The name of the export sink.
+  - name: export-s3
+    options:
+      - name: role-name
+        type: string
+        required: true
+        description: |
+          The IAM role ARN that Temporal Cloud assumes for writing to S3.
+      - name: bucket-name
+        type: string
+        required: true
+        description: |
+          The name of the destination S3 bucket.
+      - name: region
+        type: string
+        required: true
+        description: |
+          The AWS region where the S3 bucket is located.
+      - name: aws-account-id
+        type: string
+        required: true
+        description: |
+          The AWS account ID associated with the bucket and role.
+      - name: kms-arn
+        type: string
+        description: |
+          The AWS KMS key ARN for server-side encryption of exported data. Optional.
+  - name: export-gcs
+    options:
+      - name: sa-id
+        type: string
+        required: true
+        description: |
+          The customer service account ID that Temporal Cloud impersonates for writing to GCS.
+      - name: bucket-name
+        type: string
+        required: true
+        description: |
+          The name of the destination GCS bucket.
+      - name: gcp-project-id
+        type: string
+        required: true
+        description: |
+          The GCP project ID associated with the bucket and service account.
+      - name: region
+        type: string
+        required: true
+        description: |
+          The GCS bucket region.
