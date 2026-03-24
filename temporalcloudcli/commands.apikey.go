@@ -222,11 +222,11 @@ func CreateApiKeyForServiceAccount(ctx context.Context, params CreateApiKeyForSe
 	}
 	// AIDEV-NOTE: The token is only returned on creation and cannot be retrieved again.
 	// Print it immediately before handling the async operation.
-	if params.Printer.JSON {
-		// When printing JSON, include the token in the output for easy parsing by scripts.
-		params.Printer.Println("ApiKey: %q", res.Token)
+	// When printing JSON, include the token in the output for easy parsing by scripts.
+	defer func() {
+		params.Printer.Println(printer.NonJSONIndent, "ApiKey:  ", res.Token)
 		params.Printer.Println("Make sure to copy or store the ApiKey as you will not be able to see this key again.")
-	}
+	}()
 	return params.OperationHandler.HandleOperation(res.GetAsyncOperation(), res.KeyId)
 }
 
@@ -259,11 +259,11 @@ func CreateApiKeyForMe(ctx context.Context, params CreateApiKeyForMeParams) erro
 	}
 	// AIDEV-NOTE: The token is only returned on creation and cannot be retrieved again.
 	// Print it immediately before handling the async operation.
-	if params.Printer.JSON {
-		// When printing JSON, include the token in the output for easy parsing by scripts.
-		params.Printer.Println("ApiKey: %q", res.Token)
+	// When printing JSON, include the token in the output for easy parsing by scripts.
+	defer func() {
+		params.Printer.Println(printer.NonJSONIndent, "ApiKey:  ", res.Token)
 		params.Printer.Println("Make sure to copy or store the ApiKey as you will not be able to see this key again.")
-	}
+	}()
 	return params.OperationHandler.HandleOperation(res.GetAsyncOperation(), res.KeyId)
 }
 
