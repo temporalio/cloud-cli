@@ -2272,6 +2272,131 @@ commands:
         description: |
           The name of the audit log sink to disable.
 
+  - name: cloud account audit-log sink kinesis
+    summary: Manage Kinesis audit log sinks
+    description: |
+      Commands for managing Kinesis-based audit log sinks.
+    has-init: false
+    docs:
+      keywords:
+        - audit-log
+        - sink
+        - kinesis
+        - account
+      description-header: Kinesis Audit Log Sink Commands
+      tags:
+        - account
+
+  - name: cloud account audit-log sink kinesis create
+    summary: Create a Kinesis audit log sink
+    description: |
+      Create an account audit log sink that streams audit events to Amazon Kinesis.
+
+      Temporal Cloud assumes the specified IAM role to write events to the Kinesis
+      stream identified by the destination URI.
+
+      Example:
+        temporal cloud account audit-log sink kinesis create \
+          --name my-sink \
+          --role-name arn:aws:iam::123456789012:role/MyRole \
+          --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \
+          --region us-east-1
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          Name of the audit log sink.
+      - name: role-name
+        type: string
+        required: true
+        description: |
+          ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
+      - name: destination-uri
+        type: string
+        required: true
+        description: |
+          ARN of the Kinesis stream to deliver audit log events to.
+      - name: region
+        type: string
+        required: true
+        description: |
+          AWS region where the Kinesis stream is located (e.g. us-east-1).
+
+  - name: cloud account audit-log sink kinesis update
+    summary: Update a Kinesis audit log sink
+    description: |
+      Update an existing Kinesis audit log sink. Only the flags you provide are changed;
+      omitted string flags retain their current values. 
+
+      Example:
+        temporal cloud account audit-log sink kinesis update \
+          --name my-sink \
+          --role-name arn:aws:iam::123456789012:role/NewRole
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          Name of the audit log sink to update.
+      - name: role-name
+        type: string
+        description: |
+          ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
+          If omitted, the current value is kept.
+      - name: destination-uri
+        type: string
+        description: |
+          ARN of the Kinesis stream to deliver audit log events to.
+          If omitted, the current value is kept.
+      - name: region
+        type: string
+        description: |
+          AWS region where the Kinesis stream is located (e.g. us-east-1).
+          If omitted, the current value is kept.
+
+  - name: cloud account audit-log sink kinesis validate
+    summary: Validate a Kinesis audit log sink configuration
+    description: |
+      Validate an audit log sink configuration against Amazon Kinesis without creating it.
+      Use this to verify that the IAM role and Kinesis stream are correctly configured
+      before creating or updating the sink.
+
+      Example:
+        temporal cloud account audit-log sink kinesis validate \
+          --name my-sink \
+          --role-name arn:aws:iam::123456789012:role/MyRole \
+          --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \
+          --region us-east-1
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: role-name
+        type: string
+        required: true
+        description: |
+          ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
+      - name: destination-uri
+        type: string
+        required: true
+        description: |
+          ARN of the Kinesis stream to deliver audit log events to.
+      - name: region
+        type: string
+        required: true
+        description: |
+          AWS region where the Kinesis stream is located (e.g. us-east-1).
+
   # API key commands
   - name: cloud apikey
     summary: Manage Temporal Cloud API keys
