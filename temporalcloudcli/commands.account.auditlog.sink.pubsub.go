@@ -125,10 +125,11 @@ func ValidateAuditLogSinkPubSub(ctx context.Context, params ValidateAuditLogSink
 		return err
 	}
 
-	return params.Printer.PrintStructured(
-		struct{ Status string }{Status: "valid"},
-		printer.StructuredOptions{},
-	)
+	return params.Printer.PrintStructured(struct {
+		Status string `json:"status"`
+	}{
+		Status: "valid",
+	}, printer.StructuredOptions{})
 }
 
 func (c *CloudAccountAuditLogSinkPubsubValidateCommand) run(cctx *CommandContext, _ []string) error {
