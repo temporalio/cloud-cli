@@ -83,14 +83,31 @@ func TestPromptApply(t *testing.T) {
 	}
 }
 
-// TestPromptApply_JSONModePrintsDiff verifies that in JSON mode the diff is
-// emitted before the prompt is evaluated.
-func TestPromptApply_JSONModePrintsDiff(t *testing.T) {
+// TestPromptApply_JSONModeSkipsDiff verifies that in JSON mode the diff is
+// not emitted (text diffs are suppressed in JSON output mode).
+func TestPromptApply_JSONModeSkipsDiff(t *testing.T) {
 	oldSpec := &identityv1.ApiKeySpec{DisplayName: "before"}
 	newSpec := &identityv1.ApiKeySpec{DisplayName: "after"}
 
 	var buf bytes.Buffer
 	pr := newTestPrompter(&buf, "", true, true)
+
+	err := pr.PromptApply(oldSpec, newSpec, false)
+	require.NoError(t, err)
+
+	out := buf.String()
+	assert.NotContains(t, out, "before")
+	assert.NotContains(t, out, "after")
+}
+
+// TestPromptApply_PrintsDiff verifies that in text mode the diff is emitted
+// containing the before and after display names.
+func TestPromptApply_PrintsDiff(t *testing.T) {
+	oldSpec := &identityv1.ApiKeySpec{DisplayName: "before"}
+	newSpec := &identityv1.ApiKeySpec{DisplayName: "after"}
+
+	var buf bytes.Buffer
+	pr := newTestPrompter(&buf, "", false, true)
 
 	err := pr.PromptApply(oldSpec, newSpec, false)
 	require.NoError(t, err)
