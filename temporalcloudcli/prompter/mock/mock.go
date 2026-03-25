@@ -5,8 +5,8 @@
 package mock
 
 import (
-	"github.com/gogo/protobuf/proto"
 	mock "github.com/stretchr/testify/mock"
+	"google.golang.org/protobuf/proto"
 )
 
 // NewMockPrompter creates a new instance of MockPrompter. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.

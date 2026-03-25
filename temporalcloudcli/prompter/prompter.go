@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
@@ -31,7 +31,7 @@ func NewPrompter(p *printer.Printer, si io.Reader, autoConfirm bool) Prompter {
 }
 
 func (p *prompter) PromptApply(existing, modified proto.Message, verbose bool) error {
-	if p.printer.JSON {
+	if !p.printer.JSON {
 		p.printer.PrintDiff(existing, modified, printer.DiffOptions{
 			Verbose: verbose,
 		})

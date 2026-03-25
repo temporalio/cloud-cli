@@ -1,7 +1,6 @@
 package temporalcloudcli_test
 
 import (
-	"context"
 	"errors"
 	"testing"
 	"time"
@@ -99,7 +98,7 @@ func TestListApiKeys(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			temporalcloudcli.TestCommand(t, context.Background(), &tt.cmd, temporalcloudcli.TestCommandOptions{
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tt.cloudClientExpectations,
 				JSONOutput:              true,
 				ExpectedError:           tt.expectedErr,
@@ -180,7 +179,7 @@ func TestGetApiKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			temporalcloudcli.TestCommand(t, context.Background(), &tt.cmd, temporalcloudcli.TestCommandOptions{
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tt.setClientExpectations,
 				JSONOutput:              true,
 				ExpectedError:           tt.expectedErr,
@@ -289,7 +288,7 @@ func TestCreateApiKeyForServiceAccount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			temporalcloudcli.TestCommand(t, context.Background(), &tt.cmd, temporalcloudcli.TestCommandOptions{
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tt.cloudClientExpectations,
 				AsyncPollerOptions:      tt.asyncPollerOptions,
 				JSONOutput:              true,
@@ -433,9 +432,9 @@ func TestCreateApiKeyForMe(t *testing.T) {
 		{
 			name: "Success",
 			cmd: temporalcloudcli.CloudApikeyCreateForMeCommand{
-				DisplayName:    "My Key",
-				Description:    "a description",
-				ExpiryTime:     cliext.FlagTimestamp(now.Add(24 * time.Hour)),
+				DisplayName: "My Key",
+				Description: "a description",
+				ExpiryTime:  cliext.FlagTimestamp(now.Add(24 * time.Hour)),
 			},
 			setClientExpectations: func(cloudClient *cloudmock.MockCloudServiceClient) {
 				cloudClient.EXPECT().GetCurrentIdentity(
@@ -485,7 +484,7 @@ func TestCreateApiKeyForMe(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			temporalcloudcli.TestCommand(t, context.Background(), &tt.cmd, temporalcloudcli.TestCommandOptions{
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tt.setClientExpectations,
 				AsyncPollerOptions:      tt.asyncPollerOptions,
 				JSONOutput:              true,
@@ -589,7 +588,7 @@ func TestDeleteApiKey(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			temporalcloudcli.TestCommand(t, context.Background(), &tc.cmd, temporalcloudcli.TestCommandOptions{
+			temporalcloudcli.TestCommand(t, &tc.cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tc.cloudClientExpectations,
 				PromptOptions:           tc.promptOptions,
 				AsyncPollerOptions:      tc.pollerOptions,
@@ -737,7 +736,7 @@ func TestUpdateApiKey(t *testing.T) {
 			if tt.setupCmd != nil {
 				tt.setupCmd(&cmd)
 			}
-			temporalcloudcli.TestCommand(t, context.Background(), &cmd, temporalcloudcli.TestCommandOptions{
+			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tt.cloudClientExpectations,
 				PromptOptions:           tt.promptOptions,
 				AsyncPollerOptions:      tt.asyncPollerOptions,
@@ -804,7 +803,7 @@ func TestEditApiKey(t *testing.T) {
 			expectedErr:   "editor cancelled",
 		},
 		{
-			name: "ResourceVersionOverride",
+			name:            "ResourceVersionOverride",
 			resourceVersion: "rv-override",
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
@@ -845,7 +844,7 @@ func TestEditApiKey(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := &temporalcloudcli.CloudApikeyEditCommand{KeyId: "key-1"}
 			cmd.ResourceVersion = tt.resourceVersion
-			temporalcloudcli.TestCommand(t, context.Background(), cmd, temporalcloudcli.TestCommandOptions{
+			temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tt.cloudClientExpectations,
 				EditorOptions:           tt.editorOptions,
 				PromptOptions:           tt.promptOptions,
@@ -919,7 +918,7 @@ func TestDisableApiKey(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			temporalcloudcli.TestCommand(t, context.Background(), &tc.cmd, temporalcloudcli.TestCommandOptions{
+			temporalcloudcli.TestCommand(t, &tc.cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tc.cloudClientExpectations,
 				PromptOptions:           tc.promptOptions,
 				AsyncPollerOptions:      tc.asyncPollerOptions,
@@ -992,7 +991,7 @@ func TestEnableApiKey(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			temporalcloudcli.TestCommand(t, context.Background(), &tc.cmd, temporalcloudcli.TestCommandOptions{
+			temporalcloudcli.TestCommand(t, &tc.cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tc.cloudClientExpectations,
 				PromptOptions:           tc.promptOptions,
 				AsyncPollerOptions:      tc.asyncPollerOptions,

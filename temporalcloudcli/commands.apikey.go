@@ -120,10 +120,6 @@ func (c *CloudApikeyCreateForServiceAccountCommand) run(cctx *CommandContext, _ 
 		return err
 	}
 
-	defer func() {
-		cctx.Printer.Println("Make sure to copy or store the ApiKey token as you will not be able to see this secret again.")
-	}()
-
 	resp, err := client.CreateApiKey(cctx, &cloudservice.CreateApiKeyRequest{
 		Spec: &identityv1.ApiKeySpec{
 			OwnerId:     c.ServiceAccountId,
@@ -134,6 +130,11 @@ func (c *CloudApikeyCreateForServiceAccountCommand) run(cctx *CommandContext, _ 
 		},
 		AsyncOperationId: c.AsyncOperationId,
 	})
+	if err == nil {
+		defer func() {
+			cctx.Printer.Println("Make sure to copy or store the ApiKey token as you will not be able to see this secret again.")
+		}()
+	}
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleCreateAsyncOperationResponse(cctx, resp, err)
 }
 
@@ -158,10 +159,6 @@ func (c *CloudApikeyCreateForMeCommand) run(cctx *CommandContext, _ []string) er
 		return err
 	}
 
-	defer func() {
-		cctx.Printer.Println("Make sure to copy or store the ApiKey token as you will not be able to see this secret again.")
-	}()
-
 	resp, err := client.CreateApiKey(cctx, &cloudservice.CreateApiKeyRequest{
 		Spec: &identityv1.ApiKeySpec{
 			OwnerId:     user.Id,
@@ -172,6 +169,11 @@ func (c *CloudApikeyCreateForMeCommand) run(cctx *CommandContext, _ []string) er
 		},
 		AsyncOperationId: c.AsyncOperationId,
 	})
+	if err == nil {
+		defer func() {
+			cctx.Printer.Println("Make sure to copy or store the ApiKey token as you will not be able to see this secret again.")
+		}()
+	}
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleCreateAsyncOperationResponse(cctx, resp, err)
 }
 

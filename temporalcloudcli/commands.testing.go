@@ -141,7 +141,7 @@ func getMockAsyncPoller(t *testing.T, printer *printer.Printer, opts *TestAsyncP
 	return testPoller
 }
 
-func TestCommand(t *testing.T, ctx context.Context, command CommandIfc, opts TestCommandOptions) {
+func TestCommand(t *testing.T, command CommandIfc, opts TestCommandOptions) {
 	mockCloudClient := cloudmock.NewMockCloudServiceClient(t)
 	printerBuf := &bytes.Buffer{}
 	printer := &printer.Printer{Output: printerBuf, JSON: opts.JSONOutput}
