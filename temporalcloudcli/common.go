@@ -372,7 +372,6 @@ func getPoller(cctx *CommandContext, opts ClientOptions) (Poller, error) {
 	if cctx.Poller != nil {
 		return cctx.Poller, nil
 	}
-
 	cloudClient, err := cctx.BuildCloudClient(opts)
 	if err != nil {
 		return nil, err

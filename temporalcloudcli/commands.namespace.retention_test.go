@@ -9,13 +9,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
+	operation "go.temporal.io/cloud-sdk/api/operation/v1"
+
 	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 	cmdmock "github.com/temporalio/cloud-cli/temporalcloudcli/mock"
-	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
-	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
-	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 )
 
 func newTestPrinter(buf *bytes.Buffer) *printer.Printer {

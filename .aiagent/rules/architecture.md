@@ -6,59 +6,44 @@
 2. All top-level spec-based commands (e.g. namespace) that include a mutation must have `apply` and `edit` subcommands. The only exception is `apikey`.
 3. All mutation commands must have a `--resource-version` flag for optimistic locking.
 
-## Function-Based Architecture
+## Command Architecture
 
-All resource commands follow a function-based architecture for separation of concerns and testability.
+All commands implement application logic directly in the `run` method. Dependencies are injected via `CommandContext` hooks, which makes `run` testable without exported functions or params structs.
 
 ### Pattern
 
-Each command's application logic lives in an **exported function** in the `temporalcloudcli` package. The function takes a `context.Context` and an exported `XxxParams` struct containing both data fields and injectable dependencies. The `run` method only builds the cloud client and wires everything together.
+**Client acquisition** — use `cctx.GetCloudClient(opts)` instead of the two-step `cctx.BuildCloudClient(opts).CloudService()`. It returns a `cloudservice.CloudServiceClient` and respects the test override hook (`cctx.getCloudClientOverride`).
 
-**Application logic function** (`temporalcloudcli/commands.<resource>.go`):
-- Exported function (e.g., `GetRetention`, `SetRetention`) owns the full operation
-- Takes a `XxxParams` struct with data fields (e.g. `Namespace`, `RetentionDays`) and dependency fields (`Cloud`, `Prompter`, `OperationHandler`)
-- Calls the gRPC API via the `Cloud` field (a `cloudservice.CloudServiceClient` interface)
-- Testable by calling the function directly with mock dependencies
+**Async operations** — use `cctx.GetPoller(client, asyncOpts)` which returns an `async.Poller`. Call the appropriate method based on the operation type:
+- `poller.HandleCreateAsyncOperationResponse(ctx, resp, err)` — for creates; handles `AlreadyExists` if idempotent
+- `poller.HandleUpdateOperation(ctx, resp, err)` — for updates; handles "nothing to change" if idempotent
+- `poller.HandleDeleteOperation(ctx, resp, err)` — for deletes; handles `NotFound` if idempotent
 
-**`run` method wiring** (on the generated command struct):
-- Builds the cloud client via `cctx.BuildCloudClient`
-- Constructs the `XxxParams` struct from command flags and wired dependencies
-- Calls the exported application logic function
+The poller polls `GetAsyncOperation` in a loop until the op reaches a terminal state, then prints the final response (with the terminal op state embedded). Respects the test override hook (`cctx.getAsyncPollerOverride`).
 
-**Example:**
+**Read command skeleton:**
 ```go
-// XxxParams structs — exported for testability
-type (
-    GetFooParams struct {
-        Namespace string
-
-        Cloud   cloudservice.CloudServiceClient
-        Printer *printer.Printer
-    }
-
-    SetFooParams struct {
-        Namespace        string
-        Value            string
-        ResourceVersion  string
-        AsyncOperationID string
-
-        Cloud            cloudservice.CloudServiceClient
-        Prompter         Prompter
-        OperationHandler AsyncOperationHandler
-    }
-)
-
-// Exported application logic functions
-func GetFoo(ctx context.Context, params GetFooParams) error {
-    res, err := params.Cloud.GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: params.Namespace})
+func (c *CloudNamespaceFooGetCommand) run(cctx *CommandContext, _ []string) error {
+    client, err := cctx.GetCloudClient(c.ClientOptions)
     if err != nil {
         return err
     }
-    return params.Printer.PrintStructured(res.Namespace.Spec, printer.StructuredOptions{})
+    res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
+    if err != nil {
+        return err
+    }
+    return cctx.Printer.PrintResource(res.Namespace, printer.PrintResourceOptions{})
 }
+```
 
-func SetFoo(ctx context.Context, params SetFooParams) error {
-    res, err := params.Cloud.GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: params.Namespace})
+**Mutation command skeleton:**
+```go
+func (c *CloudNamespaceFooSetCommand) run(cctx *CommandContext, _ []string) error {
+    client, err := cctx.GetCloudClient(c.ClientOptions)
+    if err != nil {
+        return err
+    }
+    res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
     if err != nil {
         return err
     }
@@ -66,68 +51,38 @@ func SetFoo(ctx context.Context, params SetFooParams) error {
     newSpec := proto.Clone(ns.Spec).(*namespacev1.NamespaceSpec)
     // mutate newSpec...
 
-    if err := params.Prompter.PromptApply(ns.Spec, newSpec, false); err != nil {
-        return err
-    }
-
     rv := ns.ResourceVersion
-    if params.ResourceVersion != "" {
-        rv = params.ResourceVersion
+    if c.ResourceVersion != "" {
+        rv = c.ResourceVersion
     }
-    updateNamespace := runAsyncOperation(params.Cloud.UpdateNamespace, params.OperationHandler)
-    return updateNamespace(ctx, &cloudservice.UpdateNamespaceRequest{
-        Namespace:        params.Namespace,
+    resp, err := client.UpdateNamespace(cctx, &cloudservice.UpdateNamespaceRequest{
+        Namespace:        c.Namespace,
         Spec:             newSpec,
         ResourceVersion:  rv,
-        AsyncOperationId: params.AsyncOperationID,
+        AsyncOperationId: c.AsyncOperationId,
     })
-}
-
-// run methods — wiring only
-func (c *CloudNamespaceFooGetCommand) run(cctx *CommandContext, _ []string) error {
-    cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-    if err != nil {
-        return err
-    }
-    return GetFoo(cctx.Context, GetFooParams{
-        Namespace: c.Namespace,
-        Cloud:     cloudClient.CloudService(),
-        Printer:   cctx.Printer,
-    })
-}
-
-func (c *CloudNamespaceFooSetCommand) run(cctx *CommandContext, _ []string) error {
-    cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-    if err != nil {
-        return err
-    }
-    return SetFoo(cctx.Context, SetFooParams{
-        Namespace:        c.Namespace,
-        Value:            c.Value,
-        ResourceVersion:  c.ResourceVersion,
-        AsyncOperationID: c.AsyncOperationId,
-        Cloud:            cloudClient.CloudService(),
-        Prompter:         newPrompter(cctx),
-        OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions),
-    })
+    return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }
 ```
 
+See `temporalcloudcli/commands.apikey.go` (`CloudApikeyGetCommand` and `CloudApikeyCreateForMeCommand`) for the canonical examples.
+
 ### Key Interfaces
 
-- `cloudservice.CloudServiceClient` (from `go.temporal.io/cloud-sdk/api/cloudservice/v1`) — the gRPC client interface; mock with `csmock.NewMockCloudServiceClient(t)`
-- `Prompter` (from `temporalcloudcli/common.go`) — shows diffs and prompts for confirmation; mock with `cmdmock.NewMockPrompter(t)`
-- `AsyncOperationHandler` (from `temporalcloudcli/common.go`) — handles async op lifecycle; mock with `cmdmock.NewMockAsyncOperationHandler(t)`
+- `cloudservice.CloudServiceClient` (from `go.temporal.io/cloud-sdk/api/cloudservice/v1`) — the gRPC client interface; injected via `cctx.GetCloudClient`; overridden in tests via `cctx.getCloudClientOverride`
+- `async.Poller` (from `temporalcloudcli/async`) — handles async op lifecycle and polling; injected via `cctx.GetPoller`; overridden in tests via `cctx.getAsyncPollerOverride`
+- `Prompter` (from `temporalcloudcli/common.go`) — shows diffs and prompts for confirmation; mock with `cmdmock.NewMockPrompter(t)` when needed
 
-### When to Skip This Pattern
+### Legacy Pattern (being migrated)
 
-For simple commands with no business logic (e.g. `whoami`), call `cloudClient.CloudService()` directly in the `run` method — no exported function or params struct needed.
+Older commands (e.g. `commands.namespace.retention.go`) use an exported `XxxParams` struct and exported application logic function, with `cctx.BuildCloudClient` and `NewOperationHandler`/`AsyncOperationHandler`. When touching these files, migrate them to the new pattern. Do not write new commands using the old pattern.
 
 ## Setting Up Mocks
 
 The mockery-generated mocks live in:
 - `internal/cloudservice/mock/` — provides `MockCloudServiceClient` for the gRPC interface
-- `temporalcloudcli/mock/` — provides `MockPrompter` and `MockAsyncOperationHandler`
+- `temporalcloudcli/async/mock/` — provides `MockPoller` for the `async.Poller` interface
+- `temporalcloudcli/mock/` — provides `MockPrompter` and `MockAsyncOperationHandler` (legacy)
 
 To regenerate all mocks after interface changes:
 ```bash

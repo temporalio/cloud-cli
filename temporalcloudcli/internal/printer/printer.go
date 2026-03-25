@@ -722,6 +722,32 @@ type PrintResourceOptions struct {
 	SpecFields []string
 }
 
+func (p *Printer) PrintResponseWithAsyncOperation(resource any, options PrintResourceOptions) error {
+	if p.JSON {
+		return p.PrintStructured(resource, StructuredOptions{})
+	}
+	resourceVal := reflect.ValueOf(resource)
+	if resourceVal.Kind() == reflect.Pointer {
+		resourceVal = resourceVal.Elem()
+	}
+	if resourceVal.Kind() != reflect.Struct {
+		return fmt.Errorf("expected struct or pointer to struct for PrintResponseWithAsyncOperation, got: %v", resourceVal.Kind())
+	}
+
+	// print all top-level fields except "Spec"
+	cols, row := p.parseFields(resourceVal, options.Fields, []string{"AsyncOperation"}, 1)
+	p.printCard(cols, row)
+
+	// now print "Spec" fields if present
+	specCols, specRow := p.parseFields(resourceVal.FieldByName("AsyncOperation"), options.SpecFields, nil, 2)
+	if len(specCols) > 0 {
+		p.writeStr(NonJSONIndent)
+		p.writeStr("AsyncOperation:\n")
+		p.printCard(specCols, specRow)
+	}
+	return nil
+}
+
 func (p *Printer) PrintResource(resource any, options PrintResourceOptions) error {
 	// For JSON we can just print the whole thing, ignoring the field options
 	if p.JSON {

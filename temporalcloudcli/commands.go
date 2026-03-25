@@ -21,6 +21,7 @@ import (
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/api/temporalproto"
+	"go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	"go.temporal.io/cloud-sdk/api/operation/v1"
 	"go.temporal.io/cloud-sdk/api/resource/v1"
 	"go.temporal.io/cloud-sdk/cloudclient"
@@ -33,7 +34,10 @@ import (
 
 	"github.com/temporalio/cloud-cli/internal/cert"
 	"github.com/temporalio/cloud-cli/internal/namespace"
+	"github.com/temporalio/cloud-cli/temporalcloudcli/async"
+	"github.com/temporalio/cloud-cli/temporalcloudcli/editor"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
+	cliprompter "github.com/temporalio/cloud-cli/temporalcloudcli/prompter"
 )
 
 // Version is the value put as the default command version. This is often
@@ -62,7 +66,13 @@ type CommandContext struct {
 	CurrentCommand *cobra.Command
 
 	NamespaceClient NamespaceClient
-	Poller          Poller
+
+	Poller Poller
+
+	getCloudClientOverride func() cloudservice.CloudServiceClient
+	getAsyncPollerOverride func() async.Poller
+	getPrompterOverride    func() cliprompter.Prompter
+	getEditorOverride      func() editor.Editor
 }
 
 type NamespaceClient interface {
@@ -593,6 +603,49 @@ func (c *CloudCommand) preRun(cctx *CommandContext, timeoutCancel *context.Cance
 	}
 
 	return nil
+}
+
+func (cctx *CommandContext) GetCloudClient(
+	cloudOpts ClientOptions,
+) (cloudservice.CloudServiceClient, error) {
+	if cctx.getCloudClientOverride != nil {
+		return cctx.getCloudClientOverride(), nil
+	}
+	cc, err := cctx.BuildCloudClient(cloudOpts)
+	if err != nil {
+		return nil, err
+	}
+	return cc.CloudService(), nil
+}
+
+func (cctx *CommandContext) GetPoller(
+	client cloudservice.CloudServiceClient,
+	asyncOptions AsyncOperationOptions,
+) async.Poller {
+	if cctx.getAsyncPollerOverride != nil {
+		return cctx.getAsyncPollerOverride()
+	}
+	return async.NewPoller(
+		client,
+		cctx.Printer,
+		asyncOptions.Idempotent,
+		asyncOptions.Async,
+		time.Duration(asyncOptions.PollInterval),
+	)
+}
+
+func (cctx *CommandContext) GetPrompter() cliprompter.Prompter {
+	if cctx.getPrompterOverride != nil {
+		return cctx.getPrompterOverride()
+	}
+	return cliprompter.NewPrompter(cctx.Printer, cctx.Options.Stdin, cctx.RootCommand.AutoConfirm)
+}
+
+func (cctx *CommandContext) GetEditor() editor.Editor {
+	if cctx.getEditorOverride != nil {
+		return cctx.getEditorOverride()
+	}
+	return editor.NewEditor()
 }
 
 func newNopLogger() *slog.Logger { return slog.New(discardLogHandler{}) }

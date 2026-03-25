@@ -51,64 +51,40 @@ Each generated struct embeds the option-set structs (e.g. `ClientOptions`) and a
 
 ## Step 3 — Implement `commands.<name>.go`
 
-Create `temporalcloudcli/commands.<name>.go` and implement the application logic function(s) plus the `run` wiring method(s).
+Create `temporalcloudcli/commands.<name>.go` and implement the `run` method(s) on the generated command struct(s). Application logic lives directly in `run` — no exported function or params struct needed.
 
-Each command gets an exported `XxxParams` struct with data fields and injectable dependency fields, and an exported function that contains all application logic. The `run` method only builds the cloud client and calls the exported function.
+Use `cctx.GetCloudClient(opts)` to acquire the gRPC client. For mutation commands, pass the response and error to `cctx.GetPoller(client, asyncOpts).HandleXxxOperation(ctx, resp, err)`.
 
 **Read command skeleton:**
 ```go
 package temporalcloudcli
 
 import (
-    "context"
-
     cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
     "github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
-type GetFooParams struct {
-    Namespace string
-
-    Cloud   cloudservice.CloudServiceClient
-    Printer *printer.Printer
-}
-
-func GetFoo(ctx context.Context, params GetFooParams) error {
-    res, err := params.Cloud.GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: params.Namespace})
-    if err != nil {
-        return err
-    }
-    return params.Printer.PrintStructured(res.Namespace.Spec, printer.StructuredOptions{})
-}
-
 func (c *CloudNamespaceFooGetCommand) run(cctx *CommandContext, _ []string) error {
-    cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+    client, err := cctx.GetCloudClient(c.ClientOptions)
     if err != nil {
         return err
     }
-    return GetFoo(cctx.Context, GetFooParams{
-        Namespace: c.Namespace,
-        Cloud:     cloudClient.CloudService(),
-        Printer:   cctx.Printer,
-    })
+    res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
+    if err != nil {
+        return err
+    }
+    return cctx.Printer.PrintResource(res.Namespace, printer.PrintResourceOptions{})
 }
 ```
 
 **Mutation command skeleton:**
 ```go
-type SetFooParams struct {
-    Namespace        string
-    Value            string
-    ResourceVersion  string
-    AsyncOperationID string
-
-    Cloud            cloudservice.CloudServiceClient
-    Prompter         Prompter
-    OperationHandler AsyncOperationHandler
-}
-
-func SetFoo(ctx context.Context, params SetFooParams) error {
-    res, err := params.Cloud.GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: params.Namespace})
+func (c *CloudNamespaceFooSetCommand) run(cctx *CommandContext, _ []string) error {
+    client, err := cctx.GetCloudClient(c.ClientOptions)
+    if err != nil {
+        return err
+    }
+    res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
     if err != nil {
         return err
     }
@@ -116,41 +92,26 @@ func SetFoo(ctx context.Context, params SetFooParams) error {
     newSpec := proto.Clone(ns.Spec).(*namespacev1.NamespaceSpec)
     // mutate newSpec...
 
-    if err := params.Prompter.PromptApply(ns.Spec, newSpec, false); err != nil {
-        return err
-    }
-
     rv := ns.ResourceVersion
-    if params.ResourceVersion != "" {
-        rv = params.ResourceVersion
+    if c.ResourceVersion != "" {
+        rv = c.ResourceVersion
     }
-    updateNamespace := runAsyncOperation(params.Cloud.UpdateNamespace, params.OperationHandler)
-    return updateNamespace(ctx, &cloudservice.UpdateNamespaceRequest{
-        Namespace:        params.Namespace,
+    resp, err := client.UpdateNamespace(cctx, &cloudservice.UpdateNamespaceRequest{
+        Namespace:        c.Namespace,
         Spec:             newSpec,
         ResourceVersion:  rv,
-        AsyncOperationId: params.AsyncOperationID,
+        AsyncOperationId: c.AsyncOperationId,
     })
-}
-
-func (c *CloudNamespaceFooSetCommand) run(cctx *CommandContext, _ []string) error {
-    cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-    if err != nil {
-        return err
-    }
-    return SetFoo(cctx.Context, SetFooParams{
-        Namespace:        c.Namespace,
-        Value:            c.Value,
-        ResourceVersion:  c.ResourceVersion,
-        AsyncOperationID: c.AsyncOperationId,
-        Cloud:            cloudClient.CloudService(),
-        Prompter:         newPrompter(cctx),
-        OperationHandler: NewAsyncOperationHandler(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions),
-    })
+    return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }
 ```
 
-See `temporalcloudcli/commands.namespace.retention.go` for the canonical example.
+Use the correct `Handle*` method for the operation type:
+- `HandleCreateAsyncOperationResponse` — creates
+- `HandleUpdateOperation` — updates
+- `HandleDeleteOperation` — deletes
+
+See `temporalcloudcli/commands.apikey.go` (`CloudApikeyGetCommand`, `CloudApikeyCreateForMeCommand`) for the canonical examples.
 
 **Printer methods:**
 - `PrintStructured(v, opts)` — flat data or raw responses with no clear spec boundary
@@ -160,15 +121,13 @@ See `temporalcloudcli/commands.namespace.retention.go` for the canonical example
 **Common helpers in `common.go`:**
 - `loadJSONSpec(spec string)` — loads JSON from inline string or `@file` path
 - `runEditorForJSONEditForProtos(current, target)` — opens `$EDITOR` for interactive editing
-- `promptApplyResource(cctx, old, new, verbose)` — shows diff and asks for confirmation
-- `PollAsyncOperation(cctx, client, opID, resourceID)` — polls until terminal state
 - `isNotFoundErr(err)` / `isNothingChangedErr(idempotent, err)` — gRPC error helpers
 
 After creating the file, run `git add temporalcloudcli/commands.<name>.go`.
 
 ## Step 4 — Write tests in `commands.<name>_test.go`
 
-See `.claude/rules/testing.md` for testing patterns and the integration test template.
+See `.aiagent/rules/testing.md` for testing patterns and the integration test template.
 
 After creating the file, run `git add temporalcloudcli/commands.<name>_test.go`.
 
@@ -209,12 +168,12 @@ func applyNamespaceAccessChanges(existing map[string]*identityv1.NamespaceAccess
 
 ```go
 // Validate before API calls — applyNamespaceAccessChanges(nil, ...) is safe (range over nil map is a no-op)
-if _, err := applyNamespaceAccessChanges(nil, params.NamespaceAccesses); err != nil {
+if _, err := applyNamespaceAccessChanges(nil, c.NamespaceAccesses); err != nil {
     return err
 }
 user, err := resolveUser(...)  // only called after inputs are known-good
 ...
-accesses, _ := applyNamespaceAccessChanges(user.Spec.Access.NamespaceAccesses, params.NamespaceAccesses)
+accesses, _ := applyNamespaceAccessChanges(user.Spec.Access.NamespaceAccesses, c.NamespaceAccesses)
 ```
 
 ### Server-side vs Client-side Responsibility

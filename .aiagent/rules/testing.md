@@ -2,42 +2,100 @@
 
 ## Unit Tests (`temporalcloudcli/commands.<name>_test.go`)
 
-Unit tests call the exported application logic functions directly with mocked dependencies. No build tag is required — these run as part of the normal `make all` / `go test` flow.
+Unit tests use the `TestCommand` harness (`commands.testing.go`) to call `run` directly on a command struct with injected mock dependencies. No build tag is required — these run as part of the normal `make all` / `go test` flow.
 
 **Package:** `package temporalcloudcli_test`
 
-- Write individual test functions (most have unique setup/assertions)
 - Use `assert.Equal` for protobuf message assertions. Use `proto.Equal` only inside `mock.MatchedBy` closures. Never compare proto messages field-by-field.
-- Mock all three injectable dependency interfaces:
-  - `csmock.NewMockCloudServiceClient(t)` (from `internal/cloudservice/mock`)
-  - `cmdmock.NewMockPrompter(t)` (from `temporalcloudcli/mock`)
-  - `cmdmock.NewMockAsyncOperationHandler(t)` (from `temporalcloudcli/mock`)
-- Example naming: `TestGetRetention_Success`, `TestSetRetention_GetNamespaceError`
-- See `temporalcloudcli/commands.namespace.retention_test.go` for the canonical pattern
+- Example naming: `TestGetFoo_Success`, `TestSetFoo_GetNamespaceError`
+- See `temporalcloudcli/commands.apikey_test.go` for the canonical pattern
 
-**Example:**
+### `TestCommand` harness
+
+`temporalcloudcli.TestCommand(t, ctx, command, opts)` builds a `CommandContext` with two override hooks and calls `command.run`:
+
 ```go
-func TestGetFoo_Success(t *testing.T) {
-    mockCloud := csmock.NewMockCloudServiceClient(t)
-
-    mockCloud.EXPECT().
-        GetNamespace(context.Background(), &cloudservice.GetNamespaceRequest{Namespace: "my-namespace"}).
-        Return(&cloudservice.GetNamespaceResponse{
-            Namespace: &namespacev1.Namespace{
-                Namespace: "my-namespace",
-                Spec:      &namespacev1.NamespaceSpec{/* ... */},
-            },
-        }, nil)
-
-    var buf bytes.Buffer
-    err := temporalcloudcli.GetFoo(context.Background(), temporalcloudcli.GetFooParams{
-        Namespace: "my-namespace",
-        Cloud:     mockCloud,
-        Printer:   &printer.Printer{Output: &buf, JSON: true},
-    })
-    require.NoError(t, err)
-    // assert buf contents
+type TestCommandOptions struct {
+    Args                    []string
+    CloudClientExpectations func(cloudClient *cloudmock.MockCloudServiceClient)
+    AsyncPollerOptions      TestAsyncPollerOptions
+    JSONOutput              bool
+    ExpectedError           string
+    ExpectedOutput          string
+    ExpectedOutputJson      any  // proto.Message or plain value; compared with JSONEq
 }
+
+type TestAsyncPollerOptions struct {
+    AsyncOperationID string  // set when polling should be exercised; drives mock GetAsyncOperation expectations
+    ErrorToReturn    error   // set to simulate a poll failure
+}
+```
+
+- `CloudClientExpectations` — sets `EXPECT()` calls on `*cloudmock.MockCloudServiceClient`; injected via `cctx.getCloudClientOverride`
+- `AsyncPollerOptions` — drives a real `async.NewPoller` backed by a mock cloud client; injected via `cctx.getAsyncPollerOverride`
+  - `AsyncOperationID` set (no error): two `GetAsyncOperation` calls — first `STATE_PENDING`, second `STATE_FULFILLED`
+  - `ErrorToReturn` set: one `GetAsyncOperation` call → returns the error
+  - Neither set: no poller expectations (command errors before reaching the poller)
+
+**Read command example:**
+```go
+func TestGetFoo(t *testing.T) {
+    tests := []struct {
+        name                  string
+        cmd                   temporalcloudcli.CloudNamespaceFooGetCommand
+        setClientExpectations func(*cloudmock.MockCloudServiceClient)
+        expectedErr           string
+        expectedJsonOutput    any
+    }{
+        {
+            name: "Success",
+            cmd:  temporalcloudcli.CloudNamespaceFooGetCommand{Namespace: "my-ns"},
+            setClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+                c.EXPECT().
+                    GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: "my-ns"}, mock.Anything).
+                    Return(&cloudservice.GetNamespaceResponse{Namespace: testNamespace}, nil)
+            },
+            expectedJsonOutput: testNamespace,
+        },
+        {
+            name: "GetNamespaceError",
+            cmd:  temporalcloudcli.CloudNamespaceFooGetCommand{Namespace: "my-ns"},
+            setClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+                c.EXPECT().
+                    GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+                    Return(nil, errors.New("not found"))
+            },
+            expectedErr: "not found",
+        },
+    }
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            temporalcloudcli.TestCommand(t, context.Background(), &tt.cmd, temporalcloudcli.TestCommandOptions{
+                CloudClientExpectations: tt.setClientExpectations,
+                JSONOutput:              true,
+                ExpectedError:           tt.expectedErr,
+                ExpectedOutputJson:      tt.expectedJsonOutput,
+            })
+        })
+    }
+}
+```
+
+**Mutation command example (with async polling):**
+```go
+temporalcloudcli.TestCommand(t, context.Background(), &tt.cmd, temporalcloudcli.TestCommandOptions{
+    CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+        c.EXPECT().GetNamespace(...).Return(...)
+        c.EXPECT().UpdateNamespace(...).Return(&cloudservice.UpdateNamespaceResponse{
+            AsyncOperation: &operation.AsyncOperation{Id: "op-123"},
+        }, nil)
+    },
+    AsyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{
+        AsyncOperationID: "op-123",
+    },
+    JSONOutput:         true,
+    ExpectedOutputJson: expectedResponse,
+})
 ```
 
 ## Integration Tests (`temporalcloudcli/commands.<name>_test.go`)
@@ -95,28 +153,36 @@ func (s *SharedServerSuite) TestMyCommand() {
 
 **Avoid complex branching** in table-driven tests (nested ifs, different setup per case). If you need conditional logic to handle different cases, use individual test functions.
 
-See `temporalcloudcli/commands.namespace.retention_test.go` for the canonical unit test pattern.
+See `temporalcloudcli/commands.apikey_test.go` for the canonical unit test pattern.
 
 ## Testing Editor-Based Commands
 
-`runEditorForJSONEditForProtos` launches a real `$EDITOR` process — it cannot be called in unit tests. Inject the editor as a function field on the `XxxParams` struct:
+`runEditorForJSONEditForProtos` launches a real `$EDITOR` process — it cannot be called in unit tests. For `edit` commands, store the editor as a field on the command struct and inject it via `TestCommandOptions.CloudClientExpectations` or by setting it directly on the cmd before passing to `TestCommand`:
 
 ```go
-type EditFooParams struct {
-    // RunEditor opens the existing spec in an editor and writes the result into target.
-    // Injected so the function is unit-testable without a real editor process.
-    RunEditor func(existing, target proto.Message) error
-    ...
+// In the command struct (unexported field, set before run):
+type CloudNamespaceFooEditCommand struct {
+    // ...generated fields...
+    runEditor func(existing, target proto.Message) error
+}
+
+func (c *CloudNamespaceFooEditCommand) run(cctx *CommandContext, _ []string) error {
+    runEditor := c.runEditor
+    if runEditor == nil {
+        runEditor = runEditorForJSONEditForProtos
+    }
+    // use runEditor(existing, newSpec)
 }
 ```
 
-Production wires `runEditorForJSONEditForProtos`; tests pass a lambda using `proto.Merge`:
-
+Tests set the field directly on the cmd struct before passing to `TestCommand`:
 ```go
-RunEditor: func(existing, target proto.Message) error {
+cmd := &temporalcloudcli.CloudNamespaceFooEditCommand{...}
+cmd.SetRunEditor(func(existing, target proto.Message) error {
     proto.Merge(target, editedSpec)
     return nil
-},
+})
+temporalcloudcli.TestCommand(t, ctx, cmd, opts)
 ```
 
 ## Common Test Patterns
