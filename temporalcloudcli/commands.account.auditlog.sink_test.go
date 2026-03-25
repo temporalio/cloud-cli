@@ -14,10 +14,60 @@ import (
 	accountv1 "go.temporal.io/cloud-sdk/api/account/v1"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestGetAuditLogSink_Success(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+
+	sink := &accountv1.AuditLogSink{
+		Name:            "my-sink",
+		ResourceVersion: "rv-1",
+		Spec:            &accountv1.AuditLogSinkSpec{Enabled: true},
+	}
+	mockCloud.EXPECT().
+		GetAccountAuditLogSink(context.Background(), &cloudservice.GetAccountAuditLogSinkRequest{
+			Name: "my-sink",
+		}).
+		Return(&cloudservice.GetAccountAuditLogSinkResponse{Sink: sink}, nil)
+
+	var buf bytes.Buffer
+	err := temporalcloudcli.GetAuditLogSink(context.Background(), temporalcloudcli.GetAuditLogSinkParams{
+		Name:    "my-sink",
+		Cloud:   mockCloud,
+		Printer: &printer.Printer{Output: &buf, JSON: true},
+	})
+	require.NoError(t, err)
+
+	// Printer uses protojson for proto messages (camelCase output).
+	var out accountv1.AuditLogSink
+	require.NoError(t, protojson.Unmarshal(buf.Bytes(), &out))
+	assert.Equal(t, sink.Name, out.Name)
+	assert.Equal(t, sink.ResourceVersion, out.ResourceVersion)
+}
+
+func TestGetAuditLogSink_APIError(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	apiErr := errors.New("not found")
+
+	mockCloud.EXPECT().
+		GetAccountAuditLogSink(context.Background(), &cloudservice.GetAccountAuditLogSinkRequest{
+			Name: "my-sink",
+		}).
+		Return(nil, apiErr)
+
+	var buf bytes.Buffer
+	err := temporalcloudcli.GetAuditLogSink(context.Background(), temporalcloudcli.GetAuditLogSinkParams{
+		Name:    "my-sink",
+		Cloud:   mockCloud,
+		Printer: &printer.Printer{Output: &buf, JSON: true},
+	})
+	require.ErrorIs(t, err, apiErr)
+	assert.Empty(t, buf.String())
+}
 
 func TestListAuditLogSinks_Success(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)

@@ -2177,6 +2177,23 @@ commands:
       tags:
         - account
 
+  - name: cloud account audit-log sink get
+    summary: Get an audit log sink
+    description: |
+      Returns the details of an audit log sink for the account.
+
+      Example:
+        temporal cloud account audit-log sink get --name my-sink
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the audit log sink to get.
+
   - name: cloud account audit-log sink list
     summary: List audit log sinks
     description: |

@@ -11,6 +11,13 @@ import (
 )
 
 type (
+	GetAuditLogSinkParams struct {
+		Name string
+
+		Cloud   cloudservice.CloudServiceClient
+		Printer *printer.Printer
+	}
+
 	ListAuditLogSinksParams struct {
 		PageSize  int32
 		PageToken string
@@ -49,6 +56,16 @@ type (
 		OperationHandler AsyncOperationHandler
 	}
 )
+
+func GetAuditLogSink(ctx context.Context, params GetAuditLogSinkParams) error {
+	res, err := params.Cloud.GetAccountAuditLogSink(ctx, &cloudservice.GetAccountAuditLogSinkRequest{
+		Name: params.Name,
+	})
+	if err != nil {
+		return err
+	}
+	return params.Printer.PrintResource(res.GetSink(), printer.PrintResourceOptions{})
+}
 
 func ListAuditLogSinks(ctx context.Context, params ListAuditLogSinksParams) error {
 	res, err := params.Cloud.GetAccountAuditLogSinks(ctx, &cloudservice.GetAccountAuditLogSinksRequest{
@@ -160,6 +177,18 @@ func setAuditLogSinkEnabled(ctx context.Context, params setAuditLogSinkEnabledPa
 		Spec:             newSpec,
 		ResourceVersion:  rv,
 		AsyncOperationId: params.AsyncOperationID,
+	})
+}
+
+func (c *CloudAccountAuditLogSinkGetCommand) run(cctx *CommandContext, _ []string) error {
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	return GetAuditLogSink(cctx.Context, GetAuditLogSinkParams{
+		Name:    c.Name,
+		Cloud:   cloudClient.CloudService(),
+		Printer: cctx.Printer,
 	})
 }
 
