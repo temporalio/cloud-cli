@@ -1,14 +1,10 @@
 package temporalcloudcli_test
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/mock"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	identityv1 "go.temporal.io/cloud-sdk/api/identity/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
@@ -16,28 +12,28 @@ import (
 
 	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
-	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
-	cmdmock "github.com/temporalio/cloud-cli/temporalcloudcli/mock"
 )
 
-func TestSetNamespacePermissions(t *testing.T) {
+// --- SetNamespacePermissions ---
+
+func TestUserSetNamespacePermissions(t *testing.T) {
 	op := &operation.AsyncOperation{Id: "op-ns"}
-	promptErr := errors.New("Aborting apply.")
 
 	tests := []struct {
-		name            string
-		params          temporalcloudcli.SetNamespacePermissionsParams
-		setup           func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler)
-		wantErr         error
-		wantErrContains string
+		name                    string
+		cmd                     temporalcloudcli.CloudUserSetNamespacePermissionsCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		expectPrompt            bool
+		promptResult            bool
+		expectedErr             string
 	}{
 		{
-			name: "by_id_success",
-			params: temporalcloudcli.SetNamespacePermissionsParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
-				NamespaceAccesses:  []string{"my-ns.acct=write", "other-ns.acct=read"},
+			name: "ByIdSuccess",
+			cmd: temporalcloudcli.CloudUserSetNamespacePermissionsCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				NamespaceAccess:           []string{"my-ns.acct=write", "other-ns.acct=read"},
 			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				oldSpec := &identityv1.UserSpec{
 					Email: "alice@example.com",
 					Access: &identityv1.Access{
@@ -56,29 +52,29 @@ func TestSetNamespacePermissions(t *testing.T) {
 						},
 					},
 				}
-				cloud.EXPECT().
-					GetUser(context.Background(), &cloudservice.GetUserRequest{UserId: "user-1"}).
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
 					Return(&cloudservice.GetUserResponse{
 						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1", Spec: oldSpec},
 					}, nil)
-				prompter.EXPECT().PromptApply(oldSpec, newSpec, false).Return(nil)
-				cloud.EXPECT().
-					UpdateUser(context.Background(), &cloudservice.UpdateUserRequest{
+				c.EXPECT().
+					UpdateUser(mock.Anything, &cloudservice.UpdateUserRequest{
 						UserId:          "user-1",
 						Spec:            newSpec,
 						ResourceVersion: "rv-1",
-					}).
+					}, mock.Anything).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
+			expectPrompt: true,
+			promptResult: true,
 		},
 		{
-			name: "by_email_success",
-			params: temporalcloudcli.SetNamespacePermissionsParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserEmail: "alice@example.com"},
-				NamespaceAccesses:  []string{"my-ns.acct=admin"},
+			name: "ByEmailSuccess",
+			cmd: temporalcloudcli.CloudUserSetNamespacePermissionsCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserEmail: "alice@example.com"},
+				NamespaceAccess:           []string{"my-ns.acct=admin"},
 			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				oldSpec := &identityv1.UserSpec{Email: "alice@example.com"}
 				newSpec := &identityv1.UserSpec{
 					Email: "alice@example.com",
@@ -88,29 +84,29 @@ func TestSetNamespacePermissions(t *testing.T) {
 						},
 					},
 				}
-				cloud.EXPECT().
-					GetUsers(context.Background(), &cloudservice.GetUsersRequest{Email: "alice@example.com"}).
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{Email: "alice@example.com"}, mock.Anything).
 					Return(&cloudservice.GetUsersResponse{
 						Users: []*identityv1.User{{Id: "user-1", ResourceVersion: "rv-1", Spec: oldSpec}},
 					}, nil)
-				prompter.EXPECT().PromptApply(oldSpec, newSpec, false).Return(nil)
-				cloud.EXPECT().
-					UpdateUser(context.Background(), &cloudservice.UpdateUserRequest{
+				c.EXPECT().
+					UpdateUser(mock.Anything, &cloudservice.UpdateUserRequest{
 						UserId:          "user-1",
 						Spec:            newSpec,
 						ResourceVersion: "rv-1",
-					}).
+					}, mock.Anything).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
+			expectPrompt: true,
+			promptResult: true,
 		},
 		{
-			name: "remove_access",
-			params: temporalcloudcli.SetNamespacePermissionsParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
-				NamespaceAccesses:  []string{"ns1.acct="},
+			name: "RemoveAccess",
+			cmd: temporalcloudcli.CloudUserSetNamespacePermissionsCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				NamespaceAccess:           []string{"ns1.acct="},
 			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				oldSpec := &identityv1.UserSpec{
 					Email: "alice@example.com",
 					Access: &identityv1.Access{
@@ -128,37 +124,30 @@ func TestSetNamespacePermissions(t *testing.T) {
 						},
 					},
 				}
-				cloud.EXPECT().
-					GetUser(context.Background(), &cloudservice.GetUserRequest{UserId: "user-1"}).
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
 					Return(&cloudservice.GetUserResponse{
 						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1", Spec: oldSpec},
 					}, nil)
-				prompter.EXPECT().PromptApply(oldSpec, newSpec, false).Return(nil)
-				cloud.EXPECT().
-					UpdateUser(context.Background(), &cloudservice.UpdateUserRequest{
+				c.EXPECT().
+					UpdateUser(mock.Anything, &cloudservice.UpdateUserRequest{
 						UserId:          "user-1",
 						Spec:            newSpec,
 						ResourceVersion: "rv-1",
-					}).
+					}, mock.Anything).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
+			expectPrompt: true,
+			promptResult: true,
 		},
 		{
-			name: "invalid_permission",
-			params: temporalcloudcli.SetNamespacePermissionsParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
-				NamespaceAccesses:  []string{"my-ns.acct=superwrite"},
+			name: "ResourceVersionOverride",
+			cmd: temporalcloudcli.CloudUserSetNamespacePermissionsCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				NamespaceAccess:           []string{"my-ns.acct=write"},
+				ResourceVersionOptions:    temporalcloudcli.ResourceVersionOptions{ResourceVersion: "rv-override"},
 			},
-			wantErrContains: "invalid permission",
-		},
-		{
-			name: "prompt_declined",
-			params: temporalcloudcli.SetNamespacePermissionsParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
-				NamespaceAccesses:  []string{"my-ns.acct=write"},
-			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				oldSpec := &identityv1.UserSpec{Email: "alice@example.com"}
 				newSpec := &identityv1.UserSpec{
 					Email: "alice@example.com",
@@ -168,76 +157,105 @@ func TestSetNamespacePermissions(t *testing.T) {
 						},
 					},
 				}
-				cloud.EXPECT().
-					GetUser(context.Background(), &cloudservice.GetUserRequest{UserId: "user-1"}).
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
 					Return(&cloudservice.GetUserResponse{
 						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1", Spec: oldSpec},
 					}, nil)
-				prompter.EXPECT().PromptApply(oldSpec, newSpec, false).Return(promptErr)
+				c.EXPECT().
+					UpdateUser(mock.Anything, &cloudservice.UpdateUserRequest{
+						UserId:          "user-1",
+						Spec:            newSpec,
+						ResourceVersion: "rv-override",
+					}, mock.Anything).
+					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
 			},
-			wantErr: promptErr,
+			expectPrompt: true,
+			promptResult: true,
 		},
 		{
-			name: "no_identifier",
-			params: temporalcloudcli.SetNamespacePermissionsParams{
-				NamespaceAccesses: []string{"my-ns.acct=write"},
+			name: "InvalidPermission",
+			cmd: temporalcloudcli.CloudUserSetNamespacePermissionsCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				NamespaceAccess:           []string{"my-ns.acct=superwrite"},
 			},
-			wantErrContains: "must provide either --user-id or --user-email",
+			expectedErr: "invalid permission",
 		},
 		{
-			name: "both_identifiers",
-			params: temporalcloudcli.SetNamespacePermissionsParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1", UserEmail: "alice@example.com"},
-				NamespaceAccesses:  []string{"my-ns.acct=write"},
+			name: "PromptDeclined",
+			cmd: temporalcloudcli.CloudUserSetNamespacePermissionsCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				NamespaceAccess:           []string{"my-ns.acct=write"},
 			},
-			wantErrContains: "cannot provide both --user-id and --user-email",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
+					Return(&cloudservice.GetUserResponse{
+						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1", Spec: &identityv1.UserSpec{Email: "alice@example.com"}},
+					}, nil)
+			},
+			expectPrompt: true,
+			promptResult: false,
+			expectedErr:  "Aborting set.",
+		},
+		{
+			name: "NoIdentifier",
+			cmd: temporalcloudcli.CloudUserSetNamespacePermissionsCommand{
+				NamespaceAccess: []string{"my-ns.acct=write"},
+			},
+			expectedErr: "must provide either --user-id or --user-email",
+		},
+		{
+			name: "BothIdentifiers",
+			cmd: temporalcloudcli.CloudUserSetNamespacePermissionsCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1", UserEmail: "alice@example.com"},
+				NamespaceAccess:           []string{"my-ns.acct=write"},
+			},
+			expectedErr: "cannot provide both --user-id and --user-email",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockCloud := cloudmock.NewMockCloudServiceClient(t)
-			mockPrompter := cmdmock.NewMockPrompter(t)
-			mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-			if tt.setup != nil {
-				tt.setup(mockCloud, mockPrompter, mockHandler)
+			promptOpts := temporalcloudcli.TestPromptOptions{}
+			asyncOpts := temporalcloudcli.TestAsyncPollerOptions{}
+			if tt.expectPrompt {
+				promptOpts.ExpectPromptYes = true
+				promptOpts.PromptResult = tt.promptResult
 			}
-			params := tt.params
-			params.Cloud = mockCloud
-			params.Prompter = mockPrompter
-			params.OperationHandler = mockHandler
-
-			err := temporalcloudcli.SetNamespacePermissions(context.Background(), params)
-			switch {
-			case tt.wantErr != nil:
-				require.ErrorIs(t, err, tt.wantErr)
-			case tt.wantErrContains != "":
-				require.ErrorContains(t, err, tt.wantErrContains)
-			default:
-				require.NoError(t, err)
+			if tt.cloudClientExpectations != nil && tt.expectedErr == "" {
+				asyncOpts.AsyncOperationID = op.Id
 			}
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           promptOpts,
+				AsyncPollerOptions:      asyncOpts,
+				ExpectedError:           tt.expectedErr,
+			})
 		})
 	}
 }
 
-func TestSetAccountRole(t *testing.T) {
+// --- SetAccountRole ---
+
+func TestUserSetAccountRole(t *testing.T) {
 	op := &operation.AsyncOperation{Id: "op-role"}
-	promptErr := errors.New("Aborting apply.")
 
 	tests := []struct {
-		name            string
-		params          temporalcloudcli.SetAccountRoleParams
-		setup           func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler)
-		wantErr         error
-		wantErrContains string
+		name                    string
+		cmd                     temporalcloudcli.CloudUserSetAccountRoleCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		expectPrompt            bool
+		promptResult            bool
+		expectedErr             string
 	}{
 		{
-			name: "by_id_success",
-			params: temporalcloudcli.SetAccountRoleParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
-				AccountRole:        "admin",
+			name: "ByIdSuccess",
+			cmd: temporalcloudcli.CloudUserSetAccountRoleCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				AccountRole:               "admin",
 			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				oldSpec := &identityv1.UserSpec{
 					Email:  "alice@example.com",
 					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_DEVELOPER}},
@@ -246,29 +264,29 @@ func TestSetAccountRole(t *testing.T) {
 					Email:  "alice@example.com",
 					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_ADMIN}},
 				}
-				cloud.EXPECT().
-					GetUser(context.Background(), &cloudservice.GetUserRequest{UserId: "user-1"}).
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
 					Return(&cloudservice.GetUserResponse{
 						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1", Spec: oldSpec},
 					}, nil)
-				prompter.EXPECT().PromptApply(oldSpec, newSpec, false).Return(nil)
-				cloud.EXPECT().
-					UpdateUser(context.Background(), &cloudservice.UpdateUserRequest{
+				c.EXPECT().
+					UpdateUser(mock.Anything, &cloudservice.UpdateUserRequest{
 						UserId:          "user-1",
 						Spec:            newSpec,
 						ResourceVersion: "rv-1",
-					}).
+					}, mock.Anything).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
+			expectPrompt: true,
+			promptResult: true,
 		},
 		{
-			name: "by_email_success",
-			params: temporalcloudcli.SetAccountRoleParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserEmail: "alice@example.com"},
-				AccountRole:        "read",
+			name: "ByEmailSuccess",
+			cmd: temporalcloudcli.CloudUserSetAccountRoleCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserEmail: "alice@example.com"},
+				AccountRole:               "read",
 			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				oldSpec := &identityv1.UserSpec{
 					Email:  "alice@example.com",
 					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_DEVELOPER}},
@@ -277,65 +295,58 @@ func TestSetAccountRole(t *testing.T) {
 					Email:  "alice@example.com",
 					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_READ}},
 				}
-				cloud.EXPECT().
-					GetUsers(context.Background(), &cloudservice.GetUsersRequest{Email: "alice@example.com"}).
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{Email: "alice@example.com"}, mock.Anything).
 					Return(&cloudservice.GetUsersResponse{
 						Users: []*identityv1.User{{Id: "user-1", ResourceVersion: "rv-1", Spec: oldSpec}},
 					}, nil)
-				prompter.EXPECT().PromptApply(oldSpec, newSpec, false).Return(nil)
-				cloud.EXPECT().
-					UpdateUser(context.Background(), &cloudservice.UpdateUserRequest{
+				c.EXPECT().
+					UpdateUser(mock.Anything, &cloudservice.UpdateUserRequest{
 						UserId:          "user-1",
 						Spec:            newSpec,
 						ResourceVersion: "rv-1",
-					}).
+					}, mock.Anything).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
+			expectPrompt: true,
+			promptResult: true,
 		},
 		{
-			name: "nil_access",
-			params: temporalcloudcli.SetAccountRoleParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
-				AccountRole:        "developer",
+			name: "NilAccess",
+			cmd: temporalcloudcli.CloudUserSetAccountRoleCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				AccountRole:               "developer",
 			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				oldSpec := &identityv1.UserSpec{Email: "alice@example.com"}
 				newSpec := &identityv1.UserSpec{
 					Email:  "alice@example.com",
 					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_DEVELOPER}},
 				}
-				cloud.EXPECT().
-					GetUser(context.Background(), &cloudservice.GetUserRequest{UserId: "user-1"}).
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
 					Return(&cloudservice.GetUserResponse{
 						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1", Spec: oldSpec},
 					}, nil)
-				prompter.EXPECT().PromptApply(oldSpec, newSpec, false).Return(nil)
-				cloud.EXPECT().
-					UpdateUser(context.Background(), &cloudservice.UpdateUserRequest{
+				c.EXPECT().
+					UpdateUser(mock.Anything, &cloudservice.UpdateUserRequest{
 						UserId:          "user-1",
 						Spec:            newSpec,
 						ResourceVersion: "rv-1",
-					}).
+					}, mock.Anything).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
+			expectPrompt: true,
+			promptResult: true,
 		},
 		{
-			name: "invalid_role",
-			params: temporalcloudcli.SetAccountRoleParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
-				AccountRole:        "superuser",
+			name: "ResourceVersionOverride",
+			cmd: temporalcloudcli.CloudUserSetAccountRoleCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				AccountRole:               "admin",
+				ResourceVersionOptions:    temporalcloudcli.ResourceVersionOptions{ResourceVersion: "rv-override"},
 			},
-			wantErrContains: "invalid account role",
-		},
-		{
-			name: "prompt_declined",
-			params: temporalcloudcli.SetAccountRoleParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
-				AccountRole:        "admin",
-			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				oldSpec := &identityv1.UserSpec{
 					Email:  "alice@example.com",
 					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_DEVELOPER}},
@@ -344,211 +355,271 @@ func TestSetAccountRole(t *testing.T) {
 					Email:  "alice@example.com",
 					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_ADMIN}},
 				}
-				cloud.EXPECT().
-					GetUser(context.Background(), &cloudservice.GetUserRequest{UserId: "user-1"}).
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
 					Return(&cloudservice.GetUserResponse{
 						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1", Spec: oldSpec},
 					}, nil)
-				prompter.EXPECT().PromptApply(oldSpec, newSpec, false).Return(promptErr)
+				c.EXPECT().
+					UpdateUser(mock.Anything, &cloudservice.UpdateUserRequest{
+						UserId:          "user-1",
+						Spec:            newSpec,
+						ResourceVersion: "rv-override",
+					}, mock.Anything).
+					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
 			},
-			wantErr: promptErr,
+			expectPrompt: true,
+			promptResult: true,
 		},
 		{
-			name: "no_identifier",
-			params: temporalcloudcli.SetAccountRoleParams{
+			name: "InvalidRole",
+			cmd: temporalcloudcli.CloudUserSetAccountRoleCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				AccountRole:               "superuser",
+			},
+			expectedErr: "invalid account role",
+		},
+		{
+			name: "PromptDeclined",
+			cmd: temporalcloudcli.CloudUserSetAccountRoleCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				AccountRole:               "admin",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
+					Return(&cloudservice.GetUserResponse{
+						User: &identityv1.User{
+							Id:              "user-1",
+							ResourceVersion: "rv-1",
+							Spec: &identityv1.UserSpec{
+								Email:  "alice@example.com",
+								Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_DEVELOPER}},
+							},
+						},
+					}, nil)
+			},
+			expectPrompt: true,
+			promptResult: false,
+			expectedErr:  "Aborting set.",
+		},
+		{
+			name: "NoIdentifier",
+			cmd: temporalcloudcli.CloudUserSetAccountRoleCommand{
 				AccountRole: "admin",
 			},
-			wantErrContains: "must provide either --user-id or --user-email",
+			expectedErr: "must provide either --user-id or --user-email",
 		},
 		{
-			name: "both_identifiers",
-			params: temporalcloudcli.SetAccountRoleParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1", UserEmail: "alice@example.com"},
-				AccountRole:        "admin",
+			name: "BothIdentifiers",
+			cmd: temporalcloudcli.CloudUserSetAccountRoleCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1", UserEmail: "alice@example.com"},
+				AccountRole:               "admin",
 			},
-			wantErrContains: "cannot provide both --user-id and --user-email",
+			expectedErr: "cannot provide both --user-id and --user-email",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockCloud := cloudmock.NewMockCloudServiceClient(t)
-			mockPrompter := cmdmock.NewMockPrompter(t)
-			mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-			if tt.setup != nil {
-				tt.setup(mockCloud, mockPrompter, mockHandler)
+			promptOpts := temporalcloudcli.TestPromptOptions{}
+			asyncOpts := temporalcloudcli.TestAsyncPollerOptions{}
+			if tt.expectPrompt {
+				promptOpts.ExpectPromptYes = true
+				promptOpts.PromptResult = tt.promptResult
 			}
-			params := tt.params
-			params.Cloud = mockCloud
-			params.Prompter = mockPrompter
-			params.OperationHandler = mockHandler
-
-			err := temporalcloudcli.SetAccountRole(context.Background(), params)
-			switch {
-			case tt.wantErr != nil:
-				require.ErrorIs(t, err, tt.wantErr)
-			case tt.wantErrContains != "":
-				require.ErrorContains(t, err, tt.wantErrContains)
-			default:
-				require.NoError(t, err)
+			if tt.cloudClientExpectations != nil && tt.expectedErr == "" {
+				asyncOpts.AsyncOperationID = op.Id
 			}
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           promptOpts,
+				AsyncPollerOptions:      asyncOpts,
+				ExpectedError:           tt.expectedErr,
+			})
 		})
 	}
 }
 
-func TestDeleteUser(t *testing.T) {
+// --- DeleteUser ---
+
+func TestUserDelete(t *testing.T) {
 	op := &operation.AsyncOperation{Id: "op-delete"}
 	apiErr := errors.New("delete error")
 
 	tests := []struct {
-		name            string
-		params          temporalcloudcli.DeleteUserParams
-		setup           func(cloud *cloudmock.MockCloudServiceClient, handler *cmdmock.MockAsyncOperationHandler)
-		wantErr         error
-		wantErrContains string
+		name                    string
+		cmd                     temporalcloudcli.CloudUserDeleteCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptResult            bool
+		expectedErr             string
 	}{
 		{
-			name:   "by_id_success",
-			params: temporalcloudcli.DeleteUserParams{UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"}},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, handler *cmdmock.MockAsyncOperationHandler) {
-				cloud.EXPECT().
-					GetUser(context.Background(), &cloudservice.GetUserRequest{UserId: "user-1"}).
+			name: "ByIdSuccess",
+			cmd: temporalcloudcli.CloudUserDeleteCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
 					Return(&cloudservice.GetUserResponse{
 						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1"},
 					}, nil)
-				cloud.EXPECT().
-					DeleteUser(context.Background(), &cloudservice.DeleteUserRequest{
+				c.EXPECT().
+					DeleteUser(mock.Anything, &cloudservice.DeleteUserRequest{
 						UserId:          "user-1",
 						ResourceVersion: "rv-1",
-					}).
+					}, mock.Anything).
 					Return(&cloudservice.DeleteUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
+			promptResult: true,
 		},
 		{
-			name:   "by_email_success",
-			params: temporalcloudcli.DeleteUserParams{UserIdentification: temporalcloudcli.UserIdentificationOptions{UserEmail: "alice@example.com"}},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, handler *cmdmock.MockAsyncOperationHandler) {
-				cloud.EXPECT().
-					GetUsers(context.Background(), &cloudservice.GetUsersRequest{Email: "alice@example.com"}).
+			name: "ByEmailSuccess",
+			cmd: temporalcloudcli.CloudUserDeleteCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserEmail: "alice@example.com"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{Email: "alice@example.com"}, mock.Anything).
 					Return(&cloudservice.GetUsersResponse{
 						Users: []*identityv1.User{{Id: "user-1", ResourceVersion: "rv-1"}},
 					}, nil)
-				cloud.EXPECT().
-					DeleteUser(context.Background(), &cloudservice.DeleteUserRequest{
+				c.EXPECT().
+					DeleteUser(mock.Anything, &cloudservice.DeleteUserRequest{
 						UserId:          "user-1",
 						ResourceVersion: "rv-1",
-					}).
+					}, mock.Anything).
 					Return(&cloudservice.DeleteUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
+			promptResult: true,
 		},
 		{
-			name: "resource_version_override",
-			params: temporalcloudcli.DeleteUserParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
-				ResourceVersion:    "rv-override",
+			name: "ResourceVersionOverride",
+			cmd: temporalcloudcli.CloudUserDeleteCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				ResourceVersionOptions:    temporalcloudcli.ResourceVersionOptions{ResourceVersion: "rv-override"},
 			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, handler *cmdmock.MockAsyncOperationHandler) {
-				cloud.EXPECT().
-					GetUser(context.Background(), &cloudservice.GetUserRequest{UserId: "user-1"}).
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
 					Return(&cloudservice.GetUserResponse{
 						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1"},
 					}, nil)
-				cloud.EXPECT().
-					DeleteUser(context.Background(), &cloudservice.DeleteUserRequest{
+				c.EXPECT().
+					DeleteUser(mock.Anything, &cloudservice.DeleteUserRequest{
 						UserId:          "user-1",
 						ResourceVersion: "rv-override",
-					}).
+					}, mock.Anything).
 					Return(&cloudservice.DeleteUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
+			promptResult: true,
 		},
 		{
-			name:   "by_email_not_found",
-			params: temporalcloudcli.DeleteUserParams{UserIdentification: temporalcloudcli.UserIdentificationOptions{UserEmail: "nobody@example.com"}},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, handler *cmdmock.MockAsyncOperationHandler) {
-				cloud.EXPECT().
-					GetUsers(context.Background(), &cloudservice.GetUsersRequest{Email: "nobody@example.com"}).
+			name: "ByEmailNotFound",
+			cmd: temporalcloudcli.CloudUserDeleteCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserEmail: "nobody@example.com"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{Email: "nobody@example.com"}, mock.Anything).
 					Return(&cloudservice.GetUsersResponse{Users: nil}, nil)
 			},
-			wantErrContains: "no user found with email",
+			expectedErr: "no user found with email",
 		},
 		{
-			name:            "no_identifier",
-			params:          temporalcloudcli.DeleteUserParams{},
-			wantErrContains: "must provide either --user-id or --user-email",
+			name: "NoIdentifier",
+			cmd:  temporalcloudcli.CloudUserDeleteCommand{},
+			expectedErr: "must provide either --user-id or --user-email",
 		},
 		{
-			name: "both_identifiers",
-			params: temporalcloudcli.DeleteUserParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1", UserEmail: "alice@example.com"},
+			name: "BothIdentifiers",
+			cmd: temporalcloudcli.CloudUserDeleteCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1", UserEmail: "alice@example.com"},
 			},
-			wantErrContains: "cannot provide both --user-id and --user-email",
+			expectedErr: "cannot provide both --user-id and --user-email",
 		},
 		{
-			name:   "api_error",
-			params: temporalcloudcli.DeleteUserParams{UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"}},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, handler *cmdmock.MockAsyncOperationHandler) {
-				cloud.EXPECT().
-					GetUser(context.Background(), &cloudservice.GetUserRequest{UserId: "user-1"}).
+			name: "PromptDeclined",
+			cmd: temporalcloudcli.CloudUserDeleteCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
 					Return(&cloudservice.GetUserResponse{
 						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1"},
 					}, nil)
-				cloud.EXPECT().
-					DeleteUser(context.Background(), &cloudservice.DeleteUserRequest{
+			},
+			promptResult: false,
+			expectedErr:  "Aborting delete.",
+		},
+		{
+			name: "ApiError",
+			cmd: temporalcloudcli.CloudUserDeleteCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
+					Return(&cloudservice.GetUserResponse{
+						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1"},
+					}, nil)
+				c.EXPECT().
+					DeleteUser(mock.Anything, &cloudservice.DeleteUserRequest{
 						UserId:          "user-1",
 						ResourceVersion: "rv-1",
-					}).
+					}, mock.Anything).
 					Return(nil, apiErr)
-				handler.EXPECT().HandleDeleteErr(apiErr).Return(apiErr)
 			},
-			wantErr: apiErr,
+			promptResult: true,
+			expectedErr:  "delete error",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockCloud := cloudmock.NewMockCloudServiceClient(t)
-			mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-			if tt.setup != nil {
-				tt.setup(mockCloud, mockHandler)
+			promptOpts := temporalcloudcli.TestPromptOptions{}
+			asyncOpts := temporalcloudcli.TestAsyncPollerOptions{}
+			// PromptYes is called after resolveUser succeeds, before DeleteUser.
+			// It is NOT called when validation fails or resolveUser fails.
+			if tt.cloudClientExpectations != nil && tt.expectedErr != "no user found with email" {
+				promptOpts.ExpectPromptYes = true
+				promptOpts.PromptResult = tt.promptResult
 			}
-			params := tt.params
-			params.Cloud = mockCloud
-			params.OperationHandler = mockHandler
-
-			err := temporalcloudcli.DeleteUser(context.Background(), params)
-			switch {
-			case tt.wantErr != nil:
-				require.ErrorIs(t, err, tt.wantErr)
-			case tt.wantErrContains != "":
-				require.ErrorContains(t, err, tt.wantErrContains)
-			default:
-				require.NoError(t, err)
+			if tt.expectedErr == "" {
+				asyncOpts.AsyncOperationID = op.Id
 			}
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           promptOpts,
+				AsyncPollerOptions:      asyncOpts,
+				ExpectedError:           tt.expectedErr,
+			})
 		})
 	}
 }
 
-func TestEditUser(t *testing.T) {
+// --- EditUser ---
+
+func TestUserEdit(t *testing.T) {
 	op := &operation.AsyncOperation{Id: "op-edit"}
-	promptErr := errors.New("Aborting apply.")
-	editorErr := errors.New("editor failed")
-	getUserErr := errors.New("not found")
 
 	tests := []struct {
-		name            string
-		params          temporalcloudcli.EditUserParams
-		makeRunEditor   func(t *testing.T) func(proto.Message, proto.Message) error
-		setup           func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler)
-		wantErr         error
-		wantErrContains string
+		name                    string
+		cmd                     temporalcloudcli.CloudUserEditCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		editedSpec              proto.Message
+		editorError             error
+		expectPrompt            bool
+		promptResult            bool
+		asyncOpID               string
+		expectedErr             string
 	}{
 		{
-			name:   "success",
-			params: temporalcloudcli.EditUserParams{UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"}},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
+			name: "Success",
+			cmd:  temporalcloudcli.CloudUserEditCommand{UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"}},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				existingSpec := &identityv1.UserSpec{
 					Email:  "alice@example.com",
 					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_DEVELOPER}},
@@ -557,268 +628,226 @@ func TestEditUser(t *testing.T) {
 					Email:  "alice@example.com",
 					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_ADMIN}},
 				}
-				cloud.EXPECT().
-					GetUser(context.Background(), &cloudservice.GetUserRequest{UserId: "user-1"}).
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
 					Return(&cloudservice.GetUserResponse{
 						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1", Spec: existingSpec},
 					}, nil)
-				prompter.EXPECT().PromptApply(existingSpec, editedSpec, false).Return(nil)
-				cloud.EXPECT().
-					UpdateUser(context.Background(), &cloudservice.UpdateUserRequest{
+				c.EXPECT().
+					UpdateUser(mock.Anything, &cloudservice.UpdateUserRequest{
 						UserId:          "user-1",
 						Spec:            editedSpec,
 						ResourceVersion: "rv-1",
-					}).
+					}, mock.Anything).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
-			makeRunEditor: func(t *testing.T) func(proto.Message, proto.Message) error {
-				editedSpec := &identityv1.UserSpec{
-					Email:  "alice@example.com",
-					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_ADMIN}},
-				}
-				return func(existing, target proto.Message) error {
-					proto.Merge(target, editedSpec)
-					return nil
-				}
+			editedSpec: &identityv1.UserSpec{
+				Email:  "alice@example.com",
+				Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_ADMIN}},
 			},
+			expectPrompt: true,
+			promptResult: true,
+			asyncOpID:    op.Id,
 		},
 		{
-			name: "resource_version_override",
-			params: temporalcloudcli.EditUserParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
-				ResourceVersion:    "rv-override",
+			name: "ResourceVersionOverride",
+			cmd: temporalcloudcli.CloudUserEditCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				ResourceVersionOptions:    temporalcloudcli.ResourceVersionOptions{ResourceVersion: "rv-override"},
 			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				existingSpec := &identityv1.UserSpec{Email: "alice@example.com"}
 				editedSpec := &identityv1.UserSpec{
 					Email:  "alice@example.com",
 					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_READ}},
 				}
-				cloud.EXPECT().
-					GetUser(context.Background(), &cloudservice.GetUserRequest{UserId: "user-1"}).
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
 					Return(&cloudservice.GetUserResponse{
 						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1", Spec: existingSpec},
 					}, nil)
-				prompter.EXPECT().PromptApply(existingSpec, editedSpec, false).Return(nil)
-				cloud.EXPECT().
-					UpdateUser(context.Background(), &cloudservice.UpdateUserRequest{
+				c.EXPECT().
+					UpdateUser(mock.Anything, &cloudservice.UpdateUserRequest{
 						UserId:          "user-1",
 						Spec:            editedSpec,
 						ResourceVersion: "rv-override",
-					}).
+					}, mock.Anything).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
-			makeRunEditor: func(t *testing.T) func(proto.Message, proto.Message) error {
-				editedSpec := &identityv1.UserSpec{
-					Email:  "alice@example.com",
-					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_READ}},
-				}
-				return func(existing, target proto.Message) error {
-					proto.Merge(target, editedSpec)
-					return nil
-				}
+			editedSpec: &identityv1.UserSpec{
+				Email:  "alice@example.com",
+				Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_READ}},
 			},
+			expectPrompt: true,
+			promptResult: true,
+			asyncOpID:    op.Id,
 		},
 		{
-			name:   "prompt_declined",
-			params: temporalcloudcli.EditUserParams{UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"}},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
-				existingSpec := &identityv1.UserSpec{Email: "alice@example.com"}
+			name: "ByEmail",
+			cmd:  temporalcloudcli.CloudUserEditCommand{UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserEmail: "alice@example.com"}},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				existingSpec := &identityv1.UserSpec{
+					Email:  "alice@example.com",
+					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_DEVELOPER}},
+				}
 				editedSpec := &identityv1.UserSpec{
 					Email:  "alice@example.com",
 					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_ADMIN}},
 				}
-				cloud.EXPECT().
-					GetUser(context.Background(), &cloudservice.GetUserRequest{UserId: "user-1"}).
-					Return(&cloudservice.GetUserResponse{
-						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1", Spec: existingSpec},
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{Email: "alice@example.com"}, mock.Anything).
+					Return(&cloudservice.GetUsersResponse{
+						Users: []*identityv1.User{{Id: "user-1", ResourceVersion: "rv-1", Spec: existingSpec}},
 					}, nil)
-				prompter.EXPECT().PromptApply(existingSpec, editedSpec, false).Return(promptErr)
+				c.EXPECT().
+					UpdateUser(mock.Anything, &cloudservice.UpdateUserRequest{
+						UserId:          "user-1",
+						Spec:            editedSpec,
+						ResourceVersion: "rv-1",
+					}, mock.Anything).
+					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
 			},
-			makeRunEditor: func(t *testing.T) func(proto.Message, proto.Message) error {
-				editedSpec := &identityv1.UserSpec{
-					Email:  "alice@example.com",
-					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_ADMIN}},
-				}
-				return func(existing, target proto.Message) error {
-					proto.Merge(target, editedSpec)
-					return nil
-				}
+			editedSpec: &identityv1.UserSpec{
+				Email:  "alice@example.com",
+				Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_ADMIN}},
 			},
-			wantErr: promptErr,
+			expectPrompt: true,
+			promptResult: true,
+			asyncOpID:    op.Id,
 		},
 		{
-			name:   "get_user_error",
-			params: temporalcloudcli.EditUserParams{UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"}},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
-				cloud.EXPECT().
-					GetUser(context.Background(), &cloudservice.GetUserRequest{UserId: "user-1"}).
-					Return(nil, getUserErr)
-			},
-			makeRunEditor: func(t *testing.T) func(proto.Message, proto.Message) error {
-				called := false
-				t.Cleanup(func() { assert.False(t, called, "RunEditor should not be called") })
-				return func(existing, target proto.Message) error {
-					called = true
-					return nil
-				}
-			},
-			wantErr: getUserErr,
-		},
-		{
-			name:   "editor_error",
-			params: temporalcloudcli.EditUserParams{UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"}},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
-				cloud.EXPECT().
-					GetUser(context.Background(), &cloudservice.GetUserRequest{UserId: "user-1"}).
+			name: "PromptDeclined",
+			cmd:  temporalcloudcli.CloudUserEditCommand{UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"}},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
 					Return(&cloudservice.GetUserResponse{
 						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1", Spec: &identityv1.UserSpec{Email: "alice@example.com"}},
 					}, nil)
 			},
-			makeRunEditor: func(t *testing.T) func(proto.Message, proto.Message) error {
-				return func(existing, target proto.Message) error { return editorErr }
+			editedSpec: &identityv1.UserSpec{
+				Email:  "alice@example.com",
+				Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_ADMIN}},
 			},
-			wantErr: editorErr,
+			expectPrompt: true,
+			promptResult: false,
+			expectedErr:  "Aborting edit.",
 		},
 		{
-			name:   "by_email_success",
-			params: temporalcloudcli.EditUserParams{UserIdentification: temporalcloudcli.UserIdentificationOptions{UserEmail: "alice@example.com"}},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
-				existingSpec := &identityv1.UserSpec{
-					Email:  "alice@example.com",
-					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_DEVELOPER}},
-				}
-				editedSpec := &identityv1.UserSpec{
-					Email:  "alice@example.com",
-					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_ADMIN}},
-				}
-				cloud.EXPECT().
-					GetUsers(context.Background(), &cloudservice.GetUsersRequest{Email: "alice@example.com"}).
-					Return(&cloudservice.GetUsersResponse{
-						Users: []*identityv1.User{{Id: "user-1", ResourceVersion: "rv-1", Spec: existingSpec}},
+			name: "GetUserError",
+			cmd:  temporalcloudcli.CloudUserEditCommand{UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"}},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
+					Return(nil, errors.New("not found"))
+			},
+			// editedSpec nil: editor must NOT be called
+			expectedErr: "not found",
+		},
+		{
+			name: "EditorError",
+			cmd:  temporalcloudcli.CloudUserEditCommand{UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"}},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
+					Return(&cloudservice.GetUserResponse{
+						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1", Spec: &identityv1.UserSpec{Email: "alice@example.com"}},
 					}, nil)
-				prompter.EXPECT().PromptApply(existingSpec, editedSpec, false).Return(nil)
-				cloud.EXPECT().
-					UpdateUser(context.Background(), &cloudservice.UpdateUserRequest{
-						UserId:          "user-1",
-						Spec:            editedSpec,
-						ResourceVersion: "rv-1",
-					}).
-					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
-			makeRunEditor: func(t *testing.T) func(proto.Message, proto.Message) error {
-				editedSpec := &identityv1.UserSpec{
-					Email:  "alice@example.com",
-					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_ADMIN}},
-				}
-				return func(existing, target proto.Message) error {
-					proto.Merge(target, editedSpec)
-					return nil
-				}
-			},
+			editorError: errors.New("editor failed"),
+			expectedErr: "editor failed",
 		},
 		{
-			name:   "by_email_not_found",
-			params: temporalcloudcli.EditUserParams{UserIdentification: temporalcloudcli.UserIdentificationOptions{UserEmail: "nobody@example.com"}},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
-				cloud.EXPECT().
-					GetUsers(context.Background(), &cloudservice.GetUsersRequest{Email: "nobody@example.com"}).
+			name: "ByEmailNotFound",
+			cmd:  temporalcloudcli.CloudUserEditCommand{UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserEmail: "nobody@example.com"}},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{Email: "nobody@example.com"}, mock.Anything).
 					Return(&cloudservice.GetUsersResponse{Users: nil}, nil)
 			},
-			makeRunEditor: func(t *testing.T) func(proto.Message, proto.Message) error {
-				return func(existing, target proto.Message) error { return nil }
-			},
-			wantErrContains: "no user found with email",
+			// editedSpec nil: editor must NOT be called
+			expectedErr: "no user found with email",
 		},
 		{
-			name:   "no_identifier",
-			params: temporalcloudcli.EditUserParams{UserIdentification: temporalcloudcli.UserIdentificationOptions{}},
-			makeRunEditor: func(t *testing.T) func(proto.Message, proto.Message) error {
-				return func(existing, target proto.Message) error { return nil }
-			},
-			wantErrContains: "must provide either --user-id or --user-email",
+			name:        "NoIdentifier",
+			cmd:         temporalcloudcli.CloudUserEditCommand{},
+			expectedErr: "must provide either --user-id or --user-email",
 		},
 		{
-			name: "both_identifiers",
-			params: temporalcloudcli.EditUserParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: "user-1", UserEmail: "alice@example.com"},
+			name: "BothIdentifiers",
+			cmd: temporalcloudcli.CloudUserEditCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1", UserEmail: "alice@example.com"},
 			},
-			makeRunEditor: func(t *testing.T) func(proto.Message, proto.Message) error {
-				return func(existing, target proto.Message) error { return nil }
-			},
-			wantErrContains: "cannot provide both --user-id and --user-email",
+			expectedErr: "cannot provide both --user-id and --user-email",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockCloud := cloudmock.NewMockCloudServiceClient(t)
-			mockPrompter := cmdmock.NewMockPrompter(t)
-			mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-			if tt.setup != nil {
-				tt.setup(mockCloud, mockPrompter, mockHandler)
+			editorOpts := temporalcloudcli.TestEditorOptions{}
+			if tt.editedSpec != nil {
+				editorOpts.Modified = tt.editedSpec
+			} else if tt.editorError != nil {
+				editorOpts.EditorError = tt.editorError
 			}
-			params := tt.params
-			params.Cloud = mockCloud
-			params.Prompter = mockPrompter
-			params.OperationHandler = mockHandler
-			params.RunEditor = tt.makeRunEditor(t)
-
-			err := temporalcloudcli.EditUser(context.Background(), params)
-			switch {
-			case tt.wantErr != nil:
-				require.ErrorIs(t, err, tt.wantErr)
-			case tt.wantErrContains != "":
-				require.ErrorContains(t, err, tt.wantErrContains)
-			default:
-				require.NoError(t, err)
+			promptOpts := temporalcloudcli.TestPromptOptions{}
+			if tt.expectPrompt {
+				promptOpts.ExpectPrompApply = true
+				promptOpts.PromptResult = tt.promptResult
 			}
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				EditorOptions:           editorOpts,
+				PromptOptions:           promptOpts,
+				AsyncPollerOptions:      temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: tt.asyncOpID},
+				ExpectedError:           tt.expectedErr,
+			})
 		})
 	}
 }
 
-func TestApplyUser(t *testing.T) {
+// --- ApplyUser ---
+
+func TestUserApply(t *testing.T) {
 	op := &operation.AsyncOperation{Id: "op-apply"}
-	promptErr := errors.New("Aborting apply.")
-	getUsersErr := errors.New("lookup error")
 	createErr := errors.New("create error")
 
 	tests := []struct {
-		name            string
-		params          temporalcloudcli.ApplyUserParams
-		setup           func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler)
-		wantErr         error
-		wantErrContains string
+		name                    string
+		cmd                     temporalcloudcli.CloudUserApplyCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptResult            bool
+		asyncOpID               string
+		expectedErr             string
 	}{
 		{
-			name: "create_success",
-			params: temporalcloudcli.ApplyUserParams{
-				Spec: &identityv1.UserSpec{Email: "alice@example.com"},
-			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
-				spec := &identityv1.UserSpec{Email: "alice@example.com"}
-				cloud.EXPECT().
-					GetUsers(context.Background(), &cloudservice.GetUsersRequest{Email: "alice@example.com"}).
-					Return(&cloudservice.GetUsersResponse{Users: nil}, nil)
-				prompter.EXPECT().PromptApply((*identityv1.UserSpec)(nil), spec, false).Return(nil)
-				cloud.EXPECT().
-					CreateUser(context.Background(), &cloudservice.CreateUserRequest{Spec: spec}).
-					Return(&cloudservice.CreateUserResponse{UserId: "user-new", AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-new").Return(nil)
-			},
+			name:        "InvalidSpec_EmptyEmail",
+			cmd:         temporalcloudcli.CloudUserApplyCommand{Spec: `{}`},
+			expectedErr: "spec must include an email address",
 		},
 		{
-			name: "update_success",
-			params: temporalcloudcli.ApplyUserParams{
-				Spec: &identityv1.UserSpec{
-					Email:  "alice@example.com",
-					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_ADMIN}},
-				},
+			name: "CreateSuccess",
+			cmd: temporalcloudcli.CloudUserApplyCommand{
+				Spec: `{"email": "alice@example.com"}`,
 			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				spec := &identityv1.UserSpec{Email: "alice@example.com"}
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{Email: "alice@example.com"}, mock.Anything).
+					Return(&cloudservice.GetUsersResponse{Users: nil}, nil)
+				c.EXPECT().
+					CreateUser(mock.Anything, &cloudservice.CreateUserRequest{Spec: spec}, mock.Anything).
+					Return(&cloudservice.CreateUserResponse{UserId: "user-new", AsyncOperation: op}, nil)
+			},
+			promptResult: true,
+			asyncOpID:    op.Id,
+		},
+		{
+			name: "UpdateSuccess",
+			cmd: temporalcloudcli.CloudUserApplyCommand{
+				Spec: `{"email": "alice@example.com", "access": {"account_access": {"role": "ROLE_ADMIN"}}}`,
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				newSpec := &identityv1.UserSpec{
 					Email:  "alice@example.com",
 					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_ADMIN}},
@@ -827,213 +856,183 @@ func TestApplyUser(t *testing.T) {
 					Email:  "alice@example.com",
 					Access: &identityv1.Access{AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_DEVELOPER}},
 				}
-				cloud.EXPECT().
-					GetUsers(context.Background(), &cloudservice.GetUsersRequest{Email: "alice@example.com"}).
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{Email: "alice@example.com"}, mock.Anything).
 					Return(&cloudservice.GetUsersResponse{
 						Users: []*identityv1.User{{Id: "user-1", ResourceVersion: "rv-1", Spec: existingSpec}},
 					}, nil)
-				prompter.EXPECT().PromptApply(existingSpec, newSpec, false).Return(nil)
-				cloud.EXPECT().
-					UpdateUser(context.Background(), &cloudservice.UpdateUserRequest{
+				c.EXPECT().
+					UpdateUser(mock.Anything, &cloudservice.UpdateUserRequest{
 						UserId:          "user-1",
 						Spec:            newSpec,
 						ResourceVersion: "rv-1",
-					}).
+					}, mock.Anything).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
+			promptResult: true,
+			asyncOpID:    op.Id,
 		},
 		{
-			name: "update_resource_version_override",
-			params: temporalcloudcli.ApplyUserParams{
-				Spec:            &identityv1.UserSpec{Email: "alice@example.com"},
-				ResourceVersion: "rv-override",
+			name: "UpdateResourceVersionOverride",
+			cmd: temporalcloudcli.CloudUserApplyCommand{
+				Spec:                   `{"email": "alice@example.com"}`,
+				ResourceVersionOptions: temporalcloudcli.ResourceVersionOptions{ResourceVersion: "rv-override"},
 			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				spec := &identityv1.UserSpec{Email: "alice@example.com"}
 				existingSpec := &identityv1.UserSpec{Email: "alice@example.com"}
-				cloud.EXPECT().
-					GetUsers(context.Background(), &cloudservice.GetUsersRequest{Email: "alice@example.com"}).
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{Email: "alice@example.com"}, mock.Anything).
 					Return(&cloudservice.GetUsersResponse{
 						Users: []*identityv1.User{{Id: "user-1", ResourceVersion: "rv-1", Spec: existingSpec}},
 					}, nil)
-				prompter.EXPECT().PromptApply(existingSpec, spec, false).Return(nil)
-				cloud.EXPECT().
-					UpdateUser(context.Background(), &cloudservice.UpdateUserRequest{
+				c.EXPECT().
+					UpdateUser(mock.Anything, &cloudservice.UpdateUserRequest{
 						UserId:          "user-1",
 						Spec:            spec,
 						ResourceVersion: "rv-override",
-					}).
+					}, mock.Anything).
 					Return(&cloudservice.UpdateUserResponse{AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
+			promptResult: true,
+			asyncOpID:    op.Id,
 		},
 		{
-			name: "prompt_declined",
-			params: temporalcloudcli.ApplyUserParams{
-				Spec: &identityv1.UserSpec{Email: "alice@example.com"},
+			name: "PromptDeclined",
+			cmd: temporalcloudcli.CloudUserApplyCommand{
+				Spec: `{"email": "alice@example.com"}`,
 			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
-				spec := &identityv1.UserSpec{Email: "alice@example.com"}
-				cloud.EXPECT().
-					GetUsers(context.Background(), &cloudservice.GetUsersRequest{Email: "alice@example.com"}).
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{Email: "alice@example.com"}, mock.Anything).
 					Return(&cloudservice.GetUsersResponse{Users: nil}, nil)
-				prompter.EXPECT().PromptApply((*identityv1.UserSpec)(nil), spec, false).Return(promptErr)
 			},
-			wantErr: promptErr,
+			promptResult: false,
+			expectedErr:  "Aborting apply.",
 		},
 		{
-			name: "get_users_error",
-			params: temporalcloudcli.ApplyUserParams{
-				Spec: &identityv1.UserSpec{Email: "alice@example.com"},
+			name: "GetUsersError",
+			cmd: temporalcloudcli.CloudUserApplyCommand{
+				Spec: `{"email": "alice@example.com"}`,
 			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
-				cloud.EXPECT().
-					GetUsers(context.Background(), &cloudservice.GetUsersRequest{Email: "alice@example.com"}).
-					Return(nil, getUsersErr)
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{Email: "alice@example.com"}, mock.Anything).
+					Return(nil, errors.New("lookup error"))
 			},
-			wantErr: getUsersErr,
+			expectedErr: "lookup error",
 		},
 		{
-			name: "create_api_error",
-			params: temporalcloudcli.ApplyUserParams{
-				Spec: &identityv1.UserSpec{Email: "alice@example.com"},
+			name: "CreateApiError",
+			cmd: temporalcloudcli.CloudUserApplyCommand{
+				Spec: `{"email": "alice@example.com"}`,
 			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, prompter *cmdmock.MockPrompter, handler *cmdmock.MockAsyncOperationHandler) {
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				spec := &identityv1.UserSpec{Email: "alice@example.com"}
-				cloud.EXPECT().
-					GetUsers(context.Background(), &cloudservice.GetUsersRequest{Email: "alice@example.com"}).
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{Email: "alice@example.com"}, mock.Anything).
 					Return(&cloudservice.GetUsersResponse{Users: nil}, nil)
-				prompter.EXPECT().PromptApply((*identityv1.UserSpec)(nil), spec, false).Return(nil)
-				cloud.EXPECT().
-					CreateUser(context.Background(), &cloudservice.CreateUserRequest{Spec: spec}).
+				c.EXPECT().
+					CreateUser(mock.Anything, &cloudservice.CreateUserRequest{Spec: spec}, mock.Anything).
 					Return(nil, createErr)
-				handler.EXPECT().HandleCreateErr(createErr).Return(createErr)
 			},
-			wantErr: createErr,
+			promptResult: true,
+			expectedErr:  "create error",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockCloud := cloudmock.NewMockCloudServiceClient(t)
-			mockPrompter := cmdmock.NewMockPrompter(t)
-			mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-			if tt.setup != nil {
-				tt.setup(mockCloud, mockPrompter, mockHandler)
+			promptOpts := temporalcloudcli.TestPromptOptions{}
+			if tt.cloudClientExpectations != nil {
+				// Prompt is called after GetUsers, before Create/Update
+				if tt.expectedErr != "lookup error" {
+					promptOpts.ExpectPrompApply = true
+					promptOpts.PromptResult = tt.promptResult
+				}
 			}
-			params := tt.params
-			params.Cloud = mockCloud
-			params.Prompter = mockPrompter
-			params.OperationHandler = mockHandler
-
-			err := temporalcloudcli.ApplyUser(context.Background(), params)
-			switch {
-			case tt.wantErr != nil:
-				require.ErrorIs(t, err, tt.wantErr)
-			case tt.wantErrContains != "":
-				require.ErrorContains(t, err, tt.wantErrContains)
-			default:
-				require.NoError(t, err)
-			}
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           promptOpts,
+				AsyncPollerOptions:      temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: tt.asyncOpID},
+				ExpectedError:           tt.expectedErr,
+			})
 		})
 	}
 }
 
-func TestGetUser(t *testing.T) {
+// --- GetUser ---
+
+func TestUserGet(t *testing.T) {
 	apiErr := errors.New("api error")
+	testUser := &identityv1.User{
+		Id:   "user-1",
+		Spec: &identityv1.UserSpec{Email: "alice@example.com"},
+	}
 
 	tests := []struct {
-		name        string
-		userID      string
-		setup       func(cloud *cloudmock.MockCloudServiceClient)
-		wantErr     error
-		checkOutput func(t *testing.T, output string)
+		name                    string
+		cmd                     temporalcloudcli.CloudUserGetCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		expectedErr             string
+		expectedOutputJson      interface{}
 	}{
 		{
-			name:   "success",
-			userID: "user-1",
-			setup: func(cloud *cloudmock.MockCloudServiceClient) {
-				cloud.EXPECT().
-					GetUser(context.Background(), &cloudservice.GetUserRequest{UserId: "user-1"}).
-					Return(&cloudservice.GetUserResponse{
-						User: &identityv1.User{
-							Id:   "user-1",
-							Spec: &identityv1.UserSpec{Email: "alice@example.com"},
-						},
-					}, nil)
+			name: "Success",
+			cmd:  temporalcloudcli.CloudUserGetCommand{UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"}},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
+					Return(&cloudservice.GetUserResponse{User: testUser}, nil)
 			},
-			checkOutput: func(t *testing.T, output string) {
-				type userOutput struct {
-					Id   string `json:"id"`
-					Spec struct {
-						Email string `json:"email"`
-					} `json:"spec"`
-				}
-				var out userOutput
-				require.NoError(t, json.Unmarshal([]byte(output), &out))
-				assert.Equal(t, "user-1", out.Id)
-				assert.Equal(t, "alice@example.com", out.Spec.Email)
-			},
+			expectedOutputJson: testUser,
 		},
 		{
-			name:   "api_error",
-			userID: "user-1",
-			setup: func(cloud *cloudmock.MockCloudServiceClient) {
-				cloud.EXPECT().
-					GetUser(context.Background(), &cloudservice.GetUserRequest{UserId: "user-1"}).
+			name: "ApiError",
+			cmd:  temporalcloudcli.CloudUserGetCommand{UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"}},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
 					Return(nil, apiErr)
 			},
-			wantErr: apiErr,
-			checkOutput: func(t *testing.T, output string) {
-				assert.Empty(t, output)
-			},
+			expectedErr: "api error",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockCloud := cloudmock.NewMockCloudServiceClient(t)
-			tt.setup(mockCloud)
-
-			var buf bytes.Buffer
-			err := temporalcloudcli.GetUser(context.Background(), temporalcloudcli.GetUserParams{
-				UserIdentification: temporalcloudcli.UserIdentificationOptions{UserId: tt.userID},
-				Cloud:              mockCloud,
-				Printer:            &printer.Printer{Output: &buf, JSON: true},
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				JSONOutput:              true,
+				ExpectedError:           tt.expectedErr,
+				ExpectedOutputJson:      tt.expectedOutputJson,
 			})
-			if tt.wantErr != nil {
-				require.ErrorIs(t, err, tt.wantErr)
-			} else {
-				require.NoError(t, err)
-			}
-			if tt.checkOutput != nil {
-				tt.checkOutput(t, buf.String())
-			}
 		})
 	}
 }
 
-func TestInviteUser(t *testing.T) {
+// --- InviteUser ---
+
+func TestUserInvite(t *testing.T) {
 	op := &operation.AsyncOperation{Id: "op-invite"}
 	apiErr := errors.New("api error")
 
 	tests := []struct {
-		name    string
-		params  temporalcloudcli.InviteUserParams
-		setup   func(cloud *cloudmock.MockCloudServiceClient, handler *cmdmock.MockAsyncOperationHandler)
-		wantErr error
+		name                    string
+		cmd                     temporalcloudcli.CloudUserInviteCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		expectPrompt            bool
+		promptResult            bool
+		expectedErr             string
 	}{
 		{
-			name: "success",
-			params: temporalcloudcli.InviteUserParams{
-				Email:         "alice@example.com",
-				AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_DEVELOPER},
-				NamespaceAccesses: map[string]*identityv1.NamespaceAccess{
-					"my-ns.my-account": {Permission: identityv1.NamespaceAccess_PERMISSION_WRITE},
-				},
+			name: "Success",
+			cmd: temporalcloudcli.CloudUserInviteCommand{
+				Email:           "alice@example.com",
+				AccountRole:     "developer",
+				NamespaceAccess: []string{"my-ns.my-account=write"},
 			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, handler *cmdmock.MockAsyncOperationHandler) {
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				expectedSpec := &identityv1.UserSpec{
 					Email: "alice@example.com",
 					Access: &identityv1.Access{
@@ -1043,80 +1042,119 @@ func TestInviteUser(t *testing.T) {
 						},
 					},
 				}
-				cloud.EXPECT().
-					CreateUser(context.Background(), &cloudservice.CreateUserRequest{Spec: expectedSpec}).
+				c.EXPECT().
+					CreateUser(mock.Anything, &cloudservice.CreateUserRequest{Spec: expectedSpec}, mock.Anything).
 					Return(&cloudservice.CreateUserResponse{UserId: "user-1", AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-1").Return(nil)
 			},
+			expectPrompt: true,
+			promptResult: true,
 		},
 		{
-			name:   "no_access",
-			params: temporalcloudcli.InviteUserParams{Email: "bob@example.com"},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, handler *cmdmock.MockAsyncOperationHandler) {
-				cloud.EXPECT().
-					CreateUser(context.Background(), &cloudservice.CreateUserRequest{
+			name: "NoAccess",
+			cmd: temporalcloudcli.CloudUserInviteCommand{
+				Email: "bob@example.com",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					CreateUser(mock.Anything, &cloudservice.CreateUserRequest{
 						Spec: &identityv1.UserSpec{
 							Email:  "bob@example.com",
 							Access: &identityv1.Access{},
 						},
-					}).
+					}, mock.Anything).
 					Return(&cloudservice.CreateUserResponse{UserId: "user-2", AsyncOperation: op}, nil)
-				handler.EXPECT().HandleOperation(op, "user-2").Return(nil)
 			},
+			expectPrompt: true,
+			promptResult: true,
 		},
 		{
-			name:   "api_error",
-			params: temporalcloudcli.InviteUserParams{Email: "alice@example.com"},
-			setup: func(cloud *cloudmock.MockCloudServiceClient, handler *cmdmock.MockAsyncOperationHandler) {
-				cloud.EXPECT().
-					CreateUser(context.Background(), &cloudservice.CreateUserRequest{
+			name:         "PromptDeclined",
+			cmd:          temporalcloudcli.CloudUserInviteCommand{Email: "alice@example.com"},
+			expectPrompt: true,
+			promptResult: false,
+			expectedErr:  "Aborting invite.",
+		},
+		{
+			name: "ApiError",
+			cmd: temporalcloudcli.CloudUserInviteCommand{
+				Email: "alice@example.com",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					CreateUser(mock.Anything, &cloudservice.CreateUserRequest{
 						Spec: &identityv1.UserSpec{
 							Email:  "alice@example.com",
 							Access: &identityv1.Access{},
 						},
-					}).
+					}, mock.Anything).
 					Return(nil, apiErr)
-				handler.EXPECT().HandleCreateErr(apiErr).Return(apiErr)
 			},
-			wantErr: apiErr,
+			expectPrompt: true,
+			promptResult: true,
+			expectedErr:  "api error",
+		},
+		{
+			name: "InvalidAccountRole",
+			cmd: temporalcloudcli.CloudUserInviteCommand{
+				Email:       "alice@example.com",
+				AccountRole: "superadmin",
+			},
+			// Validation fails before prompt
+			expectedErr: "invalid account role",
+		},
+		{
+			name: "InvalidNamespaceAccess",
+			cmd: temporalcloudcli.CloudUserInviteCommand{
+				Email:           "alice@example.com",
+				NamespaceAccess: []string{"my-ns.acct=badperm"},
+			},
+			// Validation fails before prompt
+			expectedErr: "invalid permission",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockCloud := cloudmock.NewMockCloudServiceClient(t)
-			mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-			tt.setup(mockCloud, mockHandler)
-
-			params := tt.params
-			params.Cloud = mockCloud
-			params.OperationHandler = mockHandler
-
-			err := temporalcloudcli.InviteUser(context.Background(), params)
-			if tt.wantErr != nil {
-				require.ErrorIs(t, err, tt.wantErr)
-			} else {
-				require.NoError(t, err)
+			asyncOpts := temporalcloudcli.TestAsyncPollerOptions{}
+			if tt.expectedErr == "" {
+				asyncOpts.AsyncOperationID = op.Id
 			}
+			promptOpts := temporalcloudcli.TestPromptOptions{}
+			if tt.expectPrompt {
+				promptOpts.ExpectPromptYes = true
+				promptOpts.PromptResult = tt.promptResult
+			}
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           promptOpts,
+				AsyncPollerOptions:      asyncOpts,
+				ExpectedError:           tt.expectedErr,
+			})
 		})
 	}
 }
 
-func TestListUsers(t *testing.T) {
+// --- ListUsers ---
+
+func TestUserList(t *testing.T) {
+	type listOutput struct {
+		Users         []*identityv1.User
+		NextPageToken string
+	}
 	apiErr := errors.New("api error")
 
 	tests := []struct {
-		name        string
-		params      temporalcloudcli.ListUsersParams
-		setup       func(cloud *cloudmock.MockCloudServiceClient)
-		wantErr     error
-		checkOutput func(t *testing.T, output string)
+		name                    string
+		cmd                     temporalcloudcli.CloudUserListCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		expectedOutputJson      any
+		expectedErr             string
 	}{
 		{
-			name: "success",
-			setup: func(cloud *cloudmock.MockCloudServiceClient) {
-				cloud.EXPECT().
-					GetUsers(context.Background(), &cloudservice.GetUsersRequest{}).
+			name: "Success",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{}, mock.Anything).
 					Return(&cloudservice.GetUsersResponse{
 						Users: []*identityv1.User{
 							{Id: "user-1", Spec: &identityv1.UserSpec{Email: "alice@example.com"}},
@@ -1124,100 +1162,78 @@ func TestListUsers(t *testing.T) {
 						},
 					}, nil)
 			},
-			checkOutput: func(t *testing.T, output string) {
-				type listOutput struct {
-					Users []struct {
-						Id string `json:"id"`
-					} `json:"users"`
-				}
-				var out listOutput
-				require.NoError(t, json.Unmarshal([]byte(output), &out))
-				require.Len(t, out.Users, 2)
-				assert.Equal(t, "user-1", out.Users[0].Id)
-				assert.Equal(t, "user-2", out.Users[1].Id)
+			expectedOutputJson: listOutput{
+				Users: []*identityv1.User{
+					{Id: "user-1", Spec: &identityv1.UserSpec{Email: "alice@example.com"}},
+					{Id: "user-2", Spec: &identityv1.UserSpec{Email: "bob@example.com"}},
+				},
 			},
 		},
 		{
-			name: "with_filters",
-			params: temporalcloudcli.ListUsersParams{
+			name: "WithFilters",
+			cmd: temporalcloudcli.CloudUserListCommand{
 				Email:     "alice@example.com",
 				Namespace: "my-namespace.my-account",
 			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient) {
-				cloud.EXPECT().
-					GetUsers(context.Background(), &cloudservice.GetUsersRequest{
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{
 						Email:     "alice@example.com",
 						Namespace: "my-namespace.my-account",
-					}).
+					}, mock.Anything).
 					Return(&cloudservice.GetUsersResponse{
 						Users: []*identityv1.User{
 							{Id: "user-1", Spec: &identityv1.UserSpec{Email: "alice@example.com"}},
 						},
 					}, nil)
 			},
-			checkOutput: func(t *testing.T, output string) {
-				assert.Contains(t, output, "user-1")
+			expectedOutputJson: listOutput{
+				Users: []*identityv1.User{
+					{Id: "user-1", Spec: &identityv1.UserSpec{Email: "alice@example.com"}},
+				},
 			},
 		},
 		{
-			name: "with_pagination",
-			params: temporalcloudcli.ListUsersParams{
+			name: "WithPagination",
+			cmd: temporalcloudcli.CloudUserListCommand{
 				PageSize:  10,
 				PageToken: "tok-abc",
 			},
-			setup: func(cloud *cloudmock.MockCloudServiceClient) {
-				cloud.EXPECT().
-					GetUsers(context.Background(), &cloudservice.GetUsersRequest{
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{
 						PageSize:  10,
 						PageToken: "tok-abc",
-					}).
+					}, mock.Anything).
 					Return(&cloudservice.GetUsersResponse{
 						Users:         []*identityv1.User{{Id: "user-3", Spec: &identityv1.UserSpec{Email: "carol@example.com"}}},
 						NextPageToken: "tok-def",
 					}, nil)
 			},
-			checkOutput: func(t *testing.T, output string) {
-				type listOutput struct {
-					NextPageToken string `json:"NextPageToken"`
-				}
-				var out listOutput
-				require.NoError(t, json.Unmarshal([]byte(output), &out))
-				assert.Equal(t, "tok-def", out.NextPageToken)
+			expectedOutputJson: listOutput{
+				Users:         []*identityv1.User{{Id: "user-3", Spec: &identityv1.UserSpec{Email: "carol@example.com"}}},
+				NextPageToken: "tok-def",
 			},
 		},
 		{
-			name: "api_error",
-			setup: func(cloud *cloudmock.MockCloudServiceClient) {
-				cloud.EXPECT().
-					GetUsers(context.Background(), &cloudservice.GetUsersRequest{}).
+			name: "ApiError",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{}, mock.Anything).
 					Return(nil, apiErr)
 			},
-			wantErr: apiErr,
-			checkOutput: func(t *testing.T, output string) {
-				assert.Empty(t, output)
-			},
+			expectedErr: "api error",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockCloud := cloudmock.NewMockCloudServiceClient(t)
-			tt.setup(mockCloud)
-
-			var buf bytes.Buffer
-			params := tt.params
-			params.Cloud = mockCloud
-			params.Printer = &printer.Printer{Output: &buf, JSON: true}
-
-			err := temporalcloudcli.ListUsers(context.Background(), params)
-			if tt.wantErr != nil {
-				require.ErrorIs(t, err, tt.wantErr)
-			} else {
-				require.NoError(t, err)
-			}
-			if tt.checkOutput != nil {
-				tt.checkOutput(t, buf.String())
-			}
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				JSONOutput:              true,
+				ExpectedError:           tt.expectedErr,
+				ExpectedOutputJson:      tt.expectedOutputJson,
+			})
 		})
 	}
 }
