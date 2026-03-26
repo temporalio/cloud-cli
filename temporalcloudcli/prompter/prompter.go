@@ -12,8 +12,8 @@ import (
 )
 
 type Prompter interface {
-	PromptApply(old, new proto.Message, verbose bool) error
-	PromptYes(message string, autoConfirm bool) (bool, error)
+	PromptApply(existing, modified proto.Message, verbose bool) (bool, error)
+	PromptYes(message string) (bool, error)
 }
 
 type prompter struct {
@@ -30,30 +30,29 @@ func NewPrompter(p *printer.Printer, si io.Reader, autoConfirm bool) Prompter {
 	}
 }
 
-func (p *prompter) PromptApply(existing, modified proto.Message, verbose bool) error {
+func (p *prompter) PromptApply(existing, modified proto.Message, verbose bool) (bool, error) {
 	if !p.printer.JSON {
 		p.printer.PrintDiff(existing, modified, printer.DiffOptions{
 			Verbose: verbose,
 		})
 	}
 
-	yes, err := p.PromptYes("Apply (y/yes)?", p.autoConfirm)
+	yes, err := p.PromptYes("Apply")
 	if err != nil {
-		return err
+		return false, err
 	}
-
 	if !yes {
-		return fmt.Errorf("Aborting apply.")
+		p.printer.Println("Aborting apply.")
 	}
-	return nil
+	return yes, nil
 }
 
-func (p *prompter) PromptYes(message string, autoConfirm bool) (bool, error) {
-	if p.printer.JSON && !autoConfirm {
+func (p *prompter) PromptYes(message string) (bool, error) {
+	if p.printer.JSON && !p.autoConfirm {
 		return false, fmt.Errorf("must bypass prompts when using JSON output")
 	}
-	p.printer.Print(message, " ")
-	if autoConfirm {
+	p.printer.Print(message, " (y/yes)? ")
+	if p.autoConfirm {
 		p.printer.Println("yes")
 		return true, nil
 	}

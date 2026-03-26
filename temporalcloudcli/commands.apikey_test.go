@@ -531,7 +531,7 @@ func TestDeleteApiKey(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-del"},
 					}, nil)
 			},
-			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptYesResult: true},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
 			pollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-del"},
 		},
 		{
@@ -552,7 +552,7 @@ func TestDeleteApiKey(t *testing.T) {
 					GetApiKey(mock.Anything, &cloudservice.GetApiKeyRequest{KeyId: testApiKey.Id}, mock.Anything).
 					Return(&cloudservice.GetApiKeyResponse{ApiKey: testApiKey}, nil)
 			},
-			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptYesResult: false},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: false},
 			expectedErr:   "Aborting delete.",
 		},
 		{
@@ -568,7 +568,7 @@ func TestDeleteApiKey(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-del"},
 					}, nil)
 			},
-			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptYesResult: true},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
 			pollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-del"},
 		},
 		{
@@ -582,8 +582,12 @@ func TestDeleteApiKey(t *testing.T) {
 					DeleteApiKey(mock.Anything, &cloudservice.DeleteApiKeyRequest{KeyId: testApiKey.Id, ResourceVersion: "rv-1"}, mock.Anything).
 					Return(nil, errors.New("delete failed"))
 			},
-			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptYesResult: true},
-			expectedErr:   "delete operation failed",
+			promptOptions: temporalcloudcli.TestPromptOptions{
+				ExpectPromptYes:        true,
+				ExpectPromptYesMessage: "Delete",
+				PromptResult:           true,
+			},
+			expectedErr: "delete operation failed",
 		},
 	}
 	for _, tc := range tt {
@@ -634,7 +638,7 @@ func TestUpdateApiKey(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-upd"},
 					}, nil)
 			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
 		},
 		{
@@ -659,7 +663,7 @@ func TestUpdateApiKey(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-upd"},
 					}, nil)
 			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
 		},
 		{
@@ -674,7 +678,7 @@ func TestUpdateApiKey(t *testing.T) {
 			},
 			promptOptions: temporalcloudcli.TestPromptOptions{
 				ExpectPrompApply: true,
-				PromptApplyError: errors.New("Aborting apply."),
+				PromptError:      errors.New("Aborting apply."),
 			},
 			expectedErr: "Aborting apply.",
 		},
@@ -710,7 +714,7 @@ func TestUpdateApiKey(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-upd"},
 					}, nil)
 			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
 		},
 		{
@@ -726,7 +730,7 @@ func TestUpdateApiKey(t *testing.T) {
 					UpdateApiKey(mock.Anything, mock.Anything, mock.Anything).
 					Return(nil, errors.New("update failed"))
 			},
-			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			expectedErr:   "update operation failed",
 		},
 	}
@@ -778,7 +782,7 @@ func TestEditApiKey(t *testing.T) {
 					}, nil)
 			},
 			editorOptions:      temporalcloudcli.TestEditorOptions{Modified: editedSpec},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-edit"},
 		},
 		{
@@ -820,7 +824,7 @@ func TestEditApiKey(t *testing.T) {
 					}, nil)
 			},
 			editorOptions:      temporalcloudcli.TestEditorOptions{Modified: editedSpec},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-edit"},
 		},
 		{
@@ -835,7 +839,7 @@ func TestEditApiKey(t *testing.T) {
 			editorOptions: temporalcloudcli.TestEditorOptions{Modified: editedSpec},
 			promptOptions: temporalcloudcli.TestPromptOptions{
 				ExpectPrompApply: true,
-				PromptApplyError: errors.New("Aborting apply."),
+				PromptError:      errors.New("Aborting apply."),
 			},
 			expectedErr: "Aborting apply.",
 		},
@@ -886,7 +890,7 @@ func TestDisableApiKey(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-dis"},
 					}, nil)
 			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-dis"},
 		},
 		{
@@ -911,7 +915,7 @@ func TestDisableApiKey(t *testing.T) {
 			},
 			promptOptions: temporalcloudcli.TestPromptOptions{
 				ExpectPrompApply: true,
-				PromptApplyError: errors.New("Aborting apply."),
+				PromptError:      errors.New("Aborting apply."),
 			},
 			expectedErr: "Aborting apply.",
 		},
@@ -959,7 +963,7 @@ func TestEnableApiKey(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-en"},
 					}, nil)
 			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-en"},
 		},
 		{
@@ -984,7 +988,7 @@ func TestEnableApiKey(t *testing.T) {
 			},
 			promptOptions: temporalcloudcli.TestPromptOptions{
 				ExpectPrompApply: true,
-				PromptApplyError: errors.New("Aborting apply."),
+				PromptError:      errors.New("Aborting apply."),
 			},
 			expectedErr: "Aborting apply.",
 		},

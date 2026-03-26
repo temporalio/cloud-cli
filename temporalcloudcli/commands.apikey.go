@@ -188,7 +188,7 @@ func (c *CloudApikeyDeleteCommand) run(cctx *CommandContext, _ []string) error {
 		return err
 	}
 
-	yes, err := cctx.GetPrompter().PromptYes("Delete (y/yes)?", cctx.RootCommand.AutoConfirm)
+	yes, err := cctx.GetPrompter().PromptYes("Delete")
 	if err != nil {
 		return err
 	}
@@ -232,7 +232,7 @@ func (c *CloudApikeyUpdateCommand) run(cctx *CommandContext, _ []string) error {
 		newSpec.Disabled = c.Disabled
 	}
 
-	if err := cctx.GetPrompter().PromptApply(key.Spec, newSpec, false); err != nil {
+	if yes, err := cctx.GetPrompter().PromptApply(key.Spec, newSpec, false); err != nil || !yes {
 		return err
 	}
 
@@ -266,7 +266,7 @@ func (c *CloudApikeyEditCommand) run(cctx *CommandContext, _ []string) error {
 	}
 	newSpec := edited.(*identityv1.ApiKeySpec)
 
-	if err := cctx.GetPrompter().PromptApply(key.Spec, newSpec, c.VerboseDiff); err != nil {
+	if yes, err := cctx.GetPrompter().PromptApply(key.Spec, newSpec, c.VerboseDiff); err != nil || !yes {
 		return err
 	}
 
@@ -296,7 +296,7 @@ func (c *CloudApikeyDisableCommand) run(cctx *CommandContext, _ []string) error 
 	newSpec := proto.Clone(key.Spec).(*identityv1.ApiKeySpec)
 	newSpec.Disabled = true
 
-	if err := cctx.GetPrompter().PromptApply(key.Spec, newSpec, false); err != nil {
+	if yes, err := cctx.GetPrompter().PromptApply(key.Spec, newSpec, false); err != nil || !yes {
 		return err
 	}
 
@@ -326,7 +326,7 @@ func (c *CloudApikeyEnableCommand) run(cctx *CommandContext, _ []string) error {
 	newSpec := proto.Clone(key.Spec).(*identityv1.ApiKeySpec)
 	newSpec.Disabled = false
 
-	if err := cctx.GetPrompter().PromptApply(key.Spec, newSpec, false); err != nil {
+	if yes, err := cctx.GetPrompter().PromptApply(key.Spec, newSpec, false); err != nil || !yes {
 		return err
 	}
 

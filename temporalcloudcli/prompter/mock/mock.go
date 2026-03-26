@@ -37,20 +37,29 @@ func (_m *MockPrompter) EXPECT() *MockPrompter_Expecter {
 }
 
 // PromptApply provides a mock function for the type MockPrompter
-func (_mock *MockPrompter) PromptApply(old proto.Message, new proto.Message, verbose bool) error {
-	ret := _mock.Called(old, new, verbose)
+func (_mock *MockPrompter) PromptApply(existing proto.Message, modified proto.Message, verbose bool) (bool, error) {
+	ret := _mock.Called(existing, modified, verbose)
 
 	if len(ret) == 0 {
 		panic("no return value specified for PromptApply")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(proto.Message, proto.Message, bool) error); ok {
-		r0 = returnFunc(old, new, verbose)
-	} else {
-		r0 = ret.Error(0)
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(proto.Message, proto.Message, bool) (bool, error)); ok {
+		return returnFunc(existing, modified, verbose)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(0).(func(proto.Message, proto.Message, bool) bool); ok {
+		r0 = returnFunc(existing, modified, verbose)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(proto.Message, proto.Message, bool) error); ok {
+		r1 = returnFunc(existing, modified, verbose)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // MockPrompter_PromptApply_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PromptApply'
@@ -59,14 +68,14 @@ type MockPrompter_PromptApply_Call struct {
 }
 
 // PromptApply is a helper method to define mock.On call
-//   - old proto.Message
-//   - new proto.Message
+//   - existing proto.Message
+//   - modified proto.Message
 //   - verbose bool
-func (_e *MockPrompter_Expecter) PromptApply(old interface{}, new interface{}, verbose interface{}) *MockPrompter_PromptApply_Call {
-	return &MockPrompter_PromptApply_Call{Call: _e.mock.On("PromptApply", old, new, verbose)}
+func (_e *MockPrompter_Expecter) PromptApply(existing interface{}, modified interface{}, verbose interface{}) *MockPrompter_PromptApply_Call {
+	return &MockPrompter_PromptApply_Call{Call: _e.mock.On("PromptApply", existing, modified, verbose)}
 }
 
-func (_c *MockPrompter_PromptApply_Call) Run(run func(old proto.Message, new proto.Message, verbose bool)) *MockPrompter_PromptApply_Call {
+func (_c *MockPrompter_PromptApply_Call) Run(run func(existing proto.Message, modified proto.Message, verbose bool)) *MockPrompter_PromptApply_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 proto.Message
 		if args[0] != nil {
@@ -89,19 +98,19 @@ func (_c *MockPrompter_PromptApply_Call) Run(run func(old proto.Message, new pro
 	return _c
 }
 
-func (_c *MockPrompter_PromptApply_Call) Return(err error) *MockPrompter_PromptApply_Call {
-	_c.Call.Return(err)
+func (_c *MockPrompter_PromptApply_Call) Return(b bool, err error) *MockPrompter_PromptApply_Call {
+	_c.Call.Return(b, err)
 	return _c
 }
 
-func (_c *MockPrompter_PromptApply_Call) RunAndReturn(run func(old proto.Message, new proto.Message, verbose bool) error) *MockPrompter_PromptApply_Call {
+func (_c *MockPrompter_PromptApply_Call) RunAndReturn(run func(existing proto.Message, modified proto.Message, verbose bool) (bool, error)) *MockPrompter_PromptApply_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // PromptYes provides a mock function for the type MockPrompter
-func (_mock *MockPrompter) PromptYes(message string, autoConfirm bool) (bool, error) {
-	ret := _mock.Called(message, autoConfirm)
+func (_mock *MockPrompter) PromptYes(message string) (bool, error) {
+	ret := _mock.Called(message)
 
 	if len(ret) == 0 {
 		panic("no return value specified for PromptYes")
@@ -109,16 +118,16 @@ func (_mock *MockPrompter) PromptYes(message string, autoConfirm bool) (bool, er
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, bool) (bool, error)); ok {
-		return returnFunc(message, autoConfirm)
+	if returnFunc, ok := ret.Get(0).(func(string) (bool, error)); ok {
+		return returnFunc(message)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, bool) bool); ok {
-		r0 = returnFunc(message, autoConfirm)
+	if returnFunc, ok := ret.Get(0).(func(string) bool); ok {
+		r0 = returnFunc(message)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, bool) error); ok {
-		r1 = returnFunc(message, autoConfirm)
+	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
+		r1 = returnFunc(message)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -132,24 +141,18 @@ type MockPrompter_PromptYes_Call struct {
 
 // PromptYes is a helper method to define mock.On call
 //   - message string
-//   - autoConfirm bool
-func (_e *MockPrompter_Expecter) PromptYes(message interface{}, autoConfirm interface{}) *MockPrompter_PromptYes_Call {
-	return &MockPrompter_PromptYes_Call{Call: _e.mock.On("PromptYes", message, autoConfirm)}
+func (_e *MockPrompter_Expecter) PromptYes(message interface{}) *MockPrompter_PromptYes_Call {
+	return &MockPrompter_PromptYes_Call{Call: _e.mock.On("PromptYes", message)}
 }
 
-func (_c *MockPrompter_PromptYes_Call) Run(run func(message string, autoConfirm bool)) *MockPrompter_PromptYes_Call {
+func (_c *MockPrompter_PromptYes_Call) Run(run func(message string)) *MockPrompter_PromptYes_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 bool
-		if args[1] != nil {
-			arg1 = args[1].(bool)
-		}
 		run(
 			arg0,
-			arg1,
 		)
 	})
 	return _c
@@ -160,7 +163,7 @@ func (_c *MockPrompter_PromptYes_Call) Return(b bool, err error) *MockPrompter_P
 	return _c
 }
 
-func (_c *MockPrompter_PromptYes_Call) RunAndReturn(run func(message string, autoConfirm bool) (bool, error)) *MockPrompter_PromptYes_Call {
+func (_c *MockPrompter_PromptYes_Call) RunAndReturn(run func(message string) (bool, error)) *MockPrompter_PromptYes_Call {
 	_c.Call.Return(run)
 	return _c
 }

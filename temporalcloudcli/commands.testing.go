@@ -36,12 +36,16 @@ type (
 	}
 
 	TestPromptOptions struct {
-		ExpectPrompApply bool
-		PromptApplyError error
+		ExpectPrompApply          bool
+		ExpectPromptApplyExisting proto.Message
+		ExpectPromptApplyModified proto.Message
+		ExpectPromptApplyVerbose  bool
 
-		ExpectPromptYes bool
-		PromptYesResult bool
-		PromptYesError  error
+		ExpectPromptYes        bool
+		ExpectPromptYesMessage string
+
+		PromptResult bool
+		PromptError  error
 	}
 
 	TestEditorOptions struct {
@@ -77,14 +81,26 @@ func getMockPrompter(t *testing.T, printer *printer.Printer, opts TestPromptOpti
 	if opts.ExpectPrompApply {
 		promptMock.EXPECT().
 			PromptApply(mock.Anything, mock.Anything, mock.Anything).
-			Return(opts.PromptApplyError).
+			Run(func(existing, modified proto.Message, verbose bool) {
+				if opts.ExpectPromptApplyExisting != nil || opts.ExpectPromptApplyModified != nil {
+					assert.True(t, proto.Equal(opts.ExpectPromptApplyExisting, existing))
+					assert.True(t, proto.Equal(opts.ExpectPromptApplyModified, modified))
+					assert.Equal(t, opts.ExpectPromptApplyVerbose, verbose)
+				}
+			}).
+			Return(opts.PromptResult, opts.PromptError).
 			Times(1)
 	}
 
 	if opts.ExpectPromptYes {
 		promptMock.EXPECT().
-			PromptYes(mock.Anything, mock.Anything).
-			Return(opts.PromptYesResult, opts.PromptYesError).
+			PromptYes(mock.Anything).
+			Run(func(message string) {
+				if opts.ExpectPromptYesMessage != "" {
+					assert.Equal(t, opts.ExpectPromptYesMessage, message)
+				}
+			}).
+			Return(opts.PromptResult, opts.PromptError).
 			Times(1)
 	}
 	return promptMock
@@ -170,7 +186,9 @@ func TestCommand(t *testing.T, command CommandIfc, opts TestCommandOptions) {
 	err := command.run(cctx, opts.Args)
 	if opts.ExpectedError != "" {
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), opts.ExpectedError)
+		if err != nil {
+			assert.Contains(t, err.Error(), opts.ExpectedError)
+		}
 	} else {
 		assert.NoError(t, err)
 		t.Logf("Command output: %s", printerBuf.String())

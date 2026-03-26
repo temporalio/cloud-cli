@@ -199,7 +199,7 @@ func setStructField(inputIntf any, fieldName string, value any) error {
 			indirectVal.Kind())
 	}
 
-	// allocate each of the structs fields
+	// inspect each struct field for allocation
 	var err error
 	var allocatedField bool
 	for i := range indirectVal.NumField() {

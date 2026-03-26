@@ -29,26 +29,31 @@ func TestPromptApply(t *testing.T) {
 		json           bool
 		autoConfirm    bool
 		stdin          string
+		expectedResult bool
 		expectedErr    string
 		outputContains string
 	}{
 		{
 			name:           "AutoConfirm",
 			autoConfirm:    true,
+			expectedResult: true,
 			outputContains: "Apply (y/yes)? yes",
 		},
 		{
-			name:  "UserAcceptsWithY",
-			stdin: "y\n",
+			name:           "UserAcceptsWithY",
+			stdin:          "y\n",
+			expectedResult: true,
 		},
 		{
-			name:  "UserAcceptsWithYes",
-			stdin: "yes\n",
+			name:           "UserAcceptsWithYes",
+			stdin:          "yes\n",
+			expectedResult: true,
 		},
 		{
-			name:        "UserDeclines",
-			stdin:       "n\n",
-			expectedErr: "Aborting apply.",
+			name:           "UserDeclines",
+			stdin:          "n\n",
+			expectedResult: false,
+			outputContains: "Aborting apply.",
 		},
 		{
 			name:        "JSONModeRequiresAutoConfirm",
@@ -57,9 +62,10 @@ func TestPromptApply(t *testing.T) {
 			expectedErr: "must bypass prompts when using JSON output",
 		},
 		{
-			name:        "JSONModeWithAutoConfirm",
-			json:        true,
-			autoConfirm: true,
+			name:           "JSONModeWithAutoConfirm",
+			json:           true,
+			autoConfirm:    true,
+			expectedResult: true,
 		},
 	}
 
@@ -68,13 +74,14 @@ func TestPromptApply(t *testing.T) {
 			var buf bytes.Buffer
 			pr := newTestPrompter(&buf, tt.stdin, tt.json, tt.autoConfirm)
 
-			err := pr.PromptApply(oldSpec, newSpec, false)
+			yes, err := pr.PromptApply(oldSpec, newSpec, false)
 
 			if tt.expectedErr != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedErr)
 			} else {
 				require.NoError(t, err)
+				assert.Equal(t, tt.expectedResult, yes)
 			}
 			if tt.outputContains != "" {
 				assert.Contains(t, buf.String(), tt.outputContains)
@@ -92,8 +99,9 @@ func TestPromptApply_JSONModeSkipsDiff(t *testing.T) {
 	var buf bytes.Buffer
 	pr := newTestPrompter(&buf, "", true, true)
 
-	err := pr.PromptApply(oldSpec, newSpec, false)
+	yes, err := pr.PromptApply(oldSpec, newSpec, false)
 	require.NoError(t, err)
+	assert.True(t, yes)
 
 	out := buf.String()
 	assert.NotContains(t, out, "before")
@@ -109,8 +117,9 @@ func TestPromptApply_PrintsDiff(t *testing.T) {
 	var buf bytes.Buffer
 	pr := newTestPrompter(&buf, "", false, true)
 
-	err := pr.PromptApply(oldSpec, newSpec, false)
+	yes, err := pr.PromptApply(oldSpec, newSpec, false)
 	require.NoError(t, err)
+	assert.True(t, yes)
 
 	out := buf.String()
 	assert.Contains(t, out, "before")
@@ -125,6 +134,6 @@ func TestPromptApply_VerboseFlag(t *testing.T) {
 	var buf bytes.Buffer
 	pr := newTestPrompter(&buf, "", false, true)
 
-	err := pr.PromptApply(spec, spec, true)
+	_, err := pr.PromptApply(spec, spec, true)
 	require.NoError(t, err)
 }
