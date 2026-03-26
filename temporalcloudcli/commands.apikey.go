@@ -130,12 +130,16 @@ func (c *CloudApikeyCreateForServiceAccountCommand) run(cctx *CommandContext, _ 
 		},
 		AsyncOperationId: c.AsyncOperationId,
 	})
-	if err == nil {
-		defer func() {
-			cctx.Printer.Println("Make sure to copy or store the ApiKey token as you will not be able to see this secret again.")
-		}()
+	err = cctx.GetPoller(client, c.AsyncOperationOptions).HandleCreateAsyncOperationResponse(cctx, resp, err)
+	if err != nil {
+		// Print the token if creation succeeded but polling failed,
+		// since the API key was still created and the user needs the token to use it or delete it.
+		if resp != nil && resp.GetToken() != "" {
+			cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
+		}
 	}
-	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleCreateAsyncOperationResponse(cctx, resp, err)
+	cctx.Printer.Println("Make sure to copy or store the ApiKey token as you will not be able to see this secret again.")
+	return err
 }
 
 func (c *CloudApikeyCreateForMeCommand) run(cctx *CommandContext, _ []string) error {
@@ -232,8 +236,12 @@ func (c *CloudApikeyUpdateCommand) run(cctx *CommandContext, _ []string) error {
 		newSpec.Disabled = c.Disabled
 	}
 
-	if yes, err := cctx.GetPrompter().PromptApply(key.Spec, newSpec, false); err != nil || !yes {
+	yes, err := cctx.GetPrompter().PromptApply(key.Spec, newSpec, false)
+	if err != nil {
 		return err
+	}
+	if !yes {
+		return errors.New("Aborting update.")
 	}
 
 	rv := key.ResourceVersion
@@ -266,8 +274,12 @@ func (c *CloudApikeyEditCommand) run(cctx *CommandContext, _ []string) error {
 	}
 	newSpec := edited.(*identityv1.ApiKeySpec)
 
-	if yes, err := cctx.GetPrompter().PromptApply(key.Spec, newSpec, c.VerboseDiff); err != nil || !yes {
+	yes, err := cctx.GetPrompter().PromptApply(key.Spec, newSpec, false)
+	if err != nil {
 		return err
+	}
+	if !yes {
+		return errors.New("Aborting edit.")
 	}
 
 	rv := key.ResourceVersion
@@ -296,8 +308,12 @@ func (c *CloudApikeyDisableCommand) run(cctx *CommandContext, _ []string) error 
 	newSpec := proto.Clone(key.Spec).(*identityv1.ApiKeySpec)
 	newSpec.Disabled = true
 
-	if yes, err := cctx.GetPrompter().PromptApply(key.Spec, newSpec, false); err != nil || !yes {
+	yes, err := cctx.GetPrompter().PromptApply(key.Spec, newSpec, false)
+	if err != nil {
 		return err
+	}
+	if !yes {
+		return errors.New("Aborting disable.")
 	}
 
 	rv := key.ResourceVersion
@@ -326,8 +342,12 @@ func (c *CloudApikeyEnableCommand) run(cctx *CommandContext, _ []string) error {
 	newSpec := proto.Clone(key.Spec).(*identityv1.ApiKeySpec)
 	newSpec.Disabled = false
 
-	if yes, err := cctx.GetPrompter().PromptApply(key.Spec, newSpec, false); err != nil || !yes {
+	yes, err := cctx.GetPrompter().PromptApply(key.Spec, newSpec, false)
+	if err != nil {
 		return err
+	}
+	if !yes {
+		return errors.New("Aborting enable.")
 	}
 
 	rv := key.ResourceVersion

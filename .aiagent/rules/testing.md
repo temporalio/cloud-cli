@@ -12,13 +12,15 @@ Unit tests use the `TestCommand` harness (`commands.testing.go`) to call `run` d
 
 ### `TestCommand` harness
 
-`temporalcloudcli.TestCommand(t, ctx, command, opts)` builds a `CommandContext` with two override hooks and calls `command.run`:
+`temporalcloudcli.TestCommand(t, command, opts)` builds a `CommandContext` with override hooks and calls `command.run`:
 
 ```go
 type TestCommandOptions struct {
     Args                    []string
     CloudClientExpectations func(cloudClient *cloudmock.MockCloudServiceClient)
     AsyncPollerOptions      TestAsyncPollerOptions
+    PromptOptions           TestPromptOptions
+    EditorOptions           TestEditorOptions
     JSONOutput              bool
     ExpectedError           string
     ExpectedOutput          string
@@ -29,6 +31,23 @@ type TestAsyncPollerOptions struct {
     AsyncOperationID string  // set when polling should be exercised; drives mock GetAsyncOperation expectations
     ErrorToReturn    error   // set to simulate a poll failure
 }
+
+type TestPromptOptions struct {
+    ExpectPromptYes        bool
+    ExpectPromptYesMessage string
+    ExpectPrompApply       bool
+    // optional: assert the exact messages passed to PromptApply
+    ExpectPromptApplyExisting proto.Message
+    ExpectPromptApplyModified proto.Message
+    ExpectPromptApplyVerbose  bool
+    PromptResult bool   // returned by the mock (true = confirmed)
+    PromptError  error  // returned by the mock
+}
+
+type TestEditorOptions struct {
+    Modified    proto.Message  // proto returned by EditProto; nil = no editor call expected
+    EditorError error
+}
 ```
 
 - `CloudClientExpectations` — sets `EXPECT()` calls on `*cloudmock.MockCloudServiceClient`; injected via `cctx.getCloudClientOverride`
@@ -36,6 +55,8 @@ type TestAsyncPollerOptions struct {
   - `AsyncOperationID` set (no error): two `GetAsyncOperation` calls — first `STATE_PENDING`, second `STATE_FULFILLED`
   - `ErrorToReturn` set: one `GetAsyncOperation` call → returns the error
   - Neither set: no poller expectations (command errors before reaching the poller)
+- `PromptOptions` — drives a `MockPrompter`; set `ExpectPromptYes` or `ExpectPrompApply` to assert the mock is called once; `PromptResult` controls what it returns
+- `EditorOptions` — drives a `MockEditor`; set `Modified` to the proto the editor should return; set `EditorError` to simulate an error
 
 **Read command example:**
 ```go
@@ -70,7 +91,7 @@ func TestGetFoo(t *testing.T) {
     }
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
-            temporalcloudcli.TestCommand(t, context.Background(), &tt.cmd, temporalcloudcli.TestCommandOptions{
+            temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
                 CloudClientExpectations: tt.setClientExpectations,
                 JSONOutput:              true,
                 ExpectedError:           tt.expectedErr,
@@ -83,7 +104,7 @@ func TestGetFoo(t *testing.T) {
 
 **Mutation command example (with async polling):**
 ```go
-temporalcloudcli.TestCommand(t, context.Background(), &tt.cmd, temporalcloudcli.TestCommandOptions{
+temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
     CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
         c.EXPECT().GetNamespace(...).Return(...)
         c.EXPECT().UpdateNamespace(...).Return(&cloudservice.UpdateNamespaceResponse{
@@ -157,41 +178,42 @@ See `temporalcloudcli/commands.apikey_test.go` for the canonical unit test patte
 
 ## Testing Editor-Based Commands
 
-`runEditorForJSONEditForProtos` launches a real `$EDITOR` process — it cannot be called in unit tests. For `edit` commands, store the editor as a field on the command struct and inject it via `TestCommandOptions.CloudClientExpectations` or by setting it directly on the cmd before passing to `TestCommand`:
+`editor.Editor.EditProto` launches a real `$EDITOR` process — it cannot run in unit tests. The `TestCommand` harness automatically injects a `MockEditor` via `cctx.getEditorOverride`. Use `TestEditorOptions` to control its behavior:
 
 ```go
-// In the command struct (unexported field, set before run):
-type CloudNamespaceFooEditCommand struct {
-    // ...generated fields...
-    runEditor func(existing, target proto.Message) error
-}
-
-func (c *CloudNamespaceFooEditCommand) run(cctx *CommandContext, _ []string) error {
-    runEditor := c.runEditor
-    if runEditor == nil {
-        runEditor = runEditorForJSONEditForProtos
-    }
-    // use runEditor(existing, newSpec)
-}
+temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
+    CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) { ... },
+    EditorOptions: temporalcloudcli.TestEditorOptions{
+        Modified: editedSpec,  // proto returned by EditProto
+    },
+    JSONOutput:         true,
+    ExpectedOutputJson: expectedResponse,
+})
 ```
 
-Tests set the field directly on the cmd struct before passing to `TestCommand`:
+- `Modified` set: mock expects one `EditProto` call and returns `Modified`
+- `EditorError` set: mock expects one `EditProto` call and returns the error
+- Neither set: no editor call expected (command errors before reaching the editor)
+
+In the `run` method, obtain the editor via `cctx.GetEditor()`:
 ```go
-cmd := &temporalcloudcli.CloudNamespaceFooEditCommand{...}
-cmd.SetRunEditor(func(existing, target proto.Message) error {
-    proto.Merge(target, editedSpec)
-    return nil
-})
-temporalcloudcli.TestCommand(t, ctx, cmd, opts)
+func (c *CloudNamespaceFooEditCommand) run(cctx *CommandContext, _ []string) error {
+    // ...fetch existing...
+    modified, err := cctx.GetEditor().EditProto(existing)
+    if err != nil {
+        return err
+    }
+    // use modified...
+}
 ```
 
 ## Common Test Patterns
 
-**Always set `AutoConfirm: true`** to bypass prompts unless testing prompt behavior:
-```go
-s.RootCommand.AutoConfirm = true
-```
+**Bypassing prompts in unit tests** — the `MockPrompter` only fires expectations you explicitly set in `PromptOptions`. If a command calls `GetPrompter().PromptYes` but you don't set `ExpectPromptYes: true`, the test will fail with an unexpected call. To simulate auto-confirm, set `PromptOptions: TestPromptOptions{ExpectPromptYes: true, PromptResult: true}`.
 
 **Test prompt scenarios as individual functions:**
-- User declining: `AutoConfirm: false`, provide `"n\n"` as stdin
-- JSON output without auto-confirm: should error
+- User confirming: `PromptOptions: TestPromptOptions{ExpectPromptYes: true, PromptResult: true}`
+- User declining: `PromptOptions: TestPromptOptions{ExpectPromptYes: true, PromptResult: false}`
+- Prompt error: `PromptOptions: TestPromptOptions{ExpectPromptYes: true, PromptError: errors.New("...")}`
+
+**Integration tests** use `s.RootCommand.AutoConfirm = true` to bypass real prompts.

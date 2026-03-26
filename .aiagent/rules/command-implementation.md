@@ -120,8 +120,9 @@ See `temporalcloudcli/commands.apikey.go` (`CloudApikeyGetCommand`, `CloudApikey
 
 **Common helpers in `common.go`:**
 - `loadJSONSpec(spec string)` — loads JSON from inline string or `@file` path
-- `runEditorForJSONEditForProtos(current, target)` — opens `$EDITOR` for interactive editing
 - `isNotFoundErr(err)` / `isNothingChangedErr(idempotent, err)` — gRPC error helpers
+
+**Editor (for `edit` commands):** use `cctx.GetEditor()` which returns an `editor.Editor`. Call `editor.EditProto(existing)` — it serializes the proto to JSON, opens `$EDITOR`, deserializes the result, and returns `(modified proto.Message, error)`. Overridden in tests via `TestCommandOptions.EditorOptions`.
 
 After creating the file, run `git add temporalcloudcli/commands.<name>.go`.
 
@@ -207,15 +208,25 @@ for _, existing := range existingFilters {
 
 ### Mutation Commands Must Prompt for Confirmation
 
-All create and delete commands must prompt the user before making changes:
+All create and delete commands must prompt the user before making changes using `cctx.GetPrompter()`:
 
 ```go
-yes, err := cctx.promptYes("Create (y/yes)?", cctx.RootCommand.AutoConfirm)
+// Simple yes/no (create, delete):
+yes, err := cctx.GetPrompter().PromptYes("Create")
 if err != nil {
     return err
 }
 if !yes {
     return errors.New("Aborting create.")
+}
+
+// Apply/edit commands (shows diff before prompting):
+yes, err := cctx.GetPrompter().PromptApply(existing, modified, c.VerboseDiff)
+if err != nil {
+    return err
+}
+if !yes {
+    return nil  // PromptApply already prints "Aborting apply."
 }
 ```
 

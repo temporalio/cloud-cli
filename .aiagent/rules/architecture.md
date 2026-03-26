@@ -71,7 +71,8 @@ See `temporalcloudcli/commands.apikey.go` (`CloudApikeyGetCommand` and `CloudApi
 
 - `cloudservice.CloudServiceClient` (from `go.temporal.io/cloud-sdk/api/cloudservice/v1`) — the gRPC client interface; injected via `cctx.GetCloudClient`; overridden in tests via `cctx.getCloudClientOverride`
 - `async.Poller` (from `temporalcloudcli/async`) — handles async op lifecycle and polling; injected via `cctx.GetPoller`; overridden in tests via `cctx.getAsyncPollerOverride`
-- `Prompter` (from `temporalcloudcli/common.go`) — shows diffs and prompts for confirmation; mock with `cmdmock.NewMockPrompter(t)` when needed
+- `cliprompter.Prompter` (from `temporalcloudcli/prompter`) — shows diffs and prompts for confirmation; use `cctx.GetPrompter()`; overridden in tests via `cctx.getPrompterOverride`
+- `editor.Editor` (from `temporalcloudcli/editor`) — opens `$EDITOR` for interactive proto editing; use `cctx.GetEditor()`; overridden in tests via `cctx.getEditorOverride`
 
 ### Legacy Pattern (being migrated)
 
@@ -82,7 +83,8 @@ Older commands (e.g. `commands.namespace.retention.go`) use an exported `XxxPara
 The mockery-generated mocks live in:
 - `internal/cloudservice/mock/` — provides `MockCloudServiceClient` for the gRPC interface
 - `temporalcloudcli/async/mock/` — provides `MockPoller` for the `async.Poller` interface
-- `temporalcloudcli/mock/` — provides `MockPrompter` and `MockAsyncOperationHandler` (legacy)
+- `temporalcloudcli/prompter/mock/` — provides `MockPrompter` for the `cliprompter.Prompter` interface
+- `temporalcloudcli/editor/mock/` — provides `MockEditor` for the `editor.Editor` interface
 
 To regenerate all mocks after interface changes:
 ```bash
