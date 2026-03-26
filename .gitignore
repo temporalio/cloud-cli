@@ -41,3 +41,4 @@ go.work.sum
 .claude/*
 !.claude/rules
 !.claude/rules/**
+.aiagent/settings*

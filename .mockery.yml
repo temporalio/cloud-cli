@@ -8,6 +8,15 @@ packages:
       NamespaceClient:
       AsyncOperationHandler:
       Prompter:
+  github.com/temporalio/cloud-cli/temporalcloudcli/async:
+    interfaces:
+      Poller:
+  github.com/temporalio/cloud-cli/temporalcloudcli/prompter:
+    interfaces:
+      Prompter:
+  github.com/temporalio/cloud-cli/temporalcloudcli/editor:
+    interfaces:
+      Editor:
   github.com/temporalio/cloud-cli/internal/namespace:
     interfaces:
       CloudService:

@@ -64,6 +64,7 @@ type AsyncOperationOptions struct {
 	Idempotent       bool
 	AsyncOperationId string
 	Async            bool
+	PollInterval     cliext.FlagDuration
 	FlagSet          *pflag.FlagSet
 }
 
@@ -72,6 +73,8 @@ func (v *AsyncOperationOptions) BuildFlags(f *pflag.FlagSet) {
 	f.BoolVar(&v.Idempotent, "idempotent", false, "Succeed silently if the resource already exists or matches the specification. Without this flag, the command errors when no changes are needed.")
 	f.StringVar(&v.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
 	f.BoolVar(&v.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
+	v.PollInterval = cliext.MustParseFlagDuration("1s")
+	f.Var(&v.PollInterval, "poll-interval", "Time to wait between status checks when waiting for operation completion. Cannot be greater than 10 minutes. Supports minutes (m) and seconds (s). Default is 1s.")
 }
 
 type UserIdentificationOptions struct {
