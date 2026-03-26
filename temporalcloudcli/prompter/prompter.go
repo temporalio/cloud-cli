@@ -37,14 +37,7 @@ func (p *prompter) PromptApply(existing, modified proto.Message, verbose bool) (
 		})
 	}
 
-	yes, err := p.PromptYes("Apply")
-	if err != nil {
-		return false, err
-	}
-	if !yes {
-		p.printer.Println("Aborting apply.")
-	}
-	return yes, nil
+	return p.PromptYes("Apply")
 }
 
 func (p *prompter) PromptYes(message string) (bool, error) {

@@ -53,7 +53,6 @@ func TestPromptApply(t *testing.T) {
 			name:           "UserDeclines",
 			stdin:          "n\n",
 			expectedResult: false,
-			outputContains: "Aborting apply.",
 		},
 		{
 			name:        "JSONModeRequiresAutoConfirm",
