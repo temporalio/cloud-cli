@@ -33,233 +33,297 @@ var (
 	}
 )
 
-type (
-	SetNamespacePermissionsParams struct {
-		UserIdentification UserIdentificationOptions
-		// NamespaceAccesses lists changes to apply in "namespace=permission" format.
-		// Each entry adds or overwrites a namespace; an empty permission (e.g. "testns=") removes it.
-		NamespaceAccesses []string
-		ResourceVersion   string
-		AsyncOperationID  string
-
-		Cloud            cloudservice.CloudServiceClient
-		Prompter         Prompter
-		OperationHandler AsyncOperationHandler
-	}
-
-	SetAccountRoleParams struct {
-		UserIdentification UserIdentificationOptions
-		AccountRole        string
-		ResourceVersion    string
-		AsyncOperationID   string
-
-		Cloud            cloudservice.CloudServiceClient
-		Prompter         Prompter
-		OperationHandler AsyncOperationHandler
-	}
-
-	DeleteUserParams struct {
-		UserIdentification UserIdentificationOptions
-		ResourceVersion    string
-		AsyncOperationID   string
-
-		Cloud            cloudservice.CloudServiceClient
-		OperationHandler AsyncOperationHandler
-	}
-
-	EditUserParams struct {
-		UserIdentification UserIdentificationOptions
-		ResourceVersion    string
-		AsyncOperationID   string
-		VerboseDiff        bool
-
-		Cloud            cloudservice.CloudServiceClient
-		Prompter         Prompter
-		OperationHandler AsyncOperationHandler
-		// RunEditor opens the existing spec in an editor and writes the result into target.
-		// Injected so the function is unit-testable without a real editor process.
-		RunEditor func(existing, target proto.Message) error
-	}
-
-	ApplyUserParams struct {
-		Spec             *identityv1.UserSpec
-		ResourceVersion  string
-		AsyncOperationID string
-		VerboseDiff      bool
-
-		Cloud            cloudservice.CloudServiceClient
-		Prompter         Prompter
-		OperationHandler AsyncOperationHandler
-	}
-
-	GetUserParams struct {
-		UserIdentification UserIdentificationOptions
-
-		Cloud   cloudservice.CloudServiceClient
-		Printer *printer.Printer
-	}
-
-	InviteUserParams struct {
-		Email             string
-		AccountAccess     *identityv1.AccountAccess
-		NamespaceAccesses map[string]*identityv1.NamespaceAccess
-		AsyncOperationID  string
-
-		Cloud            cloudservice.CloudServiceClient
-		OperationHandler AsyncOperationHandler
-	}
-
-	ListUsersParams struct {
-		PageSize  int32
-		PageToken string
-		Email     string
-		Namespace string
-
-		Cloud   cloudservice.CloudServiceClient
-		Printer *printer.Printer
-	}
-)
-
-func SetNamespacePermissions(ctx context.Context, params SetNamespacePermissionsParams) error {
-	if err := validateUserIdentification(params.UserIdentification); err != nil {
+func (c *CloudUserGetCommand) run(cctx *CommandContext, _ []string) error {
+	if err := validateUserIdentification(c.UserIdentificationOptions); err != nil {
 		return err
 	}
-
-	// Validate changes before making any API calls.
-	if _, err := applyNamespaceAccessChanges(nil, params.NamespaceAccesses); err != nil {
-		return err
-	}
-
-	user, err := resolveUser(ctx, params.Cloud, params.UserIdentification)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
+	user, err := resolveUser(cctx, client, c.UserIdentificationOptions)
+	if err != nil {
+		return err
+	}
+	return cctx.Printer.PrintResource(user, printer.PrintResourceOptions{})
+}
 
+func (c *CloudUserListCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	res, err := client.GetUsers(cctx, &cloudservice.GetUsersRequest{
+		PageSize:  int32(c.PageSize),
+		PageToken: c.PageToken,
+		Email:     c.Email,
+		Namespace: c.Namespace,
+	})
+	if err != nil {
+		return err
+	}
+	return cctx.Printer.PrintResourceList(
+		struct {
+			Users         []*identityv1.User
+			NextPageToken string
+		}{
+			Users:         res.Users,
+			NextPageToken: res.NextPageToken,
+		},
+		printer.PrintResourceOptions{
+			Fields:     []string{"Id", "State", "CreatedTime"},
+			SpecFields: []string{"Email"},
+		},
+		printer.TableOptions{},
+	)
+}
+
+func (c *CloudUserInviteCommand) run(cctx *CommandContext, _ []string) error {
+	accountAccess, err := parseAccountRole(c.AccountRole)
+	if err != nil {
+		return err
+	}
+	namespaceAccesses, err := parseNamespaceAccesses(c.NamespaceAccess)
+	if err != nil {
+		return err
+	}
+	yes, err := cctx.GetPrompter().PromptYes("Invite")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting invite.")
+	}
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	resp, err := client.CreateUser(cctx, &cloudservice.CreateUserRequest{
+		Spec: &identityv1.UserSpec{
+			Email: c.Email,
+			Access: &identityv1.Access{
+				AccountAccess:     accountAccess,
+				NamespaceAccesses: namespaceAccesses,
+			},
+		},
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleCreateAsyncOperationResponse(cctx, resp, err)
+}
+
+func (c *CloudUserDeleteCommand) run(cctx *CommandContext, _ []string) error {
+	if err := validateUserIdentification(c.UserIdentificationOptions); err != nil {
+		return err
+	}
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	user, err := resolveUser(cctx, client, c.UserIdentificationOptions)
+	if err != nil {
+		return err
+	}
+	yes, err := cctx.GetPrompter().PromptYes("Delete")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting delete.")
+	}
+	rv := user.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.DeleteUser(cctx, &cloudservice.DeleteUserRequest{
+		UserId:           user.Id,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleDeleteOperation(cctx, resp, err)
+}
+
+func (c *CloudUserSetNamespacePermissionsCommand) run(cctx *CommandContext, _ []string) error {
+	if err := validateUserIdentification(c.UserIdentificationOptions); err != nil {
+		return err
+	}
+	// Validate namespace access changes before any API calls.
+	if _, err := applyNamespaceAccessChanges(nil, c.NamespaceAccess); err != nil {
+		return err
+	}
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	user, err := resolveUser(cctx, client, c.UserIdentificationOptions)
+	if err != nil {
+		return err
+	}
 	newSpec := proto.Clone(user.Spec).(*identityv1.UserSpec)
 	if newSpec.Access == nil {
 		newSpec.Access = &identityv1.Access{}
 	}
-
-	namespaceAccesses, err := applyNamespaceAccessChanges(newSpec.Access.NamespaceAccesses, params.NamespaceAccesses)
+	namespaceAccesses, err := applyNamespaceAccessChanges(newSpec.Access.NamespaceAccesses, c.NamespaceAccess)
 	if err != nil {
 		return err
 	}
 	newSpec.Access.NamespaceAccesses = namespaceAccesses
 
-	if err := params.Prompter.PromptApply(user.Spec, newSpec, false); err != nil {
+	yes, err := cctx.GetPrompter().PromptYes("Set namespace permissions")
+	if err != nil {
 		return err
 	}
-
-	rv := user.ResourceVersion
-	if params.ResourceVersion != "" {
-		rv = params.ResourceVersion
+	if !yes {
+		return errors.New("Aborting set.")
 	}
-
-	updateUser := wrapUpdateOperation(params.Cloud.UpdateUser, params.OperationHandler, user.Id)
-	return updateUser(ctx, &cloudservice.UpdateUserRequest{
+	rv := user.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.UpdateUser(cctx, &cloudservice.UpdateUserRequest{
 		UserId:           user.Id,
 		Spec:             newSpec,
 		ResourceVersion:  rv,
-		AsyncOperationId: params.AsyncOperationID,
+		AsyncOperationId: c.AsyncOperationId,
 	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }
 
-func SetAccountRole(ctx context.Context, params SetAccountRoleParams) error {
-	if err := validateUserIdentification(params.UserIdentification); err != nil {
+func (c *CloudUserSetAccountRoleCommand) run(cctx *CommandContext, _ []string) error {
+	if err := validateUserIdentification(c.UserIdentificationOptions); err != nil {
 		return err
 	}
-	accountAccess, err := parseAccountRole(params.AccountRole)
+	accountAccess, err := parseAccountRole(c.AccountRole)
 	if err != nil {
 		return err
 	}
-
-	user, err := resolveUser(ctx, params.Cloud, params.UserIdentification)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-
+	user, err := resolveUser(cctx, client, c.UserIdentificationOptions)
+	if err != nil {
+		return err
+	}
 	newSpec := proto.Clone(user.Spec).(*identityv1.UserSpec)
 	if newSpec.Access == nil {
 		newSpec.Access = &identityv1.Access{}
 	}
 	newSpec.Access.AccountAccess = accountAccess
 
-	if err := params.Prompter.PromptApply(user.Spec, newSpec, false); err != nil {
-		return err
-	}
-
-	rv := user.ResourceVersion
-	if params.ResourceVersion != "" {
-		rv = params.ResourceVersion
-	}
-
-	updateUser := wrapUpdateOperation(params.Cloud.UpdateUser, params.OperationHandler, user.Id)
-	return updateUser(ctx, &cloudservice.UpdateUserRequest{
-		UserId:           user.Id,
-		Spec:             newSpec,
-		ResourceVersion:  rv,
-		AsyncOperationId: params.AsyncOperationID,
-	})
-}
-
-func DeleteUser(ctx context.Context, params DeleteUserParams) error {
-	if err := validateUserIdentification(params.UserIdentification); err != nil {
-		return err
-	}
-
-	user, err := resolveUser(ctx, params.Cloud, params.UserIdentification)
+	yes, err := cctx.GetPrompter().PromptYes("Set account role")
 	if err != nil {
 		return err
 	}
-
+	if !yes {
+		return errors.New("Aborting set.")
+	}
 	rv := user.ResourceVersion
-	if params.ResourceVersion != "" {
-		rv = params.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
 	}
-
-	deleteUser := wrapDeleteOperation(params.Cloud.DeleteUser, params.OperationHandler, user.Id)
-	return deleteUser(ctx, &cloudservice.DeleteUserRequest{
-		UserId:           user.Id,
-		ResourceVersion:  rv,
-		AsyncOperationId: params.AsyncOperationID,
-	})
-}
-
-func EditUser(ctx context.Context, params EditUserParams) error {
-	if err := validateUserIdentification(params.UserIdentification); err != nil {
-		return err
-	}
-
-	user, err := resolveUser(ctx, params.Cloud, params.UserIdentification)
-	if err != nil {
-		return err
-	}
-
-	newSpec := &identityv1.UserSpec{}
-	if err := params.RunEditor(user.Spec, newSpec); err != nil {
-		return err
-	}
-
-	if err := params.Prompter.PromptApply(user.Spec, newSpec, params.VerboseDiff); err != nil {
-		return err
-	}
-
-	rv := user.ResourceVersion
-	if params.ResourceVersion != "" {
-		rv = params.ResourceVersion
-	}
-
-	updateUser := wrapUpdateOperation(params.Cloud.UpdateUser, params.OperationHandler, user.Id)
-	return updateUser(ctx, &cloudservice.UpdateUserRequest{
+	resp, err := client.UpdateUser(cctx, &cloudservice.UpdateUserRequest{
 		UserId:           user.Id,
 		Spec:             newSpec,
 		ResourceVersion:  rv,
-		AsyncOperationId: params.AsyncOperationID,
+		AsyncOperationId: c.AsyncOperationId,
 	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
+func (c *CloudUserEditCommand) run(cctx *CommandContext, _ []string) error {
+	if err := validateUserIdentification(c.UserIdentificationOptions); err != nil {
+		return err
+	}
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	user, err := resolveUser(cctx, client, c.UserIdentificationOptions)
+	if err != nil {
+		return err
+	}
+	edited, err := cctx.GetEditor().EditProto(user.Spec)
+	if err != nil {
+		return err
+	}
+	newSpec := edited.(*identityv1.UserSpec)
+
+	yes, err := cctx.GetPrompter().PromptApply(user.Spec, newSpec, c.VerboseDiff)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting edit.")
+	}
+	rv := user.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.UpdateUser(cctx, &cloudservice.UpdateUserRequest{
+		UserId:           user.Id,
+		Spec:             newSpec,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
+func (c *CloudUserApplyCommand) run(cctx *CommandContext, _ []string) error {
+	specData, err := loadJSONSpec(c.Spec)
+	if err != nil {
+		return err
+	}
+	spec := &identityv1.UserSpec{}
+	if err := cctx.UnmarshalProtoJSON(specData, spec); err != nil {
+		return fmt.Errorf("failed to parse JSON spec: %w", err)
+	}
+	if spec.Email == "" {
+		return errors.New("spec must include an email address")
+	}
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	res, err := client.GetUsers(cctx, &cloudservice.GetUsersRequest{Email: spec.Email})
+	if err != nil {
+		return err
+	}
+	var existingSpec *identityv1.UserSpec
+	var existingUserID string
+	rv := c.ResourceVersion
+	if len(res.Users) > 0 {
+		existing := res.Users[0]
+		existingSpec = existing.Spec
+		existingUserID = existing.Id
+		if rv == "" {
+			rv = existing.ResourceVersion
+		}
+	}
+	yes, err := cctx.GetPrompter().PromptApply(existingSpec, spec, c.VerboseDiff)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting apply.")
+	}
+	if existingUserID != "" {
+		resp, err := client.UpdateUser(cctx, &cloudservice.UpdateUserRequest{
+			UserId:           existingUserID,
+			Spec:             spec,
+			ResourceVersion:  rv,
+			AsyncOperationId: c.AsyncOperationId,
+		})
+		return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+	}
+	resp, err := client.CreateUser(cctx, &cloudservice.CreateUserRequest{
+		Spec:             spec,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleCreateAsyncOperationResponse(cctx, resp, err)
 }
 
 // resolveUser fetches a user by ID or by email (via GetUsers).
-// Exactly one of userID or email should be non-empty.
+// Exactly one of UserId or UserEmail should be non-empty.
 func resolveUser(ctx context.Context, cloud cloudservice.CloudServiceClient, identification UserIdentificationOptions) (*identityv1.User, error) {
 	if identification.UserId != "" {
 		res, err := cloud.GetUser(ctx, &cloudservice.GetUserRequest{UserId: identification.UserId})
@@ -276,275 +340,6 @@ func resolveUser(ctx context.Context, cloud cloudservice.CloudServiceClient, ide
 		return nil, fmt.Errorf("no user found with email %q", identification.UserEmail)
 	}
 	return res.Users[0], nil
-}
-
-func ApplyUser(ctx context.Context, params ApplyUserParams) error {
-	// Look up existing user by email.
-	res, err := params.Cloud.GetUsers(ctx, &cloudservice.GetUsersRequest{Email: params.Spec.Email})
-	if err != nil {
-		return err
-	}
-
-	var existingSpec *identityv1.UserSpec
-	var existingUserID string
-	rv := params.ResourceVersion
-
-	if len(res.Users) > 0 {
-		existing := res.Users[0]
-		existingSpec = existing.Spec
-		existingUserID = existing.Id
-		if rv == "" {
-			rv = existing.ResourceVersion
-		}
-	}
-
-	if err := params.Prompter.PromptApply(existingSpec, params.Spec, params.VerboseDiff); err != nil {
-		return err
-	}
-
-	if existingUserID != "" {
-		updateUser := wrapUpdateOperation(params.Cloud.UpdateUser, params.OperationHandler, existingUserID)
-		return updateUser(ctx, &cloudservice.UpdateUserRequest{
-			UserId:           existingUserID,
-			Spec:             params.Spec,
-			ResourceVersion:  rv,
-			AsyncOperationId: params.AsyncOperationID,
-		})
-	}
-
-	createUser := wrapCreateOperation(params.Cloud.CreateUser, params.OperationHandler, func(res *cloudservice.CreateUserResponse) string { return res.GetUserId() })
-	return createUser(ctx, &cloudservice.CreateUserRequest{
-		Spec:             params.Spec,
-		AsyncOperationId: params.AsyncOperationID,
-	})
-}
-
-func GetUser(ctx context.Context, params GetUserParams) error {
-	if err := validateUserIdentification(params.UserIdentification); err != nil {
-		return err
-	}
-	user, err := resolveUser(ctx, params.Cloud, params.UserIdentification)
-	if err != nil {
-		return err
-	}
-	return params.Printer.PrintResource(user, printer.PrintResourceOptions{})
-}
-
-func InviteUser(ctx context.Context, params InviteUserParams) error {
-	spec := &identityv1.UserSpec{
-		Email: params.Email,
-		Access: &identityv1.Access{
-			AccountAccess:     params.AccountAccess,
-			NamespaceAccesses: params.NamespaceAccesses,
-		},
-	}
-
-	createUser := wrapCreateOperation(params.Cloud.CreateUser, params.OperationHandler, func(res *cloudservice.CreateUserResponse) string { return res.GetUserId() })
-	return createUser(ctx, &cloudservice.CreateUserRequest{
-		Spec:             spec,
-		AsyncOperationId: params.AsyncOperationID,
-	})
-}
-
-func ListUsers(ctx context.Context, params ListUsersParams) error {
-	res, err := params.Cloud.GetUsers(ctx, &cloudservice.GetUsersRequest{
-		PageSize:  params.PageSize,
-		PageToken: params.PageToken,
-		Email:     params.Email,
-		Namespace: params.Namespace,
-	})
-	if err != nil {
-		return err
-	}
-
-	return params.Printer.PrintResourceList(
-		struct {
-			Users         []*identityv1.User
-			NextPageToken string
-		}{
-			Users:         res.Users,
-			NextPageToken: res.NextPageToken,
-		},
-		printer.PrintResourceOptions{
-			Fields:     []string{"Id", "State", "CreatedTime"},
-			SpecFields: []string{"Email"},
-		},
-		printer.TableOptions{},
-	)
-}
-
-func (c *CloudUserSetNamespacePermissionsCommand) run(cctx *CommandContext, _ []string) error {
-	if err := validateUserIdentification(c.UserIdentificationOptions); err != nil {
-		return err
-	}
-
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-	if err != nil {
-		return err
-	}
-
-	return SetNamespacePermissions(cctx.Context, SetNamespacePermissionsParams{
-		UserIdentification: c.UserIdentificationOptions,
-		NamespaceAccesses:  c.NamespaceAccess,
-		ResourceVersion:    c.ResourceVersion,
-		AsyncOperationID:   c.AsyncOperationId,
-		Cloud:              cloudClient.CloudService(),
-		Prompter:           newPrompter(cctx),
-		OperationHandler:   NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
-	})
-}
-
-func (c *CloudUserSetAccountRoleCommand) run(cctx *CommandContext, _ []string) error {
-	if err := validateUserIdentification(c.UserIdentificationOptions); err != nil {
-		return err
-	}
-
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-	if err != nil {
-		return err
-	}
-
-	return SetAccountRole(cctx.Context, SetAccountRoleParams{
-		UserIdentification: c.UserIdentificationOptions,
-		AccountRole:        c.AccountRole,
-		ResourceVersion:    c.ResourceVersion,
-		AsyncOperationID:   c.AsyncOperationId,
-		Cloud:              cloudClient.CloudService(),
-		Prompter:           newPrompter(cctx),
-		OperationHandler:   NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
-	})
-}
-
-func (c *CloudUserDeleteCommand) run(cctx *CommandContext, _ []string) error {
-	if err := validateUserIdentification(c.UserIdentificationOptions); err != nil {
-		return err
-	}
-
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-	if err != nil {
-		return err
-	}
-
-	yes, err := cctx.promptYes("Delete (y/yes)?", cctx.RootCommand.AutoConfirm)
-	if err != nil {
-		return err
-	}
-	if !yes {
-		return errors.New("Aborting delete.")
-	}
-
-	return DeleteUser(cctx.Context, DeleteUserParams{
-		UserIdentification: c.UserIdentificationOptions,
-		ResourceVersion:    c.ResourceVersion,
-		AsyncOperationID:   c.AsyncOperationId,
-		Cloud:              cloudClient.CloudService(),
-		OperationHandler:   NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
-	})
-}
-
-func (c *CloudUserEditCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-	if err != nil {
-		return err
-	}
-	return EditUser(cctx.Context, EditUserParams{
-		UserIdentification: c.UserIdentificationOptions,
-		ResourceVersion:    c.ResourceVersion,
-		AsyncOperationID:   c.AsyncOperationId,
-		VerboseDiff:        c.VerboseDiff,
-		Cloud:              cloudClient.CloudService(),
-		Prompter:           newPrompter(cctx),
-		OperationHandler:   NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
-		RunEditor:          runEditorForJSONEditForProtos,
-	})
-}
-
-func (c *CloudUserApplyCommand) run(cctx *CommandContext, _ []string) error {
-	specData, err := loadJSONSpec(c.Spec)
-	if err != nil {
-		return err
-	}
-
-	spec := &identityv1.UserSpec{}
-	if err := cctx.UnmarshalProtoJSON(specData, spec); err != nil {
-		return fmt.Errorf("failed to parse JSON spec: %w", err)
-	}
-
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-	if err != nil {
-		return err
-	}
-
-	return ApplyUser(cctx.Context, ApplyUserParams{
-		Spec:             spec,
-		ResourceVersion:  c.ResourceVersion,
-		AsyncOperationID: c.AsyncOperationId,
-		VerboseDiff:      c.VerboseDiff,
-		Cloud:            cloudClient.CloudService(),
-		Prompter:         newPrompter(cctx),
-		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
-	})
-}
-
-func (c *CloudUserGetCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-	if err != nil {
-		return err
-	}
-	return GetUser(cctx.Context, GetUserParams{
-		UserIdentification: c.UserIdentificationOptions,
-		Cloud:              cloudClient.CloudService(),
-		Printer:            cctx.Printer,
-	})
-}
-
-func (c *CloudUserInviteCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-	if err != nil {
-		return err
-	}
-
-	accountAccess, err := parseAccountRole(c.AccountRole)
-	if err != nil {
-		return err
-	}
-
-	namespaceAccesses, err := parseNamespaceAccesses(c.NamespaceAccess)
-	if err != nil {
-		return err
-	}
-
-	yes, err := cctx.promptYes("Invite (y/yes)?", cctx.RootCommand.AutoConfirm)
-	if err != nil {
-		return err
-	}
-	if !yes {
-		return errors.New("Aborting invite.")
-	}
-
-	return InviteUser(cctx.Context, InviteUserParams{
-		Email:             c.Email,
-		AccountAccess:     accountAccess,
-		NamespaceAccesses: namespaceAccesses,
-		AsyncOperationID:  c.AsyncOperationId,
-		Cloud:             cloudClient.CloudService(),
-		OperationHandler:  NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
-	})
-}
-
-func (c *CloudUserListCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-	if err != nil {
-		return err
-	}
-	return ListUsers(cctx.Context, ListUsersParams{
-		PageSize:  int32(c.PageSize),
-		PageToken: c.PageToken,
-		Email:     c.Email,
-		Namespace: c.Namespace,
-		Cloud:     cloudClient.CloudService(),
-		Printer:   cctx.Printer,
-	})
 }
 
 // parseAccountRole converts the --account-role flag string to an AccountAccess proto.
