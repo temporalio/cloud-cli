@@ -3121,8 +3121,53 @@ func NewCloudNexusEndpointCommand(cctx *CommandContext, parent *CloudNexusComman
 	s.Command.Short = "Manage Temporal Cloud Nexus Endpoints"
 	s.Command.Long = "Commands for managing Nexus Endpoints in Temporal Cloud."
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNexusEndpointCreateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNexusEndpointGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNexusEndpointListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNexusEndpointCreateCommand struct {
+	Parent  *CloudNexusEndpointCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	Name            string
+	TargetNamespace string
+	TargetTaskQueue string
+	AllowNamespace  []string
+	Description     string
+	DescriptionFile string
+}
+
+func NewCloudNexusEndpointCreateCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointCreateCommand {
+	var s CloudNexusEndpointCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a new Nexus Endpoint"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\nThe endpoint target is a worker and \x1b[1m--target-namespace\x1b[0m and \x1b[1m--target-task-queue\x1b[0m\nmust both be provided. This will fail if an endpoint with the same name is already registered.\n\nExample:\n\n\x1b[1mcloud nexus endpoint create --name my-endpoint --target-namespace my-ns.my-account --target-task-queue my-tq\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\nThe endpoint target is a worker and `--target-namespace` and `--target-task-queue`\nmust both be provided. This will fail if an endpoint with the same name is already registered.\n\nExample:\n\n```\ncloud nexus endpoint create --name my-endpoint --target-namespace my-ns.my-account --target-task-queue my-tq\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to create. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.TargetNamespace, "target-namespace", "", "The namespace in which a handler worker will be polling for Nexus tasks. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "target-namespace")
+	s.Command.Flags().StringVar(&s.TargetTaskQueue, "target-task-queue", "", "The task queue on which a handler worker will be polling for Nexus tasks. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "target-task-queue")
+	s.Command.Flags().StringArrayVar(&s.AllowNamespace, "allow-namespace", nil, "A namespace that is allowed to call this endpoint. Can be specified multiple times.")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "An optional endpoint description in markdown format.")
+	s.Command.Flags().StringVar(&s.DescriptionFile, "description-file", "", "Path to a file containing an endpoint description in markdown format. Mutually exclusive with --description.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 

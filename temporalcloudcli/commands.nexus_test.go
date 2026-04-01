@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	nexusv1 "go.temporal.io/cloud-sdk/api/nexus/v1"
+	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 
 	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
@@ -168,6 +169,101 @@ func TestListNexusEndpoints(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tt.cloudClientExpectations,
+				JSONOutput:              true,
+				ExpectedError:           tt.expectedErr,
+				ExpectedOutputJson:      tt.expectedJsonOutput,
+			})
+		})
+	}
+}
+
+// --- CreateNexusEndpoint ---
+
+func TestCreateNexusEndpoint(t *testing.T) {
+	tests := []struct {
+		name                    string
+		cmd                     temporalcloudcli.CloudNexusEndpointCreateCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
+		promptOptions           temporalcloudcli.TestPromptOptions
+		expectedErr             string
+		expectedJsonOutput      any
+	}{
+		{
+			name: "Success",
+			cmd: temporalcloudcli.CloudNexusEndpointCreateCommand{
+				Name:            "my-endpoint",
+				TargetNamespace: "ns-123",
+				TargetTaskQueue: "my-tq",
+				AllowNamespace:  []string{"caller-ns"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					CreateNexusEndpoint(mock.Anything, mock.MatchedBy(func(req *cloudservice.CreateNexusEndpointRequest) bool {
+						return req.Spec.Name == "my-endpoint" &&
+							req.Spec.TargetSpec.GetWorkerTargetSpec().NamespaceId == "ns-123" &&
+							req.Spec.TargetSpec.GetWorkerTargetSpec().TaskQueue == "my-tq" &&
+							len(req.Spec.PolicySpecs) == 1 &&
+							req.Spec.PolicySpecs[0].GetAllowedCloudNamespacePolicySpec().NamespaceId == "caller-ns"
+					}), mock.Anything).
+					Return(&cloudservice.CreateNexusEndpointResponse{
+						EndpointId:     "ep-new",
+						AsyncOperation: &operation.AsyncOperation{Id: "op-1"},
+					}, nil)
+			},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-1"},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			expectedJsonOutput: &cloudservice.CreateNexusEndpointResponse{
+				EndpointId: "ep-new",
+				AsyncOperation: &operation.AsyncOperation{
+					Id:    "op-1",
+					State: operation.AsyncOperation_STATE_FULFILLED,
+				},
+			},
+		},
+		{
+			name: "UserDeclines",
+			cmd: temporalcloudcli.CloudNexusEndpointCreateCommand{
+				Name:            "my-endpoint",
+				TargetNamespace: "ns-123",
+				TargetTaskQueue: "my-tq",
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: false},
+			expectedErr:   "Aborting create.",
+		},
+		{
+			name: "MutuallyExclusiveDescription",
+			cmd: temporalcloudcli.CloudNexusEndpointCreateCommand{
+				Name:            "my-endpoint",
+				TargetNamespace: "ns-123",
+				TargetTaskQueue: "my-tq",
+				Description:     "inline desc",
+				DescriptionFile: "/some/file",
+			},
+			expectedErr: "mutually exclusive",
+		},
+		{
+			name: "APIError",
+			cmd: temporalcloudcli.CloudNexusEndpointCreateCommand{
+				Name:            "my-endpoint",
+				TargetNamespace: "ns-123",
+				TargetTaskQueue: "my-tq",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					CreateNexusEndpoint(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("permission denied"))
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			expectedErr:   "permission denied",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				AsyncPollerOptions:      tt.asyncPollerOptions,
+				PromptOptions:           tt.promptOptions,
 				JSONOutput:              true,
 				ExpectedError:           tt.expectedErr,
 				ExpectedOutputJson:      tt.expectedJsonOutput,

@@ -1,13 +1,46 @@
 package temporalcloudcli
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
 
+	commonv1 "go.temporal.io/api/common/v1"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	nexusv1 "go.temporal.io/cloud-sdk/api/nexus/v1"
 
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
+
+// resolveNexusDescription resolves the endpoint description from --description or --description-file.
+// The two flags are mutually exclusive. Returns nil if neither is set.
+func resolveNexusDescription(description, descriptionFile string) (*commonv1.Payload, error) {
+	if description != "" && descriptionFile != "" {
+		return nil, errors.New("--description and --description-file are mutually exclusive")
+	}
+	if descriptionFile != "" {
+		data, err := os.ReadFile(descriptionFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed reading description file %q: %w", descriptionFile, err)
+		}
+		if len(data) == 0 {
+			return nil, fmt.Errorf("empty description file: %q", descriptionFile)
+		}
+		description = string(data)
+	}
+	if description == "" {
+		return nil, nil
+	}
+	jsonData, err := json.Marshal(description)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal description: %w", err)
+	}
+	return &commonv1.Payload{
+		Metadata: map[string][]byte{"encoding": []byte("json/plain")},
+		Data:     jsonData,
+	}, nil
+}
 
 func (c *CloudNexusEndpointListCommand) run(cctx *CommandContext, _ []string) error {
 	client, err := cctx.GetCloudClient(c.ClientOptions)
@@ -65,4 +98,53 @@ func (c *CloudNexusEndpointGetCommand) run(cctx *CommandContext, _ []string) err
 	}
 
 	return cctx.Printer.PrintResource(res.Endpoints[0], printer.PrintResourceOptions{})
+}
+
+func (c *CloudNexusEndpointCreateCommand) run(cctx *CommandContext, _ []string) error {
+	desc, err := resolveNexusDescription(c.Description, c.DescriptionFile)
+	if err != nil {
+		return err
+	}
+
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+
+	policySpecs := make([]*nexusv1.EndpointPolicySpec, len(c.AllowNamespace))
+	for i, ns := range c.AllowNamespace {
+		policySpecs[i] = &nexusv1.EndpointPolicySpec{
+			Variant: &nexusv1.EndpointPolicySpec_AllowedCloudNamespacePolicySpec{
+				AllowedCloudNamespacePolicySpec: &nexusv1.AllowedCloudNamespacePolicySpec{
+					NamespaceId: ns,
+				},
+			},
+		}
+	}
+
+	yes, err := cctx.GetPrompter().PromptYes("Create")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting create.")
+	}
+
+	resp, err := client.CreateNexusEndpoint(cctx, &cloudservice.CreateNexusEndpointRequest{
+		Spec: &nexusv1.EndpointSpec{
+			Name:        c.Name,
+			Description: desc,
+			TargetSpec: &nexusv1.EndpointTargetSpec{
+				Variant: &nexusv1.EndpointTargetSpec_WorkerTargetSpec{
+					WorkerTargetSpec: &nexusv1.WorkerTargetSpec{
+						NamespaceId: c.TargetNamespace,
+						TaskQueue:   c.TargetTaskQueue,
+					},
+				},
+			},
+			PolicySpecs: policySpecs,
+		},
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleCreateAsyncOperationResponse(cctx, resp, err)
 }
