@@ -1326,6 +1326,14 @@ commands:
       Commands for managing Nexus Endpoints in Temporal Cloud.
     has-init: false
 
+  - name: cloud nexus endpoint list
+    summary: List Nexus Endpoints
+    description: |
+      List all Nexus Endpoint configurations on the Cloud Account.
+    has-init: false
+    option-sets:
+      - client
+
   - name: cloud nexus endpoint get
     summary: Get a Nexus Endpoint by name
     description: |

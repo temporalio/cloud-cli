@@ -3122,6 +3122,7 @@ func NewCloudNexusEndpointCommand(cctx *CommandContext, parent *CloudNexusComman
 	s.Command.Long = "Commands for managing Nexus Endpoints in Temporal Cloud."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudNexusEndpointGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNexusEndpointListCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -3142,6 +3143,29 @@ func NewCloudNexusEndpointGetCommand(cctx *CommandContext, parent *CloudNexusEnd
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to retrieve. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNexusEndpointListCommand struct {
+	Parent  *CloudNexusEndpointCommand
+	Command cobra.Command
+	ClientOptions
+}
+
+func NewCloudNexusEndpointListCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointListCommand {
+	var s CloudNexusEndpointListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List Nexus Endpoints"
+	s.Command.Long = "List all Nexus Endpoint configurations on the Cloud Account."
+	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
