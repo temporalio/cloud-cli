@@ -1307,6 +1307,39 @@ commands:
         description: |
           The target region to failover to (e.g., aws-us-west-2).
 
+  # Nexus endpoint commands
+  - name: cloud nexus
+    summary: Manage Temporal Cloud Nexus Operations
+    description: |
+      Commands for managing Nexus Operations in Temporal Cloud.
+    has-init: false
+    docs:
+      keywords:
+        - nexus
+      description-header: Nexus Operations Management Commands
+      tags:
+        - nexus
+  
+  - name: cloud nexus endpoint
+    summary: Manage Temporal Cloud Nexus Endpoints
+    description: |
+      Commands for managing Nexus Endpoints in Temporal Cloud.
+    has-init: false
+
+  - name: cloud nexus endpoint get
+    summary: Get a Nexus Endpoint by name
+    description: |
+      This command gets a Nexus Endpoint configuration by name from the Cloud Account.
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint to retrieve.
+
   # User group commands
   - name: cloud user-group
     summary: Manage Temporal Cloud user groups

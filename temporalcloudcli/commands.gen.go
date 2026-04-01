@@ -216,6 +216,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.Command.AddCommand(&NewCloudLoginCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLogoutCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNexusCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserGroupCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudWhoamiCommand(cctx, &s).Command)
@@ -3084,6 +3085,64 @@ func NewCloudNamespaceTagUpdateCommand(cctx *CommandContext, parent *CloudNamesp
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNexusCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+}
+
+func NewCloudNexusCommand(cctx *CommandContext, parent *CloudCommand) *CloudNexusCommand {
+	var s CloudNexusCommand
+	s.Parent = parent
+	s.Command.Use = "nexus"
+	s.Command.Short = "Manage Temporal Cloud Nexus Operations"
+	s.Command.Long = "Commands for managing Nexus Operations in Temporal Cloud."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNexusEndpointCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNexusEndpointCommand struct {
+	Parent  *CloudNexusCommand
+	Command cobra.Command
+}
+
+func NewCloudNexusEndpointCommand(cctx *CommandContext, parent *CloudNexusCommand) *CloudNexusEndpointCommand {
+	var s CloudNexusEndpointCommand
+	s.Parent = parent
+	s.Command.Use = "endpoint"
+	s.Command.Short = "Manage Temporal Cloud Nexus Endpoints"
+	s.Command.Long = "Commands for managing Nexus Endpoints in Temporal Cloud."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNexusEndpointGetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNexusEndpointGetCommand struct {
+	Parent  *CloudNexusEndpointCommand
+	Command cobra.Command
+	ClientOptions
+	Name string
+}
+
+func NewCloudNexusEndpointGetCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointGetCommand {
+	var s CloudNexusEndpointGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get a Nexus Endpoint by name"
+	s.Command.Long = "This command gets a Nexus Endpoint configuration by name from the Cloud Account."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to retrieve. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
