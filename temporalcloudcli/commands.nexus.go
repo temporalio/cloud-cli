@@ -9,6 +9,7 @@ import (
 	commonv1 "go.temporal.io/api/common/v1"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	nexusv1 "go.temporal.io/cloud-sdk/api/nexus/v1"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
@@ -184,4 +185,65 @@ func (c *CloudNexusEndpointDeleteCommand) run(cctx *CommandContext, _ []string) 
 		AsyncOperationId: c.AsyncOperationId,
 	})
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleDeleteOperation(cctx, resp, err)
+}
+
+func (c *CloudNexusEndpointUpdateCommand) run(cctx *CommandContext, _ []string) error {
+	// Validate flag combinations.
+	if c.UnsetDescription && (c.Description != "" || c.DescriptionFile != "") {
+		return errors.New("--unset-description cannot be used with --description or --description-file")
+	}
+	desc, err := resolveNexusDescription(c.Description, c.DescriptionFile)
+	if err != nil {
+		return err
+	}
+
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+
+	res, err := client.GetNexusEndpoints(cctx, &cloudservice.GetNexusEndpointsRequest{
+		Name: c.Name,
+	})
+	if err != nil {
+		return err
+	}
+	if len(res.Endpoints) == 0 {
+		return fmt.Errorf("endpoint %q not found", c.Name)
+	}
+	endpoint := res.Endpoints[0]
+	newSpec := proto.Clone(endpoint.Spec).(*nexusv1.EndpointSpec)
+
+	// Apply only explicitly provided fields.
+	if c.UnsetDescription {
+		newSpec.Description = nil
+	} else if desc != nil {
+		newSpec.Description = desc
+	}
+	if c.Command.Flags().Changed("target-namespace") {
+		newSpec.TargetSpec.GetWorkerTargetSpec().NamespaceId = c.TargetNamespace
+	}
+	if c.Command.Flags().Changed("target-task-queue") {
+		newSpec.TargetSpec.GetWorkerTargetSpec().TaskQueue = c.TargetTaskQueue
+	}
+
+	yes, err := cctx.GetPrompter().PromptApply(endpoint.Spec, newSpec, false)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting update.")
+	}
+
+	rv := endpoint.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.UpdateNexusEndpoint(cctx, &cloudservice.UpdateNexusEndpointRequest{
+		EndpointId:       endpoint.Id,
+		Spec:             newSpec,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }

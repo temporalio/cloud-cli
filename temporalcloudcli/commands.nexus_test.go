@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	nexusv1 "go.temporal.io/cloud-sdk/api/nexus/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
@@ -399,6 +400,250 @@ func TestDeleteNexusEndpoint(t *testing.T) {
 				PromptOptions:           tc.promptOptions,
 				AsyncPollerOptions:      tc.pollerOptions,
 				ExpectedError:           tc.expectedErr,
+			})
+		})
+	}
+}
+
+// --- UpdateNexusEndpoint ---
+
+// TestUpdateNexusEndpoint uses table-driven tests for the update nexus endpoint command.
+// AIDEV-NOTE: We initialize the cobra FlagSet manually in setupCmd so Changed() returns true for
+// explicitly set flags, since TestCommand calls run() directly without going through cobra's flag parsing.
+func TestUpdateNexusEndpoint(t *testing.T) {
+	existingSpec := &nexusv1.EndpointSpec{
+		Name: "my-endpoint",
+		TargetSpec: &nexusv1.EndpointTargetSpec{
+			Variant: &nexusv1.EndpointTargetSpec_WorkerTargetSpec{
+				WorkerTargetSpec: &nexusv1.WorkerTargetSpec{
+					NamespaceId: "ns-123",
+					TaskQueue:   "my-task-queue",
+				},
+			},
+		},
+	}
+	existingEndpoint := &nexusv1.Endpoint{
+		Id:              "ep-123",
+		ResourceVersion: "v1",
+		Spec:            existingSpec,
+	}
+
+	getEndpointExpectation := func(c *cloudmock.MockCloudServiceClient) {
+		c.EXPECT().
+			GetNexusEndpoints(mock.Anything, &cloudservice.GetNexusEndpointsRequest{
+				Name: "my-endpoint",
+			}, mock.Anything).
+			Return(&cloudservice.GetNexusEndpointsResponse{
+				Endpoints: []*nexusv1.Endpoint{existingEndpoint},
+			}, nil)
+	}
+
+	tests := []struct {
+		name                    string
+		setupCmd                func(*temporalcloudcli.CloudNexusEndpointUpdateCommand)
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
+		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
+		expectedErr             string
+	}{
+		{
+			name: "TargetNamespace",
+			setupCmd: func(cmd *temporalcloudcli.CloudNexusEndpointUpdateCommand) {
+				cmd.Command.Flags().StringVar(&cmd.TargetNamespace, "target-namespace", "", "")
+				require.NoError(t, cmd.Command.Flags().Set("target-namespace", "new-ns"))
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				getEndpointExpectation(c)
+				c.EXPECT().
+					UpdateNexusEndpoint(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNexusEndpointRequest) bool {
+						return req.EndpointId == "ep-123" &&
+							req.Spec.TargetSpec.GetWorkerTargetSpec().NamespaceId == "new-ns" &&
+							req.Spec.TargetSpec.GetWorkerTargetSpec().TaskQueue == "my-task-queue" &&
+							req.ResourceVersion == "v1"
+					}), mock.Anything).
+					Return(&cloudservice.UpdateNexusEndpointResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-upd"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
+		},
+		{
+			name: "TargetTaskQueue",
+			setupCmd: func(cmd *temporalcloudcli.CloudNexusEndpointUpdateCommand) {
+				cmd.Command.Flags().StringVar(&cmd.TargetTaskQueue, "target-task-queue", "", "")
+				require.NoError(t, cmd.Command.Flags().Set("target-task-queue", "new-tq"))
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				getEndpointExpectation(c)
+				c.EXPECT().
+					UpdateNexusEndpoint(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNexusEndpointRequest) bool {
+						return req.EndpointId == "ep-123" &&
+							req.Spec.TargetSpec.GetWorkerTargetSpec().NamespaceId == "ns-123" &&
+							req.Spec.TargetSpec.GetWorkerTargetSpec().TaskQueue == "new-tq" &&
+							req.ResourceVersion == "v1"
+					}), mock.Anything).
+					Return(&cloudservice.UpdateNexusEndpointResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-upd"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
+		},
+		{
+			name: "Description",
+			setupCmd: func(cmd *temporalcloudcli.CloudNexusEndpointUpdateCommand) {
+				cmd.Description = "new description"
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				getEndpointExpectation(c)
+				c.EXPECT().
+					UpdateNexusEndpoint(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNexusEndpointRequest) bool {
+						return req.EndpointId == "ep-123" &&
+							req.Spec.Description != nil &&
+							req.ResourceVersion == "v1"
+					}), mock.Anything).
+					Return(&cloudservice.UpdateNexusEndpointResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-upd"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
+		},
+		{
+			name: "UnsetDescription",
+			setupCmd: func(cmd *temporalcloudcli.CloudNexusEndpointUpdateCommand) {
+				cmd.UnsetDescription = true
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				getEndpointExpectation(c)
+				c.EXPECT().
+					UpdateNexusEndpoint(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNexusEndpointRequest) bool {
+						return req.EndpointId == "ep-123" &&
+							req.Spec.Description == nil &&
+							req.ResourceVersion == "v1"
+					}), mock.Anything).
+					Return(&cloudservice.UpdateNexusEndpointResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-upd"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
+		},
+		{
+			name: "UnsetDescriptionWithDescription",
+			setupCmd: func(cmd *temporalcloudcli.CloudNexusEndpointUpdateCommand) {
+				cmd.UnsetDescription = true
+				cmd.Description = "some desc"
+			},
+			expectedErr: "--unset-description cannot be used with --description or --description-file",
+		},
+		{
+			name: "UnsetDescriptionWithDescriptionFile",
+			setupCmd: func(cmd *temporalcloudcli.CloudNexusEndpointUpdateCommand) {
+				cmd.UnsetDescription = true
+				cmd.DescriptionFile = "/some/file"
+			},
+			expectedErr: "--unset-description cannot be used with --description or --description-file",
+		},
+		{
+			name: "MutuallyExclusiveDescription",
+			setupCmd: func(cmd *temporalcloudcli.CloudNexusEndpointUpdateCommand) {
+				cmd.Description = "inline"
+				cmd.DescriptionFile = "/some/file"
+			},
+			expectedErr: "mutually exclusive",
+		},
+		{
+			name: "NoChanges",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				getEndpointExpectation(c)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{
+				ExpectPrompApply: true,
+				PromptError:      errors.New("Aborting apply."),
+			},
+			expectedErr: "Aborting apply.",
+		},
+		{
+			name: "GetError",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNexusEndpoints(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("get error"))
+			},
+			expectedErr: "get error",
+		},
+		{
+			name: "NotFound",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNexusEndpoints(mock.Anything, &cloudservice.GetNexusEndpointsRequest{
+						Name: "my-endpoint",
+					}, mock.Anything).
+					Return(&cloudservice.GetNexusEndpointsResponse{}, nil)
+			},
+			expectedErr: `endpoint "my-endpoint" not found`,
+		},
+		{
+			name: "ResourceVersionOverride",
+			setupCmd: func(cmd *temporalcloudcli.CloudNexusEndpointUpdateCommand) {
+				cmd.ResourceVersion = "rv-override"
+				cmd.Command.Flags().StringVar(&cmd.TargetNamespace, "target-namespace", "", "")
+				require.NoError(t, cmd.Command.Flags().Set("target-namespace", "new-ns"))
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				getEndpointExpectation(c)
+				c.EXPECT().
+					UpdateNexusEndpoint(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNexusEndpointRequest) bool {
+						return req.ResourceVersion == "rv-override"
+					}), mock.Anything).
+					Return(&cloudservice.UpdateNexusEndpointResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-upd"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
+		},
+		{
+			name: "UpdateError",
+			setupCmd: func(cmd *temporalcloudcli.CloudNexusEndpointUpdateCommand) {
+				cmd.Command.Flags().StringVar(&cmd.TargetNamespace, "target-namespace", "", "")
+				require.NoError(t, cmd.Command.Flags().Set("target-namespace", "new-ns"))
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				getEndpointExpectation(c)
+				c.EXPECT().
+					UpdateNexusEndpoint(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("update failed"))
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			expectedErr:   "update operation failed",
+		},
+		{
+			name: "PromptDeclined",
+			setupCmd: func(cmd *temporalcloudcli.CloudNexusEndpointUpdateCommand) {
+				cmd.Command.Flags().StringVar(&cmd.TargetNamespace, "target-namespace", "", "")
+				require.NoError(t, cmd.Command.Flags().Set("target-namespace", "new-ns"))
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				getEndpointExpectation(c)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
+			expectedErr:   "Aborting update.",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := temporalcloudcli.CloudNexusEndpointUpdateCommand{Name: "my-endpoint"}
+			if tt.setupCmd != nil {
+				tt.setupCmd(&cmd)
+			}
+			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
+				AsyncPollerOptions:      tt.asyncPollerOptions,
+				ExpectedError:           tt.expectedErr,
 			})
 		})
 	}

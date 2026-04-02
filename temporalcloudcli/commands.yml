@@ -1411,6 +1411,55 @@ commands:
         description: |
           The name of the Nexus Endpoint to delete.
 
+  - name: cloud nexus endpoint update
+    summary: Update an existing Nexus Endpoint
+    description: |
+      Update an existing Nexus Endpoint on the Cloud Account.
+      An endpoint name is used in workflow code to invoke Nexus operations.
+      The endpoint target is a worker and `--target-namespace` and `--target-task-queue`
+      must both be provided.
+
+      The endpoint is patched leaving any existing fields for which flags are not provided
+      as they were.
+
+      Example:
+
+      ```
+      cloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint to update.
+      - name: target-namespace
+        type: string
+        description: |
+          The namespace in which a handler worker will be polling for Nexus tasks.
+      - name: target-task-queue
+        type: string
+        description: |
+          The task queue on which a handler worker will be polling for Nexus tasks.
+      - name: description
+        type: string
+        description: |
+          An optional endpoint description in markdown format.
+      - name: description-file
+        type: string
+        description: |
+          Path to a file containing an endpoint description in markdown format.
+          Mutually exclusive with --description.
+      - name: unset-description
+        type: bool
+        description: |
+          Unset the endpoint description. Cannot be used with --description or --description-file.
+
   # User group commands
   - name: cloud user-group
     summary: Manage Temporal Cloud user groups
