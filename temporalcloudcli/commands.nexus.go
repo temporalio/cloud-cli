@@ -287,10 +287,8 @@ func (c *CloudNexusEndpointAllowedNamespaceAddCommand) run(cctx *CommandContext,
 
 	updatedPolicySpecs := make([]*nexusv1.EndpointPolicySpec, len(endpoint.Spec.PolicySpecs))
 	copy(updatedPolicySpecs, endpoint.Spec.PolicySpecs)
-	hasChange := false
 	for _, ns := range c.Namespace {
 		if _, ok := existingNSMap[ns]; !ok {
-			hasChange = true
 			updatedPolicySpecs = append(updatedPolicySpecs, &nexusv1.EndpointPolicySpec{
 				Variant: &nexusv1.EndpointPolicySpec_AllowedCloudNamespacePolicySpec{
 					AllowedCloudNamespacePolicySpec: &nexusv1.AllowedCloudNamespacePolicySpec{
@@ -299,9 +297,6 @@ func (c *CloudNexusEndpointAllowedNamespaceAddCommand) run(cctx *CommandContext,
 				},
 			})
 		}
-	}
-	if !hasChange {
-		return fmt.Errorf("no updates to be made")
 	}
 	endpoint.Spec.PolicySpecs = updatedPolicySpecs
 
@@ -375,9 +370,6 @@ func (c *CloudNexusEndpointAllowedNamespaceRemoveCommand) run(cctx *CommandConte
 		if _, ok := toRemove[ps.GetAllowedCloudNamespacePolicySpec().NamespaceId]; !ok {
 			updatedPolicySpecs = append(updatedPolicySpecs, ps)
 		}
-	}
-	if len(updatedPolicySpecs) == len(endpoint.Spec.PolicySpecs) {
-		return fmt.Errorf("no updates to be made")
 	}
 	endpoint.Spec.PolicySpecs = updatedPolicySpecs
 

@@ -800,17 +800,6 @@ func TestAddNexusEndpointAllowedNamespace(t *testing.T) {
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-add"},
 		},
 		{
-			name: "AllAlreadyExist",
-			cmd: temporalcloudcli.CloudNexusEndpointAllowedNamespaceAddCommand{
-				Name:      "my-endpoint",
-				Namespace: []string{"caller-ns-1"},
-			},
-			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-				expectGetEndpointWithPolicies(c)
-			},
-			expectedErr: "no updates to be made",
-		},
-		{
 			name: "NotFound",
 			cmd: temporalcloudcli.CloudNexusEndpointAllowedNamespaceAddCommand{
 				Name:      "missing",
@@ -986,17 +975,6 @@ func TestRemoveNexusEndpointAllowedNamespace(t *testing.T) {
 					}, nil)
 			},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-rm"},
-		},
-		{
-			name: "NoneToRemove",
-			cmd: temporalcloudcli.CloudNexusEndpointAllowedNamespaceRemoveCommand{
-				Name:      "my-endpoint",
-				Namespace: []string{"nonexistent-ns"},
-			},
-			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-				expectGetEndpointWithPolicies(c)
-			},
-			expectedErr: "no updates to be made",
 		},
 		{
 			name: "NotFound",
