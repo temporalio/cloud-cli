@@ -3121,11 +3121,156 @@ func NewCloudNexusEndpointCommand(cctx *CommandContext, parent *CloudNexusComman
 	s.Command.Short = "Manage Temporal Cloud Nexus Endpoints"
 	s.Command.Long = "Commands for managing Nexus Endpoints in Temporal Cloud."
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNexusEndpointAllowedNamespaceCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNexusEndpointCreateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNexusEndpointDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNexusEndpointGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNexusEndpointListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNexusEndpointUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNexusEndpointAllowedNamespaceCommand struct {
+	Parent  *CloudNexusEndpointCommand
+	Command cobra.Command
+}
+
+func NewCloudNexusEndpointAllowedNamespaceCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointAllowedNamespaceCommand {
+	var s CloudNexusEndpointAllowedNamespaceCommand
+	s.Parent = parent
+	s.Command.Use = "allowed-namespace"
+	s.Command.Short = "Manage allowed namespaces for a Nexus Endpoint"
+	s.Command.Long = "Commands for managing allowed namespaces for Nexus Endpoints."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNexusEndpointAllowedNamespaceAddCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNexusEndpointAllowedNamespaceListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNexusEndpointAllowedNamespaceRemoveCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNexusEndpointAllowedNamespaceSetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNexusEndpointAllowedNamespaceAddCommand struct {
+	Parent  *CloudNexusEndpointAllowedNamespaceCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Name      string
+	Namespace []string
+}
+
+func NewCloudNexusEndpointAllowedNamespaceAddCommand(cctx *CommandContext, parent *CloudNexusEndpointAllowedNamespaceCommand) *CloudNexusEndpointAllowedNamespaceAddCommand {
+	var s CloudNexusEndpointAllowedNamespaceAddCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "add [flags]"
+	s.Command.Short = "Add allowed namespaces to a Nexus Endpoint"
+	s.Command.Long = "Add namespaces that are allowed to call this Nexus Endpoint.\nNamespaces that are already allowed are silently ignored."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringArrayVar(&s.Namespace, "namespace", nil, "A namespace to allow. Can be specified multiple times. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNexusEndpointAllowedNamespaceListCommand struct {
+	Parent  *CloudNexusEndpointAllowedNamespaceCommand
+	Command cobra.Command
+	ClientOptions
+	Name string
+}
+
+func NewCloudNexusEndpointAllowedNamespaceListCommand(cctx *CommandContext, parent *CloudNexusEndpointAllowedNamespaceCommand) *CloudNexusEndpointAllowedNamespaceListCommand {
+	var s CloudNexusEndpointAllowedNamespaceListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List allowed namespaces of a Nexus Endpoint"
+	s.Command.Long = "List all namespaces that are allowed to call this Nexus Endpoint."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNexusEndpointAllowedNamespaceRemoveCommand struct {
+	Parent  *CloudNexusEndpointAllowedNamespaceCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Name      string
+	Namespace []string
+}
+
+func NewCloudNexusEndpointAllowedNamespaceRemoveCommand(cctx *CommandContext, parent *CloudNexusEndpointAllowedNamespaceCommand) *CloudNexusEndpointAllowedNamespaceRemoveCommand {
+	var s CloudNexusEndpointAllowedNamespaceRemoveCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "remove [flags]"
+	s.Command.Short = "Remove allowed namespaces from a Nexus Endpoint"
+	s.Command.Long = "Remove namespaces from the list of allowed callers of this Nexus Endpoint.\nNamespaces that are not currently allowed are silently ignored."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringArrayVar(&s.Namespace, "namespace", nil, "A namespace to remove. Can be specified multiple times. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNexusEndpointAllowedNamespaceSetCommand struct {
+	Parent  *CloudNexusEndpointAllowedNamespaceCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Name      string
+	Namespace []string
+}
+
+func NewCloudNexusEndpointAllowedNamespaceSetCommand(cctx *CommandContext, parent *CloudNexusEndpointAllowedNamespaceCommand) *CloudNexusEndpointAllowedNamespaceSetCommand {
+	var s CloudNexusEndpointAllowedNamespaceSetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set [flags]"
+	s.Command.Short = "Set allowed namespaces of a Nexus Endpoint"
+	s.Command.Long = "Set the full list of namespaces that are allowed to call this Nexus Endpoint,\nreplacing any previously allowed namespaces."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringArrayVar(&s.Namespace, "namespace", nil, "A namespace to allow. Can be specified multiple times. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 

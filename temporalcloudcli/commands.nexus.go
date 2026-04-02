@@ -247,3 +247,169 @@ func (c *CloudNexusEndpointUpdateCommand) run(cctx *CommandContext, _ []string) 
 	})
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }
+
+// getNexusEndpointByName looks up a Nexus Endpoint by name using the list RPC with a name filter.
+func getNexusEndpointByName(
+	cctx *CommandContext,
+	client cloudservice.CloudServiceClient,
+	name string,
+) (*nexusv1.Endpoint, error) {
+	res, err := client.GetNexusEndpoints(cctx, &cloudservice.GetNexusEndpointsRequest{
+		Name: name,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(res.Endpoints) == 0 {
+		return nil, fmt.Errorf("endpoint %q not found", name)
+	}
+	return res.Endpoints[0], nil
+}
+
+func (c *CloudNexusEndpointAllowedNamespaceListCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+
+	endpoint, err := getNexusEndpointByName(cctx, client, c.Name)
+	if err != nil {
+		return err
+	}
+
+	namespaceIDs := make([]string, len(endpoint.Spec.PolicySpecs))
+	for i, ps := range endpoint.Spec.PolicySpecs {
+		namespaceIDs[i] = ps.GetAllowedCloudNamespacePolicySpec().NamespaceId
+	}
+
+	return cctx.Printer.PrintStructured(struct {
+		Namespaces []string
+	}{
+		Namespaces: namespaceIDs,
+	}, printer.StructuredOptions{})
+}
+
+func (c *CloudNexusEndpointAllowedNamespaceAddCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+
+	endpoint, err := getNexusEndpointByName(cctx, client, c.Name)
+	if err != nil {
+		return err
+	}
+
+	existingNSMap := make(map[string]struct{}, len(endpoint.Spec.PolicySpecs))
+	for _, ps := range endpoint.Spec.PolicySpecs {
+		existingNSMap[ps.GetAllowedCloudNamespacePolicySpec().NamespaceId] = struct{}{}
+	}
+
+	updatedPolicySpecs := make([]*nexusv1.EndpointPolicySpec, len(endpoint.Spec.PolicySpecs))
+	copy(updatedPolicySpecs, endpoint.Spec.PolicySpecs)
+	hasChange := false
+	for _, ns := range c.Namespace {
+		if _, ok := existingNSMap[ns]; !ok {
+			hasChange = true
+			updatedPolicySpecs = append(updatedPolicySpecs, &nexusv1.EndpointPolicySpec{
+				Variant: &nexusv1.EndpointPolicySpec_AllowedCloudNamespacePolicySpec{
+					AllowedCloudNamespacePolicySpec: &nexusv1.AllowedCloudNamespacePolicySpec{
+						NamespaceId: ns,
+					},
+				},
+			})
+		}
+	}
+	if !hasChange {
+		return fmt.Errorf("no updates to be made")
+	}
+	endpoint.Spec.PolicySpecs = updatedPolicySpecs
+
+	rv := endpoint.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.UpdateNexusEndpoint(cctx, &cloudservice.UpdateNexusEndpointRequest{
+		EndpointId:       endpoint.Id,
+		Spec:             endpoint.Spec,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
+func (c *CloudNexusEndpointAllowedNamespaceSetCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+
+	endpoint, err := getNexusEndpointByName(cctx, client, c.Name)
+	if err != nil {
+		return err
+	}
+
+	updatedPolicySpecs := make([]*nexusv1.EndpointPolicySpec, len(c.Namespace))
+	for i, ns := range c.Namespace {
+		updatedPolicySpecs[i] = &nexusv1.EndpointPolicySpec{
+			Variant: &nexusv1.EndpointPolicySpec_AllowedCloudNamespacePolicySpec{
+				AllowedCloudNamespacePolicySpec: &nexusv1.AllowedCloudNamespacePolicySpec{
+					NamespaceId: ns,
+				},
+			},
+		}
+	}
+	endpoint.Spec.PolicySpecs = updatedPolicySpecs
+
+	rv := endpoint.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.UpdateNexusEndpoint(cctx, &cloudservice.UpdateNexusEndpointRequest{
+		EndpointId:       endpoint.Id,
+		Spec:             endpoint.Spec,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
+func (c *CloudNexusEndpointAllowedNamespaceRemoveCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+
+	endpoint, err := getNexusEndpointByName(cctx, client, c.Name)
+	if err != nil {
+		return err
+	}
+
+	toRemove := make(map[string]struct{}, len(c.Namespace))
+	for _, ns := range c.Namespace {
+		toRemove[ns] = struct{}{}
+	}
+
+	var updatedPolicySpecs []*nexusv1.EndpointPolicySpec
+	for _, ps := range endpoint.Spec.PolicySpecs {
+		if _, ok := toRemove[ps.GetAllowedCloudNamespacePolicySpec().NamespaceId]; !ok {
+			updatedPolicySpecs = append(updatedPolicySpecs, ps)
+		}
+	}
+	if len(updatedPolicySpecs) == len(endpoint.Spec.PolicySpecs) {
+		return fmt.Errorf("no updates to be made")
+	}
+	endpoint.Spec.PolicySpecs = updatedPolicySpecs
+
+	rv := endpoint.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.UpdateNexusEndpoint(cctx, &cloudservice.UpdateNexusEndpointRequest{
+		EndpointId:       endpoint.Id,
+		Spec:             endpoint.Spec,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}

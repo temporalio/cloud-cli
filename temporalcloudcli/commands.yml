@@ -1460,6 +1460,92 @@ commands:
         description: |
           Unset the endpoint description. Cannot be used with --description or --description-file.
 
+  - name: cloud nexus endpoint allowed-namespace
+    summary: Manage allowed namespaces for a Nexus Endpoint
+    description: |
+      Commands for managing allowed namespaces for Nexus Endpoints.
+    has-init: false
+
+  - name: cloud nexus endpoint allowed-namespace list
+    summary: List allowed namespaces of a Nexus Endpoint
+    description: |
+      List all namespaces that are allowed to call this Nexus Endpoint.
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint.
+
+  - name: cloud nexus endpoint allowed-namespace add
+    summary: Add allowed namespaces to a Nexus Endpoint
+    description: |
+      Add namespaces that are allowed to call this Nexus Endpoint.
+      Namespaces that are already allowed are silently ignored.
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint.
+      - name: namespace
+        type: string[]
+        required: true
+        description: |
+          A namespace to allow. Can be specified multiple times.
+
+  - name: cloud nexus endpoint allowed-namespace set
+    summary: Set allowed namespaces of a Nexus Endpoint
+    description: |
+      Set the full list of namespaces that are allowed to call this Nexus Endpoint,
+      replacing any previously allowed namespaces.
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint.
+      - name: namespace
+        type: string[]
+        required: true
+        description: |
+          A namespace to allow. Can be specified multiple times.
+
+  - name: cloud nexus endpoint allowed-namespace remove
+    summary: Remove allowed namespaces from a Nexus Endpoint
+    description: |
+      Remove namespaces from the list of allowed callers of this Nexus Endpoint.
+      Namespaces that are not currently allowed are silently ignored.
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint.
+      - name: namespace
+        type: string[]
+        required: true
+        description: |
+          A namespace to remove. Can be specified multiple times.
+
   # User group commands
   - name: cloud user-group
     summary: Manage Temporal Cloud user groups
