@@ -3122,6 +3122,7 @@ func NewCloudNexusEndpointCommand(cctx *CommandContext, parent *CloudNexusComman
 	s.Command.Long = "Commands for managing Nexus Endpoints in Temporal Cloud."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudNexusEndpointCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNexusEndpointDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNexusEndpointGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNexusEndpointListCommand(cctx, &s).Command)
 	return &s
@@ -3163,6 +3164,36 @@ func NewCloudNexusEndpointCreateCommand(cctx *CommandContext, parent *CloudNexus
 	s.Command.Flags().StringVar(&s.DescriptionFile, "description-file", "", "Path to a file containing an endpoint description in markdown format. Mutually exclusive with --description.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNexusEndpointDeleteCommand struct {
+	Parent  *CloudNexusEndpointCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Name string
+}
+
+func NewCloudNexusEndpointDeleteCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointDeleteCommand {
+	var s CloudNexusEndpointDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a Nexus Endpoint"
+	s.Command.Long = "Delete a Nexus Endpoint on the Cloud Account."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to delete. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

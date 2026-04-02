@@ -271,3 +271,135 @@ func TestCreateNexusEndpoint(t *testing.T) {
 		})
 	}
 }
+
+// --- DeleteNexusEndpoint ---
+
+func TestDeleteNexusEndpoint(t *testing.T) {
+	tt := []struct {
+		name                    string
+		cmd                     temporalcloudcli.CloudNexusEndpointDeleteCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
+		pollerOptions           temporalcloudcli.TestAsyncPollerOptions
+		expectedErr             string
+	}{
+		{
+			name: "SuccessDeleteEndpoint",
+			cmd:  temporalcloudcli.CloudNexusEndpointDeleteCommand{Name: "my-endpoint"},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNexusEndpoints(mock.Anything, &cloudservice.GetNexusEndpointsRequest{
+						Name: "my-endpoint",
+					}, mock.Anything).
+					Return(&cloudservice.GetNexusEndpointsResponse{
+						Endpoints: []*nexusv1.Endpoint{testEndpoint},
+					}, nil)
+				c.EXPECT().
+					DeleteNexusEndpoint(mock.Anything, &cloudservice.DeleteNexusEndpointRequest{
+						EndpointId:      testEndpoint.Id,
+						ResourceVersion: "v1",
+					}, mock.Anything).
+					Return(&cloudservice.DeleteNexusEndpointResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-del"},
+					}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			pollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-del"},
+		},
+		{
+			name: "NotFound",
+			cmd:  temporalcloudcli.CloudNexusEndpointDeleteCommand{Name: "missing"},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNexusEndpoints(mock.Anything, &cloudservice.GetNexusEndpointsRequest{
+						Name: "missing",
+					}, mock.Anything).
+					Return(&cloudservice.GetNexusEndpointsResponse{}, nil)
+			},
+			expectedErr: `endpoint "missing" not found`,
+		},
+		{
+			name: "APIError",
+			cmd:  temporalcloudcli.CloudNexusEndpointDeleteCommand{Name: "my-endpoint"},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNexusEndpoints(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("connection refused"))
+			},
+			expectedErr: "connection refused",
+		},
+		{
+			name: "PromptDeclined",
+			cmd:  temporalcloudcli.CloudNexusEndpointDeleteCommand{Name: "my-endpoint"},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNexusEndpoints(mock.Anything, &cloudservice.GetNexusEndpointsRequest{
+						Name: "my-endpoint",
+					}, mock.Anything).
+					Return(&cloudservice.GetNexusEndpointsResponse{
+						Endpoints: []*nexusv1.Endpoint{testEndpoint},
+					}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: false},
+			expectedErr:   "Aborting delete.",
+		},
+		{
+			name: "ResourceVersionOverride",
+			cmd: temporalcloudcli.CloudNexusEndpointDeleteCommand{
+				Name:                   "my-endpoint",
+				ResourceVersionOptions: temporalcloudcli.ResourceVersionOptions{ResourceVersion: "rv-override"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNexusEndpoints(mock.Anything, &cloudservice.GetNexusEndpointsRequest{
+						Name: "my-endpoint",
+					}, mock.Anything).
+					Return(&cloudservice.GetNexusEndpointsResponse{
+						Endpoints: []*nexusv1.Endpoint{testEndpoint},
+					}, nil)
+				c.EXPECT().
+					DeleteNexusEndpoint(mock.Anything, &cloudservice.DeleteNexusEndpointRequest{
+						EndpointId:      testEndpoint.Id,
+						ResourceVersion: "rv-override",
+					}, mock.Anything).
+					Return(&cloudservice.DeleteNexusEndpointResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-del"},
+					}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			pollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-del"},
+		},
+		{
+			name: "DeleteAPIError",
+			cmd:  temporalcloudcli.CloudNexusEndpointDeleteCommand{Name: "my-endpoint"},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNexusEndpoints(mock.Anything, &cloudservice.GetNexusEndpointsRequest{
+						Name: "my-endpoint",
+					}, mock.Anything).
+					Return(&cloudservice.GetNexusEndpointsResponse{
+						Endpoints: []*nexusv1.Endpoint{testEndpoint},
+					}, nil)
+				c.EXPECT().
+					DeleteNexusEndpoint(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("delete failed"))
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{
+				ExpectPromptYes:        true,
+				ExpectPromptYesMessage: "Delete",
+				PromptResult:           true,
+			},
+			expectedErr: "delete operation failed",
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			temporalcloudcli.TestCommand(t, &tc.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tc.cloudClientExpectations,
+				PromptOptions:           tc.promptOptions,
+				AsyncPollerOptions:      tc.pollerOptions,
+				ExpectedError:           tc.expectedErr,
+			})
+		})
+	}
+}

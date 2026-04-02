@@ -1395,6 +1395,22 @@ commands:
           Path to a file containing an endpoint description in markdown format.
           Mutually exclusive with --description.
 
+  - name: cloud nexus endpoint delete
+    summary: Delete a Nexus Endpoint
+    description: |
+      Delete a Nexus Endpoint on the Cloud Account.
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint to delete.
+
   # User group commands
   - name: cloud user-group
     summary: Manage Temporal Cloud user groups

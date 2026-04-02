@@ -148,3 +148,40 @@ func (c *CloudNexusEndpointCreateCommand) run(cctx *CommandContext, _ []string) 
 	})
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleCreateAsyncOperationResponse(cctx, resp, err)
 }
+
+func (c *CloudNexusEndpointDeleteCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+
+	res, err := client.GetNexusEndpoints(cctx, &cloudservice.GetNexusEndpointsRequest{
+		Name: c.Name,
+	})
+	if err != nil {
+		return err
+	}
+	if len(res.Endpoints) == 0 {
+		return fmt.Errorf("endpoint %q not found", c.Name)
+	}
+	endpoint := res.Endpoints[0]
+
+	yes, err := cctx.GetPrompter().PromptYes("Delete")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting delete.")
+	}
+
+	rv := endpoint.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.DeleteNexusEndpoint(cctx, &cloudservice.DeleteNexusEndpointRequest{
+		EndpointId:       endpoint.Id,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleDeleteOperation(cctx, resp, err)
+}
