@@ -1,43 +1,74 @@
 package temporalcloudcli
 
 import (
+	"bytes"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
 
+	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
+
 	"github.com/temporalio/cloud-cli/internal/cert"
-	"github.com/temporalio/cloud-cli/internal/namespace"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
 func (c *CloudNamespaceCertCaCreateCommand) run(cctx *CommandContext, _ []string) error {
-	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
-	if err != nil {
-		return err
-	}
-
 	newCerts, err := readAndParseCACerts(c.CaCertificateOptions)
 	if err != nil {
 		return err
 	}
 
-	addCACerts := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, namespaceClient.AddCACerts)
-	return addCACerts(namespace.AddCACertsParams{
-		Namespace:        c.Namespace,
-		Certs:            newCerts,
-		ResourceVersion:  c.ResourceVersion,
-		AsyncOperationID: c.AsyncOperationId,
-	})
-}
-
-func (c *CloudNamespaceCertCaListCommand) run(cctx *CommandContext, _ []string) error {
-	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	certs, err := namespaceClient.ListCACerts(cctx.Context, c.Namespace)
+	res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
+	if err != nil {
+		return err
+	}
+	ns := res.Namespace
+
+	spec, err := buildSpecWithAddedCerts(ns.Spec, newCerts)
+	if err != nil {
+		return err
+	}
+
+	yes, err := cctx.GetPrompter().PromptYes("Create")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting create.")
+	}
+
+	rv := ns.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.UpdateNamespace(cctx, &cloudservice.UpdateNamespaceRequest{
+		Namespace:        c.Namespace,
+		Spec:             spec,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
+func (c *CloudNamespaceCertCaListCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+
+	res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
+	if err != nil {
+		return err
+	}
+
+	certs, err := cert.ParseCACerts(res.Namespace.GetSpec().GetMtlsAuth().GetAcceptedClientCa())
 	if err != nil {
 		return err
 	}
@@ -46,32 +77,130 @@ func (c *CloudNamespaceCertCaListCommand) run(cctx *CommandContext, _ []string) 
 }
 
 func (c *CloudNamespaceCertCaDeleteCommand) run(cctx *CommandContext, _ []string) error {
-	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
-	if err != nil {
-		return err
-	}
-
 	certsToRemove, err := readAndParseCACerts(c.CaCertificateOptions)
 	if err != nil {
 		return err
 	}
 
-	yes, err := cctx.promptYes("Delete (y/yes)?", cctx.RootCommand.AutoConfirm)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
+	res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
+	if err != nil {
+		return err
+	}
+	ns := res.Namespace
+
+	spec, err := buildSpecWithDeletedCerts(ns.Spec, certsToRemove)
+	if err != nil {
+		return err
+	}
+
+	yes, err := cctx.GetPrompter().PromptYes("Delete")
+	if err != nil {
+		return err
+	}
 	if !yes {
 		return errors.New("Aborting delete.")
 	}
 
-	deleteCACerts := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, namespaceClient.DeleteCACerts)
-	return deleteCACerts(namespace.DeleteCACertsParams{
+	rv := ns.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.UpdateNamespace(cctx, &cloudservice.UpdateNamespaceRequest{
 		Namespace:        c.Namespace,
-		Certs:            certsToRemove,
-		ResourceVersion:  c.ResourceVersion,
-		AsyncOperationID: c.AsyncOperationId,
+		Spec:             spec,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
 	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
+// buildSpecWithAddedCerts returns a new NamespaceSpec with the given certs appended to the existing mTLS CA bundle.
+// Certs that already exist (matched by fingerprint) are silently filtered out.
+func buildSpecWithAddedCerts(spec *namespacev1.NamespaceSpec, newCerts []cert.CACert) (*namespacev1.NamespaceSpec, error) {
+	existingData := spec.GetMtlsAuth().GetAcceptedClientCa()
+	existingCerts, err := cert.ParseCACerts(existingData)
+	if err != nil {
+		return nil, err
+	}
+
+	existingFingerprints := map[string]struct{}{}
+	for _, c := range existingCerts {
+		existingFingerprints[c.Fingerprint] = struct{}{}
+	}
+
+	var certsToAdd []cert.CACert
+	for _, c := range newCerts {
+		if _, exists := existingFingerprints[c.Fingerprint]; !exists {
+			certsToAdd = append(certsToAdd, c)
+		}
+	}
+
+	newBundle := append(existingCerts, certsToAdd...)
+	bundleBytes, err := encodeCertBundle(newBundle)
+	if err != nil {
+		return nil, err
+	}
+
+	if spec.MtlsAuth == nil {
+		spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
+	}
+	spec.MtlsAuth.AcceptedClientCa = bundleBytes
+	return spec, nil
+}
+
+// buildSpecWithDeletedCerts returns a new NamespaceSpec with the given certs removed from the mTLS CA bundle.
+// Certs are matched by fingerprint.
+func buildSpecWithDeletedCerts(spec *namespacev1.NamespaceSpec, certsToRemove []cert.CACert) (*namespacev1.NamespaceSpec, error) {
+	existingData := spec.GetMtlsAuth().GetAcceptedClientCa()
+	existingCerts, err := cert.ParseCACerts(existingData)
+	if err != nil {
+		return nil, err
+	}
+
+	fingerprintsToRemove := map[string]struct{}{}
+	for _, c := range certsToRemove {
+		fingerprintsToRemove[c.Fingerprint] = struct{}{}
+	}
+
+	var remaining []cert.CACert
+	for _, existing := range existingCerts {
+		if _, ok := fingerprintsToRemove[existing.Fingerprint]; !ok {
+			remaining = append(remaining, existing)
+		}
+	}
+
+	if len(remaining) == 0 {
+		spec.MtlsAuth = nil
+		return spec, nil
+	}
+
+	bundleBytes, err := encodeCertBundle(remaining)
+	if err != nil {
+		return nil, err
+	}
+	if spec.MtlsAuth == nil {
+		spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
+	}
+	spec.MtlsAuth.AcceptedClientCa = bundleBytes
+	return spec, nil
+}
+
+// encodeCertBundle encodes a slice of CACerts as a joined PEM byte slice.
+func encodeCertBundle(certs []cert.CACert) ([]byte, error) {
+	var out [][]byte
+	for _, c := range certs {
+		data, err := base64.StdEncoding.DecodeString(c.Base64EncodedData)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, data)
+	}
+	return bytes.Join(out, []byte("\n")), nil
 }
 
 // readCACertBytes reads raw PEM bytes.
