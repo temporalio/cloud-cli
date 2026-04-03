@@ -1,7 +1,7 @@
 package temporalcloudcli
 
 import (
-	"context"
+	"errors"
 	"fmt"
 
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
@@ -12,164 +12,37 @@ import (
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
-type (
-	GetExportSinkParams struct {
-		Namespace string
-		SinkName  string
-
-		Cloud   cloudservice.CloudServiceClient
-		Printer *printer.Printer
+func (c *CloudNamespaceExportGetCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
 	}
-
-	ListExportSinksParams struct {
-		Namespace string
-
-		Cloud   cloudservice.CloudServiceClient
-		Printer *printer.Printer
-	}
-
-	DeleteExportSinkParams struct {
-		Namespace        string
-		SinkName         string
-		ResourceVersion  string
-		AsyncOperationID string
-
-		Cloud            cloudservice.CloudServiceClient
-		Prompter         Prompter
-		OperationHandler AsyncOperationHandler
-	}
-
-	EnableExportSinkParams struct {
-		Namespace        string
-		SinkName         string
-		ResourceVersion  string
-		AsyncOperationID string
-
-		Cloud            cloudservice.CloudServiceClient
-		Prompter         Prompter
-		OperationHandler AsyncOperationHandler
-	}
-
-	DisableExportSinkParams struct {
-		Namespace        string
-		SinkName         string
-		ResourceVersion  string
-		AsyncOperationID string
-
-		Cloud            cloudservice.CloudServiceClient
-		Prompter         Prompter
-		OperationHandler AsyncOperationHandler
-	}
-
-	CreateS3ExportSinkParams struct {
-		Namespace        string
-		SinkName         string
-		RoleName         string
-		BucketName       string
-		Region           string
-		AwsAccountID     string
-		KmsArn           string
-		AsyncOperationID string
-
-		Cloud            cloudservice.CloudServiceClient
-		Prompter         Prompter
-		OperationHandler AsyncOperationHandler
-	}
-
-	UpdateS3ExportSinkParams struct {
-		Namespace        string
-		SinkName         string
-		RoleName         string
-		BucketName       string
-		Region           string
-		AwsAccountID     string
-		KmsArn           string
-		ResourceVersion  string
-		AsyncOperationID string
-
-		Cloud            cloudservice.CloudServiceClient
-		Prompter         Prompter
-		OperationHandler AsyncOperationHandler
-	}
-
-	ValidateS3ExportSinkParams struct {
-		Namespace    string
-		SinkName     string
-		RoleName     string
-		BucketName   string
-		Region       string
-		AwsAccountID string
-		KmsArn       string
-
-		Cloud   cloudservice.CloudServiceClient
-		Printer *printer.Printer
-	}
-
-	CreateGCSExportSinkParams struct {
-		Namespace        string
-		SinkName         string
-		SaID             string
-		BucketName       string
-		GcpProjectID     string
-		Region           string
-		AsyncOperationID string
-
-		Cloud            cloudservice.CloudServiceClient
-		Prompter         Prompter
-		OperationHandler AsyncOperationHandler
-	}
-
-	UpdateGCSExportSinkParams struct {
-		Namespace        string
-		SinkName         string
-		SaID             string
-		BucketName       string
-		GcpProjectID     string
-		Region           string
-		ResourceVersion  string
-		AsyncOperationID string
-
-		Cloud            cloudservice.CloudServiceClient
-		Prompter         Prompter
-		OperationHandler AsyncOperationHandler
-	}
-
-	ValidateGCSExportSinkParams struct {
-		Namespace    string
-		SinkName     string
-		SaID         string
-		BucketName   string
-		GcpProjectID string
-		Region       string
-
-		Cloud   cloudservice.CloudServiceClient
-		Printer *printer.Printer
-	}
-)
-
-func GetExportSink(ctx context.Context, params GetExportSinkParams) error {
-	res, err := params.Cloud.GetNamespaceExportSink(ctx, &cloudservice.GetNamespaceExportSinkRequest{
-		Namespace: params.Namespace,
-		Name:      params.SinkName,
+	res, err := client.GetNamespaceExportSink(cctx, &cloudservice.GetNamespaceExportSinkRequest{
+		Namespace: c.Namespace,
+		Name:      c.SinkName,
 	})
 	if err != nil {
 		return err
 	}
-	return params.Printer.PrintResource(struct {
+	return cctx.Printer.PrintResource(struct {
 		Namespace string
 		Spec      *namespacev1.ExportSinkSpec
 	}{
-		Namespace: params.Namespace,
+		Namespace: c.Namespace,
 		Spec:      res.Sink.Spec,
 	}, printer.PrintResourceOptions{})
 }
 
-func ListExportSinks(ctx context.Context, params ListExportSinksParams) error {
+func (c *CloudNamespaceExportListCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
 	var sinks []*namespacev1.ExportSink
 	pageToken := ""
 	for {
-		res, err := params.Cloud.GetNamespaceExportSinks(ctx, &cloudservice.GetNamespaceExportSinksRequest{
-			Namespace: params.Namespace,
+		res, err := client.GetNamespaceExportSinks(cctx, &cloudservice.GetNamespaceExportSinksRequest{
+			Namespace: c.Namespace,
 			PageToken: pageToken,
 		})
 		if err != nil {
@@ -181,7 +54,7 @@ func ListExportSinks(ctx context.Context, params ListExportSinksParams) error {
 		}
 		pageToken = res.NextPageToken
 	}
-	return params.Printer.PrintResourceList(
+	return cctx.Printer.PrintResourceList(
 		struct {
 			Sinks []*namespacev1.ExportSink
 		}{Sinks: sinks},
@@ -193,463 +66,326 @@ func ListExportSinks(ctx context.Context, params ListExportSinksParams) error {
 	)
 }
 
-func DeleteExportSink(ctx context.Context, params DeleteExportSinkParams) error {
-	sinkRes, err := params.Cloud.GetNamespaceExportSink(ctx, &cloudservice.GetNamespaceExportSinkRequest{
-		Namespace: params.Namespace,
-		Name:      params.SinkName,
+func (c *CloudNamespaceExportDeleteCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	sinkRes, err := client.GetNamespaceExportSink(cctx, &cloudservice.GetNamespaceExportSinkRequest{
+		Namespace: c.Namespace,
+		Name:      c.SinkName,
 	})
 	if err != nil {
 		return err
 	}
 	sink := sinkRes.Sink
 
-	if err := params.Prompter.PromptApply(sink.Spec, &namespacev1.ExportSinkSpec{}, false); err != nil {
+	yes, err := cctx.GetPrompter().PromptYes("Delete")
+	if err != nil {
 		return err
+	}
+	if !yes {
+		return errors.New("Aborting delete.")
 	}
 
 	rv := sink.ResourceVersion
-	if params.ResourceVersion != "" {
-		rv = params.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
 	}
-
-	deleteSink := wrapDeleteOperation(params.Cloud.DeleteNamespaceExportSink, params.OperationHandler, params.SinkName)
-	return deleteSink(ctx, &cloudservice.DeleteNamespaceExportSinkRequest{
-		Namespace:        params.Namespace,
-		Name:             params.SinkName,
+	resp, err := client.DeleteNamespaceExportSink(cctx, &cloudservice.DeleteNamespaceExportSinkRequest{
+		Namespace:        c.Namespace,
+		Name:             c.SinkName,
 		ResourceVersion:  rv,
-		AsyncOperationId: params.AsyncOperationID,
+		AsyncOperationId: c.AsyncOperationId,
 	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleDeleteOperation(cctx, resp, err)
 }
 
-func EnableExportSink(ctx context.Context, params EnableExportSinkParams) error {
-	sinkRes, err := params.Cloud.GetNamespaceExportSink(ctx, &cloudservice.GetNamespaceExportSinkRequest{
-		Namespace: params.Namespace,
-		Name:      params.SinkName,
+func (c *CloudNamespaceExportEnableCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	sinkRes, err := client.GetNamespaceExportSink(cctx, &cloudservice.GetNamespaceExportSinkRequest{
+		Namespace: c.Namespace,
+		Name:      c.SinkName,
 	})
 	if err != nil {
 		return err
 	}
 	sink := sinkRes.Sink
-
-	rv := sink.ResourceVersion
-	if params.ResourceVersion != "" {
-		rv = params.ResourceVersion
-	}
-
 	oldSpec := sink.Spec
 	newSpec := proto.Clone(oldSpec).(*namespacev1.ExportSinkSpec)
 	newSpec.Enabled = true
 
-	if err := params.Prompter.PromptApply(oldSpec, newSpec, false); err != nil {
+	yes, err := cctx.GetPrompter().PromptApply(oldSpec, newSpec, false)
+	if err != nil {
 		return err
 	}
+	if !yes {
+		return errors.New("Aborting enable.")
+	}
 
-	updateSink := wrapUpdateOperation(params.Cloud.UpdateNamespaceExportSink, params.OperationHandler, params.SinkName)
-	return updateSink(ctx, &cloudservice.UpdateNamespaceExportSinkRequest{
-		Namespace:        params.Namespace,
+	rv := sink.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.UpdateNamespaceExportSink(cctx, &cloudservice.UpdateNamespaceExportSinkRequest{
+		Namespace:        c.Namespace,
 		Spec:             newSpec,
 		ResourceVersion:  rv,
-		AsyncOperationId: params.AsyncOperationID,
+		AsyncOperationId: c.AsyncOperationId,
 	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }
 
-func DisableExportSink(ctx context.Context, params DisableExportSinkParams) error {
-	sinkRes, err := params.Cloud.GetNamespaceExportSink(ctx, &cloudservice.GetNamespaceExportSinkRequest{
-		Namespace: params.Namespace,
-		Name:      params.SinkName,
+func (c *CloudNamespaceExportDisableCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	sinkRes, err := client.GetNamespaceExportSink(cctx, &cloudservice.GetNamespaceExportSinkRequest{
+		Namespace: c.Namespace,
+		Name:      c.SinkName,
 	})
 	if err != nil {
 		return err
 	}
 	sink := sinkRes.Sink
-
-	rv := sink.ResourceVersion
-	if params.ResourceVersion != "" {
-		rv = params.ResourceVersion
-	}
-
 	oldSpec := sink.Spec
 	newSpec := proto.Clone(oldSpec).(*namespacev1.ExportSinkSpec)
 	newSpec.Enabled = false
 
-	if err := params.Prompter.PromptApply(oldSpec, newSpec, false); err != nil {
-		return err
-	}
-
-	updateSink := wrapUpdateOperation(params.Cloud.UpdateNamespaceExportSink, params.OperationHandler, params.SinkName)
-	return updateSink(ctx, &cloudservice.UpdateNamespaceExportSinkRequest{
-		Namespace:        params.Namespace,
-		Spec:             newSpec,
-		ResourceVersion:  rv,
-		AsyncOperationId: params.AsyncOperationID,
-	})
-}
-
-func CreateS3ExportSink(ctx context.Context, params CreateS3ExportSinkParams) error {
-	spec := &namespacev1.ExportSinkSpec{
-		Name:    params.SinkName,
-		Enabled: true,
-		S3: &sinkv1.S3Spec{
-			RoleName:     params.RoleName,
-			BucketName:   params.BucketName,
-			Region:       params.Region,
-			AwsAccountId: params.AwsAccountID,
-			KmsArn:       params.KmsArn,
-		},
-	}
-	if err := params.Prompter.PromptApply(&namespacev1.ExportSinkSpec{}, spec, false); err != nil {
-		return err
-	}
-	createSink := wrapCreateOperation(
-		params.Cloud.CreateNamespaceExportSink,
-		params.OperationHandler,
-		func(_ *cloudservice.CreateNamespaceExportSinkResponse) string { return params.SinkName },
-	)
-	return createSink(ctx, &cloudservice.CreateNamespaceExportSinkRequest{
-		Namespace:        params.Namespace,
-		Spec:             spec,
-		AsyncOperationId: params.AsyncOperationID,
-	})
-}
-
-func UpdateS3ExportSink(ctx context.Context, params UpdateS3ExportSinkParams) error {
-	sinkRes, err := params.Cloud.GetNamespaceExportSink(ctx, &cloudservice.GetNamespaceExportSinkRequest{
-		Namespace: params.Namespace,
-		Name:      params.SinkName,
-	})
+	yes, err := cctx.GetPrompter().PromptApply(oldSpec, newSpec, false)
 	if err != nil {
 		return err
 	}
-	sink := sinkRes.Sink
+	if !yes {
+		return errors.New("Aborting disable.")
+	}
 
 	rv := sink.ResourceVersion
-	if params.ResourceVersion != "" {
-		rv = params.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
 	}
-
-	oldSpec := sink.Spec
-	newSpec := &namespacev1.ExportSinkSpec{
-		Name:    params.SinkName,
-		Enabled: oldSpec.GetEnabled(),
-		S3: &sinkv1.S3Spec{
-			RoleName:     params.RoleName,
-			BucketName:   params.BucketName,
-			Region:       params.Region,
-			AwsAccountId: params.AwsAccountID,
-			KmsArn:       params.KmsArn,
-		},
-	}
-
-	if err := params.Prompter.PromptApply(oldSpec, newSpec, false); err != nil {
-		return err
-	}
-
-	updateSink := wrapUpdateOperation(params.Cloud.UpdateNamespaceExportSink, params.OperationHandler, params.SinkName)
-	return updateSink(ctx, &cloudservice.UpdateNamespaceExportSinkRequest{
-		Namespace:        params.Namespace,
+	resp, err := client.UpdateNamespaceExportSink(cctx, &cloudservice.UpdateNamespaceExportSinkRequest{
+		Namespace:        c.Namespace,
 		Spec:             newSpec,
 		ResourceVersion:  rv,
-		AsyncOperationId: params.AsyncOperationID,
+		AsyncOperationId: c.AsyncOperationId,
 	})
-}
-
-func ValidateS3ExportSink(ctx context.Context, params ValidateS3ExportSinkParams) error {
-	spec := &namespacev1.ExportSinkSpec{
-		Name: params.SinkName,
-		S3: &sinkv1.S3Spec{
-			RoleName:     params.RoleName,
-			BucketName:   params.BucketName,
-			Region:       params.Region,
-			AwsAccountId: params.AwsAccountID,
-			KmsArn:       params.KmsArn,
-		},
-	}
-	_, err := params.Cloud.ValidateNamespaceExportSink(ctx, &cloudservice.ValidateNamespaceExportSinkRequest{
-		Namespace: params.Namespace,
-		Spec:      spec,
-	})
-	if err != nil {
-		return err
-	}
-	return params.Printer.PrintStructured(
-		struct{ Status string }{Status: fmt.Sprintf("Export sink %q configuration is valid.", params.SinkName)},
-		printer.StructuredOptions{},
-	)
-}
-
-func CreateGCSExportSink(ctx context.Context, params CreateGCSExportSinkParams) error {
-	spec := &namespacev1.ExportSinkSpec{
-		Name:    params.SinkName,
-		Enabled: true,
-		Gcs: &sinkv1.GCSSpec{
-			SaId:         params.SaID,
-			BucketName:   params.BucketName,
-			GcpProjectId: params.GcpProjectID,
-			Region:       params.Region,
-		},
-	}
-	if err := params.Prompter.PromptApply(&namespacev1.ExportSinkSpec{}, spec, false); err != nil {
-		return err
-	}
-	createSink := wrapCreateOperation(
-		params.Cloud.CreateNamespaceExportSink,
-		params.OperationHandler,
-		func(_ *cloudservice.CreateNamespaceExportSinkResponse) string { return params.SinkName },
-	)
-	return createSink(ctx, &cloudservice.CreateNamespaceExportSinkRequest{
-		Namespace:        params.Namespace,
-		Spec:             spec,
-		AsyncOperationId: params.AsyncOperationID,
-	})
-}
-
-func UpdateGCSExportSink(ctx context.Context, params UpdateGCSExportSinkParams) error {
-	sinkRes, err := params.Cloud.GetNamespaceExportSink(ctx, &cloudservice.GetNamespaceExportSinkRequest{
-		Namespace: params.Namespace,
-		Name:      params.SinkName,
-	})
-	if err != nil {
-		return err
-	}
-	sink := sinkRes.Sink
-
-	rv := sink.ResourceVersion
-	if params.ResourceVersion != "" {
-		rv = params.ResourceVersion
-	}
-
-	oldSpec := sink.Spec
-	newSpec := &namespacev1.ExportSinkSpec{
-		Name:    params.SinkName,
-		Enabled: oldSpec.GetEnabled(),
-		Gcs: &sinkv1.GCSSpec{
-			SaId:         params.SaID,
-			BucketName:   params.BucketName,
-			GcpProjectId: params.GcpProjectID,
-			Region:       params.Region,
-		},
-	}
-
-	if err := params.Prompter.PromptApply(oldSpec, newSpec, false); err != nil {
-		return err
-	}
-
-	updateSink := wrapUpdateOperation(params.Cloud.UpdateNamespaceExportSink, params.OperationHandler, params.SinkName)
-	return updateSink(ctx, &cloudservice.UpdateNamespaceExportSinkRequest{
-		Namespace:        params.Namespace,
-		Spec:             newSpec,
-		ResourceVersion:  rv,
-		AsyncOperationId: params.AsyncOperationID,
-	})
-}
-
-func ValidateGCSExportSink(ctx context.Context, params ValidateGCSExportSinkParams) error {
-	spec := &namespacev1.ExportSinkSpec{
-		Name: params.SinkName,
-		Gcs: &sinkv1.GCSSpec{
-			SaId:         params.SaID,
-			BucketName:   params.BucketName,
-			GcpProjectId: params.GcpProjectID,
-			Region:       params.Region,
-		},
-	}
-	_, err := params.Cloud.ValidateNamespaceExportSink(ctx, &cloudservice.ValidateNamespaceExportSinkRequest{
-		Namespace: params.Namespace,
-		Spec:      spec,
-	})
-	if err != nil {
-		return err
-	}
-	return params.Printer.PrintStructured(
-		struct{ Status string }{Status: fmt.Sprintf("Export sink %q configuration is valid.", params.SinkName)},
-		printer.StructuredOptions{},
-	)
-}
-
-func (c *CloudNamespaceExportGetCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-	if err != nil {
-		return err
-	}
-	return GetExportSink(cctx.Context, GetExportSinkParams{
-		Namespace: c.Namespace,
-		SinkName:  c.SinkName,
-		Cloud:     cloudClient.CloudService(),
-		Printer:   cctx.Printer,
-	})
-}
-
-func (c *CloudNamespaceExportListCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-	if err != nil {
-		return err
-	}
-	return ListExportSinks(cctx.Context, ListExportSinksParams{
-		Namespace: c.Namespace,
-		Cloud:     cloudClient.CloudService(),
-		Printer:   cctx.Printer,
-	})
-}
-
-func (c *CloudNamespaceExportDeleteCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-	if err != nil {
-		return err
-	}
-	return DeleteExportSink(cctx.Context, DeleteExportSinkParams{
-		Namespace:        c.Namespace,
-		SinkName:         c.SinkName,
-		ResourceVersion:  c.ResourceVersion,
-		AsyncOperationID: c.AsyncOperationId,
-		Cloud:            cloudClient.CloudService(),
-		Prompter:         newPrompter(cctx),
-		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
-	})
-}
-
-func (c *CloudNamespaceExportEnableCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-	if err != nil {
-		return err
-	}
-	return EnableExportSink(cctx.Context, EnableExportSinkParams{
-		Namespace:        c.Namespace,
-		SinkName:         c.SinkName,
-		ResourceVersion:  c.ResourceVersion,
-		AsyncOperationID: c.AsyncOperationId,
-		Cloud:            cloudClient.CloudService(),
-		Prompter:         newPrompter(cctx),
-		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
-	})
-}
-
-func (c *CloudNamespaceExportDisableCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
-	if err != nil {
-		return err
-	}
-	return DisableExportSink(cctx.Context, DisableExportSinkParams{
-		Namespace:        c.Namespace,
-		SinkName:         c.SinkName,
-		ResourceVersion:  c.ResourceVersion,
-		AsyncOperationID: c.AsyncOperationId,
-		Cloud:            cloudClient.CloudService(),
-		Prompter:         newPrompter(cctx),
-		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
-	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }
 
 func (c *CloudNamespaceExportS3CreateCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-	return CreateS3ExportSink(cctx.Context, CreateS3ExportSinkParams{
+	spec := &namespacev1.ExportSinkSpec{
+		Name:    c.SinkName,
+		Enabled: true,
+		S3: &sinkv1.S3Spec{
+			RoleName:     c.RoleName,
+			BucketName:   c.BucketName,
+			Region:       c.Region,
+			AwsAccountId: c.AwsAccountId,
+			KmsArn:       c.KmsArn,
+		},
+	}
+
+	yes, err := cctx.GetPrompter().PromptYes("Create")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting create.")
+	}
+
+	resp, err := client.CreateNamespaceExportSink(cctx, &cloudservice.CreateNamespaceExportSinkRequest{
 		Namespace:        c.Namespace,
-		SinkName:         c.SinkName,
-		RoleName:         c.RoleName,
-		BucketName:       c.BucketName,
-		Region:           c.Region,
-		AwsAccountID:     c.AwsAccountId,
-		KmsArn:           c.KmsArn,
-		AsyncOperationID: c.AsyncOperationId,
-		Cloud:            cloudClient.CloudService(),
-		Prompter:         newPrompter(cctx),
-		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
+		Spec:             spec,
+		AsyncOperationId: c.AsyncOperationId,
 	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleCreateAsyncOperationResponse(cctx, resp, err)
 }
 
 func (c *CloudNamespaceExportS3UpdateCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-	return UpdateS3ExportSink(cctx.Context, UpdateS3ExportSinkParams{
-		Namespace:        c.Namespace,
-		SinkName:         c.SinkName,
-		RoleName:         c.RoleName,
-		BucketName:       c.BucketName,
-		Region:           c.Region,
-		AwsAccountID:     c.AwsAccountId,
-		KmsArn:           c.KmsArn,
-		ResourceVersion:  c.ResourceVersion,
-		AsyncOperationID: c.AsyncOperationId,
-		Cloud:            cloudClient.CloudService(),
-		Prompter:         newPrompter(cctx),
-		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
+	sinkRes, err := client.GetNamespaceExportSink(cctx, &cloudservice.GetNamespaceExportSinkRequest{
+		Namespace: c.Namespace,
+		Name:      c.SinkName,
 	})
+	if err != nil {
+		return err
+	}
+	sink := sinkRes.Sink
+	oldSpec := sink.Spec
+	newSpec := &namespacev1.ExportSinkSpec{
+		Name:    c.SinkName,
+		Enabled: oldSpec.GetEnabled(),
+		S3: &sinkv1.S3Spec{
+			RoleName:     c.RoleName,
+			BucketName:   c.BucketName,
+			Region:       c.Region,
+			AwsAccountId: c.AwsAccountId,
+			KmsArn:       c.KmsArn,
+		},
+	}
+
+	yes, err := cctx.GetPrompter().PromptApply(oldSpec, newSpec, false)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting update.")
+	}
+
+	rv := sink.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.UpdateNamespaceExportSink(cctx, &cloudservice.UpdateNamespaceExportSinkRequest{
+		Namespace:        c.Namespace,
+		Spec:             newSpec,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }
 
 func (c *CloudNamespaceExportS3ValidateCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-	return ValidateS3ExportSink(cctx.Context, ValidateS3ExportSinkParams{
-		Namespace:    c.Namespace,
-		SinkName:     c.SinkName,
-		RoleName:     c.RoleName,
-		BucketName:   c.BucketName,
-		Region:       c.Region,
-		AwsAccountID: c.AwsAccountId,
-		KmsArn:       c.KmsArn,
-		Cloud:        cloudClient.CloudService(),
-		Printer:      cctx.Printer,
+	spec := &namespacev1.ExportSinkSpec{
+		Name: c.SinkName,
+		S3: &sinkv1.S3Spec{
+			RoleName:     c.RoleName,
+			BucketName:   c.BucketName,
+			Region:       c.Region,
+			AwsAccountId: c.AwsAccountId,
+			KmsArn:       c.KmsArn,
+		},
+	}
+	_, err = client.ValidateNamespaceExportSink(cctx, &cloudservice.ValidateNamespaceExportSinkRequest{
+		Namespace: c.Namespace,
+		Spec:      spec,
 	})
+	if err != nil {
+		return err
+	}
+	return cctx.Printer.PrintStructured(
+		struct{ Status string }{Status: fmt.Sprintf("Export sink %q configuration is valid.", c.SinkName)},
+		printer.StructuredOptions{},
+	)
 }
 
 func (c *CloudNamespaceExportGcsCreateCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-	return CreateGCSExportSink(cctx.Context, CreateGCSExportSinkParams{
+	spec := &namespacev1.ExportSinkSpec{
+		Name:    c.SinkName,
+		Enabled: true,
+		Gcs: &sinkv1.GCSSpec{
+			SaId:         c.SaId,
+			BucketName:   c.BucketName,
+			GcpProjectId: c.GcpProjectId,
+			Region:       c.Region,
+		},
+	}
+
+	yes, err := cctx.GetPrompter().PromptYes("Create")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting create.")
+	}
+
+	resp, err := client.CreateNamespaceExportSink(cctx, &cloudservice.CreateNamespaceExportSinkRequest{
 		Namespace:        c.Namespace,
-		SinkName:         c.SinkName,
-		SaID:             c.SaId,
-		BucketName:       c.BucketName,
-		GcpProjectID:     c.GcpProjectId,
-		Region:           c.Region,
-		AsyncOperationID: c.AsyncOperationId,
-		Cloud:            cloudClient.CloudService(),
-		Prompter:         newPrompter(cctx),
-		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
+		Spec:             spec,
+		AsyncOperationId: c.AsyncOperationId,
 	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleCreateAsyncOperationResponse(cctx, resp, err)
 }
 
 func (c *CloudNamespaceExportGcsUpdateCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-	return UpdateGCSExportSink(cctx.Context, UpdateGCSExportSinkParams{
-		Namespace:        c.Namespace,
-		SinkName:         c.SinkName,
-		SaID:             c.SaId,
-		BucketName:       c.BucketName,
-		GcpProjectID:     c.GcpProjectId,
-		Region:           c.Region,
-		ResourceVersion:  c.ResourceVersion,
-		AsyncOperationID: c.AsyncOperationId,
-		Cloud:            cloudClient.CloudService(),
-		Prompter:         newPrompter(cctx),
-		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
+	sinkRes, err := client.GetNamespaceExportSink(cctx, &cloudservice.GetNamespaceExportSinkRequest{
+		Namespace: c.Namespace,
+		Name:      c.SinkName,
 	})
+	if err != nil {
+		return err
+	}
+	sink := sinkRes.Sink
+	oldSpec := sink.Spec
+	newSpec := &namespacev1.ExportSinkSpec{
+		Name:    c.SinkName,
+		Enabled: oldSpec.GetEnabled(),
+		Gcs: &sinkv1.GCSSpec{
+			SaId:         c.SaId,
+			BucketName:   c.BucketName,
+			GcpProjectId: c.GcpProjectId,
+			Region:       c.Region,
+		},
+	}
+
+	yes, err := cctx.GetPrompter().PromptApply(oldSpec, newSpec, false)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting update.")
+	}
+
+	rv := sink.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.UpdateNamespaceExportSink(cctx, &cloudservice.UpdateNamespaceExportSinkRequest{
+		Namespace:        c.Namespace,
+		Spec:             newSpec,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }
 
 func (c *CloudNamespaceExportGcsValidateCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-	return ValidateGCSExportSink(cctx.Context, ValidateGCSExportSinkParams{
-		Namespace:    c.Namespace,
-		SinkName:     c.SinkName,
-		SaID:         c.SaId,
-		BucketName:   c.BucketName,
-		GcpProjectID: c.GcpProjectId,
-		Region:       c.Region,
-		Cloud:        cloudClient.CloudService(),
-		Printer:      cctx.Printer,
+	spec := &namespacev1.ExportSinkSpec{
+		Name: c.SinkName,
+		Gcs: &sinkv1.GCSSpec{
+			SaId:         c.SaId,
+			BucketName:   c.BucketName,
+			GcpProjectId: c.GcpProjectId,
+			Region:       c.Region,
+		},
+	}
+	_, err = client.ValidateNamespaceExportSink(cctx, &cloudservice.ValidateNamespaceExportSinkRequest{
+		Namespace: c.Namespace,
+		Spec:      spec,
 	})
+	if err != nil {
+		return err
+	}
+	return cctx.Printer.PrintStructured(
+		struct{ Status string }{Status: fmt.Sprintf("Export sink %q configuration is valid.", c.SinkName)},
+		printer.StructuredOptions{},
+	)
 }
