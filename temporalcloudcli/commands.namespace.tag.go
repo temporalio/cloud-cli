@@ -1,88 +1,94 @@
 package temporalcloudcli
 
 import (
+	"cmp"
 	"errors"
+	"slices"
 
-	"github.com/temporalio/cloud-cli/internal/namespace"
+	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
+// Tag represents a namespace tag key-value pair for display.
+type Tag struct {
+	Key   string
+	Value string
+}
+
 func (c *CloudNamespaceTagListCommand) run(cctx *CommandContext, _ []string) error {
-	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-
-	tags, err := namespaceClient.ListTags(cctx.Context, c.Namespace)
+	res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
 	if err != nil {
 		return err
 	}
-
+	tags := res.Namespace.GetTags()
+	result := make([]Tag, 0, len(tags))
+	for k, v := range tags {
+		result = append(result, Tag{Key: k, Value: v})
+	}
+	slices.SortFunc(result, func(a, b Tag) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
 	return cctx.Printer.PrintResourceList(
-		struct{ Tags []namespace.Tag }{Tags: tags},
+		struct{ Tags []Tag }{Tags: result},
 		printer.PrintResourceOptions{},
 		printer.TableOptions{},
 	)
 }
 
 func (c *CloudNamespaceTagCreateCommand) run(cctx *CommandContext, _ []string) error {
-	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-
-	yes, err := cctx.promptYes("Create (y/yes)?", cctx.RootCommand.AutoConfirm)
+	yes, err := cctx.GetPrompter().PromptYes("Create")
 	if err != nil {
 		return err
 	}
-
 	if !yes {
 		return errors.New("Aborting create.")
 	}
-
-	setTag := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, namespaceClient.SetTag)
-	return setTag(namespace.SetTagParams{
+	resp, err := client.UpdateNamespaceTags(cctx, &cloudservice.UpdateNamespaceTagsRequest{
 		Namespace:        c.Namespace,
-		Key:              c.Key,
-		Value:            c.Value,
-		AsyncOperationID: c.AsyncOperationId,
+		TagsToUpsert:     map[string]string{c.Key: c.Value},
+		AsyncOperationId: c.AsyncOperationId,
 	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }
 
 func (c *CloudNamespaceTagUpdateCommand) run(cctx *CommandContext, _ []string) error {
-	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-
-	setTag := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, namespaceClient.SetTag)
-	return setTag(namespace.SetTagParams{
+	resp, err := client.UpdateNamespaceTags(cctx, &cloudservice.UpdateNamespaceTagsRequest{
 		Namespace:        c.Namespace,
-		Key:              c.Key,
-		Value:            c.Value,
-		AsyncOperationID: c.AsyncOperationId,
+		TagsToUpsert:     map[string]string{c.Key: c.Value},
+		AsyncOperationId: c.AsyncOperationId,
 	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }
 
 func (c *CloudNamespaceTagDeleteCommand) run(cctx *CommandContext, _ []string) error {
-	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-
-	yes, err := cctx.promptYes("Delete (y/yes)?", cctx.RootCommand.AutoConfirm)
+	yes, err := cctx.GetPrompter().PromptYes("Delete")
 	if err != nil {
 		return err
 	}
-
 	if !yes {
 		return errors.New("Aborting delete.")
 	}
-
-	deleteTags := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, namespaceClient.DeleteTags)
-	return deleteTags(namespace.DeleteTagsParams{
+	resp, err := client.UpdateNamespaceTags(cctx, &cloudservice.UpdateNamespaceTagsRequest{
 		Namespace:        c.Namespace,
-		Keys:             []string{c.Key},
-		AsyncOperationID: c.AsyncOperationId,
+		TagsToRemove:     []string{c.Key},
+		AsyncOperationId: c.AsyncOperationId,
 	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleDeleteOperation(cctx, resp, err)
 }
