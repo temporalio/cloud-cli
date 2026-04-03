@@ -1,578 +1,332 @@
 package temporalcloudcli_test
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
+	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
+	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/temporalio/cloud-cli/internal/namespace"
+	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
-	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
-	cmdmock "github.com/temporalio/cloud-cli/temporalcloudcli/mock"
-	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
-	"go.temporal.io/cloud-sdk/api/operation/v1"
 )
 
-func TestCloudNamespaceCodecGetCommand_NoCodecServer(t *testing.T) {
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockClient.EXPECT().
-		GetCodecServer(mock.Anything, "test-namespace.test-account").
-		Return(nil, nil)
+var testCodecNamespace = "test-namespace.test-account"
 
-	var buf bytes.Buffer
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-	}
-	var capturedErr error
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceCodecCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCodecGetCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.NoError(t, capturedErr)
-
-	var result struct {
-		Namespace string          `json:"Namespace"`
-		Spec      json.RawMessage `json:"Spec"`
-	}
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-	assert.Equal(t, "test-namespace.test-account", result.Namespace)
-	assert.Equal(t, "null", string(result.Spec))
-}
-
-func TestCloudNamespaceCodecGetCommand_WithCodecServer(t *testing.T) {
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockClient.EXPECT().
-		GetCodecServer(mock.Anything, "test-namespace.test-account").
-		Return(&namespacev1.CodecServerSpec{
+var testNamespaceWithCodec = &namespacev1.Namespace{
+	Namespace:       testCodecNamespace,
+	ResourceVersion: "rv-1",
+	Spec: &namespacev1.NamespaceSpec{
+		CodecServer: &namespacev1.CodecServerSpec{
 			Endpoint:        "https://codec.example.com",
 			PassAccessToken: true,
-		}, nil)
-
-	var buf bytes.Buffer
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-	}
-	var capturedErr error
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceCodecCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCodecGetCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.NoError(t, capturedErr)
-	assert.Contains(t, buf.String(), "codec.example.com")
-}
-
-func TestCloudNamespaceCodecGetCommand_Error(t *testing.T) {
-	expectedErr := errors.New("API error")
-
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockClient.EXPECT().
-		GetCodecServer(mock.Anything, "test-namespace.test-account").
-		Return(nil, expectedErr)
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceCodecCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCodecGetCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Equal(t, expectedErr, capturedErr)
-}
-
-func TestCloudNamespaceCodecSetCommand_Success(t *testing.T) {
-	expectedOp := &operation.AsyncOperation{Id: "test-operation-id"}
-
-	mockClient := &cmdmock.MockNamespaceClient{}
-	mockClient.On("SetCodec", mock.Anything, mock.MatchedBy(func(p namespace.SetCodecParams) bool {
-		return p.Namespace == "test-namespace.test-account" &&
-			p.Endpoint == "https://codec.example.com" &&
-			p.PassAccessToken == true
-	})).Return(expectedOp, nil)
-
-	mockPoller := &cmdmock.MockPoller{}
-	mockPoller.On("PollAsyncOperation", mock.Anything, "test-operation-id", "test-namespace.test-account").
-		Return(nil)
-
-	tests := []struct {
-		name         string
-		setupCmd     func(*temporalcloudcli.CloudNamespaceCodecSetCommand)
-		assertResult func(*testing.T, bytes.Buffer)
-	}{
-		{
-			name: "async",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCodecSetCommand) {
-				cmd.Namespace = "test-namespace.test-account"
-				cmd.Endpoint = "https://codec.example.com"
-				cmd.PassAccessToken = true
-				cmd.AsyncOperationId = "test-operation-id"
-				cmd.Async = true
-			},
-			assertResult: func(t *testing.T, buf bytes.Buffer) {
-				var result temporalcloudcli.MutationResult
-				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-				assert.Equal(t, temporalcloudcli.MutationResult{
-					AsyncOp: &operation.AsyncOperation{Id: "test-operation-id"},
-					ID:      "test-namespace.test-account",
-				}, result)
-			},
 		},
-		{
-			name: "sync",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCodecSetCommand) {
-				cmd.Namespace = "test-namespace.test-account"
-				cmd.Endpoint = "https://codec.example.com"
-				cmd.PassAccessToken = true
-				cmd.Async = false
-			},
-			assertResult: func(t *testing.T, buf bytes.Buffer) {
-				assert.Empty(t, buf.String())
-			},
+	},
+}
+
+var testNamespaceWithoutCodec = &namespacev1.Namespace{
+	Namespace:       testCodecNamespace,
+	ResourceVersion: "rv-1",
+	Spec:            &namespacev1.NamespaceSpec{},
+}
+
+// --- GetCodecServer ---
+
+func TestGetCodecServer_WithCodecServer(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNamespaceCodecGetCommand{
+		NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: testCodecNamespace},
+	}, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: testCodecNamespace}, mock.Anything).
+				Return(&cloudservice.GetNamespaceResponse{Namespace: testNamespaceWithCodec}, nil)
 		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			cctx := &temporalcloudcli.CommandContext{
-				Context:         context.Background(),
-				Printer:         &printer.Printer{Output: &buf, JSON: true},
-				NamespaceClient: mockClient,
-				Poller:          mockPoller,
-			}
-			var capturedErr error
-			cctx.Options.Fail = func(err error) { capturedErr = err }
-
-			parent := &temporalcloudcli.CloudNamespaceCodecCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceCodecSetCommand(cctx, parent)
-			tt.setupCmd(cmd)
-
-			cmd.Command.Run(&cmd.Command, []string{})
-			require.NoError(t, capturedErr)
-			tt.assertResult(t, buf)
-		})
-	}
+		JSONOutput:         true,
+		ExpectedOutputJson: struct {
+			Namespace string
+			Spec      *namespacev1.CodecServerSpec
+		}{
+			Namespace: testCodecNamespace,
+			Spec:      testNamespaceWithCodec.Spec.CodecServer,
+		},
+	})
 }
 
-func TestCloudNamespaceCodecSetCommand_WithCustomErrorMessage(t *testing.T) {
-	expectedOp := &operation.AsyncOperation{Id: "test-operation-id"}
-
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockClient.EXPECT().
-		SetCodec(mock.Anything, mock.MatchedBy(func(p namespace.SetCodecParams) bool {
-			return p.CustomErrorMessageDefaultMessage == "Codec unavailable" &&
-				p.CustomErrorMessageDefaultLink == "https://docs.example.com"
-		})).
-		Return(expectedOp, nil)
-
-	var buf bytes.Buffer
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-	}
-	var capturedErr error
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceCodecCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCodecSetCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Endpoint = "https://codec.example.com"
-	cmd.CustomErrorMessageDefaultMessage = "Codec unavailable"
-	cmd.CustomErrorMessageDefaultLink = "https://docs.example.com"
-	cmd.Async = true
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.NoError(t, capturedErr)
-
-	var result temporalcloudcli.MutationResult
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-	assert.Equal(t, temporalcloudcli.MutationResult{
-		AsyncOp: &operation.AsyncOperation{Id: "test-operation-id"},
-		ID:      "test-namespace.test-account",
-	}, result)
+func TestGetCodecServer_NoCodecServer(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNamespaceCodecGetCommand{
+		NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: testCodecNamespace},
+	}, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: testCodecNamespace}, mock.Anything).
+				Return(&cloudservice.GetNamespaceResponse{Namespace: testNamespaceWithoutCodec}, nil)
+		},
+		JSONOutput: true,
+		ExpectedOutputJson: struct {
+			Namespace string
+			Spec      *namespacev1.CodecServerSpec
+		}{
+			Namespace: testCodecNamespace,
+			Spec:      nil,
+		},
+	})
 }
 
-func TestCloudNamespaceCodecSetCommand_Error(t *testing.T) {
-	expectedErr := errors.New("set codec failed")
-
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockClient.EXPECT().
-		SetCodec(mock.Anything, mock.Anything).
-		Return(nil, expectedErr)
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceCodecCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCodecSetCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Endpoint = "https://codec.example.com"
-	cmd.Async = true
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Equal(t, expectedErr, capturedErr)
+func TestGetCodecServer_Error(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNamespaceCodecGetCommand{
+		NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: testCodecNamespace},
+	}, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil, errors.New("API error"))
+		},
+		ExpectedError: "API error",
+	})
 }
 
-func TestCloudNamespaceCodecSetCommand_NothingToChange(t *testing.T) {
+// --- SetCodecServer ---
+
+func TestSetCodecServer_Success(t *testing.T) {
+	op := &operation.AsyncOperation{Id: "op-set-codec"}
+
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNamespaceCodecSetCommand{
+		NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: testCodecNamespace},
+		Endpoint:         "https://codec.example.com",
+		PassAccessToken:  true,
+	}, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: testCodecNamespace}, mock.Anything).
+				Return(&cloudservice.GetNamespaceResponse{Namespace: testNamespaceWithoutCodec}, nil)
+			c.EXPECT().
+				UpdateNamespace(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
+					return req.Namespace == testCodecNamespace &&
+						req.Spec.CodecServer != nil &&
+						req.Spec.CodecServer.Endpoint == "https://codec.example.com" &&
+						req.Spec.CodecServer.PassAccessToken == true &&
+						req.ResourceVersion == "rv-1"
+				}), mock.Anything).
+				Return(&cloudservice.UpdateNamespaceResponse{AsyncOperation: op}, nil)
+		},
+		AsyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: op.Id},
+	})
+}
+
+func TestSetCodecServer_WithCustomErrorMessage(t *testing.T) {
+	op := &operation.AsyncOperation{Id: "op-set-codec-custom"}
+
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNamespaceCodecSetCommand{
+		NamespaceOptions:                 temporalcloudcli.NamespaceOptions{Namespace: testCodecNamespace},
+		Endpoint:                         "https://codec.example.com",
+		CustomErrorMessageDefaultMessage: "Codec unavailable",
+		CustomErrorMessageDefaultLink:    "https://docs.example.com",
+	}, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+				Return(&cloudservice.GetNamespaceResponse{Namespace: testNamespaceWithoutCodec}, nil)
+			c.EXPECT().
+				UpdateNamespace(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
+					cs := req.Spec.GetCodecServer()
+					if cs == nil || cs.CustomErrorMessage == nil || cs.CustomErrorMessage.Default == nil {
+						return false
+					}
+					return cs.CustomErrorMessage.Default.Message == "Codec unavailable" &&
+						cs.CustomErrorMessage.Default.Link == "https://docs.example.com"
+				}), mock.Anything).
+				Return(&cloudservice.UpdateNamespaceResponse{AsyncOperation: op}, nil)
+		},
+		AsyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: op.Id},
+	})
+}
+
+func TestSetCodecServer_ResourceVersionOverride(t *testing.T) {
+	op := &operation.AsyncOperation{Id: "op-set-codec-rv"}
+
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNamespaceCodecSetCommand{
+		NamespaceOptions:       temporalcloudcli.NamespaceOptions{Namespace: testCodecNamespace},
+		Endpoint:               "https://codec.example.com",
+		ResourceVersionOptions: temporalcloudcli.ResourceVersionOptions{ResourceVersion: "rv-override"},
+	}, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+				Return(&cloudservice.GetNamespaceResponse{Namespace: testNamespaceWithoutCodec}, nil)
+			c.EXPECT().
+				UpdateNamespace(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
+					return req.ResourceVersion == "rv-override"
+				}), mock.Anything).
+				Return(&cloudservice.UpdateNamespaceResponse{AsyncOperation: op}, nil)
+		},
+		AsyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: op.Id},
+	})
+}
+
+func TestSetCodecServer_GetNamespaceError(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNamespaceCodecSetCommand{
+		NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: testCodecNamespace},
+		Endpoint:         "https://codec.example.com",
+	}, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil, errors.New("get namespace failed"))
+		},
+		ExpectedError: "get namespace failed",
+	})
+}
+
+func TestSetCodecServer_UpdateNamespaceError(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNamespaceCodecSetCommand{
+		NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: testCodecNamespace},
+		Endpoint:         "https://codec.example.com",
+	}, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+				Return(&cloudservice.GetNamespaceResponse{Namespace: testNamespaceWithoutCodec}, nil)
+			c.EXPECT().
+				UpdateNamespace(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil, errors.New("update failed"))
+		},
+		ExpectedError: "update failed",
+	})
+}
+
+func TestSetCodecServer_UpdateNamespaceNothingToChange(t *testing.T) {
 	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
 
-	tests := []struct {
-		name         string
-		idempotent   bool
-		assertResult func(*testing.T, error, bytes.Buffer)
-	}{
-		{
-			name:       "idempotent",
-			idempotent: true,
-			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
-				require.NoError(t, capturedErr)
-				var result temporalcloudcli.Result
-				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-				assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, result)
-			},
-		},
-		{
-			name:       "not idempotent",
-			idempotent: false,
-			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
-				require.Error(t, capturedErr)
-				assert.Equal(t, nothingToChangeErr, capturedErr)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockClient := cmdmock.NewMockNamespaceClient(t)
-			mockClient.EXPECT().
-				SetCodec(mock.Anything, mock.Anything).
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNamespaceCodecSetCommand{
+		NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: testCodecNamespace},
+		Endpoint:         "https://codec.example.com",
+	}, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+				Return(&cloudservice.GetNamespaceResponse{Namespace: testNamespaceWithoutCodec}, nil)
+			c.EXPECT().
+				UpdateNamespace(mock.Anything, mock.Anything, mock.Anything).
 				Return(nil, nothingToChangeErr)
-
-			var buf bytes.Buffer
-			var capturedErr error
-			cctx := &temporalcloudcli.CommandContext{
-				Context:         context.Background(),
-				Printer:         &printer.Printer{Output: &buf, JSON: true},
-				NamespaceClient: mockClient,
-			}
-			cctx.Options.Fail = func(err error) { capturedErr = err }
-
-			parent := &temporalcloudcli.CloudNamespaceCodecCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceCodecSetCommand(cctx, parent)
-			cmd.Namespace = "test-namespace.test-account"
-			cmd.Endpoint = "https://codec.example.com"
-			cmd.Async = true
-			cmd.Idempotent = tt.idempotent
-
-			cmd.Command.Run(&cmd.Command, []string{})
-			tt.assertResult(t, capturedErr, buf)
-		})
-	}
-}
-
-func TestCloudNamespaceCodecSetCommand_PollingError(t *testing.T) {
-	expectedOp := &operation.AsyncOperation{Id: "test-operation-id"}
-	pollErr := errors.New("polling failed")
-
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockClient.EXPECT().
-		SetCodec(mock.Anything, mock.Anything).
-		Return(expectedOp, nil)
-
-	mockPoller := cmdmock.NewMockPoller(t)
-	mockPoller.EXPECT().
-		PollAsyncOperation(mock.Anything, "test-operation-id", "test-namespace.test-account").
-		Return(pollErr)
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-		Poller:          mockPoller,
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceCodecCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCodecSetCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Endpoint = "https://codec.example.com"
-	cmd.Async = false
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Equal(t, pollErr, capturedErr)
-}
-
-func TestCloudNamespaceCodecDeleteCommand_Success(t *testing.T) {
-	expectedOp := &operation.AsyncOperation{Id: "test-operation-id"}
-
-	mockClient := &cmdmock.MockNamespaceClient{}
-	mockClient.On("DeleteCodec", mock.Anything, mock.MatchedBy(func(p namespace.DeleteCodecParams) bool {
-		return p.Namespace == "test-namespace.test-account"
-	})).Return(expectedOp, nil)
-
-	mockPoller := &cmdmock.MockPoller{}
-	mockPoller.On("PollAsyncOperation", mock.Anything, "test-operation-id", "test-namespace.test-account").
-		Return(nil)
-
-	tests := []struct {
-		name         string
-		setupCmd     func(*temporalcloudcli.CloudNamespaceCodecDeleteCommand)
-		assertResult func(*testing.T, bytes.Buffer)
-	}{
-		{
-			name: "async",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCodecDeleteCommand) {
-				cmd.Namespace = "test-namespace.test-account"
-				cmd.AsyncOperationId = "test-operation-id"
-				cmd.Async = true
-			},
-			assertResult: func(t *testing.T, buf bytes.Buffer) {
-				var result temporalcloudcli.MutationResult
-				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-				assert.Equal(t, temporalcloudcli.MutationResult{
-					AsyncOp: &operation.AsyncOperation{Id: "test-operation-id"},
-					ID:      "test-namespace.test-account",
-				}, result)
-			},
 		},
-		{
-			name: "sync",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCodecDeleteCommand) {
-				cmd.Namespace = "test-namespace.test-account"
-				cmd.Async = false
-			},
-			assertResult: func(t *testing.T, buf bytes.Buffer) {
-				assert.Empty(t, buf.String())
-			},
+		ExpectedError: "nothing to change",
+	})
+}
+
+// --- DeleteCodecServer ---
+
+func TestDeleteCodecServer_Success(t *testing.T) {
+	op := &operation.AsyncOperation{Id: "op-del-codec"}
+
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNamespaceCodecDeleteCommand{
+		NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: testCodecNamespace},
+	}, temporalcloudcli.TestCommandOptions{
+		PromptOptions: temporalcloudcli.TestPromptOptions{
+			ExpectPromptYes: true,
+			PromptResult:    true,
 		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			cctx := &temporalcloudcli.CommandContext{
-				Context:         context.Background(),
-				Printer:         &printer.Printer{Output: &buf, JSON: true},
-				NamespaceClient: mockClient,
-				Poller:          mockPoller,
-				RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: true},
-			}
-			var capturedErr error
-			cctx.Options.Fail = func(err error) { capturedErr = err }
-
-			parent := &temporalcloudcli.CloudNamespaceCodecCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceCodecDeleteCommand(cctx, parent)
-			tt.setupCmd(cmd)
-
-			cmd.Command.Run(&cmd.Command, []string{})
-			require.NoError(t, capturedErr)
-			tt.assertResult(t, buf)
-		})
-	}
-}
-
-func TestCloudNamespaceCodecDeleteCommand_Error(t *testing.T) {
-	expectedErr := errors.New("delete codec failed")
-
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockClient.EXPECT().
-		DeleteCodec(mock.Anything, mock.Anything).
-		Return(nil, expectedErr)
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-		RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: true},
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceCodecCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCodecDeleteCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Async = true
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Equal(t, expectedErr, capturedErr)
-}
-
-func TestCloudNamespaceCodecDeleteCommand_UserDeclinesPrompt(t *testing.T) {
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	// No client methods should be called when user declines the prompt.
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: false},
-		NamespaceClient: mockClient,
-		RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: false},
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-	cctx.Options.Stdin = bytes.NewBufferString("n\n")
-
-	parent := &temporalcloudcli.CloudNamespaceCodecCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCodecDeleteCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Async = true
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Contains(t, capturedErr.Error(), "Aborting delete")
-}
-
-func TestCloudNamespaceCodecDeleteCommand_JSONOutputWithoutAutoConfirm(t *testing.T) {
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	// No client methods should be called when the prompt check fails.
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		JSONOutput:      true,
-		NamespaceClient: mockClient,
-		RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: false},
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceCodecCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCodecDeleteCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Async = true
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Contains(t, capturedErr.Error(), "must bypass prompts when using JSON output")
-}
-
-func TestCloudNamespaceCodecDeleteCommand_NothingToChange(t *testing.T) {
-	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
-
-	tests := []struct {
-		name         string
-		idempotent   bool
-		assertResult func(*testing.T, error, bytes.Buffer)
-	}{
-		{
-			name:       "idempotent",
-			idempotent: true,
-			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
-				require.NoError(t, capturedErr)
-				var result temporalcloudcli.Result
-				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-				assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, result)
-			},
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: testCodecNamespace}, mock.Anything).
+				Return(&cloudservice.GetNamespaceResponse{Namespace: testNamespaceWithCodec}, nil)
+			c.EXPECT().
+				UpdateNamespace(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
+					return req.Namespace == testCodecNamespace &&
+						req.Spec.CodecServer == nil &&
+						req.ResourceVersion == "rv-1"
+				}), mock.Anything).
+				Return(&cloudservice.UpdateNamespaceResponse{AsyncOperation: op}, nil)
 		},
-		{
-			name:       "not idempotent",
-			idempotent: false,
-			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
-				require.Error(t, capturedErr)
-				assert.Equal(t, nothingToChangeErr, capturedErr)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockClient := cmdmock.NewMockNamespaceClient(t)
-			mockClient.EXPECT().
-				DeleteCodec(mock.Anything, mock.Anything).
-				Return(nil, nothingToChangeErr)
-
-			var buf bytes.Buffer
-			var capturedErr error
-			cctx := &temporalcloudcli.CommandContext{
-				Context:         context.Background(),
-				Printer:         &printer.Printer{Output: &buf, JSON: true},
-				NamespaceClient: mockClient,
-				RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: true},
-			}
-			cctx.Options.Fail = func(err error) { capturedErr = err }
-
-			parent := &temporalcloudcli.CloudNamespaceCodecCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceCodecDeleteCommand(cctx, parent)
-			cmd.Namespace = "test-namespace.test-account"
-			cmd.Async = true
-			cmd.Idempotent = tt.idempotent
-
-			cmd.Command.Run(&cmd.Command, []string{})
-			tt.assertResult(t, capturedErr, buf)
-		})
-	}
+		AsyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: op.Id},
+	})
 }
 
-func TestCloudNamespaceCodecDeleteCommand_PollingError(t *testing.T) {
-	expectedOp := &operation.AsyncOperation{Id: "test-operation-id"}
-	pollErr := errors.New("polling failed")
+func TestDeleteCodecServer_UserDeclinesPrompt(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNamespaceCodecDeleteCommand{
+		NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: testCodecNamespace},
+	}, temporalcloudcli.TestCommandOptions{
+		PromptOptions: temporalcloudcli.TestPromptOptions{
+			ExpectPromptYes: true,
+			PromptResult:    false,
+		},
+		ExpectedError: "Aborting delete.",
+	})
+}
 
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockPoller := cmdmock.NewMockPoller(t)
+func TestDeleteCodecServer_PromptError(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNamespaceCodecDeleteCommand{
+		NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: testCodecNamespace},
+	}, temporalcloudcli.TestCommandOptions{
+		PromptOptions: temporalcloudcli.TestPromptOptions{
+			ExpectPromptYes: true,
+			PromptError:     errors.New("prompt failed"),
+		},
+		ExpectedError: "prompt failed",
+	})
+}
 
-	mockClient.EXPECT().
-		DeleteCodec(mock.Anything, mock.Anything).
-		Return(expectedOp, nil)
-	mockPoller.EXPECT().
-		PollAsyncOperation(mock.Anything, "test-operation-id", "test-namespace.test-account").
-		Return(pollErr)
+func TestDeleteCodecServer_GetNamespaceError(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNamespaceCodecDeleteCommand{
+		NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: testCodecNamespace},
+	}, temporalcloudcli.TestCommandOptions{
+		PromptOptions: temporalcloudcli.TestPromptOptions{
+			ExpectPromptYes: true,
+			PromptResult:    true,
+		},
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil, errors.New("get namespace failed"))
+		},
+		ExpectedError: "get namespace failed",
+	})
+}
 
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-		Poller:          mockPoller,
-		RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: true},
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
+func TestDeleteCodecServer_UpdateNamespaceError(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNamespaceCodecDeleteCommand{
+		NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: testCodecNamespace},
+	}, temporalcloudcli.TestCommandOptions{
+		PromptOptions: temporalcloudcli.TestPromptOptions{
+			ExpectPromptYes: true,
+			PromptResult:    true,
+		},
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+				Return(&cloudservice.GetNamespaceResponse{Namespace: testNamespaceWithCodec}, nil)
+			c.EXPECT().
+				UpdateNamespace(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil, errors.New("update failed"))
+		},
+		ExpectedError: "update failed",
+	})
+}
 
-	parent := &temporalcloudcli.CloudNamespaceCodecCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCodecDeleteCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Async = false
+func TestDeleteCodecServer_ResourceVersionOverride(t *testing.T) {
+	op := &operation.AsyncOperation{Id: "op-del-codec-rv"}
 
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Equal(t, pollErr, capturedErr)
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNamespaceCodecDeleteCommand{
+		NamespaceOptions:       temporalcloudcli.NamespaceOptions{Namespace: testCodecNamespace},
+		ResourceVersionOptions: temporalcloudcli.ResourceVersionOptions{ResourceVersion: "rv-override"},
+	}, temporalcloudcli.TestCommandOptions{
+		PromptOptions: temporalcloudcli.TestPromptOptions{
+			ExpectPromptYes: true,
+			PromptResult:    true,
+		},
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+				Return(&cloudservice.GetNamespaceResponse{Namespace: testNamespaceWithCodec}, nil)
+			c.EXPECT().
+				UpdateNamespace(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
+					return req.ResourceVersion == "rv-override"
+				}), mock.Anything).
+				Return(&cloudservice.UpdateNamespaceResponse{AsyncOperation: op}, nil)
+		},
+		AsyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: op.Id},
+	})
 }
