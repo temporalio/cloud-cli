@@ -1,114 +1,75 @@
 package temporalcloudcli
 
 import (
-	namespace "go.temporal.io/cloud-sdk/api/namespace/v1"
+	"errors"
+
+	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
 func (c *CloudNamespaceLifecycleGetCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-
-	client := newNamespaceClient(withCloudClient(cloudClient))
-
-	ns, err := client.getNamespace(cctx.Context, c.Namespace)
+	res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
 	if err != nil {
 		return err
 	}
-
-	// Extract lifecycle configuration, handle nil case
+	ns := res.Namespace
 	enableDeleteProtection := false
 	if ns.Spec.Lifecycle != nil {
 		enableDeleteProtection = ns.Spec.Lifecycle.EnableDeleteProtection
 	}
-
-	// Create focused output showing only lifecycle information
-	result := struct {
+	return cctx.Printer.PrintResource(struct {
 		Namespace              string `json:"namespace"`
 		EnableDeleteProtection bool   `json:"enableDeleteProtection"`
 	}{
 		Namespace:              ns.Namespace,
 		EnableDeleteProtection: enableDeleteProtection,
-	}
-
-	return cctx.Printer.PrintResource(result, printer.PrintResourceOptions{})
+	}, printer.PrintResourceOptions{})
 }
 
 func (c *CloudNamespaceLifecycleSetCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
-
-	client := newNamespaceClient(withCloudClient(cloudClient))
-
-	ns, err := client.getNamespace(cctx.Context, c.Namespace)
+	res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
 	if err != nil {
 		return err
 	}
-
-	// Clone the spec and update lifecycle
-	newSpec := proto.Clone(ns.Spec).(*namespace.NamespaceSpec)
-
-	// Ensure lifecycle is initialized
+	ns := res.Namespace
+	newSpec := proto.Clone(ns.Spec).(*namespacev1.NamespaceSpec)
 	if newSpec.Lifecycle == nil {
-		newSpec.Lifecycle = &namespace.LifecycleSpec{}
+		newSpec.Lifecycle = &namespacev1.LifecycleSpec{}
 	}
 	newSpec.Lifecycle.EnableDeleteProtection = c.EnableDeleteProtection
 
-	// Show diff
-	err = promptApplyResource(cctx, ns.Spec, newSpec, c.VerboseDiff)
+	yes, err := cctx.GetPrompter().PromptApply(ns.Spec, newSpec, c.VerboseDiff)
 	if err != nil {
 		return err
 	}
-
-	// Use provided resource version, or fetch from current namespace
-	resourceVersion := c.ResourceVersion
-	if resourceVersion == "" {
-		resourceVersion = ns.ResourceVersion
+	if !yes {
+		return errors.New("Aborting update.")
 	}
 
-	asyncOp, err := client.updateNamespace(cctx.Context, updateNamespaceParams{
-		namespace:        c.Namespace,
-		spec:             newSpec,
-		asyncOperationID: c.AsyncOperationId,
-		resourceVersion:  resourceVersion,
-		idempotent:       c.Idempotent,
+	rv := ns.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.UpdateNamespace(cctx, &cloudservice.UpdateNamespaceRequest{
+		Namespace:        c.Namespace,
+		Spec:             newSpec,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
 	})
-	if err != nil {
-		return err
+	asyncOpts := AsyncOperationOptions{
+		Async:      c.Async,
+		Idempotent: c.Idempotent,
 	}
-
-	if asyncOp == nil {
-		// Nothing changed (idempotent case)
-		result := struct {
-			Status    string
-			Namespace string
-		}{
-			Status:    "unchanged",
-			Namespace: c.Namespace,
-		}
-		return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
-	}
-
-	// Handle async flag
-	if c.Async {
-		// Return immediately with the async operation
-		return cctx.Printer.PrintStructured(MutationResult{
-			AsyncOp: asyncOp,
-			ID:      c.Namespace,
-		}, printer.StructuredOptions{})
-	}
-
-	// Poll for completion
-	poller, err := getPoller(cctx, c.ClientOptions)
-	if err != nil {
-		return err
-	}
-
-	return poller.PollAsyncOperation(cctx, asyncOp.Id, c.Namespace)
+	return cctx.GetPoller(client, asyncOpts).HandleUpdateOperation(cctx, resp, err)
 }
