@@ -35,19 +35,50 @@ func TestCloudNamespaceSearchAttributeListCommand_Success(t *testing.T) {
 		Printer:         &printer.Printer{Output: &buf, JSON: true},
 		NamespaceClient: mockClient,
 	}
-	cctx.Options.Fail = func(err error) { t.Fatalf("unexpected error: %v", err) }
+	var capturedErr error
+	cctx.Options.Fail = func(err error) { capturedErr = err }
 
 	parent := &temporalcloudcli.CloudNamespaceSearchAttributeCommand{}
 	cmd := temporalcloudcli.NewCloudNamespaceSearchAttributeListCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 
 	cmd.Command.Run(&cmd.Command, []string{})
+	require.NoError(t, capturedErr)
 
 	var result struct {
 		SearchAttributes []temporalcloudcli.SearchAttributeOutput `json:"SearchAttributes"`
 	}
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
 	assert.Equal(t, []temporalcloudcli.SearchAttributeOutput{{Name: "MyField", Type: "Keyword"}}, result.SearchAttributes)
+}
+
+func TestCloudNamespaceSearchAttributeListCommand_EmptyList(t *testing.T) {
+	mockClient := cmdmock.NewMockNamespaceClient(t)
+	mockClient.EXPECT().
+		ListSearchAttributes(mock.Anything, "test-namespace.test-account").
+		Return([]namespace.SearchAttribute{}, nil)
+
+	var buf bytes.Buffer
+	cctx := &temporalcloudcli.CommandContext{
+		Context:         context.Background(),
+		Printer:         &printer.Printer{Output: &buf, JSON: true},
+		NamespaceClient: mockClient,
+	}
+	var capturedErr error
+	cctx.Options.Fail = func(err error) { capturedErr = err }
+
+	parent := &temporalcloudcli.CloudNamespaceSearchAttributeCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceSearchAttributeListCommand(cctx, parent)
+	cmd.Namespace = "test-namespace.test-account"
+
+	cmd.Command.Run(&cmd.Command, []string{})
+	require.NoError(t, capturedErr)
+
+	var result struct {
+		SearchAttributes []temporalcloudcli.SearchAttributeOutput `json:"SearchAttributes"`
+	}
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
+	assert.Empty(t, result.SearchAttributes)
 }
 
 func TestCloudNamespaceSearchAttributeListCommand_Error(t *testing.T) {
@@ -58,12 +89,12 @@ func TestCloudNamespaceSearchAttributeListCommand_Error(t *testing.T) {
 		Return(nil, expectedErr)
 
 	var buf bytes.Buffer
-	var capturedErr error
 	cctx := &temporalcloudcli.CommandContext{
 		Context:         context.Background(),
 		Printer:         &printer.Printer{Output: &buf, JSON: true},
 		NamespaceClient: mockClient,
 	}
+	var capturedErr error
 	cctx.Options.Fail = func(err error) { capturedErr = err }
 
 	parent := &temporalcloudcli.CloudNamespaceSearchAttributeCommand{}
@@ -172,12 +203,12 @@ func TestCloudNamespaceSearchAttributeCreateCommand_InvalidType(t *testing.T) {
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
 	var buf bytes.Buffer
-	var capturedErr error
 	cctx := &temporalcloudcli.CommandContext{
 		Context:         context.Background(),
 		Printer:         &printer.Printer{Output: &buf, JSON: true},
 		NamespaceClient: mockClient,
 	}
+	var capturedErr error
 	cctx.Options.Fail = func(err error) { capturedErr = err }
 
 	parent := &temporalcloudcli.CloudNamespaceSearchAttributeCommand{}
@@ -209,12 +240,12 @@ func TestCloudNamespaceSearchAttributeCreateCommand_APIError(t *testing.T) {
 		Return(nil, expectedErr)
 
 	var buf bytes.Buffer
-	var capturedErr error
 	cctx := &temporalcloudcli.CommandContext{
 		Context:         context.Background(),
 		Printer:         &printer.Printer{Output: &buf, JSON: true},
 		NamespaceClient: mockClient,
 	}
+	var capturedErr error
 	cctx.Options.Fail = func(err error) { capturedErr = err }
 
 	parent := &temporalcloudcli.CloudNamespaceSearchAttributeCommand{}
@@ -274,12 +305,12 @@ func TestCloudNamespaceSearchAttributeCreateCommand_NothingToChange(t *testing.T
 				Return(nil, nothingToChangeErr)
 
 			var buf bytes.Buffer
-			var capturedErr error
 			cctx := &temporalcloudcli.CommandContext{
 				Context:         context.Background(),
 				Printer:         &printer.Printer{Output: &buf, JSON: true},
 				NamespaceClient: mockClient,
 			}
+			var capturedErr error
 			cctx.Options.Fail = func(err error) { capturedErr = err }
 
 			parent := &temporalcloudcli.CloudNamespaceSearchAttributeCommand{}
@@ -320,13 +351,13 @@ func TestCloudNamespaceSearchAttributeCreateCommand_PollingError(t *testing.T) {
 		Return(pollErr)
 
 	var buf bytes.Buffer
-	var capturedErr error
 	cctx := &temporalcloudcli.CommandContext{
 		Context:         context.Background(),
 		Printer:         &printer.Printer{Output: &buf, JSON: true},
 		NamespaceClient: mockClient,
 		Poller:          mockPoller,
 	}
+	var capturedErr error
 	cctx.Options.Fail = func(err error) { capturedErr = err }
 
 	parent := &temporalcloudcli.CloudNamespaceSearchAttributeCommand{}
@@ -451,12 +482,12 @@ func TestCloudNamespaceSearchAttributeRenameCommand_APIError(t *testing.T) {
 		Return(nil, expectedErr)
 
 	var buf bytes.Buffer
-	var capturedErr error
 	cctx := &temporalcloudcli.CommandContext{
 		Context:         context.Background(),
 		Printer:         &printer.Printer{Output: &buf, JSON: true},
 		NamespaceClient: mockClient,
 	}
+	var capturedErr error
 	cctx.Options.Fail = func(err error) { capturedErr = err }
 
 	parent := &temporalcloudcli.CloudNamespaceSearchAttributeCommand{}
@@ -469,6 +500,73 @@ func TestCloudNamespaceSearchAttributeRenameCommand_APIError(t *testing.T) {
 	cmd.Command.Run(&cmd.Command, []string{})
 	require.Error(t, capturedErr)
 	assert.Equal(t, expectedErr, capturedErr)
+}
+
+func TestCloudNamespaceSearchAttributeRenameCommand_NothingToChange(t *testing.T) {
+	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
+
+	tests := []struct {
+		name         string
+		idempotent   bool
+		assertResult func(*testing.T, error, bytes.Buffer)
+	}{
+		{
+			name:       "idempotent",
+			idempotent: true,
+			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
+				require.NoError(t, capturedErr)
+				var result temporalcloudcli.Result
+				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
+				assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, result)
+			},
+		},
+		{
+			name:       "not idempotent",
+			idempotent: false,
+			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
+				require.Error(t, capturedErr)
+				assert.Equal(t, nothingToChangeErr, capturedErr)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := cmdmock.NewMockNamespaceClient(t)
+			mockClient.EXPECT().
+				RenameSearchAttribute(
+					mock.Anything,
+					namespace.RenameSearchAttributeParams{
+						Namespace:                         "test-namespace.test-account",
+						ExistingCustomSearchAttributeName: "OldField",
+						NewCustomSearchAttributeName:      "NewField",
+						ResourceVersion:                   "",
+						AsyncOperationID:                  "",
+					},
+				).
+				Return(nil, nothingToChangeErr)
+
+			var buf bytes.Buffer
+			cctx := &temporalcloudcli.CommandContext{
+				Context:         context.Background(),
+				Printer:         &printer.Printer{Output: &buf, JSON: true},
+				NamespaceClient: mockClient,
+			}
+			var capturedErr error
+			cctx.Options.Fail = func(err error) { capturedErr = err }
+
+			parent := &temporalcloudcli.CloudNamespaceSearchAttributeCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceSearchAttributeRenameCommand(cctx, parent)
+			cmd.Namespace = "test-namespace.test-account"
+			cmd.ExistingName = "OldField"
+			cmd.NewName = "NewField"
+			cmd.Async = true
+			cmd.Idempotent = tt.idempotent
+
+			cmd.Command.Run(&cmd.Command, []string{})
+			tt.assertResult(t, capturedErr, buf)
+		})
+	}
 }
 
 func TestCloudNamespaceSearchAttributeRenameCommand_PollingError(t *testing.T) {
@@ -495,13 +593,13 @@ func TestCloudNamespaceSearchAttributeRenameCommand_PollingError(t *testing.T) {
 		Return(pollErr)
 
 	var buf bytes.Buffer
-	var capturedErr error
 	cctx := &temporalcloudcli.CommandContext{
 		Context:         context.Background(),
 		Printer:         &printer.Printer{Output: &buf, JSON: true},
 		NamespaceClient: mockClient,
 		Poller:          mockPoller,
 	}
+	var capturedErr error
 	cctx.Options.Fail = func(err error) { capturedErr = err }
 
 	parent := &temporalcloudcli.CloudNamespaceSearchAttributeCommand{}

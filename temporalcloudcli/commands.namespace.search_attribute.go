@@ -95,14 +95,29 @@ func (c *CloudNamespaceSearchAttributeCreateCommand) run(cctx *CommandContext, _
 		return err
 	}
 
-	createSearchAttribute := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, namespaceClient.CreateSearchAttribute)
-	return createSearchAttribute(namespace.CreateSearchAttributeParams{
+	op, err := namespaceClient.CreateSearchAttribute(cctx.Context, namespace.CreateSearchAttributeParams{
 		Namespace:        c.Namespace,
 		Name:             c.Name,
 		Type:             attrType,
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
 	})
+	if err != nil {
+		if isNothingChangedErr(c.Idempotent, err) {
+			return cctx.Printer.PrintStructured(newUnchangedResult(), printer.StructuredOptions{})
+		}
+		return err
+	}
+
+	if c.Async {
+		return cctx.Printer.PrintStructured(MutationResult{AsyncOp: op, ID: c.Namespace}, printer.StructuredOptions{})
+	}
+
+	poller, err := getPoller(cctx, c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	return poller.PollAsyncOperation(cctx, op.Id, c.Namespace)
 }
 
 func (c *CloudNamespaceSearchAttributeRenameCommand) run(cctx *CommandContext, _ []string) error {
@@ -111,12 +126,27 @@ func (c *CloudNamespaceSearchAttributeRenameCommand) run(cctx *CommandContext, _
 		return err
 	}
 
-	renameSearchAttribute := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, namespaceClient.RenameSearchAttribute)
-	return renameSearchAttribute(namespace.RenameSearchAttributeParams{
+	op, err := namespaceClient.RenameSearchAttribute(cctx.Context, namespace.RenameSearchAttributeParams{
 		Namespace:                         c.Namespace,
 		ExistingCustomSearchAttributeName: c.ExistingName,
 		NewCustomSearchAttributeName:      c.NewName,
 		ResourceVersion:                   c.ResourceVersion,
 		AsyncOperationID:                  c.AsyncOperationId,
 	})
+	if err != nil {
+		if isNothingChangedErr(c.Idempotent, err) {
+			return cctx.Printer.PrintStructured(newUnchangedResult(), printer.StructuredOptions{})
+		}
+		return err
+	}
+
+	if c.Async {
+		return cctx.Printer.PrintStructured(MutationResult{AsyncOp: op, ID: c.Namespace}, printer.StructuredOptions{})
+	}
+
+	poller, err := getPoller(cctx, c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	return poller.PollAsyncOperation(cctx, op.Id, c.Namespace)
 }
