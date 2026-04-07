@@ -777,6 +777,7 @@ func TestAddNexusEndpointAllowedNamespace(t *testing.T) {
 		name                    string
 		cmd                     temporalcloudcli.CloudNexusEndpointAllowedNamespaceAddCommand
 		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
 		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
 		expectedErr             string
 	}{
@@ -799,7 +800,20 @@ func TestAddNexusEndpointAllowedNamespace(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-add"},
 					}, nil)
 			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-add"},
+		},
+		{
+			name: "UserDeclines",
+			cmd: temporalcloudcli.CloudNexusEndpointAllowedNamespaceAddCommand{
+				Name:      "my-endpoint",
+				Namespace: []string{"new-ns"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				expectGetEndpointWithPolicies(c)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: false},
+			expectedErr:   "Aborting add.",
 		},
 		{
 			name: "NotFound",
@@ -846,6 +860,7 @@ func TestAddNexusEndpointAllowedNamespace(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-add"},
 					}, nil)
 			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-add"},
 		},
 	}
@@ -853,6 +868,7 @@ func TestAddNexusEndpointAllowedNamespace(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
 				AsyncPollerOptions:      tt.asyncPollerOptions,
 				ExpectedError:           tt.expectedErr,
 			})
@@ -865,6 +881,7 @@ func TestSetNexusEndpointAllowedNamespace(t *testing.T) {
 		name                    string
 		cmd                     temporalcloudcli.CloudNexusEndpointAllowedNamespaceSetCommand
 		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
 		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
 		expectedErr             string
 	}{
@@ -888,7 +905,20 @@ func TestSetNexusEndpointAllowedNamespace(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-set"},
 					}, nil)
 			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-set"},
+		},
+		{
+			name: "UserDeclines",
+			cmd: temporalcloudcli.CloudNexusEndpointAllowedNamespaceSetCommand{
+				Name:      "my-endpoint",
+				Namespace: []string{"new-ns-1"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				expectGetEndpointWithPolicies(c)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: false},
+			expectedErr:   "Aborting set.",
 		},
 		{
 			name: "NotFound",
@@ -935,6 +965,7 @@ func TestSetNexusEndpointAllowedNamespace(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-set"},
 					}, nil)
 			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-set"},
 		},
 	}
@@ -942,6 +973,7 @@ func TestSetNexusEndpointAllowedNamespace(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
 				AsyncPollerOptions:      tt.asyncPollerOptions,
 				ExpectedError:           tt.expectedErr,
 			})
@@ -954,6 +986,7 @@ func TestRemoveNexusEndpointAllowedNamespace(t *testing.T) {
 		name                    string
 		cmd                     temporalcloudcli.CloudNexusEndpointAllowedNamespaceRemoveCommand
 		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
 		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
 		expectedErr             string
 	}{
@@ -976,7 +1009,20 @@ func TestRemoveNexusEndpointAllowedNamespace(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-rm"},
 					}, nil)
 			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-rm"},
+		},
+		{
+			name: "UserDeclines",
+			cmd: temporalcloudcli.CloudNexusEndpointAllowedNamespaceRemoveCommand{
+				Name:      "my-endpoint",
+				Namespace: []string{"caller-ns-1"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				expectGetEndpointWithPolicies(c)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: false},
+			expectedErr:   "Aborting remove.",
 		},
 		{
 			name: "NotFound",
@@ -1023,6 +1069,7 @@ func TestRemoveNexusEndpointAllowedNamespace(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-rm"},
 					}, nil)
 			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-rm"},
 		},
 	}
@@ -1030,6 +1077,7 @@ func TestRemoveNexusEndpointAllowedNamespace(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
 				AsyncPollerOptions:      tt.asyncPollerOptions,
 				ExpectedError:           tt.expectedErr,
 			})

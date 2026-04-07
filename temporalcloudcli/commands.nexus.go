@@ -294,6 +294,14 @@ func (c *CloudNexusEndpointAllowedNamespaceAddCommand) run(cctx *CommandContext,
 	}
 	endpoint.Spec.PolicySpecs = updatedPolicySpecs
 
+	yes, err := cctx.GetPrompter().PromptYes("Add")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting add.")
+	}
+
 	rv := endpoint.ResourceVersion
 	if c.ResourceVersion != "" {
 		rv = c.ResourceVersion
@@ -329,6 +337,14 @@ func (c *CloudNexusEndpointAllowedNamespaceSetCommand) run(cctx *CommandContext,
 		}
 	}
 	endpoint.Spec.PolicySpecs = updatedPolicySpecs
+
+	yes, err := cctx.GetPrompter().PromptYes("Set")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting set.")
+	}
 
 	rv := endpoint.ResourceVersion
 	if c.ResourceVersion != "" {
@@ -366,6 +382,14 @@ func (c *CloudNexusEndpointAllowedNamespaceRemoveCommand) run(cctx *CommandConte
 		}
 	}
 	endpoint.Spec.PolicySpecs = updatedPolicySpecs
+
+	yes, err := cctx.GetPrompter().PromptYes("Remove")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting remove.")
+	}
 
 	rv := endpoint.ResourceVersion
 	if c.ResourceVersion != "" {
