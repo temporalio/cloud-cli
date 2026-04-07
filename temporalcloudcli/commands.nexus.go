@@ -251,9 +251,11 @@ func (c *CloudNexusEndpointAllowedNamespaceListCommand) run(cctx *CommandContext
 		return err
 	}
 
-	namespaceIDs := make([]string, len(endpoint.Spec.PolicySpecs))
-	for i, ps := range endpoint.Spec.PolicySpecs {
-		namespaceIDs[i] = ps.GetAllowedCloudNamespacePolicySpec().NamespaceId
+	namespaceIDs := make([]string, 0, len(endpoint.Spec.PolicySpecs))
+	for _, ps := range endpoint.Spec.PolicySpecs {
+		if ns := ps.GetAllowedCloudNamespacePolicySpec(); ns != nil {
+			namespaceIDs = append(namespaceIDs, ns.NamespaceId)
+		}
 	}
 
 	return cctx.Printer.PrintStructured(struct {
@@ -276,7 +278,9 @@ func (c *CloudNexusEndpointAllowedNamespaceAddCommand) run(cctx *CommandContext,
 
 	existingNSMap := make(map[string]struct{}, len(endpoint.Spec.PolicySpecs))
 	for _, ps := range endpoint.Spec.PolicySpecs {
-		existingNSMap[ps.GetAllowedCloudNamespacePolicySpec().NamespaceId] = struct{}{}
+		if ns := ps.GetAllowedCloudNamespacePolicySpec(); ns != nil {
+			existingNSMap[ns.NamespaceId] = struct{}{}
+		}
 	}
 
 	updatedPolicySpecs := make([]*nexusv1.EndpointPolicySpec, len(endpoint.Spec.PolicySpecs))
@@ -377,7 +381,9 @@ func (c *CloudNexusEndpointAllowedNamespaceRemoveCommand) run(cctx *CommandConte
 
 	var updatedPolicySpecs []*nexusv1.EndpointPolicySpec
 	for _, ps := range endpoint.Spec.PolicySpecs {
-		if _, ok := toRemove[ps.GetAllowedCloudNamespacePolicySpec().NamespaceId]; !ok {
+		ns := ps.GetAllowedCloudNamespacePolicySpec()
+		_, remove := toRemove[ns.NamespaceId]
+		if ns == nil || !remove {
 			updatedPolicySpecs = append(updatedPolicySpecs, ps)
 		}
 	}
