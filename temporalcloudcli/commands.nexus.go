@@ -49,27 +49,21 @@ func (c *CloudNexusEndpointListCommand) run(cctx *CommandContext, _ []string) er
 		return err
 	}
 
-	var endpoints []*nexusv1.Endpoint
-	pageToken := ""
-	for {
-		res, err := client.GetNexusEndpoints(cctx, &cloudservice.GetNexusEndpointsRequest{
-			PageToken: pageToken,
-		})
-		if err != nil {
-			return err
-		}
-		endpoints = append(endpoints, res.Endpoints...)
-		pageToken = res.NextPageToken
-		if pageToken == "" {
-			break
-		}
+	res, err := client.GetNexusEndpoints(cctx, &cloudservice.GetNexusEndpointsRequest{
+		PageSize:  int32(c.PageSize),
+		PageToken: c.PageToken,
+	})
+	if err != nil {
+		return err
 	}
 
 	return cctx.Printer.PrintResourceList(
 		struct {
-			Endpoints []*nexusv1.Endpoint
+			Endpoints     []*nexusv1.Endpoint
+			NextPageToken string
 		}{
-			Endpoints: endpoints,
+			Endpoints:     res.Endpoints,
+			NextPageToken: res.NextPageToken,
 		},
 		printer.PrintResourceOptions{
 			Fields:     []string{"Id", "State"},

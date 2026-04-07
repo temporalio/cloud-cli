@@ -126,33 +126,35 @@ func TestListNexusEndpoints(t *testing.T) {
 					}, nil)
 			},
 			expectedJsonOutput: struct {
-				Endpoints []*nexusv1.Endpoint
+				Endpoints     []*nexusv1.Endpoint
+				NextPageToken string
 			}{
 				Endpoints: []*nexusv1.Endpoint{testEndpoint},
 			},
 		},
 		{
-			name: "MultiplePages",
-			cmd:  temporalcloudcli.CloudNexusEndpointListCommand{},
+			name: "WithPageSizeAndToken",
+			cmd: temporalcloudcli.CloudNexusEndpointListCommand{
+				PageSize:  10,
+				PageToken: "tok-abc",
+			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
-					GetNexusEndpoints(mock.Anything, &cloudservice.GetNexusEndpointsRequest{}, mock.Anything).
-					Return(&cloudservice.GetNexusEndpointsResponse{
-						Endpoints:     []*nexusv1.Endpoint{testEndpoint},
-						NextPageToken: "page-2",
-					}, nil)
-				c.EXPECT().
 					GetNexusEndpoints(mock.Anything, &cloudservice.GetNexusEndpointsRequest{
-						PageToken: "page-2",
+						PageSize:  10,
+						PageToken: "tok-abc",
 					}, mock.Anything).
 					Return(&cloudservice.GetNexusEndpointsResponse{
-						Endpoints: []*nexusv1.Endpoint{testEndpoint2},
+						Endpoints:     []*nexusv1.Endpoint{testEndpoint},
+						NextPageToken: "tok-def",
 					}, nil)
 			},
 			expectedJsonOutput: struct {
-				Endpoints []*nexusv1.Endpoint
+				Endpoints     []*nexusv1.Endpoint
+				NextPageToken string
 			}{
-				Endpoints: []*nexusv1.Endpoint{testEndpoint, testEndpoint2},
+				Endpoints:     []*nexusv1.Endpoint{testEndpoint},
+				NextPageToken: "tok-def",
 			},
 		},
 		{

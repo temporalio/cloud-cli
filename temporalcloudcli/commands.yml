@@ -1333,6 +1333,15 @@ commands:
     has-init: false
     option-sets:
       - client
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of endpoints to return per page.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results. Initial value is empty string.
 
   - name: cloud nexus endpoint get
     summary: Get a Nexus Endpoint by name

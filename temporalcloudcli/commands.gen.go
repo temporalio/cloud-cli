@@ -3378,6 +3378,8 @@ type CloudNexusEndpointListCommand struct {
 	Parent  *CloudNexusEndpointCommand
 	Command cobra.Command
 	ClientOptions
+	PageSize  int
+	PageToken string
 }
 
 func NewCloudNexusEndpointListCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointListCommand {
@@ -3388,6 +3390,8 @@ func NewCloudNexusEndpointListCommand(cctx *CommandContext, parent *CloudNexusEn
 	s.Command.Short = "List Nexus Endpoints"
 	s.Command.Long = "List all Nexus Endpoint configurations on the Cloud Account."
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of endpoints to return per page.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results. Initial value is empty.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
