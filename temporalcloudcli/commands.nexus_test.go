@@ -30,22 +30,6 @@ var testEndpoint = &nexusv1.Endpoint{
 	},
 }
 
-var testEndpoint2 = &nexusv1.Endpoint{
-	Id:              "ep-456",
-	ResourceVersion: "v1",
-	Spec: &nexusv1.EndpointSpec{
-		Name: "other-endpoint",
-		TargetSpec: &nexusv1.EndpointTargetSpec{
-			Variant: &nexusv1.EndpointTargetSpec_WorkerTargetSpec{
-				WorkerTargetSpec: &nexusv1.WorkerTargetSpec{
-					NamespaceId: "ns-456",
-					TaskQueue:   "other-task-queue",
-				},
-			},
-		},
-	},
-}
-
 // --- GetNexusEndpoint ---
 
 func TestGetNexusEndpoint(t *testing.T) {
