@@ -3072,8 +3072,6 @@ commands:
       description-header: Async Operation Commands
       tags:
         - async-operations
-    option-sets:
-      - client
 
   - name: cloud async-operation get
     summary: Get async operation details
