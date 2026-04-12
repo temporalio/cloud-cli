@@ -1070,7 +1070,6 @@ func NewCloudApikeyUpdateCommand(cctx *CommandContext, parent *CloudApikeyComman
 type CloudAsyncOperationCommand struct {
 	Parent  *CloudCommand
 	Command cobra.Command
-	ClientOptions
 }
 
 func NewCloudAsyncOperationCommand(cctx *CommandContext, parent *CloudCommand) *CloudAsyncOperationCommand {
@@ -1082,7 +1081,6 @@ func NewCloudAsyncOperationCommand(cctx *CommandContext, parent *CloudCommand) *
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudAsyncOperationAwaitCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudAsyncOperationGetCommand(cctx, &s).Command)
-	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
 	return &s
 }
 
