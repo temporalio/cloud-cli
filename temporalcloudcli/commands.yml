@@ -1307,6 +1307,254 @@ commands:
         description: |
           The target region to failover to (e.g., aws-us-west-2).
 
+  # Nexus endpoint commands
+  - name: cloud nexus
+    summary: Manage Temporal Cloud Nexus Operations
+    description: |
+      Commands for managing Nexus Operations in Temporal Cloud.
+    has-init: false
+    docs:
+      keywords:
+        - nexus
+      description-header: Nexus Operations Management Commands
+      tags:
+        - nexus
+  
+  - name: cloud nexus endpoint
+    summary: Manage Temporal Cloud Nexus Endpoints
+    description: |
+      Commands for managing Nexus Endpoints in Temporal Cloud.
+    has-init: false
+
+  - name: cloud nexus endpoint list
+    summary: List Nexus Endpoints
+    description: |
+      List all Nexus Endpoint configurations on the Cloud Account.
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of endpoints to return per page.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results. Initial value is empty string.
+
+  - name: cloud nexus endpoint get
+    summary: Get a Nexus Endpoint by name
+    description: |
+      This command gets a Nexus Endpoint configuration by name from the Cloud Account.
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint to retrieve.
+
+  - name: cloud nexus endpoint create
+    summary: Create a new Nexus Endpoint
+    description: |
+      Create a new Nexus Endpoint on the Cloud Account.
+      An endpoint name is used in workflow code to invoke Nexus operations.
+      The endpoint target is a worker and `--target-namespace` and `--target-task-queue`
+      must both be provided. This will fail if an endpoint with the same name is already registered.
+
+      Example:
+
+      ```
+      cloud nexus endpoint create --name my-endpoint --target-namespace my-ns.my-account --target-task-queue my-tq
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint to create.
+      - name: target-namespace
+        type: string
+        required: true
+        description: |
+          The namespace in which a handler worker will be polling for Nexus tasks.
+      - name: target-task-queue
+        type: string
+        required: true
+        description: |
+          The task queue on which a handler worker will be polling for Nexus tasks.
+      - name: allow-namespace
+        type: string[]
+        description: |
+          A namespace that is allowed to call this endpoint. Can be specified multiple times.
+      - name: description
+        type: string
+        description: |
+          An optional endpoint description in markdown format.
+      - name: description-file
+        type: string
+        description: |
+          Path to a file containing an endpoint description in markdown format.
+          Mutually exclusive with --description.
+
+  - name: cloud nexus endpoint delete
+    summary: Delete a Nexus Endpoint
+    description: |
+      Delete a Nexus Endpoint on the Cloud Account.
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint to delete.
+
+  - name: cloud nexus endpoint update
+    summary: Update an existing Nexus Endpoint
+    description: |
+      Update an existing Nexus Endpoint on the Cloud Account.
+      An endpoint name is used in workflow code to invoke Nexus operations.
+      The endpoint target is a worker and `--target-namespace` and `--target-task-queue`
+      must both be provided.
+
+      The endpoint is patched leaving any existing fields for which flags are not provided
+      as they were.
+
+      Example:
+
+      ```
+      cloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint to update.
+      - name: target-namespace
+        type: string
+        description: |
+          The namespace in which a handler worker will be polling for Nexus tasks.
+      - name: target-task-queue
+        type: string
+        description: |
+          The task queue on which a handler worker will be polling for Nexus tasks.
+      - name: description
+        type: string
+        description: |
+          An optional endpoint description in markdown format.
+      - name: description-file
+        type: string
+        description: |
+          Path to a file containing an endpoint description in markdown format.
+          Mutually exclusive with --description.
+      - name: unset-description
+        type: bool
+        description: |
+          Unset the endpoint description. Cannot be used with --description or --description-file.
+
+  - name: cloud nexus endpoint allowed-namespace
+    summary: Manage allowed namespaces for a Nexus Endpoint
+    description: |
+      Commands for managing allowed namespaces for Nexus Endpoints.
+    has-init: false
+
+  - name: cloud nexus endpoint allowed-namespace list
+    summary: List allowed namespaces of a Nexus Endpoint
+    description: |
+      List all namespaces that are allowed to call this Nexus Endpoint.
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint.
+
+  - name: cloud nexus endpoint allowed-namespace add
+    summary: Add allowed namespaces to a Nexus Endpoint
+    description: |
+      Add namespaces that are allowed to call this Nexus Endpoint.
+      Namespaces that are already allowed are silently ignored.
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint.
+      - name: namespace
+        type: string[]
+        required: true
+        description: |
+          A namespace to allow. Can be specified multiple times.
+
+  - name: cloud nexus endpoint allowed-namespace set
+    summary: Set allowed namespaces of a Nexus Endpoint
+    description: |
+      Set the full list of namespaces that are allowed to call this Nexus Endpoint,
+      replacing any previously allowed namespaces.
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint.
+      - name: namespace
+        type: string[]
+        required: true
+        description: |
+          A namespace to allow. Can be specified multiple times.
+
+  - name: cloud nexus endpoint allowed-namespace remove
+    summary: Remove allowed namespaces from a Nexus Endpoint
+    description: |
+      Remove namespaces from the list of allowed callers of this Nexus Endpoint.
+      Namespaces that are not currently allowed are silently ignored.
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint.
+      - name: namespace
+        type: string[]
+        required: true
+        description: |
+          A namespace to remove. Can be specified multiple times.
+
   # User group commands
   - name: cloud user-group
     summary: Manage Temporal Cloud user groups
