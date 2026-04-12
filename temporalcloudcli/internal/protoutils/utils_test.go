@@ -1,19 +1,16 @@
-package temporalcloudcli
+package protoutils_test
 
 import (
-	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	"go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	identityv1 "go.temporal.io/cloud-sdk/api/identity/v1"
-	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
-)
 
-// --- clearDeprecatedFields ---
+	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/protoutils"
+)
 
 func TestClearDeprecatedFields(t *testing.T) {
 	tests := []struct {
@@ -97,55 +94,8 @@ func TestClearDeprecatedFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			clearDeprecatedFields(tt.input.ProtoReflect())
+			protoutils.ClearDeprecatedFields(tt.input)
 			tt.verify(t, tt.input)
 		})
 	}
-}
-
-// --- clearDeprecatedFieldsInterceptor ---
-
-func TestClearDeprecatedFieldsInterceptor_ClearsDeprecatedFields(t *testing.T) {
-	reply := &identityv1.ApiKey{}
-	invoker := func(_ context.Context, _ string, _, rep any, _ *grpc.ClientConn, _ ...grpc.CallOption) error {
-		key := rep.(*identityv1.ApiKey)
-		key.Id = "key-1"
-		key.StateDeprecated = "active"
-		return nil
-	}
-
-	err := clearDeprecatedFieldsInterceptor(context.Background(), "/test.Service/Method", nil, reply, nil, invoker)
-
-	require.NoError(t, err)
-	assert.Equal(t, "key-1", reply.Id)
-	assert.Empty(t, reply.StateDeprecated)
-}
-
-func TestClearDeprecatedFieldsInterceptor_InvokerError(t *testing.T) {
-	reply := &identityv1.ApiKey{}
-	invokerErr := errors.New("rpc failed")
-	invoker := func(_ context.Context, _ string, _, rep any, _ *grpc.ClientConn, _ ...grpc.CallOption) error {
-		rep.(*identityv1.ApiKey).StateDeprecated = "active"
-		return invokerErr
-	}
-
-	err := clearDeprecatedFieldsInterceptor(context.Background(), "/test.Service/Method", nil, reply, nil, invoker)
-
-	require.ErrorIs(t, err, invokerErr)
-	// Fields are NOT cleared when the invoker fails.
-	assert.Equal(t, "active", reply.StateDeprecated)
-}
-
-func TestClearDeprecatedFieldsInterceptor_NonProtoReply(t *testing.T) {
-	type nonProto struct{ Name string }
-	reply := &nonProto{Name: "ignored"}
-	invoker := func(_ context.Context, _ string, _, _ any, _ *grpc.ClientConn, _ ...grpc.CallOption) error {
-		return nil
-	}
-
-	// Must not panic or return an error for non-proto replies.
-	err := clearDeprecatedFieldsInterceptor(context.Background(), "/test.Service/Method", nil, reply, nil, invoker)
-
-	require.NoError(t, err)
-	assert.Equal(t, "ignored", reply.Name)
 }

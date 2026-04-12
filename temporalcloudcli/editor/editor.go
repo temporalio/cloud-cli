@@ -10,6 +10,8 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/protoutils"
 )
 
 type (
@@ -25,6 +27,9 @@ func NewEditor() Editor {
 }
 
 func (e *editor) EditProto(existing proto.Message) (proto.Message, error) {
+	// Clear the deprecated fields from the existing proto before marshaling to JSON.
+	protoutils.ClearDeprecatedFields(existing)
+
 	marshaler := protojson.MarshalOptions{
 		EmitUnpopulated: true,
 		Indent:          "    ",

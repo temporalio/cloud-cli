@@ -1,35 +1,15 @@
-package temporalcloudcli
+package protoutils
 
 import (
-	"context"
 	"strings"
 
-	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
-// clearDeprecatedFieldsInterceptor is a gRPC unary client interceptor that strips
-// deprecated fields from every response. Any proto field whose name ends with
-// "_deprecated" or that is marked with [deprecated = true] is cleared; nested
-// messages, repeated message fields, and map fields with message values are
-// visited recursively.
-func clearDeprecatedFieldsInterceptor(
-	ctx context.Context,
-	method string,
-	req, reply any,
-	cc *grpc.ClientConn,
-	invoker grpc.UnaryInvoker,
-	opts ...grpc.CallOption,
-) error {
-	if err := invoker(ctx, method, req, reply, cc, opts...); err != nil {
-		return err
-	}
-	if msg, ok := reply.(proto.Message); ok {
-		clearDeprecatedFields(msg.ProtoReflect())
-	}
-	return nil
+func ClearDeprecatedFields(msg proto.Message) {
+	clearDeprecatedFields(msg.ProtoReflect())
 }
 
 // clearDeprecatedFields recursively clears fields whose proto name ends with

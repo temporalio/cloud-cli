@@ -6,6 +6,7 @@ package temporalcloudcli_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -15,11 +16,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	identityv1 "go.temporal.io/cloud-sdk/api/identity/v1"
+	"go.temporal.io/cloud-sdk/cloudclient"
+	"google.golang.org/grpc"
+
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
-	"go.temporal.io/cloud-sdk/cloudclient"
 )
 
 type CommandHarness struct {
@@ -240,4 +245,70 @@ func (s *SharedServerSuite) pollAsyncOperation(
 
 	poller := temporalcloudcli.AsyncOperationPoller{CloudClient: cloudClient.CloudService()}
 	return poller.PollAsyncOperation(cctx, operationID, "")
+}
+
+// --- clearDeprecatedFieldsInterceptor ---
+
+func TestClearDeprecatedFieldsInterceptor(t *testing.T) {
+	type nonProto struct{ Name string }
+
+	tests := []struct {
+		name        string
+		reply       any
+		invoker     grpc.UnaryInvoker
+		expectedErr string
+		verify      func(t *testing.T, reply any)
+	}{
+		{
+			name:  "ClearsDeprecatedFields",
+			reply: &identityv1.ApiKey{},
+			invoker: func(_ context.Context, _ string, _, rep any, _ *grpc.ClientConn, _ ...grpc.CallOption) error {
+				key := rep.(*identityv1.ApiKey)
+				key.Id = "key-1"
+				key.StateDeprecated = "active"
+				return nil
+			},
+			verify: func(t *testing.T, reply any) {
+				key := reply.(*identityv1.ApiKey)
+				assert.Equal(t, "key-1", key.Id)
+				assert.Empty(t, key.StateDeprecated)
+			},
+		},
+		{
+			name:  "InvokerError",
+			reply: &identityv1.ApiKey{},
+			invoker: func(_ context.Context, _ string, _, rep any, _ *grpc.ClientConn, _ ...grpc.CallOption) error {
+				rep.(*identityv1.ApiKey).StateDeprecated = "active"
+				return errors.New("rpc failed")
+			},
+			expectedErr: "rpc failed",
+			verify: func(t *testing.T, reply any) {
+				// Fields are NOT cleared when the invoker fails.
+				assert.Equal(t, "active", reply.(*identityv1.ApiKey).StateDeprecated)
+			},
+		},
+		{
+			name:  "NonProtoReply",
+			reply: &nonProto{Name: "ignored"},
+			invoker: func(_ context.Context, _ string, _, _ any, _ *grpc.ClientConn, _ ...grpc.CallOption) error {
+				return nil
+			},
+			verify: func(t *testing.T, reply any) {
+				assert.Equal(t, "ignored", reply.(*nonProto).Name)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := temporalcloudcli.ClearDeprecatedFieldsInterceptor(context.Background(), "/test.Service/Method", nil, tt.reply, nil, tt.invoker)
+			if tt.expectedErr != "" {
+				require.EqualError(t, err, tt.expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
+			if tt.verify != nil {
+				tt.verify(t, tt.reply)
+			}
+		})
+	}
 }
