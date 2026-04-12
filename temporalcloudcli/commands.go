@@ -186,6 +186,10 @@ func (cctx *CommandContext) BuildCloudClient(clientOpts ClientOptions) (*cloudcl
 		opts.APIKeyReader = cloudOpts
 	}
 
+	opts.GRPCDialOptions = []grpc.DialOption{
+		grpc.WithChainUnaryInterceptor(clearDeprecatedFieldsInterceptor),
+	}
+
 	cloudClient, err := cloudclient.New(opts)
 	if err != nil {
 		return nil, err
