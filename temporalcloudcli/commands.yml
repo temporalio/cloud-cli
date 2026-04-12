@@ -3059,6 +3059,78 @@ commands:
         description: |
           The ID of the API key to enable.
 
+  - name: cloud async-operation
+    summary: Manage async operations
+    description: |
+      Commands for working with Temporal Cloud async operations.
+    has-init: false
+    docs:
+      keywords:
+        - async-operation
+        - async
+        - operation
+      description-header: Async Operation Commands
+      tags:
+        - async-operations
+    option-sets:
+      - client
+
+  - name: cloud async-operation get
+    summary: Get async operation details
+    description: |
+      Retrieve the status and details of a Temporal Cloud async operation.
+
+      Example:
+
+      ```
+      cloud async-operation get --async-operation-id my-op-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: async-operation-id
+        type: string
+        required: true
+        description: |
+          The ID of the async operation to retrieve.
+
+  - name: cloud async-operation await
+    summary: Wait for an async operation to complete
+    description: |
+      Wait for a Temporal Cloud async operation to reach a terminal state.
+      Polls the operation status until it completes, fails, or is cancelled.
+
+      Example:
+
+      ```
+      cloud async-operation await --async-operation-id my-op-id
+      ```
+    has-init: false
+    docs:
+      keywords:
+        - cloud
+        - async-operation
+        - await
+      description-header: Wait for async operation
+      tags:
+        - async-operations
+    option-sets:
+      - client
+    options:
+      - name: async-operation-id
+        type: string
+        required: true
+        description: |
+          The ID of the async operation to wait for.
+      - name: poll-interval
+        type: duration
+        default: 1s
+        description: |
+          Time to wait between status checks when waiting for operation completion.
+          Cannot be greater than 10 minutes.
+          Supports minutes (m) and seconds (s). Default is 1s.
+
 option-sets:
   - name: client
     options:
