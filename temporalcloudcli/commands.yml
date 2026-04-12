@@ -2775,6 +2775,79 @@ commands:
         description: |
           The GCP project ID of the PubSub topic and service account.
 
+  # Account metrics commands
+  - name: cloud account metrics
+    summary: Manage account metrics configuration
+    description: |
+      Commands for managing the Temporal Cloud account metrics configuration.
+    has-init: false
+    docs:
+      keywords:
+        - account
+        - metrics
+      description-header: Account Metrics Commands
+      tags:
+        - account
+
+  - name: cloud account metrics cert-ca
+    summary: Manage CA certificates for metrics endpoint authentication
+    description: |
+      Commands for managing the CA certificates used to authenticate clients
+      accessing the Temporal Cloud account metrics endpoint.
+    has-init: false
+    docs:
+      keywords:
+        - account
+        - metrics
+        - certificate
+      description-header: Account Metrics CA Certificate Commands
+      tags:
+        - account
+
+  - name: cloud account metrics cert-ca create
+    summary: Add a CA certificate for metrics endpoint authentication
+    description: |
+      Add a CA certificate to the list of accepted client CA certificates for
+      the Temporal Cloud account metrics endpoint.
+
+      Example:
+        temporal cloud account metrics cert-ca create --ca-certificate-file /path/to/cert.pem
+        temporal cloud account metrics cert-ca create --ca-certificate <base64-encoded-cert>
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - ca-certificate
+
+  - name: cloud account metrics cert-ca delete
+    summary: Delete a CA certificate from metrics endpoint authentication
+    description: |
+      Remove a CA certificate from the list of accepted client CA certificates for
+      the Temporal Cloud account metrics endpoint.
+
+      Example:
+        temporal cloud account metrics cert-ca delete --ca-certificate-file /path/to/cert.pem
+        temporal cloud account metrics cert-ca delete --ca-certificate <base64-encoded-cert>
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - ca-certificate
+
+  - name: cloud account metrics cert-ca list
+    summary: List CA certificates for metrics endpoint authentication
+    description: |
+      List the CA certificates accepted for authenticating clients accessing
+      the Temporal Cloud account metrics endpoint.
+
+      Example:
+        temporal cloud account metrics cert-ca list
+    has-init: false
+    option-sets:
+      - client
+
   # API key commands
   - name: cloud apikey
     summary: Manage Temporal Cloud API keys
