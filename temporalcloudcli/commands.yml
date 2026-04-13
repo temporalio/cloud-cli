@@ -1329,7 +1329,7 @@ commands:
   - name: cloud nexus endpoint list
     summary: List Nexus Endpoints
     description: |
-      List all Nexus Endpoint configurations on the Cloud Account.
+      List all Nexus Endpoint configurations on the Cloud Account. If no page size is provided, it will default to 100. A maximum of 1000 endpoints can be fetched at a time.
     has-init: false
     option-sets:
       - client

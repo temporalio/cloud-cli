@@ -3388,7 +3388,7 @@ func NewCloudNexusEndpointListCommand(cctx *CommandContext, parent *CloudNexusEn
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "List Nexus Endpoints"
-	s.Command.Long = "List all Nexus Endpoint configurations on the Cloud Account."
+	s.Command.Long = "List all Nexus Endpoint configurations on the Cloud Account. If no page size is provided, it will default to 100. A maximum of 1000 endpoints can be fetched at a time."
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of endpoints to return per page.")
 	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results. Initial value is empty string.")
