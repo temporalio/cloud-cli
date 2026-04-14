@@ -1329,7 +1329,7 @@ commands:
   - name: cloud nexus endpoint list
     summary: List Nexus Endpoints
     description: |
-      List all Nexus Endpoint configurations on the Cloud Account.
+      List Nexus Endpoint configurations on the Cloud Account. 
     has-init: false
     option-sets:
       - client
@@ -1337,7 +1337,7 @@ commands:
       - name: page-size
         type: int
         description: |
-          Number of endpoints to return per page.
+          Number of endpoints to return per page. If no page size is provided, it will default to 100. A maximum of 1000 endpoints can be fetched at a time.
       - name: page-token
         type: string
         description: |
@@ -2354,6 +2354,245 @@ commands:
         description: |
           Filter users by the namespace they have access to.
 
+  # Service account commands
+  - name: cloud service-account
+    summary: Manage Temporal Cloud service accounts
+    description: |
+      Commands for managing Temporal Cloud service accounts.
+    has-init: false
+    docs:
+      keywords:
+        - service-account
+        - management
+      description-header: Service Account Management Commands
+      tags:
+        - service-accounts
+
+  - name: cloud service-account list
+    summary: List service accounts
+    description: |
+      List all Temporal Cloud service accounts accessible with the current
+      authentication credentials.
+
+      Example:
+
+      ```
+      cloud service-account list
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of service accounts to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
+
+  - name: cloud service-account delete
+    summary: Delete a service account
+    description: |
+      Delete a Temporal Cloud service account. This action is irreversible.
+
+      Example:
+
+      ```
+      cloud service-account delete --service-account-id my-sa-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account to delete.
+
+  - name: cloud service-account create
+    summary: Create a service account
+    description: |
+      Create a new Temporal Cloud service account with account-level access.
+      Optionally assign an account role and namespace-level permissions.
+
+      Account roles: owner, admin, developer, finance-admin, read, metrics-read.
+      Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+
+      Example:
+
+      ```
+      cloud service-account create --name my-sa --account-role developer \
+        --namespace-access my-namespace.my-account=write
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the service account. Must be unique across all active service accounts.
+      - name: description
+        type: string
+        description: |
+          An optional description for the service account.
+      - name: account-role
+        type: string
+        description: |
+          The account-level role to assign. Valid values: owner, admin, developer,
+          finance-admin, read, metrics-read.
+      - name: namespace-access
+        type: string[]
+        description: |
+          Namespace access to grant, in the format 'namespace=permission'.
+          Permission must be one of: admin, write, read. Can be repeated.
+
+  - name: cloud service-account create-namespace-scoped
+    summary: Create a namespace-scoped service account
+    description: |
+      Create a new Temporal Cloud service account scoped to a single namespace.
+
+      Example:
+
+      ```
+      cloud service-account create-namespace-scoped --name my-sa \
+        --namespace my-namespace.my-account --namespace-permission write
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the service account. Must be unique across all active service accounts.
+      - name: description
+        type: string
+        description: |
+          An optional description for the service account.
+      - name: namespace
+        type: string
+        required: true
+        description: |
+          The namespace to scope the service account to.
+      - name: namespace-permission
+        type: string
+        required: true
+        description: |
+          The permission to grant on the namespace. Valid values: admin, write, read.
+
+  - name: cloud service-account update
+    summary: Update a service account
+    description: |
+      Update a Temporal Cloud service account. Only flags that are explicitly provided
+      are changed.
+
+      For account-scoped service accounts, use --account-role and/or --namespace-access.
+      For namespace-scoped service accounts, use --namespace-permission.
+
+      Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+      Use 'namespace=' (empty permission) to remove access to a namespace.
+
+      Example:
+
+      ```
+      cloud service-account update --service-account-id my-sa-id --name new-name
+      cloud service-account update --service-account-id my-sa-id --account-role admin
+      cloud service-account update --service-account-id my-sa-id --namespace-permission write
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account to update.
+      - name: name
+        type: string
+        description: |
+          New name for the service account.
+      - name: description
+        type: string
+        description: |
+          New description for the service account.
+      - name: account-role
+        type: string
+        description: |
+          The account-level role to assign. Valid values: owner, admin, developer,
+          finance-admin, read, metrics-read. Only valid for account-scoped service accounts.
+      - name: namespace-access
+        type: string[]
+        description: |
+          Namespace access to set, in the format 'namespace=permission'. Use 'namespace='
+          to remove access. Permission must be one of: admin, write, read. Can be repeated.
+          Only valid for account-scoped service accounts.
+      - name: namespace-permission
+        type: string
+        description: |
+          The permission to grant on the scoped namespace. Valid values: admin, write, read.
+          Only valid for namespace-scoped service accounts.
+
+  - name: cloud service-account edit
+    summary: Interactively edit a service account
+    description: |
+      Open a service account configuration in your default editor for interactive
+      modification. After saving and closing the editor, the changes are applied
+      to Temporal Cloud.
+
+      The editor is determined by the EDITOR environment variable, falling
+      back to 'vi' if not set.
+
+      Example:
+
+      ```
+      cloud service-account edit --service-account-id my-sa-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+      - async-operation
+      - resource-version
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account to edit.
+
+  - name: cloud service-account get
+    summary: Get service account details
+    description: |
+      Retrieve the configuration and status of a Temporal Cloud service account.
+
+      Example:
+
+      ```
+      cloud service-account get --service-account-id my-sa-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account to retrieve.
+
   # Account commands
   - name: cloud account
     summary: Manage Temporal Cloud account
@@ -3129,6 +3368,55 @@ commands:
           Cannot be greater than 10 minutes.
           Supports minutes (m) and seconds (s). Default is 1s.
 
+  # Region commands
+  - name: cloud region
+    summary: Manage Temporal Cloud regions
+    description: |
+      Commands for listing Temporal Cloud regions.
+    has-init: false
+    docs:
+      keywords:
+        - region
+        - cloud-provider
+      description-header: Region Commands
+      tags:
+        - region
+
+  - name: cloud region get
+    summary: Get a Temporal Cloud region
+    description: |
+      Get details for a specific Temporal Cloud region.
+
+      Example:
+
+      ```
+      cloud region get --region aws-us-east-1
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: region
+        type: string
+        required: true
+        short: r
+        description: |
+          The ID of the region to get.
+
+  - name: cloud region list
+    summary: List available Temporal Cloud regions
+    description: |
+      List all available Temporal Cloud regions.
+
+      Example:
+
+      ```
+      cloud region list
+      ```
+    has-init: false
+    option-sets:
+      - client
+
 option-sets:
   - name: client
     options:
@@ -3194,7 +3482,7 @@ option-sets:
         description: |
           Time to wait between status checks when waiting for operation completion.
           Cannot be greater than 10 minutes.
-          Supports minutes (m) and seconds (s). Default is 1s.
+          Supports minutes (m) and seconds (s).
   - name: user-identification
     options:
       - name: user-id

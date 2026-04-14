@@ -30,13 +30,18 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 
+	accountv1 "go.temporal.io/cloud-sdk/api/account/v1"
+	identityv1 "go.temporal.io/cloud-sdk/api/identity/v1"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
+	regionv1 "go.temporal.io/cloud-sdk/api/region/v1"
+	usagev1 "go.temporal.io/cloud-sdk/api/usage/v1"
 
 	"github.com/temporalio/cloud-cli/internal/cert"
 	"github.com/temporalio/cloud-cli/internal/namespace"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/async"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/editor"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
+	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/protoutils"
 	cliprompter "github.com/temporalio/cloud-cli/temporalcloudcli/prompter"
 )
 
@@ -186,11 +191,39 @@ func (cctx *CommandContext) BuildCloudClient(clientOpts ClientOptions) (*cloudcl
 		opts.APIKeyReader = cloudOpts
 	}
 
+	opts.GRPCDialOptions = []grpc.DialOption{
+		grpc.WithChainUnaryInterceptor(
+			ClearDeprecatedFieldsInterceptor,
+		),
+	}
+
 	cloudClient, err := cloudclient.New(opts)
 	if err != nil {
 		return nil, err
 	}
 	return cloudClient, nil
+}
+
+// clearDeprecatedFieldsInterceptor is a gRPC unary client interceptor that strips
+// deprecated fields from every response. Any proto field whose name ends with
+// "_deprecated" or that is marked with [deprecated = true] is cleared; nested
+// messages, repeated message fields, and map fields with message values are
+// visited recursively.
+func ClearDeprecatedFieldsInterceptor(
+	ctx context.Context,
+	method string,
+	req, reply any,
+	cc *grpc.ClientConn,
+	invoker grpc.UnaryInvoker,
+	opts ...grpc.CallOption,
+) error {
+	if err := invoker(ctx, method, req, reply, cc, opts...); err != nil {
+		return err
+	}
+	if msg, ok := reply.(proto.Message); ok {
+		protoutils.ClearDeprecatedFields(msg)
+	}
+	return nil
 }
 
 func (c *CommandContext) preprocessOptions() error {
@@ -519,6 +552,17 @@ func registerKnownPrinterEnumToStringConverters(p *printer.Printer) {
 	printer.RegisterEnumToStringConverter[resource.ResourceState](p, "RESOURCE_STATE_", resource.ResourceState_name)
 	printer.RegisterEnumToStringConverter[operation.AsyncOperation_State](p, "STATE_", operation.AsyncOperation_State_name)
 	printer.RegisterEnumToStringConverter[namespacev1.NamespaceRegionStatus_State](p, "STATE_", namespacev1.NamespaceRegionStatus_State_name)
+	printer.RegisterEnumToStringConverter[namespacev1.Capacity_Request_State](p, "STATE_", namespacev1.Capacity_Request_State_name)
+	printer.RegisterEnumToStringConverter[namespacev1.NamespaceSpec_SearchAttributeType](p, "SEARCH_ATTRIBUTE_TYPE_", namespacev1.NamespaceSpec_SearchAttributeType_name)
+	printer.RegisterEnumToStringConverter[namespacev1.ExportSink_Health](p, "HEALTH_", namespacev1.ExportSink_Health_name)
+	printer.RegisterEnumToStringConverter[identityv1.OwnerType](p, "OWNER_TYPE_", identityv1.OwnerType_name)
+	printer.RegisterEnumToStringConverter[identityv1.AccountAccess_Role](p, "ROLE_", identityv1.AccountAccess_Role_name)
+	printer.RegisterEnumToStringConverter[identityv1.NamespaceAccess_Permission](p, "PERMISSION_", identityv1.NamespaceAccess_Permission_name)
+	printer.RegisterEnumToStringConverter[accountv1.AuditLogSink_Health](p, "HEALTH_", accountv1.AuditLogSink_Health_name)
+	printer.RegisterEnumToStringConverter[regionv1.Region_CloudProvider](p, "CLOUD_PROVIDER_", regionv1.Region_CloudProvider_name)
+	printer.RegisterEnumToStringConverter[usagev1.RecordType](p, "RECORD_TYPE_", usagev1.RecordType_name)
+	printer.RegisterEnumToStringConverter[usagev1.RecordUnit](p, "RECORD_UNIT_", usagev1.RecordUnit_name)
+	printer.RegisterEnumToStringConverter[usagev1.GroupByKey](p, "GROUP_BY_KEY_", usagev1.GroupByKey_name)
 }
 
 func (c *CloudCommand) preRun(cctx *CommandContext, timeoutCancel *context.CancelFunc) error {
