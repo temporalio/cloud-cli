@@ -148,6 +148,88 @@ SGVsbG8gV29ybGQ=
 	}
 }
 
+func TestAdd(t *testing.T) {
+	c1 := cert.CACert{Fingerprint: "fp1"}
+	c2 := cert.CACert{Fingerprint: "fp2"}
+	c3 := cert.CACert{Fingerprint: "fp3"}
+
+	// New cert is appended; duplicate is silently dropped.
+	result := cert.Add([]cert.CACert{c1, c2}, []cert.CACert{c2, c3})
+	assert.Equal(t, []cert.CACert{c1, c2, c3}, result)
+
+	// Add to nil existing returns only the new certs.
+	result = cert.Add(nil, []cert.CACert{c1})
+	assert.Equal(t, []cert.CACert{c1}, result)
+
+	// Add empty slice leaves existing unchanged.
+	result = cert.Add([]cert.CACert{c1}, nil)
+	assert.Equal(t, []cert.CACert{c1}, result)
+
+	// Duplicates within toAdd itself are collapsed to one entry.
+	result = cert.Add(nil, []cert.CACert{c1, c1, c2})
+	assert.Equal(t, []cert.CACert{c1, c2}, result)
+}
+
+func TestRemove(t *testing.T) {
+	c1 := cert.CACert{Fingerprint: "fp1"}
+	c2 := cert.CACert{Fingerprint: "fp2"}
+	c3 := cert.CACert{Fingerprint: "fp3"}
+
+	// Matching cert is removed; non-matching cert is preserved.
+	result := cert.Remove([]cert.CACert{c1, c2, c3}, []cert.CACert{c2})
+	assert.Equal(t, []cert.CACert{c1, c3}, result)
+
+	// Remove all certs returns nil.
+	result = cert.Remove([]cert.CACert{c1}, []cert.CACert{c1})
+	assert.Nil(t, result)
+
+	// Remove from nil existing returns nil.
+	result = cert.Remove(nil, []cert.CACert{c1})
+	assert.Nil(t, result)
+
+	// Remove with empty toRemove leaves existing unchanged.
+	result = cert.Remove([]cert.CACert{c1, c2}, nil)
+	assert.Equal(t, []cert.CACert{c1, c2}, result)
+}
+
+func TestEncodeCACerts_RoundTrip(t *testing.T) {
+	cert1, _ := generateTestCertificate(t, "test1.temporal.io", time.Time{}, time.Time{}, "")
+	cert2, _ := generateTestCertificate(t, "test2.temporal.io", time.Time{}, time.Time{}, "")
+	bundle := bytes.Join([][]byte{cert1, cert2}, []byte("\n"))
+
+	parsed, err := cert.ParseCACerts(bundle)
+	require.NoError(t, err)
+	require.Len(t, parsed, 2)
+
+	encoded, err := cert.EncodeCACerts(parsed)
+	require.NoError(t, err)
+	require.NotNil(t, encoded)
+
+	// Re-parse the encoded output and verify we get the same certs by fingerprint.
+	// Byte-for-byte comparison is intentionally avoided: pem.EncodeToMemory adds a
+	// trailing newline that ParseCACerts trims, so encoding is idempotent only after
+	// the first round-trip.
+	reparsed, err := cert.ParseCACerts(encoded)
+	require.NoError(t, err)
+	require.Len(t, reparsed, 2)
+	for i := range parsed {
+		assert.Equal(t, parsed[i].Fingerprint, reparsed[i].Fingerprint)
+	}
+}
+
+func TestEncodeCACerts_EmptySlice(t *testing.T) {
+	encoded, err := cert.EncodeCACerts(nil)
+	require.NoError(t, err)
+	// Empty input must return nil, not empty bytes, so callers can detect "no certs" cleanly.
+	assert.Nil(t, encoded)
+}
+
+func TestEncodeCACerts_InvalidBase64(t *testing.T) {
+	certs := []cert.CACert{{Base64EncodedData: "not valid base64!!!"}}
+	_, err := cert.EncodeCACerts(certs)
+	require.Error(t, err)
+}
+
 // generateTestCertificate creates a self-signed certificate for testing and returns the PEM-encoded bytes and DER bytes.
 // If notBefore/notAfter are zero values, defaults to time.Now() and time.Now()+1hour.
 // If ou is empty, no OrganizationalUnit is added.

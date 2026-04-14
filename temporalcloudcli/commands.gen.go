@@ -245,6 +245,7 @@ func NewCloudAccountCommand(cctx *CommandContext, parent *CloudCommand) *CloudAc
 	s.Command.Long = "Manage the Temporal Cloud account."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudAccountAuditLogCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudAccountMetricsCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -710,6 +711,121 @@ func NewCloudAccountAuditLogSinkPubsubValidateCommand(cctx *CommandContext, pare
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "topic-name")
 	s.Command.Flags().StringVar(&s.GcpProjectId, "gcp-project-id", "", "The GCP project ID of the PubSub topic and service account. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "gcp-project-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudAccountMetricsCommand struct {
+	Parent  *CloudAccountCommand
+	Command cobra.Command
+}
+
+func NewCloudAccountMetricsCommand(cctx *CommandContext, parent *CloudAccountCommand) *CloudAccountMetricsCommand {
+	var s CloudAccountMetricsCommand
+	s.Parent = parent
+	s.Command.Use = "metrics"
+	s.Command.Short = "Manage account metrics configuration"
+	s.Command.Long = "Commands for managing the Temporal Cloud account metrics configuration."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudAccountMetricsCertCaCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudAccountMetricsCertCaCommand struct {
+	Parent  *CloudAccountMetricsCommand
+	Command cobra.Command
+}
+
+func NewCloudAccountMetricsCertCaCommand(cctx *CommandContext, parent *CloudAccountMetricsCommand) *CloudAccountMetricsCertCaCommand {
+	var s CloudAccountMetricsCertCaCommand
+	s.Parent = parent
+	s.Command.Use = "cert-ca"
+	s.Command.Short = "Manage CA certificates for metrics endpoint authentication"
+	s.Command.Long = "Commands for managing the CA certificates used to authenticate clients\naccessing the Temporal Cloud account metrics endpoint."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudAccountMetricsCertCaCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudAccountMetricsCertCaDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudAccountMetricsCertCaListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudAccountMetricsCertCaCreateCommand struct {
+	Parent  *CloudAccountMetricsCertCaCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	CaCertificateOptions
+}
+
+func NewCloudAccountMetricsCertCaCreateCommand(cctx *CommandContext, parent *CloudAccountMetricsCertCaCommand) *CloudAccountMetricsCertCaCreateCommand {
+	var s CloudAccountMetricsCertCaCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Add a CA certificate for metrics endpoint authentication"
+	s.Command.Long = "Add a CA certificate to the list of accepted client CA certificates for\nthe Temporal Cloud account metrics endpoint.\n\nExample:\n  temporal cloud account metrics cert-ca create --ca-certificate-file /path/to/cert.pem\n  temporal cloud account metrics cert-ca create --ca-certificate <base64-encoded-cert>"
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.CaCertificateOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudAccountMetricsCertCaDeleteCommand struct {
+	Parent  *CloudAccountMetricsCertCaCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	CaCertificateOptions
+}
+
+func NewCloudAccountMetricsCertCaDeleteCommand(cctx *CommandContext, parent *CloudAccountMetricsCertCaCommand) *CloudAccountMetricsCertCaDeleteCommand {
+	var s CloudAccountMetricsCertCaDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a CA certificate from metrics endpoint authentication"
+	s.Command.Long = "Remove a CA certificate from the list of accepted client CA certificates for\nthe Temporal Cloud account metrics endpoint.\n\nExample:\n  temporal cloud account metrics cert-ca delete --ca-certificate-file /path/to/cert.pem\n  temporal cloud account metrics cert-ca delete --ca-certificate <base64-encoded-cert>"
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.CaCertificateOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudAccountMetricsCertCaListCommand struct {
+	Parent  *CloudAccountMetricsCertCaCommand
+	Command cobra.Command
+	ClientOptions
+}
+
+func NewCloudAccountMetricsCertCaListCommand(cctx *CommandContext, parent *CloudAccountMetricsCertCaCommand) *CloudAccountMetricsCertCaListCommand {
+	var s CloudAccountMetricsCertCaListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List CA certificates for metrics endpoint authentication"
+	s.Command.Long = "List the CA certificates accepted for authenticating clients accessing\nthe Temporal Cloud account metrics endpoint.\n\nExample:\n  temporal cloud account metrics cert-ca list"
+	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
