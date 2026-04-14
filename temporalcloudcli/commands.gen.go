@@ -74,7 +74,7 @@ func (v *AsyncOperationOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringVar(&v.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
 	f.BoolVar(&v.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
 	v.PollInterval = cliext.MustParseFlagDuration("1s")
-	f.Var(&v.PollInterval, "poll-interval", "Time to wait between status checks when waiting for operation completion. Cannot be greater than 10 minutes. Supports minutes (m) and seconds (s). Default is 1s.")
+	f.Var(&v.PollInterval, "poll-interval", "Time to wait between status checks when waiting for operation completion. Cannot be greater than 10 minutes. Supports minutes (m) and seconds (s).")
 }
 
 type UserIdentificationOptions struct {
@@ -216,6 +216,9 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.Command.AddCommand(&NewCloudLoginCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLogoutCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNexusCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudRegionCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudServiceAccountCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserGroupCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudWhoamiCommand(cctx, &s).Command)
@@ -3084,6 +3087,707 @@ func NewCloudNamespaceTagUpdateCommand(cctx *CommandContext, parent *CloudNamesp
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNexusCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+}
+
+func NewCloudNexusCommand(cctx *CommandContext, parent *CloudCommand) *CloudNexusCommand {
+	var s CloudNexusCommand
+	s.Parent = parent
+	s.Command.Use = "nexus"
+	s.Command.Short = "Manage Temporal Cloud Nexus Operations"
+	s.Command.Long = "Commands for managing Nexus Operations in Temporal Cloud."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNexusEndpointCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNexusEndpointCommand struct {
+	Parent  *CloudNexusCommand
+	Command cobra.Command
+}
+
+func NewCloudNexusEndpointCommand(cctx *CommandContext, parent *CloudNexusCommand) *CloudNexusEndpointCommand {
+	var s CloudNexusEndpointCommand
+	s.Parent = parent
+	s.Command.Use = "endpoint"
+	s.Command.Short = "Manage Temporal Cloud Nexus Endpoints"
+	s.Command.Long = "Commands for managing Nexus Endpoints in Temporal Cloud."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNexusEndpointAllowedNamespaceCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNexusEndpointCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNexusEndpointDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNexusEndpointGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNexusEndpointListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNexusEndpointUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNexusEndpointAllowedNamespaceCommand struct {
+	Parent  *CloudNexusEndpointCommand
+	Command cobra.Command
+}
+
+func NewCloudNexusEndpointAllowedNamespaceCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointAllowedNamespaceCommand {
+	var s CloudNexusEndpointAllowedNamespaceCommand
+	s.Parent = parent
+	s.Command.Use = "allowed-namespace"
+	s.Command.Short = "Manage allowed namespaces for a Nexus Endpoint"
+	s.Command.Long = "Commands for managing allowed namespaces for Nexus Endpoints."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNexusEndpointAllowedNamespaceAddCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNexusEndpointAllowedNamespaceListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNexusEndpointAllowedNamespaceRemoveCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNexusEndpointAllowedNamespaceSetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNexusEndpointAllowedNamespaceAddCommand struct {
+	Parent  *CloudNexusEndpointAllowedNamespaceCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Name      string
+	Namespace []string
+}
+
+func NewCloudNexusEndpointAllowedNamespaceAddCommand(cctx *CommandContext, parent *CloudNexusEndpointAllowedNamespaceCommand) *CloudNexusEndpointAllowedNamespaceAddCommand {
+	var s CloudNexusEndpointAllowedNamespaceAddCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "add [flags]"
+	s.Command.Short = "Add allowed namespaces to a Nexus Endpoint"
+	s.Command.Long = "Add namespaces that are allowed to call this Nexus Endpoint.\nNamespaces that are already allowed are silently ignored."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringArrayVar(&s.Namespace, "namespace", nil, "A namespace to allow. Can be specified multiple times. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNexusEndpointAllowedNamespaceListCommand struct {
+	Parent  *CloudNexusEndpointAllowedNamespaceCommand
+	Command cobra.Command
+	ClientOptions
+	Name string
+}
+
+func NewCloudNexusEndpointAllowedNamespaceListCommand(cctx *CommandContext, parent *CloudNexusEndpointAllowedNamespaceCommand) *CloudNexusEndpointAllowedNamespaceListCommand {
+	var s CloudNexusEndpointAllowedNamespaceListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List allowed namespaces of a Nexus Endpoint"
+	s.Command.Long = "List all namespaces that are allowed to call this Nexus Endpoint."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNexusEndpointAllowedNamespaceRemoveCommand struct {
+	Parent  *CloudNexusEndpointAllowedNamespaceCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Name      string
+	Namespace []string
+}
+
+func NewCloudNexusEndpointAllowedNamespaceRemoveCommand(cctx *CommandContext, parent *CloudNexusEndpointAllowedNamespaceCommand) *CloudNexusEndpointAllowedNamespaceRemoveCommand {
+	var s CloudNexusEndpointAllowedNamespaceRemoveCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "remove [flags]"
+	s.Command.Short = "Remove allowed namespaces from a Nexus Endpoint"
+	s.Command.Long = "Remove namespaces from the list of allowed callers of this Nexus Endpoint.\nNamespaces that are not currently allowed are silently ignored."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringArrayVar(&s.Namespace, "namespace", nil, "A namespace to remove. Can be specified multiple times. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNexusEndpointAllowedNamespaceSetCommand struct {
+	Parent  *CloudNexusEndpointAllowedNamespaceCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Name      string
+	Namespace []string
+}
+
+func NewCloudNexusEndpointAllowedNamespaceSetCommand(cctx *CommandContext, parent *CloudNexusEndpointAllowedNamespaceCommand) *CloudNexusEndpointAllowedNamespaceSetCommand {
+	var s CloudNexusEndpointAllowedNamespaceSetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set [flags]"
+	s.Command.Short = "Set allowed namespaces of a Nexus Endpoint"
+	s.Command.Long = "Set the full list of namespaces that are allowed to call this Nexus Endpoint,\nreplacing any previously allowed namespaces."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringArrayVar(&s.Namespace, "namespace", nil, "A namespace to allow. Can be specified multiple times. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNexusEndpointCreateCommand struct {
+	Parent  *CloudNexusEndpointCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	Name            string
+	TargetNamespace string
+	TargetTaskQueue string
+	AllowNamespace  []string
+	Description     string
+	DescriptionFile string
+}
+
+func NewCloudNexusEndpointCreateCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointCreateCommand {
+	var s CloudNexusEndpointCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a new Nexus Endpoint"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\nThe endpoint target is a worker and \x1b[1m--target-namespace\x1b[0m and \x1b[1m--target-task-queue\x1b[0m\nmust both be provided. This will fail if an endpoint with the same name is already registered.\n\nExample:\n\n\x1b[1mcloud nexus endpoint create --name my-endpoint --target-namespace my-ns.my-account --target-task-queue my-tq\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\nThe endpoint target is a worker and `--target-namespace` and `--target-task-queue`\nmust both be provided. This will fail if an endpoint with the same name is already registered.\n\nExample:\n\n```\ncloud nexus endpoint create --name my-endpoint --target-namespace my-ns.my-account --target-task-queue my-tq\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to create. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.TargetNamespace, "target-namespace", "", "The namespace in which a handler worker will be polling for Nexus tasks. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "target-namespace")
+	s.Command.Flags().StringVar(&s.TargetTaskQueue, "target-task-queue", "", "The task queue on which a handler worker will be polling for Nexus tasks. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "target-task-queue")
+	s.Command.Flags().StringArrayVar(&s.AllowNamespace, "allow-namespace", nil, "A namespace that is allowed to call this endpoint. Can be specified multiple times.")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "An optional endpoint description in markdown format.")
+	s.Command.Flags().StringVar(&s.DescriptionFile, "description-file", "", "Path to a file containing an endpoint description in markdown format. Mutually exclusive with --description.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNexusEndpointDeleteCommand struct {
+	Parent  *CloudNexusEndpointCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Name string
+}
+
+func NewCloudNexusEndpointDeleteCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointDeleteCommand {
+	var s CloudNexusEndpointDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a Nexus Endpoint"
+	s.Command.Long = "Delete a Nexus Endpoint on the Cloud Account."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to delete. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNexusEndpointGetCommand struct {
+	Parent  *CloudNexusEndpointCommand
+	Command cobra.Command
+	ClientOptions
+	Name string
+}
+
+func NewCloudNexusEndpointGetCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointGetCommand {
+	var s CloudNexusEndpointGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get a Nexus Endpoint by name"
+	s.Command.Long = "This command gets a Nexus Endpoint configuration by name from the Cloud Account."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to retrieve. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNexusEndpointListCommand struct {
+	Parent  *CloudNexusEndpointCommand
+	Command cobra.Command
+	ClientOptions
+	PageSize  int
+	PageToken string
+}
+
+func NewCloudNexusEndpointListCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointListCommand {
+	var s CloudNexusEndpointListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List Nexus Endpoints"
+	s.Command.Long = "List Nexus Endpoint configurations on the Cloud Account. "
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of endpoints to return per page. If no page size is provided, it will default to 100. A maximum of 1000 endpoints can be fetched at a time.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results. Initial value is empty string.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNexusEndpointUpdateCommand struct {
+	Parent  *CloudNexusEndpointCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Name             string
+	TargetNamespace  string
+	TargetTaskQueue  string
+	Description      string
+	DescriptionFile  string
+	UnsetDescription bool
+}
+
+func NewCloudNexusEndpointUpdateCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointUpdateCommand {
+	var s CloudNexusEndpointUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update an existing Nexus Endpoint"
+	if hasHighlighting {
+		s.Command.Long = "Update an existing Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\nThe endpoint target is a worker and \x1b[1m--target-namespace\x1b[0m and \x1b[1m--target-task-queue\x1b[0m\nmust both be provided.\n\nThe endpoint is patched leaving any existing fields for which flags are not provided\nas they were.\n\nExample:\n\n\x1b[1mcloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq\x1b[0m"
+	} else {
+		s.Command.Long = "Update an existing Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\nThe endpoint target is a worker and `--target-namespace` and `--target-task-queue`\nmust both be provided.\n\nThe endpoint is patched leaving any existing fields for which flags are not provided\nas they were.\n\nExample:\n\n```\ncloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to update. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.TargetNamespace, "target-namespace", "", "The namespace in which a handler worker will be polling for Nexus tasks.")
+	s.Command.Flags().StringVar(&s.TargetTaskQueue, "target-task-queue", "", "The task queue on which a handler worker will be polling for Nexus tasks.")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "An optional endpoint description in markdown format.")
+	s.Command.Flags().StringVar(&s.DescriptionFile, "description-file", "", "Path to a file containing an endpoint description in markdown format. Mutually exclusive with --description.")
+	s.Command.Flags().BoolVar(&s.UnsetDescription, "unset-description", false, "Unset the endpoint description. Cannot be used with --description or --description-file.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudRegionCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+}
+
+func NewCloudRegionCommand(cctx *CommandContext, parent *CloudCommand) *CloudRegionCommand {
+	var s CloudRegionCommand
+	s.Parent = parent
+	s.Command.Use = "region"
+	s.Command.Short = "Manage Temporal Cloud regions"
+	s.Command.Long = "Commands for listing Temporal Cloud regions."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudRegionGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudRegionListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudRegionGetCommand struct {
+	Parent  *CloudRegionCommand
+	Command cobra.Command
+	ClientOptions
+	Region string
+}
+
+func NewCloudRegionGetCommand(cctx *CommandContext, parent *CloudRegionCommand) *CloudRegionGetCommand {
+	var s CloudRegionGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get a Temporal Cloud region"
+	if hasHighlighting {
+		s.Command.Long = "Get details for a specific Temporal Cloud region.\n\nExample:\n\n\x1b[1mcloud region get --region aws-us-east-1\x1b[0m"
+	} else {
+		s.Command.Long = "Get details for a specific Temporal Cloud region.\n\nExample:\n\n```\ncloud region get --region aws-us-east-1\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Region, "region", "r", "", "The ID of the region to get. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "region")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudRegionListCommand struct {
+	Parent  *CloudRegionCommand
+	Command cobra.Command
+	ClientOptions
+}
+
+func NewCloudRegionListCommand(cctx *CommandContext, parent *CloudRegionCommand) *CloudRegionListCommand {
+	var s CloudRegionListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List available Temporal Cloud regions"
+	if hasHighlighting {
+		s.Command.Long = "List all available Temporal Cloud regions.\n\nExample:\n\n\x1b[1mcloud region list\x1b[0m"
+	} else {
+		s.Command.Long = "List all available Temporal Cloud regions.\n\nExample:\n\n```\ncloud region list\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudServiceAccountCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+}
+
+func NewCloudServiceAccountCommand(cctx *CommandContext, parent *CloudCommand) *CloudServiceAccountCommand {
+	var s CloudServiceAccountCommand
+	s.Parent = parent
+	s.Command.Use = "service-account"
+	s.Command.Short = "Manage Temporal Cloud service accounts"
+	s.Command.Long = "Commands for managing Temporal Cloud service accounts."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudServiceAccountCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudServiceAccountCreateNamespaceScopedCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudServiceAccountDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudServiceAccountEditCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudServiceAccountGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudServiceAccountListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudServiceAccountUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudServiceAccountCreateCommand struct {
+	Parent  *CloudServiceAccountCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	Name            string
+	Description     string
+	AccountRole     string
+	NamespaceAccess []string
+}
+
+func NewCloudServiceAccountCreateCommand(cctx *CommandContext, parent *CloudServiceAccountCommand) *CloudServiceAccountCreateCommand {
+	var s CloudServiceAccountCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a service account"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Temporal Cloud service account with account-level access.\nOptionally assign an account role and namespace-level permissions.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\n\nExample:\n\n\x1b[1mcloud service-account create --name my-sa --account-role developer \\\n  --namespace-access my-namespace.my-account=write\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new Temporal Cloud service account with account-level access.\nOptionally assign an account role and namespace-level permissions.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\n\nExample:\n\n```\ncloud service-account create --name my-sa --account-role developer \\\n  --namespace-access my-namespace.my-account=write\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the service account. Must be unique across all active service accounts. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "An optional description for the service account.")
+	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
+	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudServiceAccountCreateNamespaceScopedCommand struct {
+	Parent  *CloudServiceAccountCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	Name                string
+	Description         string
+	Namespace           string
+	NamespacePermission string
+}
+
+func NewCloudServiceAccountCreateNamespaceScopedCommand(cctx *CommandContext, parent *CloudServiceAccountCommand) *CloudServiceAccountCreateNamespaceScopedCommand {
+	var s CloudServiceAccountCreateNamespaceScopedCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create-namespace-scoped [flags]"
+	s.Command.Short = "Create a namespace-scoped service account"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Temporal Cloud service account scoped to a single namespace.\n\nExample:\n\n\x1b[1mcloud service-account create-namespace-scoped --name my-sa \\\n  --namespace my-namespace.my-account --namespace-permission write\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new Temporal Cloud service account scoped to a single namespace.\n\nExample:\n\n```\ncloud service-account create-namespace-scoped --name my-sa \\\n  --namespace my-namespace.my-account --namespace-permission write\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the service account. Must be unique across all active service accounts. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "An optional description for the service account.")
+	s.Command.Flags().StringVar(&s.Namespace, "namespace", "", "The namespace to scope the service account to. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
+	s.Command.Flags().StringVar(&s.NamespacePermission, "namespace-permission", "", "The permission to grant on the namespace. Valid values: admin, write, read. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace-permission")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudServiceAccountDeleteCommand struct {
+	Parent  *CloudServiceAccountCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ServiceAccountId string
+}
+
+func NewCloudServiceAccountDeleteCommand(cctx *CommandContext, parent *CloudServiceAccountCommand) *CloudServiceAccountDeleteCommand {
+	var s CloudServiceAccountDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a service account"
+	if hasHighlighting {
+		s.Command.Long = "Delete a Temporal Cloud service account. This action is irreversible.\n\nExample:\n\n\x1b[1mcloud service-account delete --service-account-id my-sa-id\x1b[0m"
+	} else {
+		s.Command.Long = "Delete a Temporal Cloud service account. This action is irreversible.\n\nExample:\n\n```\ncloud service-account delete --service-account-id my-sa-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The ID of the service account to delete. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudServiceAccountEditCommand struct {
+	Parent  *CloudServiceAccountCommand
+	Command cobra.Command
+	ClientOptions
+	DiffOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ServiceAccountId string
+}
+
+func NewCloudServiceAccountEditCommand(cctx *CommandContext, parent *CloudServiceAccountCommand) *CloudServiceAccountEditCommand {
+	var s CloudServiceAccountEditCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "edit [flags]"
+	s.Command.Short = "Interactively edit a service account"
+	if hasHighlighting {
+		s.Command.Long = "Open a service account configuration in your default editor for interactive\nmodification. After saving and closing the editor, the changes are applied\nto Temporal Cloud.\n\nThe editor is determined by the EDITOR environment variable, falling\nback to 'vi' if not set.\n\nExample:\n\n\x1b[1mcloud service-account edit --service-account-id my-sa-id\x1b[0m"
+	} else {
+		s.Command.Long = "Open a service account configuration in your default editor for interactive\nmodification. After saving and closing the editor, the changes are applied\nto Temporal Cloud.\n\nThe editor is determined by the EDITOR environment variable, falling\nback to 'vi' if not set.\n\nExample:\n\n```\ncloud service-account edit --service-account-id my-sa-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The ID of the service account to edit. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudServiceAccountGetCommand struct {
+	Parent  *CloudServiceAccountCommand
+	Command cobra.Command
+	ClientOptions
+	ServiceAccountId string
+}
+
+func NewCloudServiceAccountGetCommand(cctx *CommandContext, parent *CloudServiceAccountCommand) *CloudServiceAccountGetCommand {
+	var s CloudServiceAccountGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get service account details"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the configuration and status of a Temporal Cloud service account.\n\nExample:\n\n\x1b[1mcloud service-account get --service-account-id my-sa-id\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the configuration and status of a Temporal Cloud service account.\n\nExample:\n\n```\ncloud service-account get --service-account-id my-sa-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The ID of the service account to retrieve. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudServiceAccountListCommand struct {
+	Parent  *CloudServiceAccountCommand
+	Command cobra.Command
+	ClientOptions
+	PageSize  int
+	PageToken string
+}
+
+func NewCloudServiceAccountListCommand(cctx *CommandContext, parent *CloudServiceAccountCommand) *CloudServiceAccountListCommand {
+	var s CloudServiceAccountListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List service accounts"
+	if hasHighlighting {
+		s.Command.Long = "List all Temporal Cloud service accounts accessible with the current\nauthentication credentials.\n\nExample:\n\n\x1b[1mcloud service-account list\x1b[0m"
+	} else {
+		s.Command.Long = "List all Temporal Cloud service accounts accessible with the current\nauthentication credentials.\n\nExample:\n\n```\ncloud service-account list\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of service accounts to return per page. Use for paginated results.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results in a paginated list.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudServiceAccountUpdateCommand struct {
+	Parent  *CloudServiceAccountCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ServiceAccountId    string
+	Name                string
+	Description         string
+	AccountRole         string
+	NamespaceAccess     []string
+	NamespacePermission string
+}
+
+func NewCloudServiceAccountUpdateCommand(cctx *CommandContext, parent *CloudServiceAccountCommand) *CloudServiceAccountUpdateCommand {
+	var s CloudServiceAccountUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update a service account"
+	if hasHighlighting {
+		s.Command.Long = "Update a Temporal Cloud service account. Only flags that are explicitly provided\nare changed.\n\nFor account-scoped service accounts, use --account-role and/or --namespace-access.\nFor namespace-scoped service accounts, use --namespace-permission.\n\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\nUse 'namespace=' (empty permission) to remove access to a namespace.\n\nExample:\n\n\x1b[1mcloud service-account update --service-account-id my-sa-id --name new-name\ncloud service-account update --service-account-id my-sa-id --account-role admin\ncloud service-account update --service-account-id my-sa-id --namespace-permission write\x1b[0m"
+	} else {
+		s.Command.Long = "Update a Temporal Cloud service account. Only flags that are explicitly provided\nare changed.\n\nFor account-scoped service accounts, use --account-role and/or --namespace-access.\nFor namespace-scoped service accounts, use --namespace-permission.\n\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\nUse 'namespace=' (empty permission) to remove access to a namespace.\n\nExample:\n\n```\ncloud service-account update --service-account-id my-sa-id --name new-name\ncloud service-account update --service-account-id my-sa-id --account-role admin\ncloud service-account update --service-account-id my-sa-id --namespace-permission write\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The ID of the service account to update. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-id")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "New name for the service account.")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "New description for the service account.")
+	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read. Only valid for account-scoped service accounts.")
+	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to set, in the format 'namespace=permission'. Use 'namespace=' to remove access. Permission must be one of: admin, write, read. Can be repeated. Only valid for account-scoped service accounts.")
+	s.Command.Flags().StringVar(&s.NamespacePermission, "namespace-permission", "", "The permission to grant on the scoped namespace. Valid values: admin, write, read. Only valid for namespace-scoped service accounts.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
