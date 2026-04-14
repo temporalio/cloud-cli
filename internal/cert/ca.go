@@ -58,6 +58,38 @@ func ParseCACerts(data []byte) ([]CACert, error) {
 	return result, nil
 }
 
+// Add returns existing with any certs from toAdd whose fingerprint is not
+// already present appended. Existing order and entries are preserved.
+func Add(existing, toAdd []CACert) []CACert {
+	seen := make(map[string]struct{}, len(existing))
+	for _, c := range existing {
+		seen[c.Fingerprint] = struct{}{}
+	}
+	result := existing
+	for _, c := range toAdd {
+		if _, ok := seen[c.Fingerprint]; !ok {
+			result = append(result, c)
+		}
+	}
+	return result
+}
+
+// Remove returns existing with any certs whose fingerprint appears in toRemove
+// filtered out.
+func Remove(existing, toRemove []CACert) []CACert {
+	drop := make(map[string]struct{}, len(toRemove))
+	for _, c := range toRemove {
+		drop[c.Fingerprint] = struct{}{}
+	}
+	var result []CACert
+	for _, c := range existing {
+		if _, ok := drop[c.Fingerprint]; !ok {
+			result = append(result, c)
+		}
+	}
+	return result
+}
+
 // EncodeCACerts encodes a slice of CACerts as a concatenated PEM bundle.
 // It is the inverse of ParseCACerts. Returns nil for an empty slice so
 // callers can treat nil as "no certificates configured".

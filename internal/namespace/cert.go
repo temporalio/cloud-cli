@@ -48,24 +48,7 @@ func (c *Client) AddCACerts(ctx context.Context, params AddCACertsParams) (*oper
 		return nil, err
 	}
 
-	// Build a map of existing certificate fingerprints
-	existingFingerprints := map[string]struct{}{}
-	for _, cert := range existingCerts {
-		existingFingerprints[cert.Fingerprint] = struct{}{}
-	}
-
-	// Filter out certificates that already exist (for idempotent behavior)
-	var certsToAdd []cert.CACert
-	for _, cert := range params.Certs {
-		if _, exists := existingFingerprints[cert.Fingerprint]; !exists {
-			certsToAdd = append(certsToAdd, cert)
-		}
-	}
-
-	// Build the new certificate bundle
-	newBundle := append(existingCerts, certsToAdd...)
-
-	bundleBytes, err := cert.EncodeCACerts(newBundle)
+	bundleBytes, err := cert.EncodeCACerts(cert.Add(existingCerts, params.Certs))
 	if err != nil {
 		return nil, err
 	}
@@ -114,19 +97,7 @@ func (c *Client) DeleteCACerts(ctx context.Context, params DeleteCACertsParams) 
 		return nil, err
 	}
 
-	fingerprintsToRemove := map[string]struct{}{}
-	for _, cert := range params.Certs {
-		fingerprintsToRemove[cert.Fingerprint] = struct{}{}
-	}
-
-	var newBundle []cert.CACert
-	for _, existing := range existingCerts {
-		if _, ok := fingerprintsToRemove[existing.Fingerprint]; ok {
-			continue
-		}
-
-		newBundle = append(newBundle, existing)
-	}
+	newBundle := cert.Remove(existingCerts, params.Certs)
 
 	bundleBytes, err := cert.EncodeCACerts(newBundle)
 	if err != nil {

@@ -148,6 +148,46 @@ SGVsbG8gV29ybGQ=
 	}
 }
 
+func TestAdd(t *testing.T) {
+	c1 := cert.CACert{Fingerprint: "fp1"}
+	c2 := cert.CACert{Fingerprint: "fp2"}
+	c3 := cert.CACert{Fingerprint: "fp3"}
+
+	// New cert is appended; duplicate is silently dropped.
+	result := cert.Add([]cert.CACert{c1, c2}, []cert.CACert{c2, c3})
+	assert.Equal(t, []cert.CACert{c1, c2, c3}, result)
+
+	// Add to nil existing returns only the new certs.
+	result = cert.Add(nil, []cert.CACert{c1})
+	assert.Equal(t, []cert.CACert{c1}, result)
+
+	// Add empty slice leaves existing unchanged.
+	result = cert.Add([]cert.CACert{c1}, nil)
+	assert.Equal(t, []cert.CACert{c1}, result)
+}
+
+func TestRemove(t *testing.T) {
+	c1 := cert.CACert{Fingerprint: "fp1"}
+	c2 := cert.CACert{Fingerprint: "fp2"}
+	c3 := cert.CACert{Fingerprint: "fp3"}
+
+	// Matching cert is removed; non-matching cert is preserved.
+	result := cert.Remove([]cert.CACert{c1, c2, c3}, []cert.CACert{c2})
+	assert.Equal(t, []cert.CACert{c1, c3}, result)
+
+	// Remove all certs returns nil.
+	result = cert.Remove([]cert.CACert{c1}, []cert.CACert{c1})
+	assert.Nil(t, result)
+
+	// Remove from nil existing returns nil.
+	result = cert.Remove(nil, []cert.CACert{c1})
+	assert.Nil(t, result)
+
+	// Remove with empty toRemove leaves existing unchanged.
+	result = cert.Remove([]cert.CACert{c1, c2}, nil)
+	assert.Equal(t, []cert.CACert{c1, c2}, result)
+}
+
 func TestEncodeCACerts_RoundTrip(t *testing.T) {
 	cert1, _ := generateTestCertificate(t, "test1.temporal.io", time.Time{}, time.Time{}, "")
 	cert2, _ := generateTestCertificate(t, "test2.temporal.io", time.Time{}, time.Time{}, "")

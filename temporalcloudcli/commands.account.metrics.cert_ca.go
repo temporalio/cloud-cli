@@ -57,19 +57,7 @@ func (c *CloudAccountMetricsCertCaCreateCommand) run(cctx *CommandContext, _ []s
 		}
 	}
 
-	existingFingerprints := map[string]struct{}{}
-	for _, ec := range existingCerts {
-		existingFingerprints[ec.Fingerprint] = struct{}{}
-	}
-
-	var certsToAdd []cert.CACert
-	for _, nc := range newCerts {
-		if _, exists := existingFingerprints[nc.Fingerprint]; !exists {
-			certsToAdd = append(certsToAdd, nc)
-		}
-	}
-
-	bundleBytes, err := cert.EncodeCACerts(append(existingCerts, certsToAdd...))
+	bundleBytes, err := cert.EncodeCACerts(cert.Add(existingCerts, newCerts))
 	if err != nil {
 		return err
 	}
@@ -123,20 +111,7 @@ func (c *CloudAccountMetricsCertCaDeleteCommand) run(cctx *CommandContext, _ []s
 		return err
 	}
 
-	fingerprintsToRemove := map[string]struct{}{}
-	for _, rc := range certsToRemove {
-		fingerprintsToRemove[rc.Fingerprint] = struct{}{}
-	}
-
-	var newBundle []cert.CACert
-	for _, existing := range existingCerts {
-		if _, ok := fingerprintsToRemove[existing.Fingerprint]; ok {
-			continue
-		}
-		newBundle = append(newBundle, existing)
-	}
-
-	bundleBytes, err := cert.EncodeCACerts(newBundle)
+	bundleBytes, err := cert.EncodeCACerts(cert.Remove(existingCerts, certsToRemove))
 	if err != nil {
 		return err
 	}
