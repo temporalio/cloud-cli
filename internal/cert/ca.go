@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"crypto/x509"
 	"encoding/base64"
@@ -55,4 +56,18 @@ func ParseCACerts(data []byte) ([]CACert, error) {
 	}
 
 	return result, nil
+}
+
+// EncodeCACerts encodes a slice of CACerts as a concatenated PEM bundle.
+// It is the inverse of ParseCACerts.
+func EncodeCACerts(certs []CACert) ([]byte, error) {
+	out := make([][]byte, 0, len(certs))
+	for _, c := range certs {
+		data, err := base64.StdEncoding.DecodeString(c.Base64EncodedData)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, data)
+	}
+	return bytes.Join(out, []byte("\n")), nil
 }

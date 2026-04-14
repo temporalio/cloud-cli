@@ -1,8 +1,6 @@
 package temporalcloudcli
 
 import (
-	"bytes"
-	"encoding/base64"
 	"errors"
 
 	accountv1 "go.temporal.io/cloud-sdk/api/account/v1"
@@ -71,7 +69,7 @@ func (c *CloudAccountMetricsCertCaCreateCommand) run(cctx *CommandContext, _ []s
 		}
 	}
 
-	bundleBytes, err := encodeCACertBundle(append(existingCerts, certsToAdd...))
+	bundleBytes, err := cert.EncodeCACerts(append(existingCerts, certsToAdd...))
 	if err != nil {
 		return err
 	}
@@ -138,7 +136,7 @@ func (c *CloudAccountMetricsCertCaDeleteCommand) run(cctx *CommandContext, _ []s
 		newBundle = append(newBundle, existing)
 	}
 
-	bundleBytes, err := encodeCACertBundle(newBundle)
+	bundleBytes, err := cert.EncodeCACerts(newBundle)
 	if err != nil {
 		return err
 	}
@@ -160,17 +158,4 @@ func (c *CloudAccountMetricsCertCaDeleteCommand) run(cctx *CommandContext, _ []s
 		AsyncOperationId: c.AsyncOperationId,
 	})
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
-}
-
-// encodeCACertBundle encodes a slice of CACerts as a concatenated PEM bundle.
-func encodeCACertBundle(certs []cert.CACert) ([]byte, error) {
-	var out [][]byte
-	for _, c := range certs {
-		data, err := base64.StdEncoding.DecodeString(c.Base64EncodedData)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, data)
-	}
-	return bytes.Join(out, []byte("\n")), nil
 }

@@ -1,9 +1,7 @@
 package namespace
 
 import (
-	"bytes"
 	"context"
-	"encoding/base64"
 
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
@@ -67,14 +65,9 @@ func (c *Client) AddCACerts(ctx context.Context, params AddCACertsParams) (*oper
 	// Build the new certificate bundle
 	newBundle := append(existingCerts, certsToAdd...)
 
-	var out [][]byte
-	for _, cert := range newBundle {
-		data, err := base64.StdEncoding.DecodeString(cert.Base64EncodedData)
-		if err != nil {
-			return nil, err
-		}
-
-		out = append(out, data)
+	bundleBytes, err := cert.EncodeCACerts(newBundle)
+	if err != nil {
+		return nil, err
 	}
 
 	spec := ns.GetSpec()
@@ -82,7 +75,7 @@ func (c *Client) AddCACerts(ctx context.Context, params AddCACertsParams) (*oper
 	if spec.MtlsAuth == nil {
 		spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
 	}
-	spec.MtlsAuth.AcceptedClientCa = bytes.Join(out, []byte("\n"))
+	spec.MtlsAuth.AcceptedClientCa = bundleBytes
 
 	resourceVersion := ns.ResourceVersion
 	if params.ResourceVersion != "" {
@@ -135,25 +128,20 @@ func (c *Client) DeleteCACerts(ctx context.Context, params DeleteCACertsParams) 
 		newBundle = append(newBundle, existing)
 	}
 
-	var out [][]byte
-	for _, cert := range newBundle {
-		data, err := base64.StdEncoding.DecodeString(cert.Base64EncodedData)
-		if err != nil {
-			return nil, err
-		}
-
-		out = append(out, data)
+	bundleBytes, err := cert.EncodeCACerts(newBundle)
+	if err != nil {
+		return nil, err
 	}
 
 	spec := ns.GetSpec()
-	if len(out) == 0 {
+	if len(newBundle) == 0 {
 		spec.MtlsAuth = nil
 	} else {
 		// Ensure MtlsAuth is initialized before accessing its fields
 		if spec.MtlsAuth == nil {
 			spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
 		}
-		spec.MtlsAuth.AcceptedClientCa = bytes.Join(out, []byte("\n"))
+		spec.MtlsAuth.AcceptedClientCa = bundleBytes
 	}
 
 	resourceVersion := ns.ResourceVersion
