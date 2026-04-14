@@ -455,9 +455,8 @@ func getUsageTemplate() string {
 	flagWidth := width - 1
 
 	// Custom template that uses FlagUsagesWrapped for proper indentation
-	return fmt.Sprintf(`Usage:{{if .Runnable}}
-  {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
-  {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
+	return fmt.Sprintf(`Usage:
+  temporal {{- if .Runnable}} {{.UseLine}}{{end}}{{- if .HasAvailableSubCommands}} {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
 
 Aliases:
   {{.NameAndAliases}}{{end}}{{if .HasExample}}
