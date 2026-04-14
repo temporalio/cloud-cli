@@ -3298,6 +3298,55 @@ commands:
         description: |
           The ID of the API key to enable.
 
+  # Region commands
+  - name: cloud region
+    summary: Manage Temporal Cloud regions
+    description: |
+      Commands for listing Temporal Cloud regions.
+    has-init: false
+    docs:
+      keywords:
+        - region
+        - cloud-provider
+      description-header: Region Commands
+      tags:
+        - region
+
+  - name: cloud region get
+    summary: Get a Temporal Cloud region
+    description: |
+      Get details for a specific Temporal Cloud region.
+
+      Example:
+
+      ```
+      cloud region get --region aws-us-east-1
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: region
+        type: string
+        required: true
+        short: r
+        description: |
+          The ID of the region to get.
+
+  - name: cloud region list
+    summary: List available Temporal Cloud regions
+    description: |
+      List all available Temporal Cloud regions.
+
+      Example:
+
+      ```
+      cloud region list
+      ```
+    has-init: false
+    option-sets:
+      - client
+
 option-sets:
   - name: client
     options:

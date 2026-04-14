@@ -217,6 +217,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.Command.AddCommand(&NewCloudLogoutCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNexusCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudRegionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudServiceAccountCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserGroupCommand(cctx, &s).Command)
@@ -3438,6 +3439,80 @@ func NewCloudNexusEndpointUpdateCommand(cctx *CommandContext, parent *CloudNexus
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudRegionCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+}
+
+func NewCloudRegionCommand(cctx *CommandContext, parent *CloudCommand) *CloudRegionCommand {
+	var s CloudRegionCommand
+	s.Parent = parent
+	s.Command.Use = "region"
+	s.Command.Short = "Manage Temporal Cloud regions"
+	s.Command.Long = "Commands for listing Temporal Cloud regions."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudRegionGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudRegionListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudRegionGetCommand struct {
+	Parent  *CloudRegionCommand
+	Command cobra.Command
+	ClientOptions
+	Region string
+}
+
+func NewCloudRegionGetCommand(cctx *CommandContext, parent *CloudRegionCommand) *CloudRegionGetCommand {
+	var s CloudRegionGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get a Temporal Cloud region"
+	if hasHighlighting {
+		s.Command.Long = "Get details for a specific Temporal Cloud region.\n\nExample:\n\n\x1b[1mcloud region get --region aws-us-east-1\x1b[0m"
+	} else {
+		s.Command.Long = "Get details for a specific Temporal Cloud region.\n\nExample:\n\n```\ncloud region get --region aws-us-east-1\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Region, "region", "r", "", "The ID of the region to get. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "region")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudRegionListCommand struct {
+	Parent  *CloudRegionCommand
+	Command cobra.Command
+	ClientOptions
+}
+
+func NewCloudRegionListCommand(cctx *CommandContext, parent *CloudRegionCommand) *CloudRegionListCommand {
+	var s CloudRegionListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List available Temporal Cloud regions"
+	if hasHighlighting {
+		s.Command.Long = "List all available Temporal Cloud regions.\n\nExample:\n\n\x1b[1mcloud region list\x1b[0m"
+	} else {
+		s.Command.Long = "List all available Temporal Cloud regions.\n\nExample:\n\n```\ncloud region list\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
