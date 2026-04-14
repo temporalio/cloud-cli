@@ -68,6 +68,7 @@ func Add(existing, toAdd []CACert) []CACert {
 	result := existing
 	for _, c := range toAdd {
 		if _, ok := seen[c.Fingerprint]; !ok {
+			seen[c.Fingerprint] = struct{}{} // Avoid duplicates in toAdd itself, though that would be weird.
 			result = append(result, c)
 		}
 	}

@@ -164,6 +164,10 @@ func TestAdd(t *testing.T) {
 	// Add empty slice leaves existing unchanged.
 	result = cert.Add([]cert.CACert{c1}, nil)
 	assert.Equal(t, []cert.CACert{c1}, result)
+
+	// Duplicates within toAdd itself are collapsed to one entry.
+	result = cert.Add(nil, []cert.CACert{c1, c1, c2})
+	assert.Equal(t, []cert.CACert{c1, c2}, result)
 }
 
 func TestRemove(t *testing.T) {
