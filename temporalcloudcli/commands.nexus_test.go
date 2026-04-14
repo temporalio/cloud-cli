@@ -784,7 +784,7 @@ func TestAddNexusEndpointAllowedNamespace(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-add"},
 					}, nil)
 			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-add"},
 		},
 		{
@@ -796,7 +796,7 @@ func TestAddNexusEndpointAllowedNamespace(t *testing.T) {
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				expectGetEndpointWithPolicies(c)
 			},
-			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: false},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
 			expectedErr:   "Aborting add.",
 		},
 		{
@@ -844,7 +844,7 @@ func TestAddNexusEndpointAllowedNamespace(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-add"},
 					}, nil)
 			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-add"},
 		},
 	}
@@ -889,7 +889,7 @@ func TestSetNexusEndpointAllowedNamespace(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-set"},
 					}, nil)
 			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-set"},
 		},
 		{
@@ -901,7 +901,7 @@ func TestSetNexusEndpointAllowedNamespace(t *testing.T) {
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				expectGetEndpointWithPolicies(c)
 			},
-			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: false},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
 			expectedErr:   "Aborting set.",
 		},
 		{
@@ -949,7 +949,7 @@ func TestSetNexusEndpointAllowedNamespace(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-set"},
 					}, nil)
 			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-set"},
 		},
 	}
@@ -993,7 +993,7 @@ func TestRemoveNexusEndpointAllowedNamespace(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-rm"},
 					}, nil)
 			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-rm"},
 		},
 		{
@@ -1005,7 +1005,7 @@ func TestRemoveNexusEndpointAllowedNamespace(t *testing.T) {
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				expectGetEndpointWithPolicies(c)
 			},
-			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: false},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
 			expectedErr:   "Aborting remove.",
 		},
 		{
@@ -1053,7 +1053,7 @@ func TestRemoveNexusEndpointAllowedNamespace(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-rm"},
 					}, nil)
 			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-rm"},
 		},
 	}
