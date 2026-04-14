@@ -41,6 +41,7 @@ import (
 	"github.com/temporalio/cloud-cli/temporalcloudcli/async"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/editor"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
+	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/protoutils"
 	cliprompter "github.com/temporalio/cloud-cli/temporalcloudcli/prompter"
 )
 
@@ -190,11 +191,39 @@ func (cctx *CommandContext) BuildCloudClient(clientOpts ClientOptions) (*cloudcl
 		opts.APIKeyReader = cloudOpts
 	}
 
+	opts.GRPCDialOptions = []grpc.DialOption{
+		grpc.WithChainUnaryInterceptor(
+			ClearDeprecatedFieldsInterceptor,
+		),
+	}
+
 	cloudClient, err := cloudclient.New(opts)
 	if err != nil {
 		return nil, err
 	}
 	return cloudClient, nil
+}
+
+// clearDeprecatedFieldsInterceptor is a gRPC unary client interceptor that strips
+// deprecated fields from every response. Any proto field whose name ends with
+// "_deprecated" or that is marked with [deprecated = true] is cleared; nested
+// messages, repeated message fields, and map fields with message values are
+// visited recursively.
+func ClearDeprecatedFieldsInterceptor(
+	ctx context.Context,
+	method string,
+	req, reply any,
+	cc *grpc.ClientConn,
+	invoker grpc.UnaryInvoker,
+	opts ...grpc.CallOption,
+) error {
+	if err := invoker(ctx, method, req, reply, cc, opts...); err != nil {
+		return err
+	}
+	if msg, ok := reply.(proto.Message); ok {
+		protoutils.ClearDeprecatedFields(msg)
+	}
+	return nil
 }
 
 func (c *CommandContext) preprocessOptions() error {
