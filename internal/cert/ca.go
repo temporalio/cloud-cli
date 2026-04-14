@@ -59,8 +59,12 @@ func ParseCACerts(data []byte) ([]CACert, error) {
 }
 
 // EncodeCACerts encodes a slice of CACerts as a concatenated PEM bundle.
-// It is the inverse of ParseCACerts.
+// It is the inverse of ParseCACerts. Returns nil for an empty slice so
+// callers can treat nil as "no certificates configured".
 func EncodeCACerts(certs []CACert) ([]byte, error) {
+	if len(certs) == 0 {
+		return nil, nil
+	}
 	out := make([][]byte, 0, len(certs))
 	for _, c := range certs {
 		data, err := base64.StdEncoding.DecodeString(c.Base64EncodedData)

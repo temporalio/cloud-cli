@@ -241,8 +241,8 @@ func TestDeleteAccountMetricsCertCA_Success(t *testing.T) {
 				Return(&cloudservice.GetAccountResponse{Account: testAccount(certData)}, nil)
 			c.EXPECT().
 				UpdateAccount(mock.Anything, mock.MatchedBy(func(r *cloudservice.UpdateAccountRequest) bool {
-					// cert removed → AcceptedClientCa should be empty/nil
-					return len(r.Spec.GetMetrics().GetAcceptedClientCa()) == 0 &&
+					// all certs removed → AcceptedClientCa must be nil, not empty bytes
+					return r.Spec.GetMetrics().GetAcceptedClientCa() == nil &&
 						r.ResourceVersion == "rv-1"
 				}), mock.Anything).
 				Return(&cloudservice.UpdateAccountResponse{AsyncOperation: asyncOp}, nil)
