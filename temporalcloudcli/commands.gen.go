@@ -3422,9 +3422,9 @@ func NewCloudNexusEndpointUpdateCommand(cctx *CommandContext, parent *CloudNexus
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update an existing Nexus Endpoint"
 	if hasHighlighting {
-		s.Command.Long = "Update an existing Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\nThe endpoint target is a worker and \x1b[1m--target-namespace\x1b[0m and \x1b[1m--target-task-queue\x1b[0m\nmust both be provided.\n\nThe endpoint is patched leaving any existing fields for which flags are not provided\nas they were.\n\nExample:\n\n\x1b[1mcloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq\x1b[0m"
+		s.Command.Long = "Update an existing Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\n\nThe endpoint is patched leaving any existing fields for which flags are not provided\nas they were.\n\nExample:\n\n\x1b[1mcloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq\x1b[0m"
 	} else {
-		s.Command.Long = "Update an existing Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\nThe endpoint target is a worker and `--target-namespace` and `--target-task-queue`\nmust both be provided.\n\nThe endpoint is patched leaving any existing fields for which flags are not provided\nas they were.\n\nExample:\n\n```\ncloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq\n```"
+		s.Command.Long = "Update an existing Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\n\nThe endpoint is patched leaving any existing fields for which flags are not provided\nas they were.\n\nExample:\n\n```\ncloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to update. Required.")

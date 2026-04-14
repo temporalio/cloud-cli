@@ -1425,8 +1425,6 @@ commands:
     description: |
       Update an existing Nexus Endpoint on the Cloud Account.
       An endpoint name is used in workflow code to invoke Nexus operations.
-      The endpoint target is a worker and `--target-namespace` and `--target-task-queue`
-      must both be provided.
 
       The endpoint is patched leaving any existing fields for which flags are not provided
       as they were.
