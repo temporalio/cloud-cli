@@ -74,7 +74,7 @@ func (v *AsyncOperationOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringVar(&v.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
 	f.BoolVar(&v.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
 	v.PollInterval = cliext.MustParseFlagDuration("1s")
-	f.Var(&v.PollInterval, "poll-interval", "Time to wait between status checks when waiting for operation completion. Cannot be greater than 10 minutes. Supports minutes (m) and seconds (s). Default is 1s.")
+	f.Var(&v.PollInterval, "poll-interval", "Time to wait between status checks when waiting for operation completion. Cannot be greater than 10 minutes. Supports minutes (m) and seconds (s).")
 }
 
 type UserIdentificationOptions struct {
@@ -3388,9 +3388,9 @@ func NewCloudNexusEndpointListCommand(cctx *CommandContext, parent *CloudNexusEn
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "List Nexus Endpoints"
-	s.Command.Long = "List all Nexus Endpoint configurations on the Cloud Account."
+	s.Command.Long = "List Nexus Endpoint configurations on the Cloud Account. "
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of endpoints to return per page.")
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of endpoints to return per page. If no page size is provided, it will default to 100. A maximum of 1000 endpoints can be fetched at a time.")
 	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results. Initial value is empty string.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {

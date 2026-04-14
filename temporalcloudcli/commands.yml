@@ -1329,7 +1329,7 @@ commands:
   - name: cloud nexus endpoint list
     summary: List Nexus Endpoints
     description: |
-      List all Nexus Endpoint configurations on the Cloud Account.
+      List Nexus Endpoint configurations on the Cloud Account. 
     has-init: false
     option-sets:
       - client
@@ -1337,7 +1337,7 @@ commands:
       - name: page-size
         type: int
         description: |
-          Number of endpoints to return per page.
+          Number of endpoints to return per page. If no page size is provided, it will default to 100. A maximum of 1000 endpoints can be fetched at a time.
       - name: page-token
         type: string
         description: |
@@ -3124,7 +3124,7 @@ option-sets:
         description: |
           Time to wait between status checks when waiting for operation completion.
           Cannot be greater than 10 minutes.
-          Supports minutes (m) and seconds (s). Default is 1s.
+          Supports minutes (m) and seconds (s).
   - name: user-identification
     options:
       - name: user-id

@@ -276,18 +276,18 @@ func (c *CloudNexusEndpointAllowedNamespaceAddCommand) run(cctx *CommandContext,
 		return err
 	}
 
-	existingNSMap := make(map[string]struct{}, len(endpoint.Spec.PolicySpecs))
-	for _, ps := range endpoint.Spec.PolicySpecs {
+	newSpec := proto.Clone(endpoint.Spec).(*nexusv1.EndpointSpec)
+
+	existingNSMap := make(map[string]struct{}, len(newSpec.PolicySpecs))
+	for _, ps := range newSpec.PolicySpecs {
 		if ns := ps.GetAllowedCloudNamespacePolicySpec(); ns != nil {
 			existingNSMap[ns.NamespaceId] = struct{}{}
 		}
 	}
 
-	updatedPolicySpecs := make([]*nexusv1.EndpointPolicySpec, len(endpoint.Spec.PolicySpecs))
-	copy(updatedPolicySpecs, endpoint.Spec.PolicySpecs)
 	for _, ns := range c.Namespace {
 		if _, ok := existingNSMap[ns]; !ok {
-			updatedPolicySpecs = append(updatedPolicySpecs, &nexusv1.EndpointPolicySpec{
+			newSpec.PolicySpecs = append(newSpec.PolicySpecs, &nexusv1.EndpointPolicySpec{
 				Variant: &nexusv1.EndpointPolicySpec_AllowedCloudNamespacePolicySpec{
 					AllowedCloudNamespacePolicySpec: &nexusv1.AllowedCloudNamespacePolicySpec{
 						NamespaceId: ns,
@@ -296,9 +296,8 @@ func (c *CloudNexusEndpointAllowedNamespaceAddCommand) run(cctx *CommandContext,
 			})
 		}
 	}
-	endpoint.Spec.PolicySpecs = updatedPolicySpecs
 
-	yes, err := cctx.GetPrompter().PromptYes("Add")
+	yes, err := cctx.GetPrompter().PromptApply(endpoint.Spec, newSpec, false)
 	if err != nil {
 		return err
 	}
@@ -312,7 +311,7 @@ func (c *CloudNexusEndpointAllowedNamespaceAddCommand) run(cctx *CommandContext,
 	}
 	resp, err := client.UpdateNexusEndpoint(cctx, &cloudservice.UpdateNexusEndpointRequest{
 		EndpointId:       endpoint.Id,
-		Spec:             endpoint.Spec,
+		Spec:             newSpec,
 		ResourceVersion:  rv,
 		AsyncOperationId: c.AsyncOperationId,
 	})
@@ -330,9 +329,10 @@ func (c *CloudNexusEndpointAllowedNamespaceSetCommand) run(cctx *CommandContext,
 		return err
 	}
 
-	updatedPolicySpecs := make([]*nexusv1.EndpointPolicySpec, len(c.Namespace))
+	newSpec := proto.Clone(endpoint.Spec).(*nexusv1.EndpointSpec)
+	newSpec.PolicySpecs = make([]*nexusv1.EndpointPolicySpec, len(c.Namespace))
 	for i, ns := range c.Namespace {
-		updatedPolicySpecs[i] = &nexusv1.EndpointPolicySpec{
+		newSpec.PolicySpecs[i] = &nexusv1.EndpointPolicySpec{
 			Variant: &nexusv1.EndpointPolicySpec_AllowedCloudNamespacePolicySpec{
 				AllowedCloudNamespacePolicySpec: &nexusv1.AllowedCloudNamespacePolicySpec{
 					NamespaceId: ns,
@@ -340,9 +340,8 @@ func (c *CloudNexusEndpointAllowedNamespaceSetCommand) run(cctx *CommandContext,
 			},
 		}
 	}
-	endpoint.Spec.PolicySpecs = updatedPolicySpecs
 
-	yes, err := cctx.GetPrompter().PromptYes("Set")
+	yes, err := cctx.GetPrompter().PromptApply(endpoint.Spec, newSpec, false)
 	if err != nil {
 		return err
 	}
@@ -356,7 +355,7 @@ func (c *CloudNexusEndpointAllowedNamespaceSetCommand) run(cctx *CommandContext,
 	}
 	resp, err := client.UpdateNexusEndpoint(cctx, &cloudservice.UpdateNexusEndpointRequest{
 		EndpointId:       endpoint.Id,
-		Spec:             endpoint.Spec,
+		Spec:             newSpec,
 		ResourceVersion:  rv,
 		AsyncOperationId: c.AsyncOperationId,
 	})
@@ -374,22 +373,24 @@ func (c *CloudNexusEndpointAllowedNamespaceRemoveCommand) run(cctx *CommandConte
 		return err
 	}
 
+	newSpec := proto.Clone(endpoint.Spec).(*nexusv1.EndpointSpec)
+
 	toRemove := make(map[string]struct{}, len(c.Namespace))
 	for _, ns := range c.Namespace {
 		toRemove[ns] = struct{}{}
 	}
 
 	var updatedPolicySpecs []*nexusv1.EndpointPolicySpec
-	for _, ps := range endpoint.Spec.PolicySpecs {
+	for _, ps := range newSpec.PolicySpecs {
 		ns := ps.GetAllowedCloudNamespacePolicySpec()
 		_, remove := toRemove[ns.NamespaceId]
 		if ns == nil || !remove {
 			updatedPolicySpecs = append(updatedPolicySpecs, ps)
 		}
 	}
-	endpoint.Spec.PolicySpecs = updatedPolicySpecs
+	newSpec.PolicySpecs = updatedPolicySpecs
 
-	yes, err := cctx.GetPrompter().PromptYes("Remove")
+	yes, err := cctx.GetPrompter().PromptApply(endpoint.Spec, newSpec, false)
 	if err != nil {
 		return err
 	}
@@ -403,7 +404,7 @@ func (c *CloudNexusEndpointAllowedNamespaceRemoveCommand) run(cctx *CommandConte
 	}
 	resp, err := client.UpdateNexusEndpoint(cctx, &cloudservice.UpdateNexusEndpointRequest{
 		EndpointId:       endpoint.Id,
-		Spec:             endpoint.Spec,
+		Spec:             newSpec,
 		ResourceVersion:  rv,
 		AsyncOperationId: c.AsyncOperationId,
 	})
