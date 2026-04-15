@@ -3353,6 +3353,7 @@ type CloudNexusEndpointGetCommand struct {
 	Command cobra.Command
 	ClientOptions
 	Name string
+	Id   string
 }
 
 func NewCloudNexusEndpointGetCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointGetCommand {
@@ -3360,11 +3361,15 @@ func NewCloudNexusEndpointGetCommand(cctx *CommandContext, parent *CloudNexusEnd
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "get [flags]"
-	s.Command.Short = "Get a Nexus Endpoint by name"
-	s.Command.Long = "This command gets a Nexus Endpoint configuration by name from the Cloud Account."
+	s.Command.Short = "Get a Nexus Endpoint by name or ID"
+	if hasHighlighting {
+		s.Command.Long = "Get a Nexus Endpoint configuration from the Cloud Account.\nSpecify either \x1b[1m--name\x1b[0m or \x1b[1m--id\x1b[0m (exactly one is required)."
+	} else {
+		s.Command.Long = "Get a Nexus Endpoint configuration from the Cloud Account.\nSpecify either `--name` or `--id` (exactly one is required)."
+	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to retrieve. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to retrieve.")
+	s.Command.Flags().StringVar(&s.Id, "id", "", "The ID of the Nexus Endpoint to retrieve.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {

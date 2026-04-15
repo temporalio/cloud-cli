@@ -1344,18 +1344,22 @@ commands:
           Token for retrieving the next page of results. Initial value is empty string.
 
   - name: cloud nexus endpoint get
-    summary: Get a Nexus Endpoint by name
+    summary: Get a Nexus Endpoint by name or ID
     description: |
-      This command gets a Nexus Endpoint configuration by name from the Cloud Account.
+      Get a Nexus Endpoint configuration from the Cloud Account.
+      Specify either `--name` or `--id` (exactly one is required).
     has-init: false
     option-sets:
       - client
     options:
       - name: name
         type: string
-        required: true
         description: |
           The name of the Nexus Endpoint to retrieve.
+      - name: id
+        type: string
+        description: |
+          The ID of the Nexus Endpoint to retrieve.
 
   - name: cloud nexus endpoint create
     summary: Create a new Nexus Endpoint
