@@ -67,7 +67,7 @@ func (c *CloudNexusEndpointListCommand) run(cctx *CommandContext, _ []string) er
 		},
 		printer.PrintResourceOptions{
 			Fields:     []string{"Id", "State"},
-			SpecFields: []string{"Name"},
+			SpecFields: []string{"Name", "Description"},
 		},
 		printer.TableOptions{},
 	)
