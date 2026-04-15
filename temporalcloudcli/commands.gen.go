@@ -3626,9 +3626,9 @@ func NewCloudNexusEndpointUpdateCommand(cctx *CommandContext, parent *CloudNexus
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update an existing Nexus Endpoint"
 	if hasHighlighting {
-		s.Command.Long = "Update an existing Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\n\nThe endpoint is patched leaving any existing fields for which flags are not provided\nas they were.\n\nExample:\n\n\x1b[1mcloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq\x1b[0m"
+		s.Command.Long = "Update an existing Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\n\nThe endpoint is patched leaving any existing fields for which flags are not provided\nas they were.\n\nExample:\n\n\x1b[1mtemporal cloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq\x1b[0m"
 	} else {
-		s.Command.Long = "Update an existing Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\n\nThe endpoint is patched leaving any existing fields for which flags are not provided\nas they were.\n\nExample:\n\n```\ncloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq\n```"
+		s.Command.Long = "Update an existing Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\n\nThe endpoint is patched leaving any existing fields for which flags are not provided\nas they were.\n\nExample:\n\n```\ntemporal cloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to update. Required.")
