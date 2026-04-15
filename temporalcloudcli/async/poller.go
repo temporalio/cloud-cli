@@ -21,6 +21,10 @@ type (
 		HandleCreateAsyncOperationResponse(ctx context.Context, response RespWithAsyncOp, err error) error
 		HandleUpdateOperation(ctx context.Context, response RespWithAsyncOp, err error) error
 		HandleDeleteOperation(ctx context.Context, response RespWithAsyncOp, err error) error
+		// AwaitAsyncOperation blocks until the operation with the given ID reaches a terminal state,
+		// then prints the final operation details. Use this when you already have an operation ID
+		// and just need to wait for it to complete.
+		AwaitAsyncOperation(ctx context.Context, asyncOpID string) error
 	}
 
 	poller struct {
@@ -94,6 +98,14 @@ func (p *poller) HandleDeleteOperation(
 		return fmt.Errorf("delete operation failed: %w", err)
 	}
 	return p.handleAsyncOperation(ctx, response)
+}
+
+func (p *poller) AwaitAsyncOperation(ctx context.Context, asyncOpID string) error {
+	finalOp, err := p.waitForAsyncOperation(ctx, asyncOpID)
+	if err != nil {
+		return err
+	}
+	return p.printer.PrintResource(finalOp, printer.PrintResourceOptions{})
 }
 
 func (p *poller) handleAsyncOperation(

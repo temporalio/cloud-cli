@@ -38,6 +38,63 @@ func (_m *MockPoller) EXPECT() *MockPoller_Expecter {
 	return &MockPoller_Expecter{mock: &_m.Mock}
 }
 
+// AwaitAsyncOperation provides a mock function for the type MockPoller
+func (_mock *MockPoller) AwaitAsyncOperation(ctx context.Context, asyncOpID string) error {
+	ret := _mock.Called(ctx, asyncOpID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AwaitAsyncOperation")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, asyncOpID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockPoller_AwaitAsyncOperation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AwaitAsyncOperation'
+type MockPoller_AwaitAsyncOperation_Call struct {
+	*mock.Call
+}
+
+// AwaitAsyncOperation is a helper method to define mock.On call
+//   - ctx context.Context
+//   - asyncOpID string
+func (_e *MockPoller_Expecter) AwaitAsyncOperation(ctx interface{}, asyncOpID interface{}) *MockPoller_AwaitAsyncOperation_Call {
+	return &MockPoller_AwaitAsyncOperation_Call{Call: _e.mock.On("AwaitAsyncOperation", ctx, asyncOpID)}
+}
+
+func (_c *MockPoller_AwaitAsyncOperation_Call) Run(run func(ctx context.Context, asyncOpID string)) *MockPoller_AwaitAsyncOperation_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockPoller_AwaitAsyncOperation_Call) Return(err error) *MockPoller_AwaitAsyncOperation_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockPoller_AwaitAsyncOperation_Call) RunAndReturn(run func(ctx context.Context, asyncOpID string) error) *MockPoller_AwaitAsyncOperation_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // HandleCreateAsyncOperationResponse provides a mock function for the type MockPoller
 func (_mock *MockPoller) HandleCreateAsyncOperationResponse(ctx context.Context, response async.RespWithAsyncOp, err error) error {
 	ret := _mock.Called(ctx, response, err)

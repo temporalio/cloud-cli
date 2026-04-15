@@ -9,7 +9,7 @@ commands:
       Example:
 
       ```
-      cloud namespace get --namespace my-namespace.my-account
+      temporal cloud namespace get --namespace my-namespace.my-account
       ```
     has-init: true
     option-sets:
@@ -42,7 +42,7 @@ commands:
       Example:
 
       ```
-      cloud login
+      temporal cloud login
       ```
 
       For headless environments, use --disable-pop-up and follow the printed URL.
@@ -96,7 +96,7 @@ commands:
       Example:
 
       ```
-      cloud whoami
+      temporal cloud whoami
       ```
     has-init: false
     option-sets:
@@ -118,7 +118,7 @@ commands:
       Example:
 
       ```
-      cloud logout
+      temporal cloud logout
       ```
     has-init: false
     docs:
@@ -165,7 +165,7 @@ commands:
       Example:
 
       ```
-      cloud namespace get --namespace my-namespace.my-account
+      temporal cloud namespace get --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
@@ -202,13 +202,13 @@ commands:
       Example with inline JSON:
 
       ```
-      cloud namespace apply --spec '{"name": "namespace-name", "region": "us-west-2", "retention_days": 7}'
+      temporal cloud namespace apply --spec '{"name": "namespace-name", "region": "us-west-2", "retention_days": 7}'
       ```
 
       Example with file path:
 
       ```
-      cloud namespace apply --spec @namespace-spec.json
+      temporal cloud namespace apply --spec @namespace-spec.json
       ```
     has-init: false
     option-sets:
@@ -255,7 +255,7 @@ commands:
       Example:
 
       ```
-      cloud namespace edit --namespace my-namespace.my-account
+      temporal cloud namespace edit --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
@@ -300,7 +300,7 @@ commands:
       Example:
 
       ```
-      cloud namespace delete --namespace my-namespace.my-account
+      temporal cloud namespace delete --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
@@ -343,7 +343,7 @@ commands:
       Example:
 
       ```
-      cloud namespace list
+      temporal cloud namespace list
       ```
     has-init: false
     option-sets:
@@ -372,7 +372,7 @@ commands:
       Example:
 
       ```
-      cloud namespace create --name my-namespace --region aws-us-east-1 --retention-days 30
+      temporal cloud namespace create --name my-namespace --region aws-us-east-1 --retention-days 30
       ```
     has-init: false
     option-sets:
@@ -437,7 +437,7 @@ commands:
       Example:
 
       ```
-      cloud namespace retention get --namespace my-namespace.my-account
+      temporal cloud namespace retention get --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
@@ -452,7 +452,7 @@ commands:
       Example:
 
       ```
-      cloud namespace retention set --namespace my-namespace.my-account --retention-days 14
+      temporal cloud namespace retention set --namespace my-namespace.my-account --retention-days 14
       ```
     has-init: false
     option-sets:
@@ -485,7 +485,7 @@ commands:
       Example:
 
       ```
-      cloud namespace lifecycle get --namespace my-namespace.my-account
+      temporal cloud namespace lifecycle get --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
@@ -507,7 +507,7 @@ commands:
       Example:
 
       ```
-      cloud namespace lifecycle set --namespace my-namespace.my-account --enable-delete-protection true
+      temporal cloud namespace lifecycle set --namespace my-namespace.my-account --enable-delete-protection true
       ```
     has-init: false
     option-sets:
@@ -564,7 +564,7 @@ commands:
       Example:
 
       ```
-      cloud namespace cert-ca list --namespace my-namespace.my-account
+      temporal cloud namespace cert-ca list --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
@@ -582,13 +582,13 @@ commands:
       Example with file:
 
       ```
-      cloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem
+      temporal cloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem
       ```
 
       Example with base64 encoded data:
 
       ```
-      cloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>
+      temporal cloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>
       ```
     has-init: false
     option-sets:
@@ -610,13 +610,13 @@ commands:
       Example with file:
 
       ```
-      cloud namespace cert-ca delete --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem
+      temporal cloud namespace cert-ca delete --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem
       ```
 
       Example with base64 encoded data:
 
       ```
-      cloud namespace cert-ca delete --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>
+      temporal cloud namespace cert-ca delete --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>
       ```
     has-init: false
     option-sets:
@@ -713,7 +713,7 @@ commands:
       Example:
 
       ```
-      cloud namespace search-attribute list --namespace my-namespace.my-account
+      temporal cloud namespace search-attribute list --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
@@ -727,7 +727,7 @@ commands:
       Example:
 
       ```
-      cloud namespace search-attribute create --namespace my-namespace.my-account --name MyField --type Keyword
+      temporal cloud namespace search-attribute create --namespace my-namespace.my-account --name MyField --type Keyword
       ```
     has-init: false
     option-sets:
@@ -756,7 +756,7 @@ commands:
       Example:
 
       ```
-      cloud namespace search-attribute rename --namespace my-namespace.my-account --existing-name OldField --new-name NewField
+      temporal cloud namespace search-attribute rename --namespace my-namespace.my-account --existing-name OldField --new-name NewField
       ```
     has-init: false
     option-sets:
@@ -793,7 +793,7 @@ commands:
       Example:
 
       ```
-      cloud namespace export get --namespace my-namespace.my-account --sink-name my-sink
+      temporal cloud namespace export get --namespace my-namespace.my-account --sink-name my-sink
       ```
     has-init: false
     option-sets:
@@ -808,7 +808,7 @@ commands:
       Example:
 
       ```
-      cloud namespace export list --namespace my-namespace.my-account
+      temporal cloud namespace export list --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
@@ -822,7 +822,7 @@ commands:
       Example:
 
       ```
-      cloud namespace export delete --namespace my-namespace.my-account --sink-name my-sink
+      temporal cloud namespace export delete --namespace my-namespace.my-account --sink-name my-sink
       ```
     has-init: false
     option-sets:
@@ -839,7 +839,7 @@ commands:
       Example:
 
       ```
-      cloud namespace export enable --namespace my-namespace.my-account --sink-name my-sink
+      temporal cloud namespace export enable --namespace my-namespace.my-account --sink-name my-sink
       ```
     has-init: false
     option-sets:
@@ -857,7 +857,7 @@ commands:
       Example:
 
       ```
-      cloud namespace export disable --namespace my-namespace.my-account --sink-name my-sink
+      temporal cloud namespace export disable --namespace my-namespace.my-account --sink-name my-sink
       ```
     has-init: false
     option-sets:
@@ -880,7 +880,7 @@ commands:
       Example:
 
       ```
-      cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \
+      temporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \
         --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
         --region us-east-1 --aws-account-id 123456789012
       ```
@@ -900,7 +900,7 @@ commands:
       Example:
 
       ```
-      cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \
+      temporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \
         --role-name arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket \
         --region us-east-1 --aws-account-id 123456789012
       ```
@@ -921,7 +921,7 @@ commands:
       Example:
 
       ```
-      cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \
+      temporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \
         --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
         --region us-east-1 --aws-account-id 123456789012
       ```
@@ -945,7 +945,7 @@ commands:
       Example:
 
       ```
-      cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \
+      temporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \
         --sa-id my-service-account@my-project.iam.gserviceaccount.com \
         --bucket-name my-bucket --gcp-project-id my-project --region us-central1
       ```
@@ -965,7 +965,7 @@ commands:
       Example:
 
       ```
-      cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \
+      temporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \
         --sa-id my-service-account@my-project.iam.gserviceaccount.com \
         --bucket-name my-bucket --gcp-project-id my-project --region us-central1
       ```
@@ -986,7 +986,7 @@ commands:
       Example:
 
       ```
-      cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \
+      temporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \
         --sa-id my-service-account@my-project.iam.gserviceaccount.com \
         --bucket-name my-bucket --gcp-project-id my-project --region us-central1
       ```
@@ -1013,7 +1013,7 @@ commands:
       Example:
 
       ```
-      cloud namespace codec get --namespace my-namespace.my-account
+      temporal cloud namespace codec get --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
@@ -1027,7 +1027,7 @@ commands:
       Example:
 
       ```
-      cloud namespace codec set --namespace my-namespace.my-account --endpoint https://my-codec.example.com
+      temporal cloud namespace codec set --namespace my-namespace.my-account --endpoint https://my-codec.example.com
       ```
     has-init: false
     option-sets:
@@ -1065,7 +1065,7 @@ commands:
       Example:
 
       ```
-      cloud namespace codec delete --namespace my-namespace.my-account
+      temporal cloud namespace codec delete --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
@@ -1090,7 +1090,7 @@ commands:
       Example:
 
       ```
-      cloud namespace tag list --namespace my-namespace.my-account
+      temporal cloud namespace tag list --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
@@ -1105,7 +1105,7 @@ commands:
       Example:
 
       ```
-      cloud namespace tag create --namespace my-namespace.my-account --key environment --value production
+      temporal cloud namespace tag create --namespace my-namespace.my-account --key environment --value production
       ```
     has-init: false
     option-sets:
@@ -1132,7 +1132,7 @@ commands:
       Example:
 
       ```
-      cloud namespace tag update --namespace my-namespace.my-account --key environment --value staging
+      temporal cloud namespace tag update --namespace my-namespace.my-account --key environment --value staging
       ```
     has-init: false
     option-sets:
@@ -1158,7 +1158,7 @@ commands:
       Example:
 
       ```
-      cloud namespace tag delete --namespace my-namespace.my-account --key environment
+      temporal cloud namespace tag delete --namespace my-namespace.my-account --key environment
       ```
     has-init: false
     option-sets:
@@ -1189,7 +1189,7 @@ commands:
       Example:
 
       ```
-      cloud namespace ha get --namespace my-namespace.my-account
+      temporal cloud namespace ha get --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
@@ -1204,7 +1204,7 @@ commands:
       Example:
 
       ```
-      cloud namespace ha update --namespace my-namespace.my-account --disable-auto-failover true
+      temporal cloud namespace ha update --namespace my-namespace.my-account --disable-auto-failover true
       ```
     has-init: false
     option-sets:
@@ -1232,7 +1232,7 @@ commands:
       Example:
 
       ```
-      cloud namespace ha region list --namespace my-namespace.my-account
+      temporal cloud namespace ha region list --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
@@ -1247,7 +1247,7 @@ commands:
       Example:
 
       ```
-      cloud namespace ha region add --namespace my-namespace.my-account --region aws-us-west-2
+      temporal cloud namespace ha region add --namespace my-namespace.my-account --region aws-us-west-2
       ```
     has-init: false
     option-sets:
@@ -1270,7 +1270,7 @@ commands:
       Example:
 
       ```
-      cloud namespace ha region delete --namespace my-namespace.my-account --region aws-us-west-2
+      temporal cloud namespace ha region delete --namespace my-namespace.my-account --region aws-us-west-2
       ```
     has-init: false
     option-sets:
@@ -1293,7 +1293,7 @@ commands:
       Example:
 
       ```
-      cloud namespace ha failover --namespace my-namespace.my-account --region aws-us-west-2
+      temporal cloud namespace ha failover --namespace my-namespace.my-account --region aws-us-west-2
       ```
     has-init: false
     option-sets:
@@ -1372,7 +1372,7 @@ commands:
       Example:
 
       ```
-      cloud nexus endpoint create --name my-endpoint --target-namespace my-ns.my-account --target-task-queue my-tq
+      temporal cloud nexus endpoint create --name my-endpoint --target-namespace my-ns.my-account --target-task-queue my-tq
       ```
     has-init: false
     option-sets:
@@ -1436,7 +1436,7 @@ commands:
       Example:
 
       ```
-      cloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq
+      temporal cloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq
       ```
     has-init: false
     option-sets:
@@ -1583,13 +1583,13 @@ commands:
       Example with inline JSON:
 
       ```
-      cloud user-group apply --spec '{"display_name": "Engineering", "cloud_group": {}, "access": {"account_access": {"role": "developer"}}}'
+      temporal cloud user-group apply --spec '{"display_name": "Engineering", "cloud_group": {}, "access": {"account_access": {"role": "developer"}}}'
       ```
 
       Example with file path:
 
       ```
-      cloud user-group apply --spec @user-group-spec.json
+      temporal cloud user-group apply --spec @user-group-spec.json
       ```
     has-init: false
     option-sets:
@@ -1616,7 +1616,7 @@ commands:
       Example:
 
       ```
-      cloud user-group create-cloud-group --display-name "Engineering" \
+      temporal cloud user-group create-cloud-group --display-name "Engineering" \
         --account-role developer \
         --namespace-access my-namespace.my-account=write
       ```
@@ -1652,7 +1652,7 @@ commands:
       Example:
 
       ```
-      cloud user-group create-google-group --display-name "Platform" \
+      temporal cloud user-group create-google-group --display-name "Platform" \
         --google-group-email platform@example.com \
         --account-role developer
       ```
@@ -1693,7 +1693,7 @@ commands:
       Example:
 
       ```
-      cloud user-group create-scim-group --display-name "Security" \
+      temporal cloud user-group create-scim-group --display-name "Security" \
         --scim-idp-id idp-group-id-123 \
         --account-role read
       ```
@@ -1730,7 +1730,7 @@ commands:
       Example:
 
       ```
-      cloud user-group get --group-id my-group-id
+      temporal cloud user-group get --group-id my-group-id
       ```
     has-init: false
     option-sets:
@@ -1745,7 +1745,7 @@ commands:
       Example:
 
       ```
-      cloud user-group list
+      temporal cloud user-group list
       ```
     has-init: false
     option-sets:
@@ -1784,7 +1784,7 @@ commands:
       Example:
 
       ```
-      cloud user-group delete --group-id my-group-id
+      temporal cloud user-group delete --group-id my-group-id
       ```
     has-init: false
     option-sets:
@@ -1802,10 +1802,10 @@ commands:
       Example:
 
       ```
-      cloud user-group update --group-id my-group-id --account-role developer
-      cloud user-group update --group-id my-group-id \
+      temporal cloud user-group update --group-id my-group-id --account-role developer
+      temporal cloud user-group update --group-id my-group-id \
         --namespace-access my-namespace.my-account=write
-      cloud user-group update --group-id my-group-id --account-role admin \
+      temporal cloud user-group update --group-id my-group-id --account-role admin \
         --namespace-access my-namespace.my-account=write \
         --namespace-access other-namespace.my-account=read
       ```
@@ -1841,7 +1841,7 @@ commands:
       Example:
 
       ```
-      cloud user-group edit --group-id my-group-id
+      temporal cloud user-group edit --group-id my-group-id
       ```
     has-init: false
     option-sets:
@@ -1860,7 +1860,7 @@ commands:
       Example:
 
       ```
-      cloud user-group set-account-role --group-id my-group-id --account-role developer
+      temporal cloud user-group set-account-role --group-id my-group-id --account-role developer
       ```
     has-init: false
     option-sets:
@@ -1887,7 +1887,7 @@ commands:
       Example:
 
       ```
-      cloud user-group set-namespace-permissions --group-id my-group-id \
+      temporal cloud user-group set-namespace-permissions --group-id my-group-id \
         --namespace-access my-namespace.my-account=write \
         --namespace-access other-namespace.my-account=read
       ```
@@ -1922,7 +1922,7 @@ commands:
       Example:
 
       ```
-      cloud user-group members list --group-id my-group-id
+      temporal cloud user-group members list --group-id my-group-id
       ```
     has-init: false
     option-sets:
@@ -1948,8 +1948,8 @@ commands:
       Example:
 
       ```
-      cloud user-group members add --group-id my-group-id --user-id my-user-id
-      cloud user-group members add --group-id my-group-id --user-email alice@example.com
+      temporal cloud user-group members add --group-id my-group-id --user-id my-user-id
+      temporal cloud user-group members add --group-id my-group-id --user-email alice@example.com
       ```
     has-init: false
     option-sets:
@@ -1968,8 +1968,8 @@ commands:
       Example:
 
       ```
-      cloud user-group members remove --group-id my-group-id --user-id my-user-id
-      cloud user-group members remove --group-id my-group-id --user-email alice@example.com
+      temporal cloud user-group members remove --group-id my-group-id --user-id my-user-id
+      temporal cloud user-group members remove --group-id my-group-id --user-email alice@example.com
       ```
     has-init: false
     option-sets:
@@ -2000,7 +2000,7 @@ commands:
       Example:
 
       ```
-      cloud connectivity list --namespace my-namespace.my-account
+      temporal cloud connectivity list --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
@@ -2028,7 +2028,7 @@ commands:
       Example:
 
       ```
-      cloud connectivity get --id <connectivity-rule-id>
+      temporal cloud connectivity get --id <connectivity-rule-id>
       ```
     has-init: false
     options:
@@ -2048,7 +2048,7 @@ commands:
       Example:
 
       ```
-      cloud connectivity delete --id <connectivity-rule-id>
+      temporal cloud connectivity delete --id <connectivity-rule-id>
       ```
     has-init: false
     options:
@@ -2076,7 +2076,7 @@ commands:
       Example:
 
       ```
-      cloud connectivity public create
+      temporal cloud connectivity public create
       ```
     has-init: false
     option-sets:
@@ -2097,7 +2097,7 @@ commands:
       Example:
 
       ```
-      cloud connectivity private create --connection-id vpce-12345 --region aws-us-west-2
+      temporal cloud connectivity private create --connection-id vpce-12345 --region aws-us-west-2
       ```
     has-init: false
     option-sets:
@@ -2140,7 +2140,7 @@ commands:
       Example:
 
       ```
-      cloud user get --user-id my-user-id
+      temporal cloud user get --user-id my-user-id
       ```
     has-init: false
     option-sets:
@@ -2161,12 +2161,12 @@ commands:
 
       ```
       # Grant write access to my-namespace and read access to other-namespace:
-      cloud user set-namespace-permissions --user-id my-user-id \
+      temporal cloud user set-namespace-permissions --user-id my-user-id \
         --namespace-access my-namespace.my-account=write \
         --namespace-access other-namespace.my-account=read
 
       # Remove access to a namespace:
-      cloud user set-namespace-permissions --user-id my-user-id \
+      temporal cloud user set-namespace-permissions --user-id my-user-id \
         --namespace-access my-namespace.my-account=
       ```
     has-init: false
@@ -2196,8 +2196,8 @@ commands:
       Example:
 
       ```
-      cloud user set-account-role --user-id my-user-id --account-role developer
-      cloud user set-account-role --user-email alice@example.com --account-role admin
+      temporal cloud user set-account-role --user-id my-user-id --account-role developer
+      temporal cloud user set-account-role --user-email alice@example.com --account-role admin
       ```
     has-init: false
     option-sets:
@@ -2222,8 +2222,8 @@ commands:
       Example:
 
       ```
-      cloud user delete --user-id my-user-id
-      cloud user delete --user-email alice@example.com
+      temporal cloud user delete --user-id my-user-id
+      temporal cloud user delete --user-email alice@example.com
       ```
     has-init: false
     option-sets:
@@ -2246,8 +2246,8 @@ commands:
       Example:
 
       ```
-      cloud user edit --user-id my-user-id
-      cloud user edit --user-email alice@example.com
+      temporal cloud user edit --user-id my-user-id
+      temporal cloud user edit --user-email alice@example.com
       ```
     has-init: false
     option-sets:
@@ -2268,13 +2268,13 @@ commands:
       Example with inline JSON:
 
       ```
-      cloud user apply --spec '{"email": "alice@example.com", "access": {"account_access": {"role": "developer"}}}'
+      temporal cloud user apply --spec '{"email": "alice@example.com", "access": {"account_access": {"role": "developer"}}}'
       ```
 
       Example with file path:
 
       ```
-      cloud user apply --spec @user-spec.json
+      temporal cloud user apply --spec @user-spec.json
       ```
     has-init: false
     option-sets:
@@ -2301,7 +2301,7 @@ commands:
       Example:
 
       ```
-      cloud user invite --email alice@example.com --account-role developer \
+      temporal cloud user invite --email alice@example.com --account-role developer \
         --namespace-access my-namespace.my-account=write
       ```
     has-init: false
@@ -2333,7 +2333,7 @@ commands:
       Example:
 
       ```
-      cloud user list
+      temporal cloud user list
       ```
     has-init: false
     option-sets:
@@ -2355,6 +2355,245 @@ commands:
         type: string
         description: |
           Filter users by the namespace they have access to.
+
+  # Service account commands
+  - name: cloud service-account
+    summary: Manage Temporal Cloud service accounts
+    description: |
+      Commands for managing Temporal Cloud service accounts.
+    has-init: false
+    docs:
+      keywords:
+        - service-account
+        - management
+      description-header: Service Account Management Commands
+      tags:
+        - service-accounts
+
+  - name: cloud service-account list
+    summary: List service accounts
+    description: |
+      List all Temporal Cloud service accounts accessible with the current
+      authentication credentials.
+
+      Example:
+
+      ```
+      temporal cloud service-account list
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of service accounts to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
+
+  - name: cloud service-account delete
+    summary: Delete a service account
+    description: |
+      Delete a Temporal Cloud service account. This action is irreversible.
+
+      Example:
+
+      ```
+      temporal cloud service-account delete --service-account-id my-sa-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account to delete.
+
+  - name: cloud service-account create
+    summary: Create a service account
+    description: |
+      Create a new Temporal Cloud service account with account-level access.
+      Optionally assign an account role and namespace-level permissions.
+
+      Account roles: owner, admin, developer, finance-admin, read, metrics-read.
+      Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+
+      Example:
+
+      ```
+      temporal cloud service-account create --name my-sa --account-role developer \
+        --namespace-access my-namespace.my-account=write
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the service account. Must be unique across all active service accounts.
+      - name: description
+        type: string
+        description: |
+          An optional description for the service account.
+      - name: account-role
+        type: string
+        description: |
+          The account-level role to assign. Valid values: owner, admin, developer,
+          finance-admin, read, metrics-read.
+      - name: namespace-access
+        type: string[]
+        description: |
+          Namespace access to grant, in the format 'namespace=permission'.
+          Permission must be one of: admin, write, read. Can be repeated.
+
+  - name: cloud service-account create-namespace-scoped
+    summary: Create a namespace-scoped service account
+    description: |
+      Create a new Temporal Cloud service account scoped to a single namespace.
+
+      Example:
+
+      ```
+      temporal cloud service-account create-namespace-scoped --name my-sa \
+        --namespace my-namespace.my-account --namespace-permission write
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the service account. Must be unique across all active service accounts.
+      - name: description
+        type: string
+        description: |
+          An optional description for the service account.
+      - name: namespace
+        type: string
+        required: true
+        description: |
+          The namespace to scope the service account to.
+      - name: namespace-permission
+        type: string
+        required: true
+        description: |
+          The permission to grant on the namespace. Valid values: admin, write, read.
+
+  - name: cloud service-account update
+    summary: Update a service account
+    description: |
+      Update a Temporal Cloud service account. Only flags that are explicitly provided
+      are changed.
+
+      For account-scoped service accounts, use --account-role and/or --namespace-access.
+      For namespace-scoped service accounts, use --namespace-permission.
+
+      Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+      Use 'namespace=' (empty permission) to remove access to a namespace.
+
+      Example:
+
+      ```
+      temporal cloud service-account update --service-account-id my-sa-id --name new-name
+      temporal cloud service-account update --service-account-id my-sa-id --account-role admin
+      temporal cloud service-account update --service-account-id my-sa-id --namespace-permission write
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account to update.
+      - name: name
+        type: string
+        description: |
+          New name for the service account.
+      - name: description
+        type: string
+        description: |
+          New description for the service account.
+      - name: account-role
+        type: string
+        description: |
+          The account-level role to assign. Valid values: owner, admin, developer,
+          finance-admin, read, metrics-read. Only valid for account-scoped service accounts.
+      - name: namespace-access
+        type: string[]
+        description: |
+          Namespace access to set, in the format 'namespace=permission'. Use 'namespace='
+          to remove access. Permission must be one of: admin, write, read. Can be repeated.
+          Only valid for account-scoped service accounts.
+      - name: namespace-permission
+        type: string
+        description: |
+          The permission to grant on the scoped namespace. Valid values: admin, write, read.
+          Only valid for namespace-scoped service accounts.
+
+  - name: cloud service-account edit
+    summary: Interactively edit a service account
+    description: |
+      Open a service account configuration in your default editor for interactive
+      modification. After saving and closing the editor, the changes are applied
+      to Temporal Cloud.
+
+      The editor is determined by the EDITOR environment variable, falling
+      back to 'vi' if not set.
+
+      Example:
+
+      ```
+      temporal cloud service-account edit --service-account-id my-sa-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+      - async-operation
+      - resource-version
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account to edit.
+
+  - name: cloud service-account get
+    summary: Get service account details
+    description: |
+      Retrieve the configuration and status of a Temporal Cloud service account.
+
+      Example:
+
+      ```
+      temporal cloud service-account get --service-account-id my-sa-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account to retrieve.
 
   # Account commands
   - name: cloud account
@@ -2777,6 +3016,79 @@ commands:
         description: |
           The GCP project ID of the PubSub topic and service account.
 
+  # Account metrics commands
+  - name: cloud account metrics
+    summary: Manage account metrics configuration
+    description: |
+      Commands for managing the Temporal Cloud account metrics configuration.
+    has-init: false
+    docs:
+      keywords:
+        - account
+        - metrics
+      description-header: Account Metrics Commands
+      tags:
+        - account
+
+  - name: cloud account metrics cert-ca
+    summary: Manage CA certificates for metrics endpoint authentication
+    description: |
+      Commands for managing the CA certificates used to authenticate clients
+      accessing the Temporal Cloud account metrics endpoint.
+    has-init: false
+    docs:
+      keywords:
+        - account
+        - metrics
+        - certificate
+      description-header: Account Metrics CA Certificate Commands
+      tags:
+        - account
+
+  - name: cloud account metrics cert-ca create
+    summary: Add a CA certificate for metrics endpoint authentication
+    description: |
+      Add a CA certificate to the list of accepted client CA certificates for
+      the Temporal Cloud account metrics endpoint.
+
+      Example:
+        temporal cloud account metrics cert-ca create --ca-certificate-file /path/to/cert.pem
+        temporal cloud account metrics cert-ca create --ca-certificate <base64-encoded-cert>
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - ca-certificate
+
+  - name: cloud account metrics cert-ca delete
+    summary: Delete a CA certificate from metrics endpoint authentication
+    description: |
+      Remove a CA certificate from the list of accepted client CA certificates for
+      the Temporal Cloud account metrics endpoint.
+
+      Example:
+        temporal cloud account metrics cert-ca delete --ca-certificate-file /path/to/cert.pem
+        temporal cloud account metrics cert-ca delete --ca-certificate <base64-encoded-cert>
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - ca-certificate
+
+  - name: cloud account metrics cert-ca list
+    summary: List CA certificates for metrics endpoint authentication
+    description: |
+      List the CA certificates accepted for authenticating clients accessing
+      the Temporal Cloud account metrics endpoint.
+
+      Example:
+        temporal cloud account metrics cert-ca list
+    has-init: false
+    option-sets:
+      - client
+
   # API key commands
   - name: cloud apikey
     summary: Manage Temporal Cloud API keys
@@ -2803,9 +3115,9 @@ commands:
       Example:
 
       ```
-      cloud apikey list
-      cloud apikey list --user-id my-user-id
-      cloud apikey list --service-account-id my-sa-id
+      temporal cloud apikey list
+      temporal cloud apikey list --user-id my-user-id
+      temporal cloud apikey list --service-account-id my-sa-id
       ```
     has-init: false
     option-sets:
@@ -2840,7 +3152,7 @@ commands:
       Example:
 
       ```
-      cloud apikey get --key-id my-key-id
+      temporal cloud apikey get --key-id my-key-id
       ```
     has-init: false
     option-sets:
@@ -2861,7 +3173,7 @@ commands:
       Example:
 
       ```
-      cloud apikey create-for-service-account --service-account-id my-sa-id --display-name "My Key"
+      temporal cloud apikey create-for-service-account --service-account-id my-sa-id --display-name "My Key"
       ```
     has-init: false
     option-sets:
@@ -2903,7 +3215,7 @@ commands:
       Example:
 
       ```
-      cloud apikey create-for-me --display-name "My Key"
+      temporal cloud apikey create-for-me --display-name "My Key"
       ```
     has-init: false
     option-sets:
@@ -2939,7 +3251,7 @@ commands:
       Example:
 
       ```
-      cloud apikey delete --key-id my-key-id
+      temporal cloud apikey delete --key-id my-key-id
       ```
     has-init: false
     option-sets:
@@ -2962,8 +3274,8 @@ commands:
       Example:
 
       ```
-      cloud apikey update --key-id my-key-id --display-name "New Name"
-      cloud apikey update --key-id my-key-id --disabled=true
+      temporal cloud apikey update --key-id my-key-id --display-name "New Name"
+      temporal cloud apikey update --key-id my-key-id --disabled=true
       ```
     has-init: false
     option-sets:
@@ -3002,7 +3314,7 @@ commands:
       Example:
 
       ```
-      cloud apikey edit --key-id my-key-id
+      temporal cloud apikey edit --key-id my-key-id
       ```
     has-init: false
     option-sets:
@@ -3025,7 +3337,7 @@ commands:
       Example:
 
       ```
-      cloud apikey disable --key-id my-key-id
+      temporal cloud apikey disable --key-id my-key-id
       ```
     has-init: false
     option-sets:
@@ -3047,7 +3359,7 @@ commands:
       Example:
 
       ```
-      cloud apikey enable --key-id my-key-id
+      temporal cloud apikey enable --key-id my-key-id
       ```
     has-init: false
     option-sets:
@@ -3060,6 +3372,125 @@ commands:
         required: true
         description: |
           The ID of the API key to enable.
+
+  - name: cloud async-operation
+    summary: Manage async operations
+    description: |
+      Commands for working with Temporal Cloud async operations.
+    has-init: false
+    docs:
+      keywords:
+        - async-operation
+        - async
+        - operation
+      description-header: Async Operation Commands
+      tags:
+        - async-operations
+
+  - name: cloud async-operation get
+    summary: Get async operation details
+    description: |
+      Retrieve the status and details of a Temporal Cloud async operation.
+
+      Example:
+
+      ```
+      temporal cloud async-operation get --async-operation-id my-op-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: async-operation-id
+        type: string
+        required: true
+        description: |
+          The ID of the async operation to retrieve.
+
+  - name: cloud async-operation await
+    summary: Wait for an async operation to complete
+    description: |
+      Wait for a Temporal Cloud async operation to reach a terminal state.
+      Polls the operation status until it completes, fails, or is cancelled.
+
+      Example:
+
+      ```
+      temporal cloud async-operation await --async-operation-id my-op-id
+      ```
+    has-init: false
+    docs:
+      keywords:
+        - cloud
+        - async-operation
+        - await
+      description-header: Wait for async operation
+      tags:
+        - async-operations
+    option-sets:
+      - client
+    options:
+      - name: async-operation-id
+        type: string
+        required: true
+        description: |
+          The ID of the async operation to wait for.
+      - name: poll-interval
+        type: duration
+        default: 1s
+        description: |
+          Time to wait between status checks when waiting for operation completion.
+          Cannot be greater than 10 minutes.
+          Supports minutes (m) and seconds (s). Default is 1s.
+
+  # Region commands
+  - name: cloud region
+    summary: Manage Temporal Cloud regions
+    description: |
+      Commands for listing Temporal Cloud regions.
+    has-init: false
+    docs:
+      keywords:
+        - region
+        - cloud-provider
+      description-header: Region Commands
+      tags:
+        - region
+
+  - name: cloud region get
+    summary: Get a Temporal Cloud region
+    description: |
+      Get details for a specific Temporal Cloud region.
+
+      Example:
+
+      ```
+      temporal cloud region get --region aws-us-east-1
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: region
+        type: string
+        required: true
+        short: r
+        description: |
+          The ID of the region to get.
+
+  - name: cloud region list
+    summary: List available Temporal Cloud regions
+    description: |
+      List all available Temporal Cloud regions.
+
+      Example:
+
+      ```
+      temporal cloud region list
+      ```
+    has-init: false
+    option-sets:
+      - client
 
 option-sets:
   - name: client
