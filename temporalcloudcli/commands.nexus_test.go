@@ -899,6 +899,18 @@ func TestAddNexusEndpointAllowedNamespace(t *testing.T) {
 	}
 }
 
+func TestAddNexusEndpointAllowedNamespace_NoOp(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNexusEndpointAllowedNamespaceAddCommand{
+		Name:      "my-endpoint",
+		Namespace: []string{"caller-ns-1"},
+	}, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			expectGetEndpointWithPolicies(c)
+		},
+		ExpectedOutput: "No changes to apply: all specified namespaces are already allowed.\n",
+	})
+}
+
 func TestSetNexusEndpointAllowedNamespace(t *testing.T) {
 	tests := []struct {
 		name                    string
@@ -1106,4 +1118,16 @@ func TestRemoveNexusEndpointAllowedNamespace(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestRemoveNexusEndpointAllowedNamespace_NoOp(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNexusEndpointAllowedNamespaceRemoveCommand{
+		Name:      "my-endpoint",
+		Namespace: []string{"nonexistent-ns"},
+	}, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			expectGetEndpointWithPolicies(c)
+		},
+		ExpectedOutput: "No changes to apply: none of the specified namespaces are currently allowed.\n",
+	})
 }

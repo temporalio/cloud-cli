@@ -315,6 +315,11 @@ func (c *CloudNexusEndpointAllowedNamespaceAddCommand) run(cctx *CommandContext,
 		}
 	}
 
+	if proto.Equal(endpoint.Spec, newSpec) {
+		cctx.Printer.Println("No changes to apply: all specified namespaces are already allowed.")
+		return nil
+	}
+
 	yes, err := cctx.GetPrompter().PromptApply(endpoint.Spec, newSpec, false)
 	if err != nil {
 		return err
@@ -407,6 +412,11 @@ func (c *CloudNexusEndpointAllowedNamespaceRemoveCommand) run(cctx *CommandConte
 		}
 	}
 	newSpec.PolicySpecs = updatedPolicySpecs
+
+	if proto.Equal(endpoint.Spec, newSpec) {
+		cctx.Printer.Println("No changes to apply: none of the specified namespaces are currently allowed.")
+		return nil
+	}
 
 	yes, err := cctx.GetPrompter().PromptApply(endpoint.Spec, newSpec, false)
 	if err != nil {
