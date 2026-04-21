@@ -41,7 +41,7 @@ func TestGetNexusEndpoint(t *testing.T) {
 		expectedJsonOutput      any
 	}{
 		{
-			name: "SuccessEndpointFound",
+			name: "SuccessByName",
 			cmd:  temporalcloudcli.CloudNexusEndpointGetCommand{Name: "my-endpoint"},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
@@ -55,7 +55,21 @@ func TestGetNexusEndpoint(t *testing.T) {
 			expectedJsonOutput: testEndpoint,
 		},
 		{
-			name: "NotFound",
+			name: "SuccessById",
+			cmd:  temporalcloudcli.CloudNexusEndpointGetCommand{Id: "ep-123"},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNexusEndpoint(mock.Anything, &cloudservice.GetNexusEndpointRequest{
+						EndpointId: "ep-123",
+					}, mock.Anything).
+					Return(&cloudservice.GetNexusEndpointResponse{
+						Endpoint: testEndpoint,
+					}, nil)
+			},
+			expectedJsonOutput: testEndpoint,
+		},
+		{
+			name: "NotFoundByName",
 			cmd:  temporalcloudcli.CloudNexusEndpointGetCommand{Name: "missing"},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
@@ -67,7 +81,7 @@ func TestGetNexusEndpoint(t *testing.T) {
 			expectedErr: `endpoint "missing" not found`,
 		},
 		{
-			name: "APIError",
+			name: "APIErrorByName",
 			cmd:  temporalcloudcli.CloudNexusEndpointGetCommand{Name: "my-endpoint"},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
@@ -75,6 +89,16 @@ func TestGetNexusEndpoint(t *testing.T) {
 					Return(nil, errors.New("connection refused"))
 			},
 			expectedErr: "connection refused",
+		},
+		{
+			name: "APIErrorById",
+			cmd:  temporalcloudcli.CloudNexusEndpointGetCommand{Id: "ep-bad"},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNexusEndpoint(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("not found"))
+			},
+			expectedErr: "not found",
 		},
 	}
 	for _, tt := range tests {
@@ -87,6 +111,21 @@ func TestGetNexusEndpoint(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestGetNexusEndpoint_NeitherNameNorId(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNexusEndpointGetCommand{}, temporalcloudcli.TestCommandOptions{
+		ExpectedError: "either --name or --id is required",
+	})
+}
+
+func TestGetNexusEndpoint_BothNameAndId(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNexusEndpointGetCommand{
+		Name: "my-endpoint",
+		Id:   "ep-123",
+	}, temporalcloudcli.TestCommandOptions{
+		ExpectedError: "--name and --id are mutually exclusive",
+	})
 }
 
 // --- ListNexusEndpoints ---
@@ -860,6 +899,18 @@ func TestAddNexusEndpointAllowedNamespace(t *testing.T) {
 	}
 }
 
+func TestAddNexusEndpointAllowedNamespace_NoOp(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNexusEndpointAllowedNamespaceAddCommand{
+		Name:      "my-endpoint",
+		Namespace: []string{"caller-ns-1"},
+	}, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			expectGetEndpointWithPolicies(c)
+		},
+		ExpectedOutput: "No changes to apply: all specified namespaces are already allowed.\n",
+	})
+}
+
 func TestSetNexusEndpointAllowedNamespace(t *testing.T) {
 	tests := []struct {
 		name                    string
@@ -1067,4 +1118,16 @@ func TestRemoveNexusEndpointAllowedNamespace(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestRemoveNexusEndpointAllowedNamespace_NoOp(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNexusEndpointAllowedNamespaceRemoveCommand{
+		Name:      "my-endpoint",
+		Namespace: []string{"nonexistent-ns"},
+	}, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			expectGetEndpointWithPolicies(c)
+		},
+		ExpectedOutput: "No changes to apply: none of the specified namespaces are currently allowed.\n",
+	})
 }
