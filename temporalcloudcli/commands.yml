@@ -2622,8 +2622,8 @@ commands:
       tags:
         - account
 
-  - name: cloud account audit-log get
-    summary: Get audit logs
+  - name: cloud account audit-log list
+    summary: List audit logs
     description: |
       Returns a paginated list of audit logs for the account, optionally filtered by time range.
 

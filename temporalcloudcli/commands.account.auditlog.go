@@ -51,7 +51,7 @@ func GetAuditLogs(ctx context.Context, params GetAuditLogsParams) error {
 	)
 }
 
-func (c *CloudAccountAuditLogGetCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudAccountAuditLogListCommand) run(cctx *CommandContext, _ []string) error {
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
