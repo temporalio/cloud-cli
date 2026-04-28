@@ -76,7 +76,8 @@ func (s *SharedServerSuite) TestNamespaceCreate() {
 
 	gotSpec := getNsRes.Namespace.Spec
 	s.Suite.Equal(namespaceName, gotSpec.Name)
-	s.Suite.Equal([]string{"aws-us-east-1"}, gotSpec.Regions)
+	s.Suite.Require().Len(gotSpec.Replicas, 1)
+	s.Suite.Equal("aws-us-east-1", gotSpec.Replicas[0].Region)
 	s.Suite.Equal(int32(30), gotSpec.RetentionDays)
 	s.Suite.Require().NotNil(gotSpec.ApiKeyAuth)
 	s.Suite.True(gotSpec.ApiKeyAuth.Enabled)
@@ -98,7 +99,7 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 
 	namespaceSpec := &namespace.NamespaceSpec{
 		Name:          newNamespaceName,
-		Regions:       []string{"aws-us-east-1"},
+		Replicas:      []*namespace.ReplicaSpec{{Region: "aws-us-east-1"}},
 		RetentionDays: 30,
 		ApiKeyAuth: &namespace.ApiKeyAuthSpec{
 			Enabled: true,
@@ -156,7 +157,10 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 	s.Suite.Require().NotNil(readNamespace)
 	s.Suite.Require().NotNil(readNamespace.Spec)
 	s.Suite.Equal(namespaceSpec.Name, readNamespace.Spec.Name)
-	s.Suite.Equal(namespaceSpec.Regions, readNamespace.Spec.Regions)
+	s.Suite.Require().Len(readNamespace.Spec.Replicas, len(namespaceSpec.Replicas))
+	for i, replica := range namespaceSpec.Replicas {
+		s.Suite.Equal(replica.Region, readNamespace.Spec.Replicas[i].Region)
+	}
 	s.Suite.Equal(namespaceSpec.SearchAttributes, readNamespace.Spec.SearchAttributes)
 	s.Suite.Equal(namespaceSpec.RetentionDays, readNamespace.Spec.RetentionDays)
 
@@ -223,7 +227,10 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 	s.Suite.Require().NotNil(readNamespace)
 	s.Suite.Require().NotNil(readNamespace.Spec)
 	s.Suite.Equal(namespaceSpec.Name, readNamespace.Spec.Name)
-	s.Suite.Equal(namespaceSpec.Regions, readNamespace.Spec.Regions)
+	s.Suite.Require().Len(readNamespace.Spec.Replicas, len(namespaceSpec.Replicas))
+	for i, replica := range namespaceSpec.Replicas {
+		s.Suite.Equal(replica.Region, readNamespace.Spec.Replicas[i].Region)
+	}
 	s.Suite.Equal(namespaceSpec.SearchAttributes, readNamespace.Spec.SearchAttributes)
 	s.Suite.Equal(namespaceSpec.RetentionDays, readNamespace.Spec.RetentionDays)
 
