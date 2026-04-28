@@ -134,6 +134,53 @@ func TestUpdateHA_Success(t *testing.T) {
 	assert.Equal(t, expectedOp, op)
 }
 
+func TestUpdateHA_DisablePassivePollerForwarding(t *testing.T) {
+	ctx := context.Background()
+	mockCloud := nsmock.NewMockCloudService(t)
+
+	ns := &namespacev1.Namespace{
+		Namespace:       "test-namespace",
+		ResourceVersion: "v1",
+		Spec: &namespacev1.NamespaceSpec{
+			HighAvailability: &namespacev1.HighAvailabilitySpec{
+				DisablePassivePollerForwarding: false,
+			},
+		},
+	}
+
+	mockCloud.EXPECT().
+		GetNamespace(ctx, &cloudservice.GetNamespaceRequest{Namespace: "test-namespace"}).
+		Return(&cloudservice.GetNamespaceResponse{Namespace: ns}, nil)
+
+	expectedOp := &operationv1.AsyncOperation{Id: "test-op"}
+	mockCloud.EXPECT().
+		UpdateNamespace(ctx, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
+			expected := &cloudservice.UpdateNamespaceRequest{
+				Namespace:        "test-namespace",
+				ResourceVersion:  "v1",
+				AsyncOperationId: "test-op-id",
+				Spec: &namespacev1.NamespaceSpec{
+					HighAvailability: &namespacev1.HighAvailabilitySpec{
+						DisablePassivePollerForwarding: true,
+					},
+				},
+			}
+			return proto.Equal(expected, req)
+		})).
+		Return(&cloudservice.UpdateNamespaceResponse{AsyncOperation: expectedOp}, nil)
+
+	client := &namespace.Client{Cloud: mockCloud}
+
+	op, err := client.UpdateHA(ctx, namespace.UpdateHAParams{
+		Namespace:                      "test-namespace",
+		DisablePassivePollerForwarding: true,
+		AsyncOperationID:               "test-op-id",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, expectedOp, op)
+}
+
 func TestUpdateHA_CustomResourceVersion(t *testing.T) {
 	ctx := context.Background()
 	mockCloud := nsmock.NewMockCloudService(t)

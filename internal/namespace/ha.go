@@ -19,10 +19,11 @@ type RegionStatus struct {
 
 // UpdateHAParams contains parameters for updating HA configuration on a namespace.
 type UpdateHAParams struct {
-	Namespace           string
-	DisableAutoFailover bool
-	ResourceVersion     string
-	AsyncOperationID    string
+	Namespace                      string
+	DisableAutoFailover            bool
+	DisablePassivePollerForwarding bool
+	ResourceVersion                string
+	AsyncOperationID               string
 }
 
 // AddRegionParams contains parameters for adding a replica region to a namespace.
@@ -77,6 +78,7 @@ func (c *Client) UpdateHA(ctx context.Context, params UpdateHAParams) (*operatio
 		spec.HighAvailability = &namespacev1.HighAvailabilitySpec{}
 	}
 	spec.HighAvailability.DisableManagedFailover = params.DisableAutoFailover
+	spec.HighAvailability.DisablePassivePollerForwarding = params.DisablePassivePollerForwarding
 
 	resourceVersion := ns.ResourceVersion
 	if params.ResourceVersion != "" {

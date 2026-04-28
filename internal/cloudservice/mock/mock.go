@@ -371,6 +371,89 @@ func (_c *MockCloudServiceClient_CreateApiKey_Call) RunAndReturn(run func(ctx co
 	return _c
 }
 
+// CreateBillingReport provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) CreateBillingReport(ctx context.Context, in *cloudservice.CreateBillingReportRequest, opts ...grpc.CallOption) (*cloudservice.CreateBillingReportResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateBillingReport")
+	}
+
+	var r0 *cloudservice.CreateBillingReportResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.CreateBillingReportRequest, ...grpc.CallOption) (*cloudservice.CreateBillingReportResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.CreateBillingReportRequest, ...grpc.CallOption) *cloudservice.CreateBillingReportResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.CreateBillingReportResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.CreateBillingReportRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_CreateBillingReport_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateBillingReport'
+type MockCloudServiceClient_CreateBillingReport_Call struct {
+	*mock.Call
+}
+
+// CreateBillingReport is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.CreateBillingReportRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) CreateBillingReport(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_CreateBillingReport_Call {
+	return &MockCloudServiceClient_CreateBillingReport_Call{Call: _e.mock.On("CreateBillingReport",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_CreateBillingReport_Call) Run(run func(ctx context.Context, in *cloudservice.CreateBillingReportRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_CreateBillingReport_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.CreateBillingReportRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.CreateBillingReportRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_CreateBillingReport_Call) Return(createBillingReportResponse *cloudservice.CreateBillingReportResponse, err error) *MockCloudServiceClient_CreateBillingReport_Call {
+	_c.Call.Return(createBillingReportResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_CreateBillingReport_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.CreateBillingReportRequest, opts ...grpc.CallOption) (*cloudservice.CreateBillingReportResponse, error)) *MockCloudServiceClient_CreateBillingReport_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateConnectivityRule provides a mock function for the type MockCloudServiceClient
 func (_mock *MockCloudServiceClient) CreateConnectivityRule(ctx context.Context, in *cloudservice.CreateConnectivityRuleRequest, opts ...grpc.CallOption) (*cloudservice.CreateConnectivityRuleResponse, error) {
 	var tmpRet mock.Arguments
@@ -450,6 +533,89 @@ func (_c *MockCloudServiceClient_CreateConnectivityRule_Call) Return(createConne
 }
 
 func (_c *MockCloudServiceClient_CreateConnectivityRule_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.CreateConnectivityRuleRequest, opts ...grpc.CallOption) (*cloudservice.CreateConnectivityRuleResponse, error)) *MockCloudServiceClient_CreateConnectivityRule_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateCustomRole provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) CreateCustomRole(ctx context.Context, in *cloudservice.CreateCustomRoleRequest, opts ...grpc.CallOption) (*cloudservice.CreateCustomRoleResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateCustomRole")
+	}
+
+	var r0 *cloudservice.CreateCustomRoleResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.CreateCustomRoleRequest, ...grpc.CallOption) (*cloudservice.CreateCustomRoleResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.CreateCustomRoleRequest, ...grpc.CallOption) *cloudservice.CreateCustomRoleResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.CreateCustomRoleResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.CreateCustomRoleRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_CreateCustomRole_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateCustomRole'
+type MockCloudServiceClient_CreateCustomRole_Call struct {
+	*mock.Call
+}
+
+// CreateCustomRole is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.CreateCustomRoleRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) CreateCustomRole(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_CreateCustomRole_Call {
+	return &MockCloudServiceClient_CreateCustomRole_Call{Call: _e.mock.On("CreateCustomRole",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_CreateCustomRole_Call) Run(run func(ctx context.Context, in *cloudservice.CreateCustomRoleRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_CreateCustomRole_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.CreateCustomRoleRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.CreateCustomRoleRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_CreateCustomRole_Call) Return(createCustomRoleResponse *cloudservice.CreateCustomRoleResponse, err error) *MockCloudServiceClient_CreateCustomRole_Call {
+	_c.Call.Return(createCustomRoleResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_CreateCustomRole_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.CreateCustomRoleRequest, opts ...grpc.CallOption) (*cloudservice.CreateCustomRoleResponse, error)) *MockCloudServiceClient_CreateCustomRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1197,6 +1363,89 @@ func (_c *MockCloudServiceClient_DeleteConnectivityRule_Call) Return(deleteConne
 }
 
 func (_c *MockCloudServiceClient_DeleteConnectivityRule_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.DeleteConnectivityRuleRequest, opts ...grpc.CallOption) (*cloudservice.DeleteConnectivityRuleResponse, error)) *MockCloudServiceClient_DeleteConnectivityRule_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteCustomRole provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) DeleteCustomRole(ctx context.Context, in *cloudservice.DeleteCustomRoleRequest, opts ...grpc.CallOption) (*cloudservice.DeleteCustomRoleResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteCustomRole")
+	}
+
+	var r0 *cloudservice.DeleteCustomRoleResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.DeleteCustomRoleRequest, ...grpc.CallOption) (*cloudservice.DeleteCustomRoleResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.DeleteCustomRoleRequest, ...grpc.CallOption) *cloudservice.DeleteCustomRoleResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.DeleteCustomRoleResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.DeleteCustomRoleRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_DeleteCustomRole_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteCustomRole'
+type MockCloudServiceClient_DeleteCustomRole_Call struct {
+	*mock.Call
+}
+
+// DeleteCustomRole is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.DeleteCustomRoleRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) DeleteCustomRole(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_DeleteCustomRole_Call {
+	return &MockCloudServiceClient_DeleteCustomRole_Call{Call: _e.mock.On("DeleteCustomRole",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_DeleteCustomRole_Call) Run(run func(ctx context.Context, in *cloudservice.DeleteCustomRoleRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_DeleteCustomRole_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.DeleteCustomRoleRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.DeleteCustomRoleRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_DeleteCustomRole_Call) Return(deleteCustomRoleResponse *cloudservice.DeleteCustomRoleResponse, err error) *MockCloudServiceClient_DeleteCustomRole_Call {
+	_c.Call.Return(deleteCustomRoleResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_DeleteCustomRole_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.DeleteCustomRoleRequest, opts ...grpc.CallOption) (*cloudservice.DeleteCustomRoleResponse, error)) *MockCloudServiceClient_DeleteCustomRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2446,6 +2695,89 @@ func (_c *MockCloudServiceClient_GetAuditLogs_Call) RunAndReturn(run func(ctx co
 	return _c
 }
 
+// GetBillingReport provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) GetBillingReport(ctx context.Context, in *cloudservice.GetBillingReportRequest, opts ...grpc.CallOption) (*cloudservice.GetBillingReportResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetBillingReport")
+	}
+
+	var r0 *cloudservice.GetBillingReportResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetBillingReportRequest, ...grpc.CallOption) (*cloudservice.GetBillingReportResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetBillingReportRequest, ...grpc.CallOption) *cloudservice.GetBillingReportResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.GetBillingReportResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.GetBillingReportRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_GetBillingReport_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetBillingReport'
+type MockCloudServiceClient_GetBillingReport_Call struct {
+	*mock.Call
+}
+
+// GetBillingReport is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.GetBillingReportRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) GetBillingReport(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetBillingReport_Call {
+	return &MockCloudServiceClient_GetBillingReport_Call{Call: _e.mock.On("GetBillingReport",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_GetBillingReport_Call) Run(run func(ctx context.Context, in *cloudservice.GetBillingReportRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetBillingReport_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.GetBillingReportRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.GetBillingReportRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetBillingReport_Call) Return(getBillingReportResponse *cloudservice.GetBillingReportResponse, err error) *MockCloudServiceClient_GetBillingReport_Call {
+	_c.Call.Return(getBillingReportResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetBillingReport_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetBillingReportRequest, opts ...grpc.CallOption) (*cloudservice.GetBillingReportResponse, error)) *MockCloudServiceClient_GetBillingReport_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetConnectivityRule provides a mock function for the type MockCloudServiceClient
 func (_mock *MockCloudServiceClient) GetConnectivityRule(ctx context.Context, in *cloudservice.GetConnectivityRuleRequest, opts ...grpc.CallOption) (*cloudservice.GetConnectivityRuleResponse, error) {
 	var tmpRet mock.Arguments
@@ -2691,6 +3023,172 @@ func (_c *MockCloudServiceClient_GetCurrentIdentity_Call) Return(getCurrentIdent
 }
 
 func (_c *MockCloudServiceClient_GetCurrentIdentity_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetCurrentIdentityRequest, opts ...grpc.CallOption) (*cloudservice.GetCurrentIdentityResponse, error)) *MockCloudServiceClient_GetCurrentIdentity_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetCustomRole provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) GetCustomRole(ctx context.Context, in *cloudservice.GetCustomRoleRequest, opts ...grpc.CallOption) (*cloudservice.GetCustomRoleResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetCustomRole")
+	}
+
+	var r0 *cloudservice.GetCustomRoleResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetCustomRoleRequest, ...grpc.CallOption) (*cloudservice.GetCustomRoleResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetCustomRoleRequest, ...grpc.CallOption) *cloudservice.GetCustomRoleResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.GetCustomRoleResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.GetCustomRoleRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_GetCustomRole_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetCustomRole'
+type MockCloudServiceClient_GetCustomRole_Call struct {
+	*mock.Call
+}
+
+// GetCustomRole is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.GetCustomRoleRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) GetCustomRole(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetCustomRole_Call {
+	return &MockCloudServiceClient_GetCustomRole_Call{Call: _e.mock.On("GetCustomRole",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_GetCustomRole_Call) Run(run func(ctx context.Context, in *cloudservice.GetCustomRoleRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetCustomRole_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.GetCustomRoleRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.GetCustomRoleRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetCustomRole_Call) Return(getCustomRoleResponse *cloudservice.GetCustomRoleResponse, err error) *MockCloudServiceClient_GetCustomRole_Call {
+	_c.Call.Return(getCustomRoleResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetCustomRole_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetCustomRoleRequest, opts ...grpc.CallOption) (*cloudservice.GetCustomRoleResponse, error)) *MockCloudServiceClient_GetCustomRole_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetCustomRoles provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) GetCustomRoles(ctx context.Context, in *cloudservice.GetCustomRolesRequest, opts ...grpc.CallOption) (*cloudservice.GetCustomRolesResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetCustomRoles")
+	}
+
+	var r0 *cloudservice.GetCustomRolesResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetCustomRolesRequest, ...grpc.CallOption) (*cloudservice.GetCustomRolesResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetCustomRolesRequest, ...grpc.CallOption) *cloudservice.GetCustomRolesResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.GetCustomRolesResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.GetCustomRolesRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_GetCustomRoles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetCustomRoles'
+type MockCloudServiceClient_GetCustomRoles_Call struct {
+	*mock.Call
+}
+
+// GetCustomRoles is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.GetCustomRolesRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) GetCustomRoles(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetCustomRoles_Call {
+	return &MockCloudServiceClient_GetCustomRoles_Call{Call: _e.mock.On("GetCustomRoles",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_GetCustomRoles_Call) Run(run func(ctx context.Context, in *cloudservice.GetCustomRolesRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetCustomRoles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.GetCustomRolesRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.GetCustomRolesRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetCustomRoles_Call) Return(getCustomRolesResponse *cloudservice.GetCustomRolesResponse, err error) *MockCloudServiceClient_GetCustomRoles_Call {
+	_c.Call.Return(getCustomRolesResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetCustomRoles_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetCustomRolesRequest, opts ...grpc.CallOption) (*cloudservice.GetCustomRolesResponse, error)) *MockCloudServiceClient_GetCustomRoles_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -4766,6 +5264,89 @@ func (_c *MockCloudServiceClient_UpdateApiKey_Call) Return(updateApiKeyResponse 
 }
 
 func (_c *MockCloudServiceClient_UpdateApiKey_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.UpdateApiKeyRequest, opts ...grpc.CallOption) (*cloudservice.UpdateApiKeyResponse, error)) *MockCloudServiceClient_UpdateApiKey_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateCustomRole provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) UpdateCustomRole(ctx context.Context, in *cloudservice.UpdateCustomRoleRequest, opts ...grpc.CallOption) (*cloudservice.UpdateCustomRoleResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateCustomRole")
+	}
+
+	var r0 *cloudservice.UpdateCustomRoleResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.UpdateCustomRoleRequest, ...grpc.CallOption) (*cloudservice.UpdateCustomRoleResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.UpdateCustomRoleRequest, ...grpc.CallOption) *cloudservice.UpdateCustomRoleResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.UpdateCustomRoleResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.UpdateCustomRoleRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_UpdateCustomRole_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateCustomRole'
+type MockCloudServiceClient_UpdateCustomRole_Call struct {
+	*mock.Call
+}
+
+// UpdateCustomRole is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.UpdateCustomRoleRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) UpdateCustomRole(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_UpdateCustomRole_Call {
+	return &MockCloudServiceClient_UpdateCustomRole_Call{Call: _e.mock.On("UpdateCustomRole",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_UpdateCustomRole_Call) Run(run func(ctx context.Context, in *cloudservice.UpdateCustomRoleRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_UpdateCustomRole_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.UpdateCustomRoleRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.UpdateCustomRoleRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_UpdateCustomRole_Call) Return(updateCustomRoleResponse *cloudservice.UpdateCustomRoleResponse, err error) *MockCloudServiceClient_UpdateCustomRole_Call {
+	_c.Call.Return(updateCustomRoleResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_UpdateCustomRole_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.UpdateCustomRoleRequest, opts ...grpc.CallOption) (*cloudservice.UpdateCustomRoleResponse, error)) *MockCloudServiceClient_UpdateCustomRole_Call {
 	_c.Call.Return(run)
 	return _c
 }

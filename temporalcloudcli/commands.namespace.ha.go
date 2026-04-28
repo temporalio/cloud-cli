@@ -20,13 +20,15 @@ func (c *CloudNamespaceHaGetCommand) run(cctx *CommandContext, _ []string) error
 	}
 
 	result := struct {
-		Namespace              string
-		ActiveRegion           string
-		ManagedFailoverEnabled bool
+		Namespace                      string
+		ActiveRegion                   string
+		ManagedFailoverEnabled         bool
+		PassivePollerForwardingEnabled bool
 	}{
-		Namespace:              c.Namespace,
-		ActiveRegion:           ns.GetActiveRegion(),
-		ManagedFailoverEnabled: !ns.GetSpec().GetHighAvailability().GetDisableManagedFailover(),
+		Namespace:                      c.Namespace,
+		ActiveRegion:                   ns.GetActiveRegion(),
+		ManagedFailoverEnabled:         !ns.GetSpec().GetHighAvailability().GetDisableManagedFailover(),
+		PassivePollerForwardingEnabled: !ns.GetSpec().GetHighAvailability().GetDisablePassivePollerForwarding(),
 	}
 	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 }
@@ -39,10 +41,11 @@ func (c *CloudNamespaceHaUpdateCommand) run(cctx *CommandContext, _ []string) er
 
 	update := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, haClient.UpdateHA)
 	return update(namespace.UpdateHAParams{
-		Namespace:           c.Namespace,
-		DisableAutoFailover: c.DisableAutoFailover,
-		ResourceVersion:     c.ResourceVersion,
-		AsyncOperationID:    c.AsyncOperationId,
+		Namespace:                      c.Namespace,
+		DisableAutoFailover:            c.DisableAutoFailover,
+		DisablePassivePollerForwarding: c.DisablePassivePollerForwarding,
+		ResourceVersion:                c.ResourceVersion,
+		AsyncOperationID:               c.AsyncOperationId,
 	})
 }
 
