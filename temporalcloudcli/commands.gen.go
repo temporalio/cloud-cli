@@ -2636,9 +2636,9 @@ func NewCloudNamespaceHaGetCommand(cctx *CommandContext, parent *CloudNamespaceH
 	s.Command.Use = "get [flags]"
 	s.Command.Short = "Get High Availability configuration for a namespace"
 	if hasHighlighting {
-		s.Command.Long = "Retrieve the current High Availability configuration for a Temporal Cloud namespace.\nShows the active region, whether managed failover is enabled, and whether passive forwarding is enabled.\n\nExample:\n\n\x1b[1mtemporal cloud namespace ha get --namespace my-namespace.my-account\x1b[0m"
+		s.Command.Long = "Retrieve the current High Availability configuration for a Temporal Cloud namespace.\nShows the active region, whether managed failover is enabled, and whether passive poller forwarding is enabled.\n\nExample:\n\n\x1b[1mtemporal cloud namespace ha get --namespace my-namespace.my-account\x1b[0m"
 	} else {
-		s.Command.Long = "Retrieve the current High Availability configuration for a Temporal Cloud namespace.\nShows the active region, whether managed failover is enabled, and whether passive forwarding is enabled.\n\nExample:\n\n```\ntemporal cloud namespace ha get --namespace my-namespace.my-account\n```"
+		s.Command.Long = "Retrieve the current High Availability configuration for a Temporal Cloud namespace.\nShows the active region, whether managed failover is enabled, and whether passive poller forwarding is enabled.\n\nExample:\n\n```\ntemporal cloud namespace ha get --namespace my-namespace.my-account\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
