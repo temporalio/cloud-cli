@@ -2636,9 +2636,9 @@ func NewCloudNamespaceHaGetCommand(cctx *CommandContext, parent *CloudNamespaceH
 	s.Command.Use = "get [flags]"
 	s.Command.Short = "Get High Availability configuration for a namespace"
 	if hasHighlighting {
-		s.Command.Long = "Retrieve the current High Availability configuration for a Temporal Cloud namespace.\nShows the active region and whether managed failover is enabled.\n\nExample:\n\n\x1b[1mtemporal cloud namespace ha get --namespace my-namespace.my-account\x1b[0m"
+		s.Command.Long = "Retrieve the current High Availability configuration for a Temporal Cloud namespace.\nShows the active region, whether managed failover is enabled, and whether passive poller forwarding is enabled.\n\nExample:\n\n\x1b[1mtemporal cloud namespace ha get --namespace my-namespace.my-account\x1b[0m"
 	} else {
-		s.Command.Long = "Retrieve the current High Availability configuration for a Temporal Cloud namespace.\nShows the active region and whether managed failover is enabled.\n\nExample:\n\n```\ntemporal cloud namespace ha get --namespace my-namespace.my-account\n```"
+		s.Command.Long = "Retrieve the current High Availability configuration for a Temporal Cloud namespace.\nShows the active region, whether managed failover is enabled, and whether passive poller forwarding is enabled.\n\nExample:\n\n```\ntemporal cloud namespace ha get --namespace my-namespace.my-account\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -2777,7 +2777,8 @@ type CloudNamespaceHaUpdateCommand struct {
 	NamespaceOptions
 	AsyncOperationOptions
 	ResourceVersionOptions
-	DisableAutoFailover bool
+	DisableAutoFailover            bool
+	DisablePassivePollerForwarding bool
 }
 
 func NewCloudNamespaceHaUpdateCommand(cctx *CommandContext, parent *CloudNamespaceHaCommand) *CloudNamespaceHaUpdateCommand {
@@ -2787,13 +2788,13 @@ func NewCloudNamespaceHaUpdateCommand(cctx *CommandContext, parent *CloudNamespa
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update High Availability configuration for a namespace"
 	if hasHighlighting {
-		s.Command.Long = "Update the High Availability configuration for a Temporal Cloud namespace.\nUse --disable-auto-failover to toggle Temporal-managed automatic failover.\n\nExample:\n\n\x1b[1mtemporal cloud namespace ha update --namespace my-namespace.my-account --disable-auto-failover true\x1b[0m"
+		s.Command.Long = "Update the High Availability configuration for a Temporal Cloud namespace.\nUse --disable-auto-failover to toggle Temporal-managed automatic failover.\nUse --disable-passive-poller-forwarding to toggle passive poller forwarding.\n\nExample:\n\n\x1b[1mtemporal cloud namespace ha update --namespace my-namespace.my-account --disable-auto-failover true --disable-passive-poller-forwarding false\x1b[0m"
 	} else {
-		s.Command.Long = "Update the High Availability configuration for a Temporal Cloud namespace.\nUse --disable-auto-failover to toggle Temporal-managed automatic failover.\n\nExample:\n\n```\ntemporal cloud namespace ha update --namespace my-namespace.my-account --disable-auto-failover true\n```"
+		s.Command.Long = "Update the High Availability configuration for a Temporal Cloud namespace.\nUse --disable-auto-failover to toggle Temporal-managed automatic failover.\nUse --disable-passive-poller-forwarding to toggle passive poller forwarding.\n\nExample:\n\n```\ntemporal cloud namespace ha update --namespace my-namespace.my-account --disable-auto-failover true --disable-passive-poller-forwarding false\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().BoolVar(&s.DisableAutoFailover, "disable-auto-failover", false, "Set to true to disable Temporal-managed automatic failover for the namespace. Set to false to re-enable automatic failover. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "disable-auto-failover")
+	s.Command.Flags().BoolVar(&s.DisableAutoFailover, "disable-auto-failover", false, "Set to true to disable Temporal-managed automatic failover for the namespace. Set to false to re-enable automatic failover.")
+	s.Command.Flags().BoolVar(&s.DisablePassivePollerForwarding, "disable-passive-poller-forwarding", false, "Set to true to disable passive poller forwarding for the namespace. Set to false to re-enable passive poller forwarding.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
