@@ -520,7 +520,7 @@ func NewCloudAccountAuditLogSinkKinesisUpdateCommand(cctx *CommandContext, paren
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a Kinesis audit log sink"
-	s.Command.Long = "Update an existing Kinesis audit log sink. Only the flags you provide are changed;\nomitted string flags retain their current values. \n\nExample:\n  temporal cloud account audit-log sink kinesis update \\\n    --name my-sink \\\n    --role-name arn:aws:iam::123456789012:role/NewRole"
+	s.Command.Long = "Update an existing Kinesis audit log sink. Only the flags you provide are changed;\nomitted string flags retain their current values.\n\nExample:\n  temporal cloud account audit-log sink kinesis update \\\n    --name my-sink \\\n    --role-name arn:aws:iam::123456789012:role/NewRole"
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Name of the audit log sink to update. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
@@ -1502,7 +1502,7 @@ func NewCloudCustomRoleCommand(cctx *CommandContext, parent *CloudCommand) *Clou
 	s.Parent = parent
 	s.Command.Use = "custom-role"
 	s.Command.Short = "Manage Temporal Cloud custom roles"
-	s.Command.Long = "Commands for managing Temporal Cloud custom roles.\n\nCustom roles enable fine-grained authorization by binding sets of\npermissions (resource + actions) to a named role that can be assigned\nto user groups."
+	s.Command.Long = "Commands for managing Temporal Cloud custom roles.\n\nCustom roles enable fine-grained authorization by binding sets of\npermissions (resource + actions) to a named role that can be assigned\nto users, user groups, and service accounts."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudCustomRoleApplyCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudCustomRoleCreateCommand(cctx, &s).Command)
@@ -3858,7 +3858,7 @@ func NewCloudNexusEndpointListCommand(cctx *CommandContext, parent *CloudNexusEn
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "List Nexus Endpoints"
-	s.Command.Long = "List Nexus Endpoint configurations on the Cloud Account. "
+	s.Command.Long = "List Nexus Endpoint configurations on the Cloud Account."
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of endpoints to return per page. If no page size is provided, it will default to 100. A maximum of 1000 endpoints can be fetched at a time.")
 	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results. Initial value is empty string.")

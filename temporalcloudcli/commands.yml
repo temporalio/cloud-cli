@@ -79,7 +79,7 @@ commands:
         hidden: true
         default: http://127.0.0.1:56628/callback
         description: |
-          Redirect URL for OAuth authentication flow. 
+          Redirect URL for OAuth authentication flow.
       - name: reset
         type: bool
         description: |
@@ -136,7 +136,7 @@ commands:
         description: |
           Authentication domain for the OAuth provider.
         default: login.tmprl-test.cloud
-        
+
   # Namespace commands
   - name: cloud namespace
     summary: Manage Temporal Cloud namespaces
@@ -1319,7 +1319,7 @@ commands:
       description-header: Nexus Operations Management Commands
       tags:
         - nexus
-  
+
   - name: cloud nexus endpoint
     summary: Manage Temporal Cloud Nexus Endpoints
     description: |
@@ -1329,7 +1329,7 @@ commands:
   - name: cloud nexus endpoint list
     summary: List Nexus Endpoints
     description: |
-      List Nexus Endpoint configurations on the Cloud Account. 
+      List Nexus Endpoint configurations on the Cloud Account.
     has-init: false
     option-sets:
       - client
@@ -1986,7 +1986,7 @@ commands:
 
       Custom roles enable fine-grained authorization by binding sets of
       permissions (resource + actions) to a named role that can be assigned
-      to user groups.
+      to users, user groups, and service accounts.
     has-init: false
     docs:
       keywords:
@@ -2996,7 +2996,7 @@ commands:
     summary: Update a Kinesis audit log sink
     description: |
       Update an existing Kinesis audit log sink. Only the flags you provide are changed;
-      omitted string flags retain their current values. 
+      omitted string flags retain their current values.
 
       Example:
         temporal cloud account audit-log sink kinesis update \

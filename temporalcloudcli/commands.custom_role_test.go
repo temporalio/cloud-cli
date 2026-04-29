@@ -479,6 +479,26 @@ func TestApplyCustomRole_GetCustomRolesError(t *testing.T) {
 		})
 }
 
+func TestApplyCustomRole_DuplicateNameError(t *testing.T) {
+	dup := &identityv1.CustomRole{
+		Id:              "role-2",
+		ResourceVersion: "rv-2",
+		Spec:            &identityv1.CustomRoleSpec{Name: "reader"},
+	}
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudCustomRoleApplyCommand{Spec: testRoleSpecJSON},
+		temporalcloudcli.TestCommandOptions{
+			CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetCustomRoles(mock.Anything, &cloudservice.GetCustomRolesRequest{}, mock.Anything).
+					Return(&cloudservice.GetCustomRolesResponse{
+						CustomRoles: []*identityv1.CustomRole{testRole, dup},
+					}, nil)
+			},
+			JSONOutput:    true,
+			ExpectedError: `multiple custom roles found with name "reader"`,
+		})
+}
+
 // ---- EditCustomRole ----
 
 func TestEditCustomRole(t *testing.T) {

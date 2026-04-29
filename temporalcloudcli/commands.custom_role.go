@@ -221,11 +221,14 @@ func parseCustomRoleSpec(cctx *CommandContext, raw string) (*identityv1.CustomRo
 
 // AIDEV-NOTE: GetCustomRoles has no name filter; we page client-side.
 // Roles per account are typically small (tens), so paging is fine.
+// Names are not unique server-side, so we scan every page and error on
+// duplicates rather than silently picking one.
 func findCustomRoleByName(
 	cctx *CommandContext,
 	client cloudservice.CloudServiceClient,
 	name string,
 ) (*identityv1.CustomRole, error) {
+	var match *identityv1.CustomRole
 	var pageToken string
 	for {
 		res, err := client.GetCustomRoles(cctx, &cloudservice.GetCustomRolesRequest{PageToken: pageToken})
@@ -233,12 +236,16 @@ func findCustomRoleByName(
 			return nil, err
 		}
 		for _, r := range res.CustomRoles {
-			if r.Spec != nil && r.Spec.Name == name {
-				return r, nil
+			if r.Spec == nil || r.Spec.Name != name {
+				continue
 			}
+			if match != nil {
+				return nil, fmt.Errorf("multiple custom roles found with name %q (ids: %s, %s); use update with --role-id to disambiguate", name, match.Id, r.Id)
+			}
+			match = r
 		}
 		if res.NextPageToken == "" {
-			return nil, nil
+			return match, nil
 		}
 		pageToken = res.NextPageToken
 	}
