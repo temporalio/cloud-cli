@@ -48,6 +48,12 @@ func (c *CloudServiceAccountCreateCommand) run(cctx *CommandContext, _ []string)
 	if err != nil {
 		return err
 	}
+	if c.Command.Flags().Changed("custom-role") {
+		if accountAccess == nil {
+			return errors.New("--custom-role requires --account-role; a principal must have a built-in role")
+		}
+		accountAccess.CustomRoles = dedupeStrings(c.CustomRole)
+	}
 	yes, err := cctx.GetPrompter().PromptYes("Create")
 	if err != nil {
 		return err
@@ -108,6 +114,8 @@ func (c *CloudServiceAccountUpdateCommand) run(cctx *CommandContext, _ []string)
 	accountRoleChanged := c.Command.Flags().Changed("account-role")
 	namespaceAccessChanged := c.Command.Flags().Changed("namespace-access")
 	namespacePermissionChanged := c.Command.Flags().Changed("namespace-permission")
+	customRoleChanged := c.Command.Flags().Changed("custom-role")
+	clearCustomRolesChanged := c.Command.Flags().Changed("clear-custom-roles")
 
 	if accountRoleChanged {
 		if _, ok := accountRoleNames[c.AccountRole]; !ok {
@@ -124,6 +132,9 @@ func (c *CloudServiceAccountUpdateCommand) run(cctx *CommandContext, _ []string)
 			return fmt.Errorf("invalid namespace permission %q: must be one of admin, write, read", c.NamespacePermission)
 		}
 	}
+	if _, err := applyCustomRoleChanges(nil, c.CustomRole, customRoleChanged, clearCustomRolesChanged); err != nil {
+		return err
+	}
 
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
@@ -138,8 +149,8 @@ func (c *CloudServiceAccountUpdateCommand) run(cctx *CommandContext, _ []string)
 
 	isNamespaceScoped := newSpec.NamespaceScopedAccess != nil
 
-	if isNamespaceScoped && (accountRoleChanged || namespaceAccessChanged) {
-		return errors.New("--account-role and --namespace-access are not valid for namespace-scoped service accounts")
+	if isNamespaceScoped && (accountRoleChanged || namespaceAccessChanged || customRoleChanged || clearCustomRolesChanged) {
+		return errors.New("--account-role, --namespace-access, --custom-role, and --clear-custom-roles are not valid for namespace-scoped service accounts")
 	}
 	if !isNamespaceScoped && namespacePermissionChanged {
 		return errors.New("--namespace-permission is not valid for account-scoped service accounts")
@@ -155,13 +166,30 @@ func (c *CloudServiceAccountUpdateCommand) run(cctx *CommandContext, _ []string)
 		if newSpec.Access == nil {
 			newSpec.Access = &identityv1.Access{}
 		}
-		newSpec.Access.AccountAccess = &identityv1.AccountAccess{Role: accountRoleNames[c.AccountRole]}
+		// Preserve existing CustomRoles when overwriting AccountAccess.
+		newAccountAccess := &identityv1.AccountAccess{Role: accountRoleNames[c.AccountRole]}
+		if newSpec.Access.AccountAccess != nil {
+			newAccountAccess.CustomRoles = newSpec.Access.AccountAccess.CustomRoles
+		}
+		newSpec.Access.AccountAccess = newAccountAccess
 	}
 	if namespaceAccessChanged {
 		if newSpec.Access == nil {
 			newSpec.Access = &identityv1.Access{}
 		}
 		newSpec.Access.NamespaceAccesses, err = applyNamespaceAccessChanges(newSpec.Access.NamespaceAccesses, c.NamespaceAccess)
+		if err != nil {
+			return err
+		}
+	}
+	if customRoleChanged || clearCustomRolesChanged {
+		if newSpec.Access == nil || newSpec.Access.AccountAccess == nil {
+			return errors.New("service account has no account access; assign a built-in role with --account-role first")
+		}
+		newSpec.Access.AccountAccess.CustomRoles, err = applyCustomRoleChanges(
+			newSpec.Access.AccountAccess.CustomRoles,
+			c.CustomRole, customRoleChanged, clearCustomRolesChanged,
+		)
 		if err != nil {
 			return err
 		}
@@ -270,4 +298,58 @@ func (c *CloudServiceAccountListCommand) run(cctx *CommandContext, _ []string) e
 		},
 		printer.TableOptions{},
 	)
+}
+
+func (c *CloudServiceAccountSetCustomRolesCommand) run(cctx *CommandContext, _ []string) error {
+	customRoleProvided := c.Command.Flags().Changed("custom-role")
+	clearProvided := c.Command.Flags().Changed("clear-custom-roles")
+	if !customRoleProvided && !clearProvided {
+		return errors.New("must provide --custom-role or --clear-custom-roles")
+	}
+	if _, err := applyCustomRoleChanges(nil, c.CustomRole, customRoleProvided, clearProvided); err != nil {
+		return err
+	}
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	res, err := client.GetServiceAccount(cctx, &cloudservice.GetServiceAccountRequest{ServiceAccountId: c.ServiceAccountId})
+	if err != nil {
+		return err
+	}
+	sa := res.ServiceAccount
+	if sa.Spec.NamespaceScopedAccess != nil {
+		return errors.New("--custom-role and --clear-custom-roles are not valid for namespace-scoped service accounts")
+	}
+	newSpec := proto.Clone(sa.Spec).(*identityv1.ServiceAccountSpec)
+	if newSpec.Access == nil || newSpec.Access.AccountAccess == nil {
+		return errors.New("service account has no account access; assign a built-in role with --account-role first")
+	}
+	roles, err := applyCustomRoleChanges(
+		newSpec.Access.AccountAccess.CustomRoles,
+		c.CustomRole, customRoleProvided, clearProvided,
+	)
+	if err != nil {
+		return err
+	}
+	newSpec.Access.AccountAccess.CustomRoles = roles
+
+	yes, err := cctx.GetPrompter().PromptApply(sa.Spec, newSpec, false)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting set.")
+	}
+	rv := sa.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.UpdateServiceAccount(cctx, &cloudservice.UpdateServiceAccountRequest{
+		ServiceAccountId: c.ServiceAccountId,
+		Spec:             newSpec,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }

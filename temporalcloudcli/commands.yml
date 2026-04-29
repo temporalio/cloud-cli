@@ -1624,6 +1624,7 @@ commands:
     option-sets:
       - client
       - async-operation
+      - custom-role
     options:
       - name: display-name
         type: string
@@ -1660,6 +1661,7 @@ commands:
     option-sets:
       - client
       - async-operation
+      - custom-role
     options:
       - name: display-name
         type: string
@@ -1701,6 +1703,7 @@ commands:
     option-sets:
       - client
       - async-operation
+      - custom-role
     options:
       - name: display-name
         type: string
@@ -1797,7 +1800,8 @@ commands:
     description: |
       Update an existing Temporal Cloud user group's access settings.
 
-      Provide at least one of --account-role or --namespace-access.
+      Provide at least one of --account-role, --namespace-access,
+      --custom-role, or --clear-custom-roles.
 
       Example:
 
@@ -1815,6 +1819,7 @@ commands:
       - group-id
       - async-operation
       - resource-version
+      - custom-role
     options:
       - name: account-role
         type: string
@@ -1875,6 +1880,26 @@ commands:
         description: |
           The account-level role to assign. Valid values: owner, admin, developer,
           finance-admin, read, metrics-read.
+  - name: cloud user-group set-custom-roles
+    summary: Set custom role assignments for a user group
+    description: |
+      Set the custom roles assigned to a Temporal Cloud user group. Replaces
+      the group's current custom role list. Use --clear-custom-roles to remove
+      all custom roles.
+
+      Example:
+
+      ```
+      temporal cloud user-group set-custom-roles --group-id my-group-id \
+        --custom-role role-id-1 --custom-role role-id-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - group-id
+      - async-operation
+      - resource-version
+      - custom-role
   - name: cloud user-group set-namespace-permissions
     summary: Set namespace permissions for a user group
     description: |
@@ -2388,6 +2413,28 @@ commands:
         description: |
           The account-level role to assign. Valid values: owner, admin, developer,
           finance-admin, read, metrics-read.
+  - name: cloud user set-custom-roles
+    summary: Set custom role assignments for a user
+    description: |
+      Set the custom roles assigned to a Temporal Cloud user. Replaces the
+      user's current custom role list. Use --clear-custom-roles to remove all
+      custom roles.
+
+      Specify the user with either --user-id or --user-email (not both).
+
+      Example:
+
+      ```
+      temporal cloud user set-custom-roles --user-email alice@example.com \
+        --custom-role role-id-1 --custom-role role-id-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - user-identification
+      - custom-role
   - name: cloud user delete
     summary: Delete a Temporal Cloud user
     description: |
@@ -2484,6 +2531,7 @@ commands:
     option-sets:
       - client
       - async-operation
+      - custom-role
     options:
       - name: email
         type: string
@@ -2611,6 +2659,7 @@ commands:
     option-sets:
       - client
       - async-operation
+      - custom-role
     options:
       - name: name
         type: string
@@ -2692,6 +2741,7 @@ commands:
       - client
       - async-operation
       - resource-version
+      - custom-role
     options:
       - name: service-account-id
         type: string
@@ -2722,6 +2772,34 @@ commands:
         description: |
           The permission to grant on the scoped namespace. Valid values: admin, write, read.
           Only valid for namespace-scoped service accounts.
+
+  - name: cloud service-account set-custom-roles
+    summary: Set custom role assignments for a service account
+    description: |
+      Set the custom roles assigned to a Temporal Cloud service account.
+      Replaces the service account's current custom role list. Use
+      --clear-custom-roles to remove all custom roles.
+
+      Not valid for namespace-scoped service accounts.
+
+      Example:
+
+      ```
+      temporal cloud service-account set-custom-roles --service-account-id my-sa-id \
+        --custom-role role-id-1 --custom-role role-id-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - custom-role
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account.
 
   - name: cloud service-account edit
     summary: Interactively edit a service account
@@ -3794,6 +3872,17 @@ option-sets:
         required: true
         description: |
           The ID of the custom role.
+  - name: custom-role
+    options:
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple. When provided,
+          replaces the existing custom role list.
+      - name: clear-custom-roles
+        type: bool
+        description: |
+          Remove all custom role assignments. Mutually exclusive with --custom-role.
   - name: export-sink
     options:
       - name: sink-name

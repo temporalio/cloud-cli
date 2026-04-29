@@ -87,6 +87,13 @@ func (c *CloudUserInviteCommand) run(cctx *CommandContext, _ []string) error {
 	if err != nil {
 		return err
 	}
+	customRoleProvided := c.Command.Flags().Changed("custom-role")
+	if customRoleProvided {
+		if accountAccess == nil {
+			return errors.New("--custom-role requires --account-role; a principal must have a built-in role")
+		}
+		accountAccess.CustomRoles = dedupeStrings(c.CustomRole)
+	}
 	yes, err := cctx.GetPrompter().PromptYes("Invite")
 	if err != nil {
 		return err
@@ -207,6 +214,9 @@ func (c *CloudUserSetAccountRoleCommand) run(cctx *CommandContext, _ []string) e
 	newSpec := proto.Clone(user.Spec).(*identityv1.UserSpec)
 	if newSpec.Access == nil {
 		newSpec.Access = &identityv1.Access{}
+	}
+	if newSpec.Access.AccountAccess != nil {
+		accountAccess.CustomRoles = newSpec.Access.AccountAccess.CustomRoles
 	}
 	newSpec.Access.AccountAccess = accountAccess
 
@@ -376,6 +386,50 @@ func parseNamespaceAccesses(accesses []string) (map[string]*identityv1.Namespace
 	return result, nil
 }
 
+// applyCustomRoleChanges returns the new CustomRoles slice given the existing
+// list and flag values. When neither --custom-role nor --clear-custom-roles
+// is set, the existing list is returned unchanged. When --custom-role is set,
+// the list is replaced (de-duplicated). When --clear-custom-roles is set, the
+// list is cleared.
+//
+// AIDEV-NOTE: customRoleProvided / clearProvided come from
+// cobra.Command.Flags().Changed(...) so the caller can distinguish "leave
+// untouched" (no flag) from "clear" (--clear-custom-roles).
+func applyCustomRoleChanges(
+	existing []string,
+	customRoles []string,
+	customRoleProvided bool,
+	clearProvided bool,
+) ([]string, error) {
+	if customRoleProvided && clearProvided {
+		return nil, errors.New("--custom-role and --clear-custom-roles are mutually exclusive")
+	}
+	if clearProvided {
+		return nil, nil
+	}
+	if !customRoleProvided {
+		return existing, nil
+	}
+	return dedupeStrings(customRoles), nil
+}
+
+// dedupeStrings preserves first-occurrence order so test output is deterministic.
+func dedupeStrings(in []string) []string {
+	if len(in) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(in))
+	out := make([]string, 0, len(in))
+	for _, s := range in {
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out
+}
+
 // applyNamespaceAccessChanges merges a set of namespace access changes into an existing map.
 // Each change is in "namespace=permission" format. An empty permission (e.g. "testns=") removes
 // that namespace; a non-empty permission adds or overwrites it. Returns nil when the result is empty.
@@ -403,6 +457,59 @@ func applyNamespaceAccessChanges(existing map[string]*identityv1.NamespaceAccess
 		return nil, nil
 	}
 	return result, nil
+}
+
+func (c *CloudUserSetCustomRolesCommand) run(cctx *CommandContext, _ []string) error {
+	if err := validateUserIdentification(c.UserIdentificationOptions); err != nil {
+		return err
+	}
+	customRoleProvided := c.Command.Flags().Changed("custom-role")
+	clearProvided := c.Command.Flags().Changed("clear-custom-roles")
+	if !customRoleProvided && !clearProvided {
+		return errors.New("must provide --custom-role or --clear-custom-roles")
+	}
+	if _, err := applyCustomRoleChanges(nil, c.CustomRole, customRoleProvided, clearProvided); err != nil {
+		return err
+	}
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	user, err := resolveUser(cctx, client, c.UserIdentificationOptions)
+	if err != nil {
+		return err
+	}
+	newSpec := proto.Clone(user.Spec).(*identityv1.UserSpec)
+	if newSpec.Access == nil || newSpec.Access.AccountAccess == nil {
+		return errors.New("user has no account access; assign a built-in role with set-account-role first")
+	}
+	roles, err := applyCustomRoleChanges(
+		newSpec.Access.AccountAccess.CustomRoles,
+		c.CustomRole, customRoleProvided, clearProvided,
+	)
+	if err != nil {
+		return err
+	}
+	newSpec.Access.AccountAccess.CustomRoles = roles
+
+	yes, err := cctx.GetPrompter().PromptApply(user.Spec, newSpec, false)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting set.")
+	}
+	rv := user.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.UpdateUser(cctx, &cloudservice.UpdateUserRequest{
+		UserId:           user.Id,
+		Spec:             newSpec,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }
 
 func validateUserIdentification(identification UserIdentificationOptions) error {
