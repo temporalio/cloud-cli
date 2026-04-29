@@ -138,6 +138,17 @@ func (v *GroupIdOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "group-id")
 }
 
+type RoleIdOptions struct {
+	RoleId  string
+	FlagSet *pflag.FlagSet
+}
+
+func (v *RoleIdOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.RoleId, "role-id", "", "The ID of the custom role. Required.")
+	_ = cobra.MarkFlagRequired(f, "role-id")
+}
+
 type ExportSinkOptions struct {
 	SinkName string
 	FlagSet  *pflag.FlagSet
@@ -214,6 +225,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.Command.AddCommand(&NewCloudApikeyCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudAsyncOperationCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudConnectivityCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudCustomRoleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLoginCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLogoutCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCommand(cctx, &s).Command)
@@ -1472,6 +1484,260 @@ func NewCloudConnectivityPublicCreateCommand(cctx *CommandContext, parent *Cloud
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudCustomRoleCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+}
+
+func NewCloudCustomRoleCommand(cctx *CommandContext, parent *CloudCommand) *CloudCustomRoleCommand {
+	var s CloudCustomRoleCommand
+	s.Parent = parent
+	s.Command.Use = "custom-role"
+	s.Command.Short = "Manage Temporal Cloud custom roles"
+	s.Command.Long = "Commands for managing Temporal Cloud custom roles.\n\nCustom roles enable fine-grained authorization by binding sets of\npermissions (resource + actions) to a named role that can be assigned\nto user groups."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudCustomRoleApplyCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudCustomRoleCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudCustomRoleDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudCustomRoleEditCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudCustomRoleGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudCustomRoleListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudCustomRoleUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudCustomRoleApplyCommand struct {
+	Parent  *CloudCustomRoleCommand
+	Command cobra.Command
+	ClientOptions
+	DiffOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Spec string
+}
+
+func NewCloudCustomRoleApplyCommand(cctx *CommandContext, parent *CloudCustomRoleCommand) *CloudCustomRoleApplyCommand {
+	var s CloudCustomRoleApplyCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "apply [flags]"
+	s.Command.Short = "Create or update a custom role from a specification"
+	if hasHighlighting {
+		s.Command.Long = "Apply a custom role configuration to Temporal Cloud. Creates a new role\nif no role with the given name exists, or updates the existing one to\nmatch the specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role apply --spec @custom-role.json\x1b[0m"
+	} else {
+		s.Command.Long = "Apply a custom role configuration to Temporal Cloud. Creates a new role\nif no role with the given name exists, or updates the existing one to\nmatch the specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample:\n\n```\ntemporal cloud custom-role apply --spec @custom-role.json\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Spec, "spec", "", "Custom role specification in JSON format. Provide inline JSON directly, or use '@path/to/file.json' to load from a file. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "spec")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudCustomRoleCreateCommand struct {
+	Parent  *CloudCustomRoleCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	Spec string
+}
+
+func NewCloudCustomRoleCreateCommand(cctx *CommandContext, parent *CloudCustomRoleCommand) *CloudCustomRoleCreateCommand {
+	var s CloudCustomRoleCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a Temporal Cloud custom role"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Temporal Cloud custom role from a JSON specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample with inline JSON:\n\n\x1b[1mtemporal cloud custom-role create --spec '{\"name\":\"reader\",\"description\":\"...\",\"permissions\":[...]}'\x1b[0m\n\nExample with file path:\n\n\x1b[1mtemporal cloud custom-role create --spec @custom-role.json\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new Temporal Cloud custom role from a JSON specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample with inline JSON:\n\n```\ntemporal cloud custom-role create --spec '{\"name\":\"reader\",\"description\":\"...\",\"permissions\":[...]}'\n```\n\nExample with file path:\n\n```\ntemporal cloud custom-role create --spec @custom-role.json\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Spec, "spec", "", "Custom role specification in JSON format. Provide inline JSON directly, or use '@path/to/file.json' to load from a file. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "spec")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudCustomRoleDeleteCommand struct {
+	Parent  *CloudCustomRoleCommand
+	Command cobra.Command
+	ClientOptions
+	RoleIdOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+}
+
+func NewCloudCustomRoleDeleteCommand(cctx *CommandContext, parent *CloudCustomRoleCommand) *CloudCustomRoleDeleteCommand {
+	var s CloudCustomRoleDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a Temporal Cloud custom role"
+	if hasHighlighting {
+		s.Command.Long = "Delete a Temporal Cloud custom role. This action is irreversible.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role delete --role-id my-role-id\x1b[0m"
+	} else {
+		s.Command.Long = "Delete a Temporal Cloud custom role. This action is irreversible.\n\nExample:\n\n```\ntemporal cloud custom-role delete --role-id my-role-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.RoleIdOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudCustomRoleEditCommand struct {
+	Parent  *CloudCustomRoleCommand
+	Command cobra.Command
+	ClientOptions
+	DiffOptions
+	RoleIdOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+}
+
+func NewCloudCustomRoleEditCommand(cctx *CommandContext, parent *CloudCustomRoleCommand) *CloudCustomRoleEditCommand {
+	var s CloudCustomRoleEditCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "edit [flags]"
+	s.Command.Short = "Interactively edit a custom role configuration"
+	if hasHighlighting {
+		s.Command.Long = "Open a custom role configuration in your default editor for interactive\nmodification. After saving and closing the editor, the changes are\napplied to Temporal Cloud.\n\nThe editor is determined by the EDITOR environment variable, falling\nback to 'vi' if not set.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role edit --role-id my-role-id\x1b[0m"
+	} else {
+		s.Command.Long = "Open a custom role configuration in your default editor for interactive\nmodification. After saving and closing the editor, the changes are\napplied to Temporal Cloud.\n\nThe editor is determined by the EDITOR environment variable, falling\nback to 'vi' if not set.\n\nExample:\n\n```\ntemporal cloud custom-role edit --role-id my-role-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.RoleIdOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudCustomRoleGetCommand struct {
+	Parent  *CloudCustomRoleCommand
+	Command cobra.Command
+	ClientOptions
+	RoleIdOptions
+}
+
+func NewCloudCustomRoleGetCommand(cctx *CommandContext, parent *CloudCustomRoleCommand) *CloudCustomRoleGetCommand {
+	var s CloudCustomRoleGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Retrieve custom role details"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the configuration and status of a Temporal Cloud custom role.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role get --role-id my-role-id\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the configuration and status of a Temporal Cloud custom role.\n\nExample:\n\n```\ntemporal cloud custom-role get --role-id my-role-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.RoleIdOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudCustomRoleListCommand struct {
+	Parent  *CloudCustomRoleCommand
+	Command cobra.Command
+	ClientOptions
+	PageSize  int
+	PageToken string
+}
+
+func NewCloudCustomRoleListCommand(cctx *CommandContext, parent *CloudCustomRoleCommand) *CloudCustomRoleListCommand {
+	var s CloudCustomRoleListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List Temporal Cloud custom roles"
+	if hasHighlighting {
+		s.Command.Long = "List all Temporal Cloud custom roles accessible with the current\nauthentication credentials.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role list\x1b[0m"
+	} else {
+		s.Command.Long = "List all Temporal Cloud custom roles accessible with the current\nauthentication credentials.\n\nExample:\n\n```\ntemporal cloud custom-role list\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of custom roles to return per page. Use for paginated results.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results in a paginated list.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudCustomRoleUpdateCommand struct {
+	Parent  *CloudCustomRoleCommand
+	Command cobra.Command
+	ClientOptions
+	RoleIdOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Spec string
+}
+
+func NewCloudCustomRoleUpdateCommand(cctx *CommandContext, parent *CloudCustomRoleCommand) *CloudCustomRoleUpdateCommand {
+	var s CloudCustomRoleUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update an existing Temporal Cloud custom role"
+	if hasHighlighting {
+		s.Command.Long = "Update an existing Temporal Cloud custom role from a JSON specification.\nReplaces the role's spec with the provided one.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role update --role-id my-role-id --spec @custom-role.json\x1b[0m"
+	} else {
+		s.Command.Long = "Update an existing Temporal Cloud custom role from a JSON specification.\nReplaces the role's spec with the provided one.\n\nExample:\n\n```\ntemporal cloud custom-role update --role-id my-role-id --spec @custom-role.json\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Spec, "spec", "", "Custom role specification in JSON format. Provide inline JSON directly, or use '@path/to/file.json' to load from a file. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "spec")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.RoleIdOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
