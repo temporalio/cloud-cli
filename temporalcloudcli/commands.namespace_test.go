@@ -76,7 +76,7 @@ func (s *SharedServerSuite) TestNamespaceCreate() {
 
 	gotSpec := getNsRes.Namespace.Spec
 	s.Suite.Equal(namespaceName, gotSpec.Name)
-	s.Suite.Equal([]string{"aws-us-east-1"}, gotSpec.Regions)
+	s.Suite.Equal("aws-us-east-1", getNsRes.Namespace.ActiveRegion)
 	s.Suite.Equal(int32(30), gotSpec.RetentionDays)
 	s.Suite.Require().NotNil(gotSpec.ApiKeyAuth)
 	s.Suite.True(gotSpec.ApiKeyAuth.Enabled)
@@ -156,7 +156,7 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 	s.Suite.Require().NotNil(readNamespace)
 	s.Suite.Require().NotNil(readNamespace.Spec)
 	s.Suite.Equal(namespaceSpec.Name, readNamespace.Spec.Name)
-	s.Suite.Equal(namespaceSpec.Regions, readNamespace.Spec.Regions)
+	s.Suite.Equal(namespaceSpec.Regions[0], readNamespace.ActiveRegion)
 	s.Suite.Equal(namespaceSpec.SearchAttributes, readNamespace.Spec.SearchAttributes)
 	s.Suite.Equal(namespaceSpec.RetentionDays, readNamespace.Spec.RetentionDays)
 
@@ -223,7 +223,7 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 	s.Suite.Require().NotNil(readNamespace)
 	s.Suite.Require().NotNil(readNamespace.Spec)
 	s.Suite.Equal(namespaceSpec.Name, readNamespace.Spec.Name)
-	s.Suite.Equal(namespaceSpec.Regions, readNamespace.Spec.Regions)
+	s.Suite.Equal(namespaceSpec.Regions[0], readNamespace.ActiveRegion)
 	s.Suite.Equal(namespaceSpec.SearchAttributes, readNamespace.Spec.SearchAttributes)
 	s.Suite.Equal(namespaceSpec.RetentionDays, readNamespace.Spec.RetentionDays)
 

@@ -1,6 +1,6 @@
 [tools]
 # Note: Keep in sync with `toolchain` directive in `go.mod`.
-go = "1.26.1"
+go = "1.26.2"
 
 "ubi:vektra/mockery" = "v3.6.4"
 
