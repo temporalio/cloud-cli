@@ -153,7 +153,7 @@ func (c *CloudCustomRoleApplyCommand) run(cctx *CommandContext, _ []string) erro
 		return err
 	}
 	if !yes {
-		return nil
+		return errors.New("Aborting apply.")
 	}
 	if existingRoleID != "" {
 		resp, err := client.UpdateCustomRole(cctx, &cloudservice.UpdateCustomRoleRequest{

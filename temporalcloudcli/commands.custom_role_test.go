@@ -455,6 +455,7 @@ func TestApplyCustomRole_Declined(t *testing.T) {
 			},
 			PromptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
 			JSONOutput:    true,
+			ExpectedError: "Aborting apply.",
 		})
 }
 
