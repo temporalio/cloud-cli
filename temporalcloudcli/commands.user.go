@@ -87,8 +87,7 @@ func (c *CloudUserInviteCommand) run(cctx *CommandContext, _ []string) error {
 	if err != nil {
 		return err
 	}
-	customRoleProvided := c.Command.Flags().Changed("custom-role")
-	if customRoleProvided {
+	if c.Command.Flags().Changed("custom-role") {
 		if accountAccess == nil {
 			return errors.New("--custom-role requires --account-role; a principal must have a built-in role")
 		}
