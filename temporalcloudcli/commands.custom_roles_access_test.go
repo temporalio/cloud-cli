@@ -22,7 +22,11 @@ import (
 
 func bindCustomRoleFlags(t *testing.T, fs *pflag.FlagSet, opts *temporalcloudcli.CustomRoleOptions) {
 	t.Helper()
-	fs.StringSliceVar(&opts.CustomRole, "custom-role", nil, "")
+	// Production CustomRoleOptions.BuildFlags uses StringArrayVar (no comma
+	// splitting). Mirror that here so tests exercise the real parsing
+	// behavior — StringSliceVar would split "a,b" into ["a","b"] and mask
+	// any bug involving role IDs that contain commas.
+	fs.StringArrayVar(&opts.CustomRole, "custom-role", nil, "")
 	fs.BoolVar(&opts.ClearCustomRoles, "clear-custom-roles", false, "")
 }
 
