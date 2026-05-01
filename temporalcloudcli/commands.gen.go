@@ -149,6 +149,18 @@ func (v *RoleIdOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "role-id")
 }
 
+type CustomRoleOptions struct {
+	CustomRole       []string
+	ClearCustomRoles bool
+	FlagSet          *pflag.FlagSet
+}
+
+func (v *CustomRoleOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringArrayVar(&v.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple. When provided, replaces the existing custom role list.")
+	f.BoolVar(&v.ClearCustomRoles, "clear-custom-roles", false, "Remove all custom role assignments. Mutually exclusive with --custom-role.")
+}
+
 type ExportSinkOptions struct {
 	SinkName string
 	FlagSet  *pflag.FlagSet

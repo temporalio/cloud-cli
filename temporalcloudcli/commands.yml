@@ -3877,6 +3877,17 @@ option-sets:
         required: true
         description: |
           The ID of the custom role.
+  - name: custom-role
+    options:
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple. When provided,
+          replaces the existing custom role list.
+      - name: clear-custom-roles
+        type: bool
+        description: |
+          Remove all custom role assignments. Mutually exclusive with --custom-role.
   - name: export-sink
     options:
       - name: sink-name
