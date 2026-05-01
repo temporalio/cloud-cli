@@ -455,10 +455,7 @@ func TestApplyCustomRole_Declined(t *testing.T) {
 			},
 			PromptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
 			JSONOutput:    true,
-<<<<<<< HEAD
-=======
 			ExpectedError: "Aborting apply.",
->>>>>>> origin/main
 		})
 }
 
@@ -483,8 +480,6 @@ func TestApplyCustomRole_GetCustomRolesError(t *testing.T) {
 		})
 }
 
-<<<<<<< HEAD
-=======
 func TestApplyCustomRole_DuplicateNameError(t *testing.T) {
 	dup := &identityv1.CustomRole{
 		Id:              "role-2",
@@ -505,7 +500,6 @@ func TestApplyCustomRole_DuplicateNameError(t *testing.T) {
 		})
 }
 
->>>>>>> origin/main
 // ---- EditCustomRole ----
 
 func TestEditCustomRole(t *testing.T) {
