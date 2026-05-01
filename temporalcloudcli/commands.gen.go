@@ -149,18 +149,6 @@ func (v *RoleIdOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "role-id")
 }
 
-type CustomRoleOptions struct {
-	CustomRole       []string
-	ClearCustomRoles bool
-	FlagSet          *pflag.FlagSet
-}
-
-func (v *CustomRoleOptions) BuildFlags(f *pflag.FlagSet) {
-	v.FlagSet = f
-	f.StringArrayVar(&v.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple. When provided, replaces the existing custom role list.")
-	f.BoolVar(&v.ClearCustomRoles, "clear-custom-roles", false, "Remove all custom role assignments. Mutually exclusive with --custom-role.")
-}
-
 type ExportSinkOptions struct {
 	SinkName string
 	FlagSet  *pflag.FlagSet
@@ -532,7 +520,7 @@ func NewCloudAccountAuditLogSinkKinesisUpdateCommand(cctx *CommandContext, paren
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a Kinesis audit log sink"
-	s.Command.Long = "Update an existing Kinesis audit log sink. Only the flags you provide are changed;\nomitted string flags retain their current values. \n\nExample:\n  temporal cloud account audit-log sink kinesis update \\\n    --name my-sink \\\n    --role-name arn:aws:iam::123456789012:role/NewRole"
+	s.Command.Long = "Update an existing Kinesis audit log sink. Only the flags you provide are changed;\nomitted string flags retain their current values.\n\nExample:\n  temporal cloud account audit-log sink kinesis update \\\n    --name my-sink \\\n    --role-name arn:aws:iam::123456789012:role/NewRole"
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Name of the audit log sink to update. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
@@ -1514,7 +1502,7 @@ func NewCloudCustomRoleCommand(cctx *CommandContext, parent *CloudCommand) *Clou
 	s.Parent = parent
 	s.Command.Use = "custom-role"
 	s.Command.Short = "Manage Temporal Cloud custom roles"
-	s.Command.Long = "Commands for managing Temporal Cloud custom roles.\n\nCustom roles enable fine-grained authorization by binding sets of\npermissions (resource + actions) to a named role that can be assigned\nto user groups."
+	s.Command.Long = "Commands for managing Temporal Cloud custom roles.\n\nCustom roles enable fine-grained authorization by binding sets of\npermissions (resource + actions) to a named role that can be assigned\nto users, user groups, and service accounts."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudCustomRoleApplyCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudCustomRoleCreateCommand(cctx, &s).Command)
@@ -2914,9 +2902,9 @@ func NewCloudNamespaceHaGetCommand(cctx *CommandContext, parent *CloudNamespaceH
 	s.Command.Use = "get [flags]"
 	s.Command.Short = "Get High Availability configuration for a namespace"
 	if hasHighlighting {
-		s.Command.Long = "Retrieve the current High Availability configuration for a Temporal Cloud namespace.\nShows the active region and whether managed failover is enabled.\n\nExample:\n\n\x1b[1mtemporal cloud namespace ha get --namespace my-namespace.my-account\x1b[0m"
+		s.Command.Long = "Retrieve the current High Availability configuration for a Temporal Cloud namespace.\nShows the active region, whether managed failover is enabled, and whether passive poller forwarding is enabled.\n\nExample:\n\n\x1b[1mtemporal cloud namespace ha get --namespace my-namespace.my-account\x1b[0m"
 	} else {
-		s.Command.Long = "Retrieve the current High Availability configuration for a Temporal Cloud namespace.\nShows the active region and whether managed failover is enabled.\n\nExample:\n\n```\ntemporal cloud namespace ha get --namespace my-namespace.my-account\n```"
+		s.Command.Long = "Retrieve the current High Availability configuration for a Temporal Cloud namespace.\nShows the active region, whether managed failover is enabled, and whether passive poller forwarding is enabled.\n\nExample:\n\n```\ntemporal cloud namespace ha get --namespace my-namespace.my-account\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -3055,7 +3043,8 @@ type CloudNamespaceHaUpdateCommand struct {
 	NamespaceOptions
 	AsyncOperationOptions
 	ResourceVersionOptions
-	DisableAutoFailover bool
+	DisableAutoFailover            bool
+	DisablePassivePollerForwarding bool
 }
 
 func NewCloudNamespaceHaUpdateCommand(cctx *CommandContext, parent *CloudNamespaceHaCommand) *CloudNamespaceHaUpdateCommand {
@@ -3065,13 +3054,13 @@ func NewCloudNamespaceHaUpdateCommand(cctx *CommandContext, parent *CloudNamespa
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update High Availability configuration for a namespace"
 	if hasHighlighting {
-		s.Command.Long = "Update the High Availability configuration for a Temporal Cloud namespace.\nUse --disable-auto-failover to toggle Temporal-managed automatic failover.\n\nExample:\n\n\x1b[1mtemporal cloud namespace ha update --namespace my-namespace.my-account --disable-auto-failover true\x1b[0m"
+		s.Command.Long = "Update the High Availability configuration for a Temporal Cloud namespace.\nUse --disable-auto-failover to toggle Temporal-managed automatic failover.\nUse --disable-passive-poller-forwarding to toggle passive poller forwarding.\n\nExample:\n\n\x1b[1mtemporal cloud namespace ha update --namespace my-namespace.my-account --disable-auto-failover true --disable-passive-poller-forwarding false\x1b[0m"
 	} else {
-		s.Command.Long = "Update the High Availability configuration for a Temporal Cloud namespace.\nUse --disable-auto-failover to toggle Temporal-managed automatic failover.\n\nExample:\n\n```\ntemporal cloud namespace ha update --namespace my-namespace.my-account --disable-auto-failover true\n```"
+		s.Command.Long = "Update the High Availability configuration for a Temporal Cloud namespace.\nUse --disable-auto-failover to toggle Temporal-managed automatic failover.\nUse --disable-passive-poller-forwarding to toggle passive poller forwarding.\n\nExample:\n\n```\ntemporal cloud namespace ha update --namespace my-namespace.my-account --disable-auto-failover true --disable-passive-poller-forwarding false\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().BoolVar(&s.DisableAutoFailover, "disable-auto-failover", false, "Set to true to disable Temporal-managed automatic failover for the namespace. Set to false to re-enable automatic failover. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "disable-auto-failover")
+	s.Command.Flags().BoolVar(&s.DisableAutoFailover, "disable-auto-failover", false, "Set to true to disable Temporal-managed automatic failover for the namespace. Set to false to re-enable automatic failover.")
+	s.Command.Flags().BoolVar(&s.DisablePassivePollerForwarding, "disable-passive-poller-forwarding", false, "Set to true to disable passive poller forwarding for the namespace. Set to false to re-enable passive poller forwarding.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
@@ -3870,7 +3859,7 @@ func NewCloudNexusEndpointListCommand(cctx *CommandContext, parent *CloudNexusEn
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "List Nexus Endpoints"
-	s.Command.Long = "List Nexus Endpoint configurations on the Cloud Account. "
+	s.Command.Long = "List Nexus Endpoint configurations on the Cloud Account."
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of endpoints to return per page. If no page size is provided, it will default to 100. A maximum of 1000 endpoints can be fetched at a time.")
 	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results. Initial value is empty string.")

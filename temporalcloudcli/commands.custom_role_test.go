@@ -455,6 +455,10 @@ func TestApplyCustomRole_Declined(t *testing.T) {
 			},
 			PromptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
 			JSONOutput:    true,
+<<<<<<< HEAD
+=======
+			ExpectedError: "Aborting apply.",
+>>>>>>> origin/main
 		})
 }
 
@@ -479,6 +483,29 @@ func TestApplyCustomRole_GetCustomRolesError(t *testing.T) {
 		})
 }
 
+<<<<<<< HEAD
+=======
+func TestApplyCustomRole_DuplicateNameError(t *testing.T) {
+	dup := &identityv1.CustomRole{
+		Id:              "role-2",
+		ResourceVersion: "rv-2",
+		Spec:            &identityv1.CustomRoleSpec{Name: "reader"},
+	}
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudCustomRoleApplyCommand{Spec: testRoleSpecJSON},
+		temporalcloudcli.TestCommandOptions{
+			CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetCustomRoles(mock.Anything, &cloudservice.GetCustomRolesRequest{}, mock.Anything).
+					Return(&cloudservice.GetCustomRolesResponse{
+						CustomRoles: []*identityv1.CustomRole{testRole, dup},
+					}, nil)
+			},
+			JSONOutput:    true,
+			ExpectedError: `multiple custom roles found with name "reader"`,
+		})
+}
+
+>>>>>>> origin/main
 // ---- EditCustomRole ----
 
 func TestEditCustomRole(t *testing.T) {
