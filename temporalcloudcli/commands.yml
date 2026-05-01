@@ -79,7 +79,7 @@ commands:
         hidden: true
         default: http://127.0.0.1:56628/callback
         description: |
-          Redirect URL for OAuth authentication flow. 
+          Redirect URL for OAuth authentication flow.
       - name: reset
         type: bool
         description: |
@@ -136,7 +136,7 @@ commands:
         description: |
           Authentication domain for the OAuth provider.
         default: login.tmprl-test.cloud
-        
+
   # Namespace commands
   - name: cloud namespace
     summary: Manage Temporal Cloud namespaces
@@ -1324,7 +1324,7 @@ commands:
       description-header: Nexus Operations Management Commands
       tags:
         - nexus
-  
+
   - name: cloud nexus endpoint
     summary: Manage Temporal Cloud Nexus Endpoints
     description: |
@@ -1334,7 +1334,7 @@ commands:
   - name: cloud nexus endpoint list
     summary: List Nexus Endpoints
     description: |
-      List Nexus Endpoint configurations on the Cloud Account. 
+      List Nexus Endpoint configurations on the Cloud Account.
     has-init: false
     option-sets:
       - client
@@ -1982,6 +1982,182 @@ commands:
       - group-id
       - async-operation
       - user-identification
+
+  # Custom role commands
+  - name: cloud custom-role
+    summary: Manage Temporal Cloud custom roles
+    description: |
+      Commands for managing Temporal Cloud custom roles.
+
+      Custom roles enable fine-grained authorization by binding sets of
+      permissions (resource + actions) to a named role that can be assigned
+      to users, user groups, and service accounts.
+    has-init: false
+    docs:
+      keywords:
+        - custom-role
+        - role
+        - authorization
+      description-header: Custom Role Management Commands
+      tags:
+        - custom-roles
+  - name: cloud custom-role get
+    summary: Retrieve custom role details
+    description: |
+      Retrieve the configuration and status of a Temporal Cloud custom role.
+
+      Example:
+
+      ```
+      temporal cloud custom-role get --role-id my-role-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - role-id
+  - name: cloud custom-role list
+    summary: List Temporal Cloud custom roles
+    description: |
+      List all Temporal Cloud custom roles accessible with the current
+      authentication credentials.
+
+      Example:
+
+      ```
+      temporal cloud custom-role list
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of custom roles to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
+  - name: cloud custom-role create
+    summary: Create a Temporal Cloud custom role
+    description: |
+      Create a new Temporal Cloud custom role from a JSON specification.
+
+      The specification can be provided as inline JSON or loaded from a file
+      by prefixing the path with '@'.
+
+      Example with inline JSON:
+
+      ```
+      temporal cloud custom-role create --spec '{"name":"reader","description":"...","permissions":[...]}'
+      ```
+
+      Example with file path:
+
+      ```
+      temporal cloud custom-role create --spec @custom-role.json
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: spec
+        type: string
+        required: true
+        description: |
+          Custom role specification in JSON format. Provide inline JSON
+          directly, or use '@path/to/file.json' to load from a file.
+  - name: cloud custom-role update
+    summary: Update an existing Temporal Cloud custom role
+    description: |
+      Update an existing Temporal Cloud custom role from a JSON specification.
+      Replaces the role's spec with the provided one.
+
+      Example:
+
+      ```
+      temporal cloud custom-role update --role-id my-role-id --spec @custom-role.json
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - role-id
+      - async-operation
+      - resource-version
+    options:
+      - name: spec
+        type: string
+        required: true
+        description: |
+          Custom role specification in JSON format. Provide inline JSON
+          directly, or use '@path/to/file.json' to load from a file.
+  - name: cloud custom-role delete
+    summary: Delete a Temporal Cloud custom role
+    description: |
+      Delete a Temporal Cloud custom role. This action is irreversible.
+
+      Example:
+
+      ```
+      temporal cloud custom-role delete --role-id my-role-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - role-id
+      - async-operation
+      - resource-version
+  - name: cloud custom-role apply
+    summary: Create or update a custom role from a specification
+    description: |
+      Apply a custom role configuration to Temporal Cloud. Creates a new role
+      if no role with the given name exists, or updates the existing one to
+      match the specification.
+
+      The specification can be provided as inline JSON or loaded from a file
+      by prefixing the path with '@'.
+
+      Example:
+
+      ```
+      temporal cloud custom-role apply --spec @custom-role.json
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+      - async-operation
+      - resource-version
+    options:
+      - name: spec
+        type: string
+        required: true
+        description: |
+          Custom role specification in JSON format. Provide inline JSON
+          directly, or use '@path/to/file.json' to load from a file.
+  - name: cloud custom-role edit
+    summary: Interactively edit a custom role configuration
+    description: |
+      Open a custom role configuration in your default editor for interactive
+      modification. After saving and closing the editor, the changes are
+      applied to Temporal Cloud.
+
+      The editor is determined by the EDITOR environment variable, falling
+      back to 'vi' if not set.
+
+      Example:
+
+      ```
+      temporal cloud custom-role edit --role-id my-role-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+      - role-id
+      - async-operation
+      - resource-version
 
   # Connectivity commands
   - name: cloud connectivity
@@ -2825,7 +3001,7 @@ commands:
     summary: Update a Kinesis audit log sink
     description: |
       Update an existing Kinesis audit log sink. Only the flags you provide are changed;
-      omitted string flags retain their current values. 
+      omitted string flags retain their current values.
 
       Example:
         temporal cloud account audit-log sink kinesis update \
@@ -3616,6 +3792,13 @@ option-sets:
         required: true
         description: |
           The ID of the user group.
+  - name: role-id
+    options:
+      - name: role-id
+        type: string
+        required: true
+        description: |
+          The ID of the custom role.
   - name: export-sink
     options:
       - name: sink-name
