@@ -3,56 +3,90 @@ package temporalcloudcli
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 
-	"github.com/temporalio/cloud-cli/internal/namespace"
+	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
 func (c *CloudNamespaceHaGetCommand) run(cctx *CommandContext, _ []string) error {
-	nsClient, err := getNamespaceClient(cctx, c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	ns, err := nsClient.GetNamespace(cctx.Context, c.Namespace)
+	res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
 	if err != nil {
 		return err
 	}
+	ns := res.Namespace
 
 	result := struct {
-		Namespace              string
-		ActiveRegion           string
-		ManagedFailoverEnabled bool
+		Namespace                      string
+		ActiveRegion                   string
+		ManagedFailoverEnabled         bool
+		PassivePollerForwardingEnabled bool
 	}{
-		Namespace:              c.Namespace,
-		ActiveRegion:           ns.GetActiveRegion(),
-		ManagedFailoverEnabled: !ns.GetSpec().GetHighAvailability().GetDisableManagedFailover(),
+		Namespace:                      c.Namespace,
+		ActiveRegion:                   ns.GetActiveRegion(),
+		ManagedFailoverEnabled:         !ns.GetSpec().GetHighAvailability().GetDisableManagedFailover(),
+		PassivePollerForwardingEnabled: !ns.GetSpec().GetHighAvailability().GetDisablePassivePollerForwarding(),
 	}
 	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 }
 
 func (c *CloudNamespaceHaUpdateCommand) run(cctx *CommandContext, _ []string) error {
-	haClient, err := getNamespaceClient(cctx, c.ClientOptions)
+	disableAutoFailoverChanged := c.Command.Flags().Changed("disable-auto-failover")
+	disablePassivePollerForwardingChanged := c.Command.Flags().Changed("disable-passive-poller-forwarding")
+	if !disableAutoFailoverChanged && !disablePassivePollerForwardingChanged {
+		return errors.New("no changes specified")
+	}
+
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	update := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, haClient.UpdateHA)
-	return update(namespace.UpdateHAParams{
-		Namespace:           c.Namespace,
-		DisableAutoFailover: c.DisableAutoFailover,
-		ResourceVersion:     c.ResourceVersion,
-		AsyncOperationID:    c.AsyncOperationId,
+	res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
+	if err != nil {
+		return err
+	}
+	ns := res.Namespace
+	newSpec := proto.Clone(ns.Spec).(*namespacev1.NamespaceSpec)
+	if newSpec.HighAvailability == nil {
+		newSpec.HighAvailability = &namespacev1.HighAvailabilitySpec{}
+	}
+	if disableAutoFailoverChanged {
+		newSpec.HighAvailability.DisableManagedFailover = c.DisableAutoFailover
+	}
+	if disablePassivePollerForwardingChanged {
+		newSpec.HighAvailability.DisablePassivePollerForwarding = c.DisablePassivePollerForwarding
+	}
+
+	rv := ns.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.UpdateNamespace(cctx, &cloudservice.UpdateNamespaceRequest{
+		Namespace:        c.Namespace,
+		Spec:             newSpec,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
 	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }
 
 func (c *CloudNamespaceHaFailoverCommand) run(cctx *CommandContext, _ []string) error {
-	haClient, err := getNamespaceClient(cctx, c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	yes, err := cctx.promptYes("Failover (y/yes)?", cctx.RootCommand.AutoConfirm)
+	yes, err := cctx.GetPrompter().PromptYes("Failover")
 	if err != nil {
 		return err
 	}
@@ -60,40 +94,50 @@ func (c *CloudNamespaceHaFailoverCommand) run(cctx *CommandContext, _ []string) 
 		return errors.New("Aborting failover.")
 	}
 
-	failover := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, haClient.Failover)
-	return failover(namespace.FailoverParams{
+	resp, err := client.FailoverNamespaceRegion(cctx, &cloudservice.FailoverNamespaceRegionRequest{
 		Namespace:        c.Namespace,
 		Region:           c.Region,
-		AsyncOperationID: c.AsyncOperationId,
+		AsyncOperationId: c.AsyncOperationId,
 	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }
 
 func (c *CloudNamespaceHaRegionListCommand) run(cctx *CommandContext, _ []string) error {
-	haClient, err := getNamespaceClient(cctx, c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	regions, err := haClient.ListRegions(cctx.Context, c.Namespace)
+	res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
 	if err != nil {
 		return err
+	}
+
+	type regionStatus struct {
+		Region string
+		Status namespacev1.NamespaceRegionStatus_State
+	}
+	m := res.Namespace.GetRegionStatus()
+	keys := slices.Sorted(maps.Keys(m))
+	regions := make([]regionStatus, len(keys))
+	for i, k := range keys {
+		regions[i] = regionStatus{Region: k, Status: m[k].GetState()}
 	}
 
 	return cctx.Printer.PrintResourceList(
-		struct{ Regions []namespace.RegionStatus }{Regions: regions},
+		struct{ Regions []regionStatus }{Regions: regions},
 		printer.PrintResourceOptions{},
 		printer.TableOptions{},
 	)
 }
 
 func (c *CloudNamespaceHaRegionAddCommand) run(cctx *CommandContext, _ []string) error {
-	haClient, err := getNamespaceClient(cctx, c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	prompt := fmt.Sprintf("Add region %s (y/yes)?", c.Region)
-	yes, err := cctx.promptYes(prompt, cctx.RootCommand.AutoConfirm)
+	yes, err := cctx.GetPrompter().PromptYes(fmt.Sprintf("Add region %s", c.Region))
 	if err != nil {
 		return err
 	}
@@ -101,23 +145,31 @@ func (c *CloudNamespaceHaRegionAddCommand) run(cctx *CommandContext, _ []string)
 		return errors.New("Aborting create.")
 	}
 
-	addRegion := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, haClient.AddRegion)
-	return addRegion(namespace.AddRegionParams{
-		Namespace:        c.Namespace,
-		Region:           c.Region,
-		ResourceVersion:  c.ResourceVersion,
-		AsyncOperationID: c.AsyncOperationId,
-	})
-}
-
-func (c *CloudNamespaceHaRegionDeleteCommand) run(cctx *CommandContext, _ []string) error {
-	haClient, err := getNamespaceClient(cctx, c.ClientOptions)
+	res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
 	if err != nil {
 		return err
 	}
 
-	prompt := fmt.Sprintf("Delete region %s (y/yes)?", c.Region)
-	yes, err := cctx.promptYes(prompt, cctx.RootCommand.AutoConfirm)
+	rv := res.Namespace.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.AddNamespaceRegion(cctx, &cloudservice.AddNamespaceRegionRequest{
+		Namespace:        c.Namespace,
+		Region:           c.Region,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleCreateAsyncOperationResponse(cctx, resp, err)
+}
+
+func (c *CloudNamespaceHaRegionDeleteCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+
+	yes, err := cctx.GetPrompter().PromptYes(fmt.Sprintf("Delete region %s", c.Region))
 	if err != nil {
 		return err
 	}
@@ -125,11 +177,20 @@ func (c *CloudNamespaceHaRegionDeleteCommand) run(cctx *CommandContext, _ []stri
 		return errors.New("Aborting delete.")
 	}
 
-	removeRegion := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, haClient.RemoveRegion)
-	return removeRegion(namespace.RemoveRegionParams{
+	res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
+	if err != nil {
+		return err
+	}
+
+	rv := res.Namespace.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.DeleteNamespaceRegion(cctx, &cloudservice.DeleteNamespaceRegionRequest{
 		Namespace:        c.Namespace,
 		Region:           c.Region,
-		ResourceVersion:  c.ResourceVersion,
-		AsyncOperationID: c.AsyncOperationId,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
 	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleDeleteOperation(cctx, resp, err)
 }

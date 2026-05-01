@@ -98,11 +98,6 @@ type NamespaceClient interface {
 	GetCodecServer(context.Context, string) (*namespacev1.CodecServerSpec, error)
 	SetCodec(context.Context, namespace.SetCodecParams) (*operation.AsyncOperation, error)
 	DeleteCodec(context.Context, namespace.DeleteCodecParams) (*operation.AsyncOperation, error)
-	ListRegions(context.Context, string) ([]namespace.RegionStatus, error)
-	UpdateHA(context.Context, namespace.UpdateHAParams) (*operation.AsyncOperation, error)
-	AddRegion(context.Context, namespace.AddRegionParams) (*operation.AsyncOperation, error)
-	RemoveRegion(context.Context, namespace.RemoveRegionParams) (*operation.AsyncOperation, error)
-	Failover(context.Context, namespace.FailoverParams) (*operation.AsyncOperation, error)
 }
 
 type Poller interface {
