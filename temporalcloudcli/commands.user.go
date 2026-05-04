@@ -89,7 +89,7 @@ func (c *CloudUserInviteCommand) run(cctx *CommandContext, _ []string) error {
 	}
 	if c.Command.Flags().Changed("custom-role") {
 		if accountAccess == nil {
-			return errors.New("--custom-role requires --account-role; a principal must have a built-in role")
+			return errors.New("--custom-role requires --account-role; a principal must have a account role")
 		}
 		accountAccess.CustomRoles = dedupeStrings(c.CustomRole)
 	}
@@ -480,7 +480,7 @@ func (c *CloudUserSetCustomRolesCommand) run(cctx *CommandContext, _ []string) e
 	}
 	newSpec := proto.Clone(user.Spec).(*identityv1.UserSpec)
 	if newSpec.Access == nil || newSpec.Access.AccountAccess == nil {
-		return errors.New("user has no account access; assign a built-in role with set-account-role first")
+		return errors.New("user has no account access; assign an account role with `temporal cloud user set-account-role` first")
 	}
 	roles, err := applyCustomRoleChanges(
 		newSpec.Access.AccountAccess.CustomRoles,

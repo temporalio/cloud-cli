@@ -96,7 +96,7 @@ func (c *CloudUserGroupCreateCloudGroupCommand) run(cctx *CommandContext, _ []st
 	}
 	if c.Command.Flags().Changed("custom-role") {
 		if accountAccess == nil {
-			return errors.New("--custom-role requires --account-role; a principal must have a built-in role")
+			return errors.New("--custom-role requires --account-role; a principal must have a account role")
 		}
 		accountAccess.CustomRoles = dedupeStrings(c.CustomRole)
 	}
@@ -139,7 +139,7 @@ func (c *CloudUserGroupCreateGoogleGroupCommand) run(cctx *CommandContext, _ []s
 	}
 	if c.Command.Flags().Changed("custom-role") {
 		if accountAccess == nil {
-			return errors.New("--custom-role requires --account-role; a principal must have a built-in role")
+			return errors.New("--custom-role requires --account-role; a principal must have a account role")
 		}
 		accountAccess.CustomRoles = dedupeStrings(c.CustomRole)
 	}
@@ -184,7 +184,7 @@ func (c *CloudUserGroupCreateScimGroupCommand) run(cctx *CommandContext, _ []str
 	}
 	if c.Command.Flags().Changed("custom-role") {
 		if accountAccess == nil {
-			return errors.New("--custom-role requires --account-role; a principal must have a built-in role")
+			return errors.New("--custom-role requires --account-role; a principal must have a account role")
 		}
 		accountAccess.CustomRoles = dedupeStrings(c.CustomRole)
 	}
@@ -339,7 +339,7 @@ func (c *CloudUserGroupUpdateCommand) run(cctx *CommandContext, _ []string) erro
 		newSpec.Access = &identityv1.Access{}
 	}
 	if accountAccess != nil {
-		// Preserve existing CustomRoles so changing the built-in role
+		// Preserve existing CustomRoles so changing the account role
 		// doesn't silently wipe them.
 		if newSpec.Access.AccountAccess != nil {
 			accountAccess.CustomRoles = newSpec.Access.AccountAccess.CustomRoles
@@ -355,7 +355,7 @@ func (c *CloudUserGroupUpdateCommand) run(cctx *CommandContext, _ []string) erro
 	}
 	if customRoleProvided || clearProvided {
 		if newSpec.Access.AccountAccess == nil {
-			return errors.New("group has no account access; assign a built-in role with --account-role first")
+			return errors.New("group has no account access; assign an account role with --account-role first")
 		}
 		roles, err := applyCustomRoleChanges(
 			newSpec.Access.AccountAccess.CustomRoles,
@@ -488,7 +488,7 @@ func (c *CloudUserGroupSetCustomRolesCommand) run(cctx *CommandContext, _ []stri
 	}
 	newSpec := proto.Clone(res.Group.Spec).(*identityv1.UserGroupSpec)
 	if newSpec.Access == nil || newSpec.Access.AccountAccess == nil {
-		return errors.New("group has no account access; assign a built-in role with set-account-role first")
+		return errors.New("group has no account access; assign an account role with `temporal cloud user-group set-account-role` first")
 	}
 	roles, err := applyCustomRoleChanges(
 		newSpec.Access.AccountAccess.CustomRoles,

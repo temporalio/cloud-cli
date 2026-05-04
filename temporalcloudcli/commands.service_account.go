@@ -50,7 +50,7 @@ func (c *CloudServiceAccountCreateCommand) run(cctx *CommandContext, _ []string)
 	}
 	if c.Command.Flags().Changed("custom-role") {
 		if accountAccess == nil {
-			return errors.New("--custom-role requires --account-role; a principal must have a built-in role")
+			return errors.New("--custom-role requires --account-role; a principal must have a account role")
 		}
 		accountAccess.CustomRoles = dedupeStrings(c.CustomRole)
 	}
@@ -184,7 +184,7 @@ func (c *CloudServiceAccountUpdateCommand) run(cctx *CommandContext, _ []string)
 	}
 	if customRoleChanged || clearCustomRolesChanged {
 		if newSpec.Access == nil || newSpec.Access.AccountAccess == nil {
-			return errors.New("service account has no account access; assign a built-in role with --account-role first")
+			return errors.New("service account has no account access; assign an account role with --account-role first")
 		}
 		newSpec.Access.AccountAccess.CustomRoles, err = applyCustomRoleChanges(
 			newSpec.Access.AccountAccess.CustomRoles,
@@ -323,7 +323,7 @@ func (c *CloudServiceAccountSetCustomRolesCommand) run(cctx *CommandContext, _ [
 	}
 	newSpec := proto.Clone(sa.Spec).(*identityv1.ServiceAccountSpec)
 	if newSpec.Access == nil || newSpec.Access.AccountAccess == nil {
-		return errors.New("service account has no account access; assign a built-in role with --account-role first")
+		return errors.New("service account has no account access; assign an account role with `temporal cloud service-account update --account-role` first")
 	}
 	roles, err := applyCustomRoleChanges(
 		newSpec.Access.AccountAccess.CustomRoles,
