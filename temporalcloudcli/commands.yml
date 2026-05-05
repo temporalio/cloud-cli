@@ -1199,13 +1199,16 @@ commands:
     summary: Update High Availability configuration for a namespace
     description: |
       Update the High Availability configuration for a Temporal Cloud namespace.
-      Use --disable-auto-failover to toggle Temporal-managed automatic failover.
-      Use --disable-passive-poller-forwarding to toggle passive poller forwarding.
+      Use --auto-failover to enable or disable Temporal-managed automatic failover.
+      Use --passive-poller-forwarding to enable or disable passive poller forwarding.
 
       Example:
 
       ```
-      temporal cloud namespace ha update --namespace my-namespace.my-account --disable-auto-failover true --disable-passive-poller-forwarding false
+      temporal cloud namespace ha update \
+          --namespace my-namespace.my-account \
+          --auto-failover enabled \
+          --passive-poller-forwarding disabled
       ```
     has-init: false
     option-sets:
@@ -1214,16 +1217,18 @@ commands:
       - async-operation
       - resource-version
     options:
-      - name: disable-auto-failover
-        type: bool
-        description: |
-          Set to true to disable Temporal-managed automatic failover for the namespace.
-          Set to false to re-enable automatic failover.
-      - name: disable-passive-poller-forwarding
-        type: bool
-        description: |
-          Set to true to disable passive poller forwarding for the namespace.
-          Set to false to re-enable passive poller forwarding.
+      - name: auto-failover
+        type: string-enum
+        description: Enable or disable Temporal-managed automatic failover for the namespace.
+        enum-values:
+          - enabled
+          - disabled
+      - name: passive-poller-forwarding
+        type: string-enum
+        description: Enable or disable passive poller forwarding for the namespace.
+        enum-values:
+          - enabled
+          - disabled
   - name: cloud namespace ha region
     summary: Manage replica regions for a namespace
     description: |

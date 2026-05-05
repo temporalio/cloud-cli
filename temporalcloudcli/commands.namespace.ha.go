@@ -25,24 +25,30 @@ func (c *CloudNamespaceHaGetCommand) run(cctx *CommandContext, _ []string) error
 	}
 	ns := res.Namespace
 
+	enabledOrDisabled := func(v bool) string {
+		if v {
+			return "enabled"
+		}
+		return "disabled"
+	}
 	result := struct {
-		Namespace                      string
-		ActiveRegion                   string
-		ManagedFailoverEnabled         bool
-		PassivePollerForwardingEnabled bool
+		Namespace               string
+		ActiveRegion            string
+		AutoFailover            string
+		PassivePollerForwarding string
 	}{
-		Namespace:                      c.Namespace,
-		ActiveRegion:                   ns.GetActiveRegion(),
-		ManagedFailoverEnabled:         !ns.GetSpec().GetHighAvailability().GetDisableManagedFailover(),
-		PassivePollerForwardingEnabled: !ns.GetSpec().GetHighAvailability().GetDisablePassivePollerForwarding(),
+		Namespace:               c.Namespace,
+		ActiveRegion:            ns.GetActiveRegion(),
+		AutoFailover:            enabledOrDisabled(!ns.GetSpec().GetHighAvailability().GetDisableManagedFailover()),
+		PassivePollerForwarding: enabledOrDisabled(!ns.GetSpec().GetHighAvailability().GetDisablePassivePollerForwarding()),
 	}
 	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 }
 
 func (c *CloudNamespaceHaUpdateCommand) run(cctx *CommandContext, _ []string) error {
-	disableAutoFailoverChanged := c.Command.Flags().Changed("disable-auto-failover")
-	disablePassivePollerForwardingChanged := c.Command.Flags().Changed("disable-passive-poller-forwarding")
-	if !disableAutoFailoverChanged && !disablePassivePollerForwardingChanged {
+	autoFailoverChanged := c.AutoFailover.ChangedFromDefault
+	passivePollerForwardingChanged := c.PassivePollerForwarding.ChangedFromDefault
+	if !autoFailoverChanged && !passivePollerForwardingChanged {
 		return errors.New("no changes specified")
 	}
 
@@ -60,11 +66,11 @@ func (c *CloudNamespaceHaUpdateCommand) run(cctx *CommandContext, _ []string) er
 	if newSpec.HighAvailability == nil {
 		newSpec.HighAvailability = &namespacev1.HighAvailabilitySpec{}
 	}
-	if disableAutoFailoverChanged {
-		newSpec.HighAvailability.DisableManagedFailover = c.DisableAutoFailover
+	if autoFailoverChanged {
+		newSpec.HighAvailability.DisableManagedFailover = c.AutoFailover.Value == "disabled"
 	}
-	if disablePassivePollerForwardingChanged {
-		newSpec.HighAvailability.DisablePassivePollerForwarding = c.DisablePassivePollerForwarding
+	if passivePollerForwardingChanged {
+		newSpec.HighAvailability.DisablePassivePollerForwarding = c.PassivePollerForwarding.Value == "disabled"
 	}
 
 	rv := ns.ResourceVersion

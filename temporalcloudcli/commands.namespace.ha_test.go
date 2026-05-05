@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	cliext "github.com/temporalio/cli/cliext"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
@@ -42,15 +43,15 @@ func TestHaGet(t *testing.T) {
 					}, nil)
 			},
 			expectedJsonOutput: struct {
-				Namespace                      string
-				ActiveRegion                   string
-				ManagedFailoverEnabled         bool
-				PassivePollerForwardingEnabled bool
+				Namespace               string
+				ActiveRegion            string
+				AutoFailover            string
+				PassivePollerForwarding string
 			}{
-				Namespace:                      "my-ns",
-				ActiveRegion:                   "us-west-2",
-				ManagedFailoverEnabled:         true,
-				PassivePollerForwardingEnabled: false,
+				Namespace:               "my-ns",
+				ActiveRegion:            "us-west-2",
+				AutoFailover:            "enabled",
+				PassivePollerForwarding: "disabled",
 			},
 		},
 		{
@@ -80,8 +81,14 @@ func TestHaGet(t *testing.T) {
 // --- HaUpdate ---
 
 // TestHaUpdate uses table-driven tests for the ha update command.
-// AIDEV-NOTE: We initialize the cobra FlagSet manually in setupCmd so Changed() returns true for
-// explicitly set flags, since TestCommand calls run() directly without going through cobra's flag parsing.
+// AIDEV-NOTE: We set FlagStringEnum fields directly on the struct so ChangedFromDefault is true,
+// since TestCommand calls run() directly without going through cobra's flag parsing.
+func newHaEnum(t *testing.T, value string) cliext.FlagStringEnum {
+	f := cliext.NewFlagStringEnum([]string{"enabled", "disabled"}, "")
+	require.NoError(t, f.Set(value))
+	return f
+}
+
 func TestHaUpdate(t *testing.T) {
 	baseNS := func(disableManagedFailover, disablePassivePollerForwarding bool) *namespacev1.Namespace {
 		return &namespacev1.Namespace{
@@ -106,8 +113,7 @@ func TestHaUpdate(t *testing.T) {
 		{
 			name: "DisableAutoFailover",
 			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceHaUpdateCommand) {
-				cmd.Command.Flags().BoolVar(&cmd.DisableAutoFailover, "disable-auto-failover", false, "")
-				require.NoError(t, cmd.Command.Flags().Set("disable-auto-failover", "true"))
+				cmd.AutoFailover = newHaEnum(t, "disabled")
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
@@ -133,8 +139,7 @@ func TestHaUpdate(t *testing.T) {
 		{
 			name: "EnableAutoFailover",
 			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceHaUpdateCommand) {
-				cmd.Command.Flags().BoolVar(&cmd.DisableAutoFailover, "disable-auto-failover", false, "")
-				require.NoError(t, cmd.Command.Flags().Set("disable-auto-failover", "false"))
+				cmd.AutoFailover = newHaEnum(t, "enabled")
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
@@ -160,8 +165,7 @@ func TestHaUpdate(t *testing.T) {
 		{
 			name: "DisablePassivePollerForwarding",
 			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceHaUpdateCommand) {
-				cmd.Command.Flags().BoolVar(&cmd.DisablePassivePollerForwarding, "disable-passive-poller-forwarding", false, "")
-				require.NoError(t, cmd.Command.Flags().Set("disable-passive-poller-forwarding", "true"))
+				cmd.PassivePollerForwarding = newHaEnum(t, "disabled")
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
@@ -187,8 +191,7 @@ func TestHaUpdate(t *testing.T) {
 		{
 			name: "EnablePassivePollerForwarding",
 			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceHaUpdateCommand) {
-				cmd.Command.Flags().BoolVar(&cmd.DisablePassivePollerForwarding, "disable-passive-poller-forwarding", false, "")
-				require.NoError(t, cmd.Command.Flags().Set("disable-passive-poller-forwarding", "false"))
+				cmd.PassivePollerForwarding = newHaEnum(t, "enabled")
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
@@ -214,10 +217,8 @@ func TestHaUpdate(t *testing.T) {
 		{
 			name: "BothFlags",
 			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceHaUpdateCommand) {
-				cmd.Command.Flags().BoolVar(&cmd.DisableAutoFailover, "disable-auto-failover", false, "")
-				cmd.Command.Flags().BoolVar(&cmd.DisablePassivePollerForwarding, "disable-passive-poller-forwarding", false, "")
-				require.NoError(t, cmd.Command.Flags().Set("disable-auto-failover", "true"))
-				require.NoError(t, cmd.Command.Flags().Set("disable-passive-poller-forwarding", "true"))
+				cmd.AutoFailover = newHaEnum(t, "disabled")
+				cmd.PassivePollerForwarding = newHaEnum(t, "disabled")
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
@@ -247,8 +248,7 @@ func TestHaUpdate(t *testing.T) {
 		{
 			name: "GetNamespaceError",
 			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceHaUpdateCommand) {
-				cmd.Command.Flags().BoolVar(&cmd.DisableAutoFailover, "disable-auto-failover", false, "")
-				require.NoError(t, cmd.Command.Flags().Set("disable-auto-failover", "true"))
+				cmd.AutoFailover = newHaEnum(t, "disabled")
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
@@ -260,8 +260,7 @@ func TestHaUpdate(t *testing.T) {
 		{
 			name: "UpdateNamespaceError",
 			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceHaUpdateCommand) {
-				cmd.Command.Flags().BoolVar(&cmd.DisableAutoFailover, "disable-auto-failover", false, "")
-				require.NoError(t, cmd.Command.Flags().Set("disable-auto-failover", "true"))
+				cmd.AutoFailover = newHaEnum(t, "disabled")
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
