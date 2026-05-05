@@ -1814,8 +1814,7 @@ commands:
     description: |
       Update an existing Temporal Cloud user group's access settings.
 
-      Provide at least one of --account-role, --namespace-access,
-      --custom-role, or --clear-custom-roles.
+      Provide at least one of --account-role, --namespace-access, or --custom-role.
 
       Example:
 
@@ -1898,8 +1897,8 @@ commands:
     summary: Set custom role assignments for a user group
     description: |
       Set the custom roles assigned to a Temporal Cloud user group. Replaces
-      the group's current custom role list. Use --clear-custom-roles to remove
-      all custom roles.
+      the group's current custom role list. Pass no --custom-role flags to
+      remove all custom roles.
 
       Example:
 
@@ -2431,8 +2430,8 @@ commands:
     summary: Set custom role assignments for a user
     description: |
       Set the custom roles assigned to a Temporal Cloud user. Replaces the
-      user's current custom role list. Use --clear-custom-roles to remove all
-      custom roles.
+      user's current custom role list. Pass no --custom-role flags to remove
+      all custom roles.
 
       Specify the user with either --user-id or --user-email (not both).
 
@@ -2797,8 +2796,8 @@ commands:
     summary: Set custom role assignments for a service account
     description: |
       Set the custom roles assigned to a Temporal Cloud service account.
-      Replaces the service account's current custom role list. Use
-      --clear-custom-roles to remove all custom roles.
+      Replaces the service account's current custom role list. Pass no
+      --custom-role flags to remove all custom roles.
 
       Not valid for namespace-scoped service accounts.
 
@@ -3899,10 +3898,6 @@ option-sets:
         description: |
           Custom role ID to assign. Repeat to assign multiple. When provided,
           replaces the existing custom role list.
-      - name: clear-custom-roles
-        type: bool
-        description: |
-          Remove all custom role assignments. Mutually exclusive with --custom-role.
   - name: export-sink
     options:
       - name: sink-name

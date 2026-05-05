@@ -27,12 +27,10 @@ func bindCustomRoleFlags(t *testing.T, fs *pflag.FlagSet, opts *temporalcloudcli
 	// behavior — StringSliceVar would split "a,b" into ["a","b"] and mask
 	// any bug involving role IDs that contain commas.
 	fs.StringArrayVar(&opts.CustomRole, "custom-role", nil, "")
-	fs.BoolVar(&opts.ClearCustomRoles, "clear-custom-roles", false, "")
 }
 
-// bindCustomRoleFlag registers only --custom-role (no --clear-custom-roles).
-// Use for create/invite commands, which intentionally don't accept the clear
-// flag (nothing to clear at creation time).
+// bindCustomRoleFlag registers --custom-role bound to a plain []string field
+// (used by commands that don't embed CustomRoleOptions, e.g. create/invite).
 func bindCustomRoleFlag(t *testing.T, fs *pflag.FlagSet, dst *[]string) {
 	t.Helper()
 	fs.StringArrayVar(dst, "custom-role", nil, "")
@@ -195,10 +193,9 @@ func TestUserSetCustomRoles(t *testing.T) {
 			asyncPollerOpts: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op"},
 		},
 		{
-			name: "Clear",
+			name: "EmptyClears",
 			setup: func(cmd *temporalcloudcli.CloudUserSetCustomRolesCommand) {
 				bindCustomRoleFlags(t, cmd.Command.Flags(), &cmd.CustomRoleOptions)
-				require.NoError(t, cmd.Command.Flags().Set("clear-custom-roles", "true"))
 			},
 			existing:        userWithRoles(role, "old-1", "old-2"),
 			expectGetUser:   true,
@@ -217,22 +214,6 @@ func TestUserSetCustomRoles(t *testing.T) {
 			expectUpdate:    matchUpdateUserCR(role, []string{"a", "b"}),
 			promptOpts:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOpts: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op"},
-		},
-		{
-			name: "MutualExclusion",
-			setup: func(cmd *temporalcloudcli.CloudUserSetCustomRolesCommand) {
-				bindCustomRoleFlags(t, cmd.Command.Flags(), &cmd.CustomRoleOptions)
-				setCustomRoles(t, cmd.Command.Flags(), "a")
-				require.NoError(t, cmd.Command.Flags().Set("clear-custom-roles", "true"))
-			},
-			expectedErr: "--custom-role and --clear-custom-roles are mutually exclusive",
-		},
-		{
-			name: "NoFlags",
-			setup: func(cmd *temporalcloudcli.CloudUserSetCustomRolesCommand) {
-				bindCustomRoleFlags(t, cmd.Command.Flags(), &cmd.CustomRoleOptions)
-			},
-			expectedErr: "must provide --custom-role or --clear-custom-roles",
 		},
 		{
 			name: "NoAccountAccess",
@@ -314,32 +295,15 @@ func TestUserGroupSetCustomRoles(t *testing.T) {
 			asyncPollerOpts: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op"},
 		},
 		{
-			name: "Clear",
+			name: "EmptyClears",
 			setup: func(cmd *temporalcloudcli.CloudUserGroupSetCustomRolesCommand) {
 				bindCustomRoleFlags(t, cmd.Command.Flags(), &cmd.CustomRoleOptions)
-				require.NoError(t, cmd.Command.Flags().Set("clear-custom-roles", "true"))
 			},
 			existing:        groupWithRoles(role, "old"),
 			expectGetGroup:  true,
 			expectUpdate:    matchUpdateGroupCR(role, nil),
 			promptOpts:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOpts: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op"},
-		},
-		{
-			name: "MutualExclusion",
-			setup: func(cmd *temporalcloudcli.CloudUserGroupSetCustomRolesCommand) {
-				bindCustomRoleFlags(t, cmd.Command.Flags(), &cmd.CustomRoleOptions)
-				setCustomRoles(t, cmd.Command.Flags(), "a")
-				require.NoError(t, cmd.Command.Flags().Set("clear-custom-roles", "true"))
-			},
-			expectedErr: "--custom-role and --clear-custom-roles are mutually exclusive",
-		},
-		{
-			name: "NoFlags",
-			setup: func(cmd *temporalcloudcli.CloudUserGroupSetCustomRolesCommand) {
-				bindCustomRoleFlags(t, cmd.Command.Flags(), &cmd.CustomRoleOptions)
-			},
-			expectedErr: "must provide --custom-role or --clear-custom-roles",
 		},
 		{
 			name: "NoAccountAccess",
@@ -420,20 +384,15 @@ func TestServiceAccountSetCustomRoles(t *testing.T) {
 			expectedErr:    "not valid for namespace-scoped service accounts",
 		},
 		{
-			name: "MutualExclusion",
-			setup: func(cmd *temporalcloudcli.CloudServiceAccountSetCustomRolesCommand) {
-				bindCustomRoleFlags(t, cmd.Command.Flags(), &cmd.CustomRoleOptions)
-				setCustomRoles(t, cmd.Command.Flags(), "a")
-				require.NoError(t, cmd.Command.Flags().Set("clear-custom-roles", "true"))
-			},
-			expectedErr: "--custom-role and --clear-custom-roles are mutually exclusive",
-		},
-		{
-			name: "NoFlags",
+			name: "EmptyClears",
 			setup: func(cmd *temporalcloudcli.CloudServiceAccountSetCustomRolesCommand) {
 				bindCustomRoleFlags(t, cmd.Command.Flags(), &cmd.CustomRoleOptions)
 			},
-			expectedErr: "must provide --custom-role or --clear-custom-roles",
+			serviceAccount:  saWithRoles(role, "old"),
+			expectGetSA:     true,
+			expectUpdate:    matchUpdateSACR(role, nil),
+			promptOpts:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOpts: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op"},
 		},
 	}
 	for _, tt := range tests {
@@ -669,28 +628,3 @@ func TestUserGroupUpdateWithCustomRoles_Replace(t *testing.T) {
 	})
 }
 
-func TestUserGroupUpdateWithCustomRoles_MutualExclusionError(t *testing.T) {
-	cmd := &temporalcloudcli.CloudUserGroupUpdateCommand{
-		GroupIdOptions: temporalcloudcli.GroupIdOptions{GroupId: "group-1"},
-	}
-	bindCustomRoleFlags(t, cmd.Command.Flags(), &cmd.CustomRoleOptions)
-	setCustomRoles(t, cmd.Command.Flags(), "a")
-	require.NoError(t, cmd.Command.Flags().Set("clear-custom-roles", "true"))
-	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
-		JSONOutput:    true,
-		ExpectedError: "--custom-role and --clear-custom-roles are mutually exclusive",
-	})
-}
-
-func TestServiceAccountUpdateWithCustomRoles_MutualExclusionError(t *testing.T) {
-	cmd := &temporalcloudcli.CloudServiceAccountUpdateCommand{
-		ServiceAccountId: "sa-1",
-	}
-	bindCustomRoleFlags(t, cmd.Command.Flags(), &cmd.CustomRoleOptions)
-	setCustomRoles(t, cmd.Command.Flags(), "a")
-	require.NoError(t, cmd.Command.Flags().Set("clear-custom-roles", "true"))
-	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
-		JSONOutput:    true,
-		ExpectedError: "--custom-role and --clear-custom-roles are mutually exclusive",
-	})
-}

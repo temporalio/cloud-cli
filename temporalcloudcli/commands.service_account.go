@@ -115,7 +115,6 @@ func (c *CloudServiceAccountUpdateCommand) run(cctx *CommandContext, _ []string)
 	namespaceAccessChanged := c.Command.Flags().Changed("namespace-access")
 	namespacePermissionChanged := c.Command.Flags().Changed("namespace-permission")
 	customRoleChanged := c.Command.Flags().Changed("custom-role")
-	clearCustomRolesChanged := c.Command.Flags().Changed("clear-custom-roles")
 
 	if accountRoleChanged {
 		if _, ok := accountRoleNames[c.AccountRole]; !ok {
@@ -132,9 +131,6 @@ func (c *CloudServiceAccountUpdateCommand) run(cctx *CommandContext, _ []string)
 			return fmt.Errorf("invalid namespace permission %q: must be one of admin, write, read", c.NamespacePermission)
 		}
 	}
-	if _, err := applyCustomRoleChanges(nil, c.CustomRole, customRoleChanged, clearCustomRolesChanged); err != nil {
-		return err
-	}
 
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
@@ -149,8 +145,8 @@ func (c *CloudServiceAccountUpdateCommand) run(cctx *CommandContext, _ []string)
 
 	isNamespaceScoped := newSpec.NamespaceScopedAccess != nil
 
-	if isNamespaceScoped && (accountRoleChanged || namespaceAccessChanged || customRoleChanged || clearCustomRolesChanged) {
-		return errors.New("--account-role, --namespace-access, --custom-role, and --clear-custom-roles are not valid for namespace-scoped service accounts")
+	if isNamespaceScoped && (accountRoleChanged || namespaceAccessChanged || customRoleChanged) {
+		return errors.New("--account-role, --namespace-access, and --custom-role are not valid for namespace-scoped service accounts")
 	}
 	if !isNamespaceScoped && namespacePermissionChanged {
 		return errors.New("--namespace-permission is not valid for account-scoped service accounts")
@@ -182,17 +178,14 @@ func (c *CloudServiceAccountUpdateCommand) run(cctx *CommandContext, _ []string)
 			return err
 		}
 	}
-	if customRoleChanged || clearCustomRolesChanged {
+	if customRoleChanged {
 		if newSpec.Access == nil || newSpec.Access.AccountAccess == nil {
 			return errors.New("service account has no account access; assign an account role with --account-role first")
 		}
-		newSpec.Access.AccountAccess.CustomRoles, err = applyCustomRoleChanges(
+		newSpec.Access.AccountAccess.CustomRoles = applyCustomRoleChanges(
 			newSpec.Access.AccountAccess.CustomRoles,
-			c.CustomRole, customRoleChanged, clearCustomRolesChanged,
+			c.CustomRole, customRoleChanged,
 		)
-		if err != nil {
-			return err
-		}
 	}
 	if namespacePermissionChanged {
 		if newSpec.NamespaceScopedAccess.Access == nil {
@@ -301,14 +294,6 @@ func (c *CloudServiceAccountListCommand) run(cctx *CommandContext, _ []string) e
 }
 
 func (c *CloudServiceAccountSetCustomRolesCommand) run(cctx *CommandContext, _ []string) error {
-	customRoleProvided := c.Command.Flags().Changed("custom-role")
-	clearProvided := c.Command.Flags().Changed("clear-custom-roles")
-	if !customRoleProvided && !clearProvided {
-		return errors.New("must provide --custom-role or --clear-custom-roles")
-	}
-	if _, err := applyCustomRoleChanges(nil, c.CustomRole, customRoleProvided, clearProvided); err != nil {
-		return err
-	}
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -319,20 +304,13 @@ func (c *CloudServiceAccountSetCustomRolesCommand) run(cctx *CommandContext, _ [
 	}
 	sa := res.ServiceAccount
 	if sa.Spec.NamespaceScopedAccess != nil {
-		return errors.New("--custom-role and --clear-custom-roles are not valid for namespace-scoped service accounts")
+		return errors.New("--custom-role is not valid for namespace-scoped service accounts")
 	}
 	newSpec := proto.Clone(sa.Spec).(*identityv1.ServiceAccountSpec)
 	if newSpec.Access == nil || newSpec.Access.AccountAccess == nil {
 		return errors.New("service account has no account access; assign an account role with `temporal cloud service-account update --account-role` first")
 	}
-	roles, err := applyCustomRoleChanges(
-		newSpec.Access.AccountAccess.CustomRoles,
-		c.CustomRole, customRoleProvided, clearProvided,
-	)
-	if err != nil {
-		return err
-	}
-	newSpec.Access.AccountAccess.CustomRoles = roles
+	newSpec.Access.AccountAccess.CustomRoles = dedupeStrings(c.CustomRole)
 
 	yes, err := cctx.GetPrompter().PromptApply(sa.Spec, newSpec, false)
 	if err != nil {

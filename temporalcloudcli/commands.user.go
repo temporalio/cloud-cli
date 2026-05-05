@@ -385,31 +385,18 @@ func parseNamespaceAccesses(accesses []string) (map[string]*identityv1.Namespace
 	return result, nil
 }
 
-// applyCustomRoleChanges returns the new CustomRoles slice given the existing
-// list and flag values. When neither --custom-role nor --clear-custom-roles
-// is set, the existing list is returned unchanged. When --custom-role is set,
-// the list is replaced (de-duplicated). When --clear-custom-roles is set, the
-// list is cleared.
+// applyCustomRoleChanges returns the new CustomRoles slice for an update
+// command, given the existing list and whether --custom-role was passed.
 //
-// AIDEV-NOTE: customRoleProvided / clearProvided come from
-// cobra.Command.Flags().Changed(...) so the caller can distinguish "leave
-// untouched" (no flag) from "clear" (--clear-custom-roles).
-func applyCustomRoleChanges(
-	existing []string,
-	customRoles []string,
-	customRoleProvided bool,
-	clearProvided bool,
-) ([]string, error) {
-	if customRoleProvided && clearProvided {
-		return nil, errors.New("--custom-role and --clear-custom-roles are mutually exclusive")
-	}
-	if clearProvided {
-		return nil, nil
-	}
+// AIDEV-NOTE: customRoleProvided comes from cobra.Command.Flags().Changed(...)
+// so update commands can distinguish "leave untouched" (no flag) from
+// "replace with this list" (flag passed). Use set-custom-roles with no
+// --custom-role flags to clear the list entirely.
+func applyCustomRoleChanges(existing, customRoles []string, customRoleProvided bool) []string {
 	if !customRoleProvided {
-		return existing, nil
+		return existing
 	}
-	return dedupeStrings(customRoles), nil
+	return dedupeStrings(customRoles)
 }
 
 // dedupeStrings preserves first-occurrence order so test output is deterministic.
@@ -462,14 +449,6 @@ func (c *CloudUserSetCustomRolesCommand) run(cctx *CommandContext, _ []string) e
 	if err := validateUserIdentification(c.UserIdentificationOptions); err != nil {
 		return err
 	}
-	customRoleProvided := c.Command.Flags().Changed("custom-role")
-	clearProvided := c.Command.Flags().Changed("clear-custom-roles")
-	if !customRoleProvided && !clearProvided {
-		return errors.New("must provide --custom-role or --clear-custom-roles")
-	}
-	if _, err := applyCustomRoleChanges(nil, c.CustomRole, customRoleProvided, clearProvided); err != nil {
-		return err
-	}
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -482,14 +461,7 @@ func (c *CloudUserSetCustomRolesCommand) run(cctx *CommandContext, _ []string) e
 	if newSpec.Access == nil || newSpec.Access.AccountAccess == nil {
 		return errors.New("user has no account access; assign an account role with `temporal cloud user set-account-role` first")
 	}
-	roles, err := applyCustomRoleChanges(
-		newSpec.Access.AccountAccess.CustomRoles,
-		c.CustomRole, customRoleProvided, clearProvided,
-	)
-	if err != nil {
-		return err
-	}
-	newSpec.Access.AccountAccess.CustomRoles = roles
+	newSpec.Access.AccountAccess.CustomRoles = dedupeStrings(c.CustomRole)
 
 	yes, err := cctx.GetPrompter().PromptApply(user.Spec, newSpec, false)
 	if err != nil {

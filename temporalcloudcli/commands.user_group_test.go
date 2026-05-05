@@ -651,7 +651,7 @@ func TestUpdateUserGroup(t *testing.T) {
 		{
 			name:        "NoFlags",
 			cmd:         temporalcloudcli.CloudUserGroupUpdateCommand{GroupIdOptions: temporalcloudcli.GroupIdOptions{GroupId: "group-1"}},
-			expectedErr: "must provide at least one of --account-role, --namespace-access, --custom-role, or --clear-custom-roles",
+			expectedErr: "must provide at least one of --account-role, --namespace-access, or --custom-role",
 		},
 		{
 			name:        "InvalidRole",

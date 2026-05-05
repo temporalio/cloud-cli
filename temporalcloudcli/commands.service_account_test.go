@@ -460,7 +460,7 @@ func TestUpdateServiceAccount(t *testing.T) {
 					GetServiceAccount(mock.Anything, mock.Anything, mock.Anything).
 					Return(&cloudservice.GetServiceAccountResponse{ServiceAccount: namespaceScopedSA}, nil)
 			},
-			expectedErr: "--account-role, --namespace-access, --custom-role, and --clear-custom-roles are not valid for namespace-scoped service accounts",
+			expectedErr: "--account-role, --namespace-access, and --custom-role are not valid for namespace-scoped service accounts",
 		},
 		{
 			name: "NamespacePermissionOnAccountScopedSA",

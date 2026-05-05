@@ -150,15 +150,13 @@ func (v *RoleIdOptions) BuildFlags(f *pflag.FlagSet) {
 }
 
 type CustomRoleOptions struct {
-	CustomRole       []string
-	ClearCustomRoles bool
-	FlagSet          *pflag.FlagSet
+	CustomRole []string
+	FlagSet    *pflag.FlagSet
 }
 
 func (v *CustomRoleOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringArrayVar(&v.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple. When provided, replaces the existing custom role list.")
-	f.BoolVar(&v.ClearCustomRoles, "clear-custom-roles", false, "Remove all custom role assignments. Mutually exclusive with --custom-role.")
 }
 
 type ExportSinkOptions struct {
@@ -4253,9 +4251,9 @@ func NewCloudServiceAccountSetCustomRolesCommand(cctx *CommandContext, parent *C
 	s.Command.Use = "set-custom-roles [flags]"
 	s.Command.Short = "Set custom role assignments for a service account"
 	if hasHighlighting {
-		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud service account.\nReplaces the service account's current custom role list. Use\n--clear-custom-roles to remove all custom roles.\n\nNot valid for namespace-scoped service accounts.\n\nExample:\n\n\x1b[1mtemporal cloud service-account set-custom-roles --service-account-id my-sa-id \\\n  --custom-role role-id-1 --custom-role role-id-2\x1b[0m"
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud service account.\nReplaces the service account's current custom role list. Pass no\n--custom-role flags to remove all custom roles.\n\nNot valid for namespace-scoped service accounts.\n\nExample:\n\n\x1b[1mtemporal cloud service-account set-custom-roles --service-account-id my-sa-id \\\n  --custom-role role-id-1 --custom-role role-id-2\x1b[0m"
 	} else {
-		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud service account.\nReplaces the service account's current custom role list. Use\n--clear-custom-roles to remove all custom roles.\n\nNot valid for namespace-scoped service accounts.\n\nExample:\n\n```\ntemporal cloud service-account set-custom-roles --service-account-id my-sa-id \\\n  --custom-role role-id-1 --custom-role role-id-2\n```"
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud service account.\nReplaces the service account's current custom role list. Pass no\n--custom-role flags to remove all custom roles.\n\nNot valid for namespace-scoped service accounts.\n\nExample:\n\n```\ntemporal cloud service-account set-custom-roles --service-account-id my-sa-id \\\n  --custom-role role-id-1 --custom-role role-id-2\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The ID of the service account. Required.")
@@ -4601,9 +4599,9 @@ func NewCloudUserSetCustomRolesCommand(cctx *CommandContext, parent *CloudUserCo
 	s.Command.Use = "set-custom-roles [flags]"
 	s.Command.Short = "Set custom role assignments for a user"
 	if hasHighlighting {
-		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user. Replaces the\nuser's current custom role list. Use --clear-custom-roles to remove all\ncustom roles.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n\x1b[1mtemporal cloud user set-custom-roles --user-email alice@example.com \\\n  --custom-role role-id-1 --custom-role role-id-2\x1b[0m"
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user. Replaces the\nuser's current custom role list. Pass no --custom-role flags to remove\nall custom roles.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n\x1b[1mtemporal cloud user set-custom-roles --user-email alice@example.com \\\n  --custom-role role-id-1 --custom-role role-id-2\x1b[0m"
 	} else {
-		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user. Replaces the\nuser's current custom role list. Use --clear-custom-roles to remove all\ncustom roles.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n```\ntemporal cloud user set-custom-roles --user-email alice@example.com \\\n  --custom-role role-id-1 --custom-role role-id-2\n```"
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user. Replaces the\nuser's current custom role list. Pass no --custom-role flags to remove\nall custom roles.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n```\ntemporal cloud user set-custom-roles --user-email alice@example.com \\\n  --custom-role role-id-1 --custom-role role-id-2\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -5145,9 +5143,9 @@ func NewCloudUserGroupSetCustomRolesCommand(cctx *CommandContext, parent *CloudU
 	s.Command.Use = "set-custom-roles [flags]"
 	s.Command.Short = "Set custom role assignments for a user group"
 	if hasHighlighting {
-		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user group. Replaces\nthe group's current custom role list. Use --clear-custom-roles to remove\nall custom roles.\n\nExample:\n\n\x1b[1mtemporal cloud user-group set-custom-roles --group-id my-group-id \\\n  --custom-role role-id-1 --custom-role role-id-2\x1b[0m"
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user group. Replaces\nthe group's current custom role list. Pass no --custom-role flags to\nremove all custom roles.\n\nExample:\n\n\x1b[1mtemporal cloud user-group set-custom-roles --group-id my-group-id \\\n  --custom-role role-id-1 --custom-role role-id-2\x1b[0m"
 	} else {
-		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user group. Replaces\nthe group's current custom role list. Use --clear-custom-roles to remove\nall custom roles.\n\nExample:\n\n```\ntemporal cloud user-group set-custom-roles --group-id my-group-id \\\n  --custom-role role-id-1 --custom-role role-id-2\n```"
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user group. Replaces\nthe group's current custom role list. Pass no --custom-role flags to\nremove all custom roles.\n\nExample:\n\n```\ntemporal cloud user-group set-custom-roles --group-id my-group-id \\\n  --custom-role role-id-1 --custom-role role-id-2\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -5218,9 +5216,9 @@ func NewCloudUserGroupUpdateCommand(cctx *CommandContext, parent *CloudUserGroup
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a Temporal Cloud user group"
 	if hasHighlighting {
-		s.Command.Long = "Update an existing Temporal Cloud user group's access settings.\n\nProvide at least one of --account-role, --namespace-access,\n--custom-role, or --clear-custom-roles.\n\nExample:\n\n\x1b[1mtemporal cloud user-group update --group-id my-group-id --account-role developer\ntemporal cloud user-group update --group-id my-group-id \\\n  --namespace-access my-namespace.my-account=write\ntemporal cloud user-group update --group-id my-group-id --account-role admin \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\x1b[0m"
+		s.Command.Long = "Update an existing Temporal Cloud user group's access settings.\n\nProvide at least one of --account-role, --namespace-access, or --custom-role.\n\nExample:\n\n\x1b[1mtemporal cloud user-group update --group-id my-group-id --account-role developer\ntemporal cloud user-group update --group-id my-group-id \\\n  --namespace-access my-namespace.my-account=write\ntemporal cloud user-group update --group-id my-group-id --account-role admin \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\x1b[0m"
 	} else {
-		s.Command.Long = "Update an existing Temporal Cloud user group's access settings.\n\nProvide at least one of --account-role, --namespace-access,\n--custom-role, or --clear-custom-roles.\n\nExample:\n\n```\ntemporal cloud user-group update --group-id my-group-id --account-role developer\ntemporal cloud user-group update --group-id my-group-id \\\n  --namespace-access my-namespace.my-account=write\ntemporal cloud user-group update --group-id my-group-id --account-role admin \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\n```"
+		s.Command.Long = "Update an existing Temporal Cloud user group's access settings.\n\nProvide at least one of --account-role, --namespace-access, or --custom-role.\n\nExample:\n\n```\ntemporal cloud user-group update --group-id my-group-id --account-role developer\ntemporal cloud user-group update --group-id my-group-id \\\n  --namespace-access my-namespace.my-account=write\ntemporal cloud user-group update --group-id my-group-id --account-role admin \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account role to assign to the group. Role must be one of: admin, developer, finance-admin, read.")
