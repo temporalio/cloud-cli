@@ -705,6 +705,20 @@ commands:
       Commands for attaching and detaching connectivity rules on a Temporal Cloud
       namespace. Use 'cloud connectivity' to manage the rules themselves.
     has-init: false
+  - name: cloud namespace connectivity list
+    summary: List connectivity rules attached to a namespace
+    description: |
+      List all connectivity rules currently attached to a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace connectivity list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
   - name: cloud namespace connectivity create
     summary: Attach a connectivity rule to a namespace
     description: |
@@ -725,9 +739,9 @@ commands:
       - resource-version
     options:
       - name: connectivity-rule-id
-        type: string
+        type: string[]
         description: |
-          The ID of the connectivity rule to attach.
+          The ID of a connectivity rule to attach. Repeat to attach multiple.
         required: true
   - name: cloud namespace connectivity delete
     summary: Detach a connectivity rule from a namespace
@@ -749,9 +763,9 @@ commands:
       - resource-version
     options:
       - name: connectivity-rule-id
-        type: string
+        type: string[]
         description: |
-          The ID of the connectivity rule to detach.
+          The ID of a connectivity rule to detach. Repeat to detach multiple.
         required: true
 
   # Namespace search-attribute commands
