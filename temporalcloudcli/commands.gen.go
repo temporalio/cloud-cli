@@ -1829,6 +1829,7 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.AddCommand(&NewCloudNamespaceCertCaCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCertFilterCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCodecCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceConnectivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCreateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceEditCommand(cctx, &s).Command)
@@ -2229,6 +2230,95 @@ func NewCloudNamespaceCodecSetCommand(cctx *CommandContext, parent *CloudNamespa
 	s.Command.Flags().BoolVar(&s.IncludeCrossOriginCredentials, "include-cross-origin-credentials", false, "Whether to include cross-origin credentials in requests to the codec server.")
 	s.Command.Flags().StringVar(&s.CustomErrorMessageDefaultMessage, "custom-error-message-default-message", "", "A custom message to display for remote codec server errors.")
 	s.Command.Flags().StringVar(&s.CustomErrorMessageDefaultLink, "custom-error-message-default-link", "", "A link to display alongside the custom error message for remote codec server errors.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceConnectivityCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceConnectivityCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceConnectivityCommand {
+	var s CloudNamespaceConnectivityCommand
+	s.Parent = parent
+	s.Command.Use = "connectivity"
+	s.Command.Short = "Manage connectivity rules attached to a namespace"
+	s.Command.Long = "Commands for attaching and detaching connectivity rules on a Temporal Cloud\nnamespace. Use 'cloud connectivity' to manage the rules themselves."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceConnectivityCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceConnectivityDeleteCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceConnectivityCreateCommand struct {
+	Parent  *CloudNamespaceConnectivityCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ConnectivityRuleId string
+}
+
+func NewCloudNamespaceConnectivityCreateCommand(cctx *CommandContext, parent *CloudNamespaceConnectivityCommand) *CloudNamespaceConnectivityCreateCommand {
+	var s CloudNamespaceConnectivityCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Attach a connectivity rule to a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Attach an existing connectivity rule to a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace connectivity create \\\n  --namespace my-namespace.my-account \\\n  --connectivity-rule-id <rule-id>\x1b[0m"
+	} else {
+		s.Command.Long = "Attach an existing connectivity rule to a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace connectivity create \\\n  --namespace my-namespace.my-account \\\n  --connectivity-rule-id <rule-id>\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ConnectivityRuleId, "connectivity-rule-id", "", "The ID of the connectivity rule to attach. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "connectivity-rule-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceConnectivityDeleteCommand struct {
+	Parent  *CloudNamespaceConnectivityCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ConnectivityRuleId string
+}
+
+func NewCloudNamespaceConnectivityDeleteCommand(cctx *CommandContext, parent *CloudNamespaceConnectivityCommand) *CloudNamespaceConnectivityDeleteCommand {
+	var s CloudNamespaceConnectivityDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Detach a connectivity rule from a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Detach a connectivity rule from a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace connectivity delete \\\n  --namespace my-namespace.my-account \\\n  --connectivity-rule-id <rule-id>\x1b[0m"
+	} else {
+		s.Command.Long = "Detach a connectivity rule from a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace connectivity delete \\\n  --namespace my-namespace.my-account \\\n  --connectivity-rule-id <rule-id>\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ConnectivityRuleId, "connectivity-rule-id", "", "The ID of the connectivity rule to detach. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "connectivity-rule-id")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())

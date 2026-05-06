@@ -698,6 +698,62 @@ commands:
         description: |
           The subject alternative name (SAN) from the certificate.
 
+  # Namespace connectivity commands
+  - name: cloud namespace connectivity
+    summary: Manage connectivity rules attached to a namespace
+    description: |
+      Commands for attaching and detaching connectivity rules on a Temporal Cloud
+      namespace. Use 'cloud connectivity' to manage the rules themselves.
+    has-init: false
+  - name: cloud namespace connectivity create
+    summary: Attach a connectivity rule to a namespace
+    description: |
+      Attach an existing connectivity rule to a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace connectivity create \
+        --namespace my-namespace.my-account \
+        --connectivity-rule-id <rule-id>
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: connectivity-rule-id
+        type: string
+        description: |
+          The ID of the connectivity rule to attach.
+        required: true
+  - name: cloud namespace connectivity delete
+    summary: Detach a connectivity rule from a namespace
+    description: |
+      Detach a connectivity rule from a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace connectivity delete \
+        --namespace my-namespace.my-account \
+        --connectivity-rule-id <rule-id>
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: connectivity-rule-id
+        type: string
+        description: |
+          The ID of the connectivity rule to detach.
+        required: true
+
   # Namespace search-attribute commands
   - name: cloud namespace search-attribute
     summary: Manage custom search attributes for namespaces
