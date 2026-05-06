@@ -1,0 +1,13 @@
+{
+    "apiKeyAuth": null,
+    "capacitySpec": null,
+    "codecServer": null,
+    "connectivityRuleIds": [],
+    "highAvailability": null,
+    "lifecycle": null,
+    "mtlsAuth": null,
+    "name": "my-ns",
+    "replicas": [],
+    "retentionDays": 7,
+    "searchAttributes": {}
+}
