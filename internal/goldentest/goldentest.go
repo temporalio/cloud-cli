@@ -19,8 +19,7 @@ import (
 var update = flag.Bool("update-golden", false, "update golden files")
 
 // AssertJSON compares got against the JSON golden file at path, ignoring key
-// ordering. When -update-golden is set, got is written to path and the
-// assertion is skipped.
+// ordering. When -update-golden is set, got is written to the path.
 func AssertJSON(t *testing.T, path string, got []byte) {
 	t.Helper()
 	if *update {
