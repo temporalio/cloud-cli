@@ -95,8 +95,7 @@ func clearDeprecatedFields(msg protoreflect.Message) {
 	var toClear []protoreflect.FieldDescriptor
 
 	msg.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
-		opts, _ := fd.Options().(*descriptorpb.FieldOptions)
-		if strings.HasSuffix(string(fd.Name()), "_deprecated") || opts.GetDeprecated() {
+		if isDeprecatedField(fd) {
 			toClear = append(toClear, fd)
 			return true
 		}
