@@ -227,7 +227,7 @@ func (c *CloudNamespaceExportS3UpdateCommand) run(cctx *CommandContext, _ []stri
 		S3: &sinkv1.S3Spec{
 			RoleName:     c.RoleName,
 			BucketName:   c.BucketName,
-			Region:       c.Region,
+			Region:       sink.Spec.GetS3().GetRegion(),
 			AwsAccountId: c.AwsAccountId,
 			KmsArn:       c.KmsArn,
 		},
@@ -333,7 +333,7 @@ func (c *CloudNamespaceExportGcsUpdateCommand) run(cctx *CommandContext, _ []str
 			SaId:         c.SaId,
 			BucketName:   c.BucketName,
 			GcpProjectId: c.GcpProjectId,
-			Region:       c.Region,
+			Region:       sink.Spec.GetGcs().GetRegion(),
 		},
 	}
 

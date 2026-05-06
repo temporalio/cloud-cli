@@ -891,6 +891,7 @@ commands:
       - async-operation
       - export-sink
       - export-s3
+      - export-s3-region
   - name: cloud namespace export s3 update
     summary: Update an S3 workflow history export sink
     description: |
@@ -902,7 +903,7 @@ commands:
       ```
       temporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \
         --role-name arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket \
-        --region us-east-1 --aws-account-id 123456789012
+        --aws-account-id 123456789012
       ```
     has-init: false
     option-sets:
@@ -931,6 +932,7 @@ commands:
       - namespace
       - export-sink
       - export-s3
+      - export-s3-region
   - name: cloud namespace export gcs
     summary: Manage GCS workflow history export sinks
     description: |
@@ -956,6 +958,7 @@ commands:
       - async-operation
       - export-sink
       - export-gcs
+      - export-gcs-region
   - name: cloud namespace export gcs update
     summary: Update a GCS workflow history export sink
     description: |
@@ -967,7 +970,7 @@ commands:
       ```
       temporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \
         --sa-id my-service-account@my-project.iam.gserviceaccount.com \
-        --bucket-name my-bucket --gcp-project-id my-project --region us-central1
+        --bucket-name my-bucket --gcp-project-id my-project
       ```
     has-init: false
     option-sets:
@@ -996,6 +999,7 @@ commands:
       - namespace
       - export-sink
       - export-gcs
+      - export-gcs-region
 
   # Namespace codec commands
   - name: cloud namespace codec
@@ -3818,11 +3822,6 @@ option-sets:
         required: true
         description: |
           The name of the destination S3 bucket.
-      - name: region
-        type: string
-        required: true
-        description: |
-          The AWS region where the S3 bucket is located.
       - name: aws-account-id
         type: string
         required: true
@@ -3832,6 +3831,13 @@ option-sets:
         type: string
         description: |
           The AWS KMS key ARN for server-side encryption of exported data. Optional.
+  - name: export-s3-region
+    options:
+      - name: region
+        type: string
+        required: true
+        description: |
+          The AWS region where the S3 bucket is located.
   - name: export-gcs
     options:
       - name: sa-id
@@ -3849,6 +3855,8 @@ option-sets:
         required: true
         description: |
           The GCP project ID associated with the bucket and service account.
+  - name: export-gcs-region
+    options:
       - name: region
         type: string
         required: true

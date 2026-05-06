@@ -444,9 +444,9 @@ func TestCreateS3ExportSink(t *testing.T) {
 				ExportS3Options: temporalcloudcli.ExportS3Options{
 					RoleName:     "my-role",
 					BucketName:   "my-bucket",
-					Region:       "us-east-1",
 					AwsAccountId: "123456789012",
 				},
+				ExportS3RegionOptions: temporalcloudcli.ExportS3RegionOptions{Region: "us-east-1"},
 			}
 			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tt.cloudClientExpectations,
@@ -554,7 +554,6 @@ func TestUpdateS3ExportSink(t *testing.T) {
 				ExportS3Options: temporalcloudcli.ExportS3Options{
 					RoleName:     tt.roleName,
 					BucketName:   "my-bucket",
-					Region:       "us-east-1",
 					AwsAccountId: "123456789012",
 				},
 			}
@@ -606,9 +605,9 @@ func TestValidateS3ExportSink(t *testing.T) {
 				ExportS3Options: temporalcloudcli.ExportS3Options{
 					RoleName:     "my-role",
 					BucketName:   "my-bucket",
-					Region:       "us-east-1",
 					AwsAccountId: "123456789012",
 				},
+				ExportS3RegionOptions: temporalcloudcli.ExportS3RegionOptions{Region: "us-east-1"},
 			}
 			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tt.cloudClientExpectations,
@@ -659,8 +658,8 @@ func TestCreateGCSExportSink(t *testing.T) {
 					SaId:         "my-sa@project.iam.gserviceaccount.com",
 					BucketName:   "my-bucket",
 					GcpProjectId: "my-project",
-					Region:       "us-central1",
 				},
+				ExportGcsRegionOptions: temporalcloudcli.ExportGcsRegionOptions{Region: "us-central1"},
 			}
 			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tt.cloudClientExpectations,
@@ -749,7 +748,6 @@ func TestUpdateGCSExportSink(t *testing.T) {
 					SaId:         tt.saID,
 					BucketName:   "my-bucket",
 					GcpProjectId: "my-project",
-					Region:       "us-central1",
 				},
 			}
 			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
@@ -801,8 +799,8 @@ func TestValidateGCSExportSink(t *testing.T) {
 					SaId:         "my-sa@project.iam.gserviceaccount.com",
 					BucketName:   "my-bucket",
 					GcpProjectId: "my-project",
-					Region:       "us-central1",
 				},
+				ExportGcsRegionOptions: temporalcloudcli.ExportGcsRegionOptions{Region: "us-central1"},
 			}
 			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tt.cloudClientExpectations,
