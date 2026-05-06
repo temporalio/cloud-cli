@@ -1,6 +1,9 @@
 package protoutils_test
 
 import (
+	"flag"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +16,8 @@ import (
 
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/protoutils"
 )
+
+var updateGolden = flag.Bool("update-golden", false, "update golden files")
 
 func TestClearDeprecatedFields(t *testing.T) {
 	tests := []struct {
@@ -104,22 +109,18 @@ func TestClearDeprecatedFields(t *testing.T) {
 
 func TestStripDeprecatedJSONFields(t *testing.T) {
 	tests := []struct {
-		name           string
-		input          proto.Message
-		mustNotContain []string
-		mustContain    []string
+		name  string
+		input proto.Message
 	}{
 		{
-			name: "RemovesSuffixDeprecatedTopLevelField",
+			name: "removes_suffix_deprecated_top_level_field",
 			input: &identityv1.ApiKey{
 				Id:              "key-1",
 				StateDeprecated: "active",
 			},
-			mustNotContain: []string{`"stateDeprecated"`},
-			mustContain:    []string{`"id": "key-1"`},
 		},
 		{
-			name: "RemovesSuffixDeprecatedNestedField",
+			name: "removes_suffix_deprecated_nested_field",
 			input: &identityv1.ApiKey{
 				Id: "key-1",
 				Spec: &identityv1.ApiKeySpec{
@@ -127,33 +128,27 @@ func TestStripDeprecatedJSONFields(t *testing.T) {
 					OwnerTypeDeprecated: "user",
 				},
 			},
-			mustNotContain: []string{`"ownerTypeDeprecated"`},
-			mustContain:    []string{`"displayName": "my-key"`},
 		},
 		{
-			name: "RemovesOptionDeprecatedFieldWithoutSuffix",
+			name: "removes_option_deprecated_field_without_suffix",
 			input: &namespacev1.NamespaceSpec{
 				Name:                   "my-ns",
 				Regions:                []string{"aws-us-west-2"},
 				CustomSearchAttributes: map[string]string{"k": "v"},
 				RetentionDays:          7,
 			},
-			mustNotContain: []string{`"regions"`, `"customSearchAttributes"`},
-			mustContain:    []string{`"name": "my-ns"`, `"retentionDays": 7`},
 		},
 		{
-			name: "RemovesDeprecatedFieldInRepeatedMessage",
+			name: "removes_deprecated_field_in_repeated_message",
 			input: &cloudservice.GetApiKeysResponse{
 				ApiKeys: []*identityv1.ApiKey{
 					{Id: "key-1", StateDeprecated: "active"},
 					{Id: "key-2", StateDeprecated: "deleted"},
 				},
 			},
-			mustNotContain: []string{`"stateDeprecated"`},
-			mustContain:    []string{`"id": "key-1"`, `"id": "key-2"`},
 		},
 		{
-			name: "RemovesDeprecatedFieldInMapValueMessage",
+			name: "removes_deprecated_field_in_map_value_message",
 			input: &identityv1.Access{
 				NamespaceAccesses: map[string]*identityv1.NamespaceAccess{
 					"ns1": {
@@ -162,11 +157,9 @@ func TestStripDeprecatedJSONFields(t *testing.T) {
 					},
 				},
 			},
-			mustNotContain: []string{`"permissionDeprecated"`},
-			mustContain:    []string{`"ns1"`, `"permission"`},
 		},
 		{
-			name: "PreservesNonDeprecatedFields",
+			name: "preserves_non_deprecated_fields",
 			input: &identityv1.ApiKey{
 				Id: "key-1",
 				Spec: &identityv1.ApiKeySpec{
@@ -174,7 +167,6 @@ func TestStripDeprecatedJSONFields(t *testing.T) {
 					OwnerId:     "owner-1",
 				},
 			},
-			mustContain: []string{`"id": "key-1"`, `"displayName": "my-key"`, `"ownerId": "owner-1"`},
 		},
 	}
 	marshaler := protojson.MarshalOptions{
@@ -185,15 +177,17 @@ func TestStripDeprecatedJSONFields(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			data, err := marshaler.Marshal(tt.input)
 			require.NoError(t, err)
-			out, err := protoutils.StripDeprecatedJSONFields(data, tt.input)
+			got, err := protoutils.StripDeprecatedJSONFields(data, tt.input)
 			require.NoError(t, err)
-			got := string(out)
-			for _, s := range tt.mustNotContain {
-				assert.NotContains(t, got, s)
+
+			golden := filepath.Join("testdata", "strip_deprecated", tt.name+".golden.json")
+			if *updateGolden {
+				require.NoError(t, os.MkdirAll(filepath.Dir(golden), 0o755))
+				require.NoError(t, os.WriteFile(golden, got, 0o644))
 			}
-			for _, s := range tt.mustContain {
-				assert.Contains(t, got, s)
-			}
+			want, err := os.ReadFile(golden)
+			require.NoError(t, err)
+			assert.JSONEq(t, string(want), string(got), "output does not match contents of golden file: have you run --update-golden?")
 		})
 	}
 }

@@ -1,0 +1,23 @@
+{
+    "apiKeys": [
+        {
+            "asyncOperationId": "",
+            "createdTime": null,
+            "id": "key-1",
+            "lastModifiedTime": null,
+            "resourceVersion": "",
+            "spec": null,
+            "state": "RESOURCE_STATE_UNSPECIFIED"
+        },
+        {
+            "asyncOperationId": "",
+            "createdTime": null,
+            "id": "key-2",
+            "lastModifiedTime": null,
+            "resourceVersion": "",
+            "spec": null,
+            "state": "RESOURCE_STATE_UNSPECIFIED"
+        }
+    ],
+    "nextPageToken": ""
+}
