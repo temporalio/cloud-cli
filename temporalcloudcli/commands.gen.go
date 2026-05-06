@@ -1915,9 +1915,9 @@ func NewCloudNamespaceCapacityGetCommand(cctx *CommandContext, parent *CloudName
 	s.Command.Use = "get [flags]"
 	s.Command.Short = "Get namespace capacity information"
 	if hasHighlighting {
-		s.Command.Long = "Retrieve capacity information for a Temporal Cloud namespace, including\nthe current mode (on-demand or provisioned), the latest capacity request\nstatus, mode options, and recent usage stats.\n\nExample:\n\n\x1b[1mtemporal cloud namespace capacity get --namespace my-namespace.my-account\x1b[0m"
+		s.Command.Long = "Retrieve capacity information for a Temporal Cloud namespace, including\nthe current mode (on-demand or provisioned), mode options, and recent usage stats.\n\nExample:\n\n\x1b[1mtemporal cloud namespace capacity get --namespace my-namespace.my-account\x1b[0m"
 	} else {
-		s.Command.Long = "Retrieve capacity information for a Temporal Cloud namespace, including\nthe current mode (on-demand or provisioned), the latest capacity request\nstatus, mode options, and recent usage stats.\n\nExample:\n\n```\ntemporal cloud namespace capacity get --namespace my-namespace.my-account\n```"
+		s.Command.Long = "Retrieve capacity information for a Temporal Cloud namespace, including\nthe current mode (on-demand or provisioned), mode options, and recent usage stats.\n\nExample:\n\n```\ntemporal cloud namespace capacity get --namespace my-namespace.my-account\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -1948,9 +1948,9 @@ func NewCloudNamespaceCapacityUpdateCommand(cctx *CommandContext, parent *CloudN
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update namespace capacity"
 	if hasHighlighting {
-		s.Command.Long = "Update the capacity of a Temporal Cloud namespace. Choose either on-demand\nmode or provisioned mode (with a fixed TRU allocation).\n\nExample (switch to on-demand):\n\n\x1b[1mtemporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode on_demand\x1b[0m\n\nExample (switch to provisioned with 100 TRUs):\n\n\x1b[1mtemporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode provisioned --capacity-value 100\x1b[0m"
+		s.Command.Long = "Update the capacity of a Temporal Cloud namespace. Choose either on-demand\nmode or provisioned mode (with a fixed TRU allocation).\n\nExample (switch to on-demand):\n\n\x1b[1mtemporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode on_demand\x1b[0m\n\nExample (switch to provisioned with 4 TRUs):\n\n\x1b[1mtemporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode provisioned --capacity-value 4\x1b[0m"
 	} else {
-		s.Command.Long = "Update the capacity of a Temporal Cloud namespace. Choose either on-demand\nmode or provisioned mode (with a fixed TRU allocation).\n\nExample (switch to on-demand):\n\n```\ntemporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode on_demand\n```\n\nExample (switch to provisioned with 100 TRUs):\n\n```\ntemporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode provisioned --capacity-value 100\n```"
+		s.Command.Long = "Update the capacity of a Temporal Cloud namespace. Choose either on-demand\nmode or provisioned mode (with a fixed TRU allocation).\n\nExample (switch to on-demand):\n\n```\ntemporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode on_demand\n```\n\nExample (switch to provisioned with 4 TRUs):\n\n```\ntemporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode provisioned --capacity-value 4\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.CapacityMode = cliext.NewFlagStringEnum([]string{"on_demand", "provisioned"}, "")

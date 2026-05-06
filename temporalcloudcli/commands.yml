@@ -1325,8 +1325,7 @@ commands:
     summary: Get namespace capacity information
     description: |
       Retrieve capacity information for a Temporal Cloud namespace, including
-      the current mode (on-demand or provisioned), the latest capacity request
-      status, mode options, and recent usage stats.
+      the current mode (on-demand or provisioned), mode options, and recent usage stats.
 
       Example:
 
@@ -1349,10 +1348,10 @@ commands:
       temporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode on_demand
       ```
 
-      Example (switch to provisioned with 100 TRUs):
+      Example (switch to provisioned with 4 TRUs):
 
       ```
-      temporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode provisioned --capacity-value 100
+      temporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode provisioned --capacity-value 4
       ```
     has-init: false
     option-sets:
