@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	identityv1 "go.temporal.io/cloud-sdk/api/identity/v1"
+	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/protoutils"
@@ -98,4 +100,106 @@ func TestClearDeprecatedFields(t *testing.T) {
 			tt.verify(t, tt.input)
 		})
 	}
+}
+
+func TestStripDeprecatedJSONFields(t *testing.T) {
+	tests := []struct {
+		name           string
+		input          proto.Message
+		mustNotContain []string
+		mustContain    []string
+	}{
+		{
+			name: "RemovesSuffixDeprecatedTopLevelField",
+			input: &identityv1.ApiKey{
+				Id:              "key-1",
+				StateDeprecated: "active",
+			},
+			mustNotContain: []string{`"stateDeprecated"`},
+			mustContain:    []string{`"id": "key-1"`},
+		},
+		{
+			name: "RemovesSuffixDeprecatedNestedField",
+			input: &identityv1.ApiKey{
+				Id: "key-1",
+				Spec: &identityv1.ApiKeySpec{
+					DisplayName:         "my-key",
+					OwnerTypeDeprecated: "user",
+				},
+			},
+			mustNotContain: []string{`"ownerTypeDeprecated"`},
+			mustContain:    []string{`"displayName": "my-key"`},
+		},
+		{
+			name: "RemovesOptionDeprecatedFieldWithoutSuffix",
+			input: &namespacev1.NamespaceSpec{
+				Name:                   "my-ns",
+				Regions:                []string{"aws-us-west-2"},
+				CustomSearchAttributes: map[string]string{"k": "v"},
+				RetentionDays:          7,
+			},
+			mustNotContain: []string{`"regions"`, `"customSearchAttributes"`},
+			mustContain:    []string{`"name": "my-ns"`, `"retentionDays": 7`},
+		},
+		{
+			name: "RemovesDeprecatedFieldInRepeatedMessage",
+			input: &cloudservice.GetApiKeysResponse{
+				ApiKeys: []*identityv1.ApiKey{
+					{Id: "key-1", StateDeprecated: "active"},
+					{Id: "key-2", StateDeprecated: "deleted"},
+				},
+			},
+			mustNotContain: []string{`"stateDeprecated"`},
+			mustContain:    []string{`"id": "key-1"`, `"id": "key-2"`},
+		},
+		{
+			name: "RemovesDeprecatedFieldInMapValueMessage",
+			input: &identityv1.Access{
+				NamespaceAccesses: map[string]*identityv1.NamespaceAccess{
+					"ns1": {
+						Permission:           identityv1.NamespaceAccess_PERMISSION_READ,
+						PermissionDeprecated: "read",
+					},
+				},
+			},
+			mustNotContain: []string{`"permissionDeprecated"`},
+			mustContain:    []string{`"ns1"`, `"permission"`},
+		},
+		{
+			name: "PreservesNonDeprecatedFields",
+			input: &identityv1.ApiKey{
+				Id: "key-1",
+				Spec: &identityv1.ApiKeySpec{
+					DisplayName: "my-key",
+					OwnerId:     "owner-1",
+				},
+			},
+			mustContain: []string{`"id": "key-1"`, `"displayName": "my-key"`, `"ownerId": "owner-1"`},
+		},
+	}
+	marshaler := protojson.MarshalOptions{
+		EmitUnpopulated: true,
+		Indent:          "    ",
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := marshaler.Marshal(tt.input)
+			require.NoError(t, err)
+			out, err := protoutils.StripDeprecatedJSONFields(data, tt.input)
+			require.NoError(t, err)
+			got := string(out)
+			for _, s := range tt.mustNotContain {
+				assert.NotContains(t, got, s)
+			}
+			for _, s := range tt.mustContain {
+				assert.Contains(t, got, s)
+			}
+		})
+	}
+}
+
+func TestStripDeprecatedJSONFields_InvalidJSON(t *testing.T) {
+	_, err := protoutils.StripDeprecatedJSONFields([]byte("not-valid-json"), &identityv1.ApiKey{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unable to parse json")
 }

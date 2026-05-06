@@ -2,7 +2,6 @@ package editor
 
 import (
 	"cmp"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +9,8 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/protoutils"
 )
 
 type (
@@ -33,7 +34,7 @@ func (e *editor) EditProto(existing proto.Message) (proto.Message, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to convert existing object to json: %v", err)
 	}
-	existingBytes, err = stripDeprecatedFields(existingBytes)
+	existingBytes, err = protoutils.StripDeprecatedJSONFields(existingBytes, existing)
 	if err != nil {
 		return nil, err
 	}
@@ -49,38 +50,6 @@ func (e *editor) EditProto(existing proto.Message) (proto.Message, error) {
 		return nil, fmt.Errorf("no changes detected")
 	}
 	return value, nil
-}
-
-// stripDeprecatedFields removes all JSON keys ending with "_deprecated" from the
-// marshaled proto JSON before presenting it to the user in the editor.
-func stripDeprecatedFields(data []byte) ([]byte, error) {
-	var v any
-	if err := json.Unmarshal(data, &v); err != nil {
-		return nil, fmt.Errorf("unable to parse json for deprecated field removal: %v", err)
-	}
-	removeDeprecatedFields(v)
-	out, err := json.MarshalIndent(v, "", "    ")
-	if err != nil {
-		return nil, fmt.Errorf("unable to re-marshal json after deprecated field removal: %v", err)
-	}
-	return out, nil
-}
-
-func removeDeprecatedFields(v any) {
-	switch val := v.(type) {
-	case map[string]any:
-		for k := range val {
-			if strings.HasSuffix(k, "Deprecated") {
-				delete(val, k)
-			} else {
-				removeDeprecatedFields(val[k])
-			}
-		}
-	case []any:
-		for _, item := range val {
-			removeDeprecatedFields(item)
-		}
-	}
 }
 
 func (e *editor) runEditor(existing []byte) ([]byte, error) {

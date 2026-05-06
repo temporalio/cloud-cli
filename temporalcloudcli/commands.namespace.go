@@ -46,11 +46,11 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 		return err
 	}
 
-	newSpec := &namespacev1.NamespaceSpec{}
-	err = runEditorForJSONEditForProtos(ns.Spec, newSpec)
+	edited, err := cctx.GetEditor().EditProto(ns.Spec)
 	if err != nil {
 		return err
 	}
+	newSpec := edited.(*namespacev1.NamespaceSpec)
 
 	err = promptApplyResource(cctx, ns.Spec, newSpec, c.VerboseDiff)
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	identityv1 "go.temporal.io/cloud-sdk/api/identity/v1"
+	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 
 	"github.com/temporalio/cloud-cli/temporalcloudcli/editor"
 )
@@ -108,8 +109,8 @@ func TestEditProto_VISUALTakesPrecedenceOverEDITOR(t *testing.T) {
 
 func TestEditProto_DeprecatedFieldsStrippedBeforeEditing(t *testing.T) {
 	// The script exits 1 if any JSON key ending with "Deprecated" is found in the
-	// editor file, which would indicate stripDeprecatedFields did not run. On
-	// success it writes back a minimal valid modification.
+	// editor file, which would indicate the deprecated-field stripping did not run.
+	// On success it writes back a minimal valid modification.
 	script := writeScript(t, `grep -q 'Deprecated' "$1" && exit 1; printf '{"id":"key-1","spec":{"displayName":"updated"}}' > "$1"`)
 	setEditor(t, script)
 
@@ -124,4 +125,23 @@ func TestEditProto_DeprecatedFieldsStrippedBeforeEditing(t *testing.T) {
 	updated, ok := result.(*identityv1.ApiKey)
 	require.True(t, ok)
 	assert.Equal(t, "updated", updated.Spec.DisplayName)
+}
+
+func TestEditProto_OptionDeprecatedFieldsStrippedBeforeEditing(t *testing.T) {
+	// `regions` and `customSearchAttributes` on NamespaceSpec are marked
+	// [deprecated = true] but their JSON names don't end in "Deprecated".
+	// The script exits 1 if either appears in the editor file.
+	script := writeScript(t, `(grep -q '"regions"' "$1" || grep -q '"customSearchAttributes"' "$1") && exit 1; printf '{"name":"my-ns","retentionDays":14}' > "$1"`)
+	setEditor(t, script)
+
+	existing := &namespacev1.NamespaceSpec{
+		Name:          "my-ns",
+		RetentionDays: 7,
+	}
+	result, err := editor.NewEditor().EditProto(existing)
+
+	require.NoError(t, err)
+	updated, ok := result.(*namespacev1.NamespaceSpec)
+	require.True(t, ok)
+	assert.Equal(t, int32(14), updated.RetentionDays)
 }
