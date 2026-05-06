@@ -1,21 +1,17 @@
 package temporalcloudcli_test
 
 import (
-	"bytes"
-	"context"
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
-	"github.com/temporalio/cloud-cli/temporalcloudcli"
-	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
-	cmdmock "github.com/temporalio/cloud-cli/temporalcloudcli/mock"
+	"github.com/stretchr/testify/mock"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 	sinkv1 "go.temporal.io/cloud-sdk/api/sink/v1"
+
+	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
+	"github.com/temporalio/cloud-cli/temporalcloudcli"
 )
 
 // testS3Spec returns a sample S3 spec for use in tests.
@@ -50,1055 +46,768 @@ func testExportSink(enabled bool) *namespacev1.ExportSink {
 	}
 }
 
-// --- GetExportSink ---
-
-func TestGetExportSink_Success(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-
-	sink := testExportSink(true)
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: sink}, nil)
-
-	var buf bytes.Buffer
-	err := temporalcloudcli.GetExportSink(context.Background(), temporalcloudcli.GetExportSinkParams{
-		Namespace: "my-namespace",
-		SinkName:  "my-sink",
-		Cloud:     mockCloud,
-		Printer:   newTestPrinter(&buf),
-	})
-	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "my-sink")
+func nsOpts() temporalcloudcli.NamespaceOptions {
+	return temporalcloudcli.NamespaceOptions{Namespace: "my-namespace"}
 }
 
-func TestGetExportSink_Error(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	apiErr := errors.New("api error")
+func sinkOpts() temporalcloudcli.ExportSinkOptions {
+	return temporalcloudcli.ExportSinkOptions{SinkName: "my-sink"}
+}
 
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(nil, apiErr)
+// --- GetExportSink ---
 
-	var buf bytes.Buffer
-	err := temporalcloudcli.GetExportSink(context.Background(), temporalcloudcli.GetExportSinkParams{
-		Namespace: "my-namespace",
-		SinkName:  "my-sink",
-		Cloud:     mockCloud,
-		Printer:   newTestPrinter(&buf),
-	})
-	require.ErrorIs(t, err, apiErr)
+func TestGetExportSink(t *testing.T) {
+	tests := []struct {
+		name                    string
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		expectedErr             string
+	}{
+		{
+			name: "Success",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, &cloudservice.GetNamespaceExportSinkRequest{
+						Namespace: "my-namespace",
+						Name:      "my-sink",
+					}, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: testExportSink(true)}, nil)
+			},
+		},
+		{
+			name: "GetSinkError",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("api error"))
+			},
+			expectedErr: "api error",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := temporalcloudcli.CloudNamespaceExportGetCommand{
+				NamespaceOptions:  nsOpts(),
+				ExportSinkOptions: sinkOpts(),
+			}
+			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				ExpectedError:           tt.expectedErr,
+			})
+		})
+	}
 }
 
 // --- ListExportSinks ---
 
-func TestListExportSinks_Success(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-
-	sinks := []*namespacev1.ExportSink{testExportSink(true)}
-	mockCloud.EXPECT().
-		GetNamespaceExportSinks(context.Background(), &cloudservice.GetNamespaceExportSinksRequest{
-			Namespace: "my-namespace",
-			PageToken: "",
-		}).
-		Return(&cloudservice.GetNamespaceExportSinksResponse{Sinks: sinks}, nil)
-
-	var buf bytes.Buffer
-	err := temporalcloudcli.ListExportSinks(context.Background(), temporalcloudcli.ListExportSinksParams{
-		Namespace: "my-namespace",
-		Cloud:     mockCloud,
-		Printer:   &printer.Printer{Output: &buf, JSON: true},
-	})
-	require.NoError(t, err)
-}
-
-func TestListExportSinks_Error(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	apiErr := errors.New("api error")
-
-	mockCloud.EXPECT().
-		GetNamespaceExportSinks(context.Background(), &cloudservice.GetNamespaceExportSinksRequest{
-			Namespace: "my-namespace",
-			PageToken: "",
-		}).
-		Return(nil, apiErr)
-
-	var buf bytes.Buffer
-	err := temporalcloudcli.ListExportSinks(context.Background(), temporalcloudcli.ListExportSinksParams{
-		Namespace: "my-namespace",
-		Cloud:     mockCloud,
-		Printer:   newTestPrinter(&buf),
-	})
-	require.ErrorIs(t, err, apiErr)
+func TestListExportSinks(t *testing.T) {
+	tests := []struct {
+		name                    string
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		expectedErr             string
+	}{
+		{
+			name: "Success",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSinks(mock.Anything, &cloudservice.GetNamespaceExportSinksRequest{
+						Namespace: "my-namespace",
+					}, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinksResponse{
+						Sinks: []*namespacev1.ExportSink{testExportSink(true)},
+					}, nil)
+			},
+		},
+		{
+			name: "Pagination",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSinks(mock.Anything, &cloudservice.GetNamespaceExportSinksRequest{
+						Namespace: "my-namespace",
+					}, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinksResponse{
+						Sinks:         []*namespacev1.ExportSink{testExportSink(true)},
+						NextPageToken: "next",
+					}, nil).Once()
+				c.EXPECT().
+					GetNamespaceExportSinks(mock.Anything, &cloudservice.GetNamespaceExportSinksRequest{
+						Namespace: "my-namespace",
+						PageToken: "next",
+					}, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinksResponse{
+						Sinks: []*namespacev1.ExportSink{testExportSink(false)},
+					}, nil).Once()
+			},
+		},
+		{
+			name: "Error",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSinks(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("api error"))
+			},
+			expectedErr: "api error",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := temporalcloudcli.CloudNamespaceExportListCommand{
+				NamespaceOptions: nsOpts(),
+			}
+			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				JSONOutput:              true,
+				ExpectedError:           tt.expectedErr,
+			})
+		})
+	}
 }
 
 // --- DeleteExportSink ---
 
-func TestDeleteExportSink_Success(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-
-	sink := testExportSink(true)
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: sink}, nil)
-
-	mockPrompter.EXPECT().
-		PromptApply(sink.Spec, &namespacev1.ExportSinkSpec{}, false).
-		Return(nil)
-
-	op := &operation.AsyncOperation{Id: "op-123"}
-	mockCloud.EXPECT().
-		DeleteNamespaceExportSink(context.Background(), &cloudservice.DeleteNamespaceExportSinkRequest{
-			Namespace:       "my-namespace",
-			Name:            "my-sink",
-			ResourceVersion: "rv-1",
-		}).
-		Return(&cloudservice.DeleteNamespaceExportSinkResponse{AsyncOperation: op}, nil)
-
-	mockHandler.EXPECT().
-		HandleOperation(op, "my-sink").
-		Return(nil)
-
-	err := temporalcloudcli.DeleteExportSink(context.Background(), temporalcloudcli.DeleteExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.NoError(t, err)
-}
-
-func TestDeleteExportSink_GetSinkError(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-	apiErr := errors.New("sink not found")
-
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(nil, apiErr)
-
-	err := temporalcloudcli.DeleteExportSink(context.Background(), temporalcloudcli.DeleteExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.ErrorIs(t, err, apiErr)
-}
-
-func TestDeleteExportSink_PromptDeclined(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-	promptErr := errors.New("Aborting apply.")
-
-	sink := testExportSink(true)
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: sink}, nil)
-
-	mockPrompter.EXPECT().
-		PromptApply(sink.Spec, &namespacev1.ExportSinkSpec{}, false).
-		Return(promptErr)
-
-	err := temporalcloudcli.DeleteExportSink(context.Background(), temporalcloudcli.DeleteExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.ErrorIs(t, err, promptErr)
-}
-
-func TestDeleteExportSink_ExplicitResourceVersion(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-
-	sink := testExportSink(true)
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: sink}, nil)
-
-	mockPrompter.EXPECT().
-		PromptApply(sink.Spec, &namespacev1.ExportSinkSpec{}, false).
-		Return(nil)
-
-	op := &operation.AsyncOperation{Id: "op-456"}
-	mockCloud.EXPECT().
-		DeleteNamespaceExportSink(context.Background(), &cloudservice.DeleteNamespaceExportSinkRequest{
-			Namespace:       "my-namespace",
-			Name:            "my-sink",
-			ResourceVersion: "rv-explicit",
-		}).
-		Return(&cloudservice.DeleteNamespaceExportSinkResponse{AsyncOperation: op}, nil)
-
-	mockHandler.EXPECT().
-		HandleOperation(op, "my-sink").
-		Return(nil)
-
-	err := temporalcloudcli.DeleteExportSink(context.Background(), temporalcloudcli.DeleteExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		ResourceVersion:  "rv-explicit",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.NoError(t, err)
+func TestDeleteExportSink(t *testing.T) {
+	tests := []struct {
+		name                    string
+		resourceVersion         string
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
+		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
+		expectedErr             string
+	}{
+		{
+			name: "Success",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, &cloudservice.GetNamespaceExportSinkRequest{
+						Namespace: "my-namespace", Name: "my-sink",
+					}, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: testExportSink(true)}, nil)
+				c.EXPECT().
+					DeleteNamespaceExportSink(mock.Anything, &cloudservice.DeleteNamespaceExportSinkRequest{
+						Namespace: "my-namespace", Name: "my-sink", ResourceVersion: "rv-1",
+					}, mock.Anything).
+					Return(&cloudservice.DeleteNamespaceExportSinkResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-del"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-del"},
+		},
+		{
+			name: "GetSinkError",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("sink not found"))
+			},
+			expectedErr: "sink not found",
+		},
+		{
+			name: "PromptDeclined",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: testExportSink(true)}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
+			expectedErr:   "Aborting delete.",
+		},
+		{
+			name:            "ResourceVersionOverride",
+			resourceVersion: "rv-override",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: testExportSink(true)}, nil)
+				c.EXPECT().
+					DeleteNamespaceExportSink(mock.Anything, &cloudservice.DeleteNamespaceExportSinkRequest{
+						Namespace: "my-namespace", Name: "my-sink", ResourceVersion: "rv-override",
+					}, mock.Anything).
+					Return(&cloudservice.DeleteNamespaceExportSinkResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-del"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-del"},
+		},
+		{
+			name: "DeleteError",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: testExportSink(true)}, nil)
+				c.EXPECT().
+					DeleteNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("delete failed"))
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			expectedErr:   "delete operation failed",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := temporalcloudcli.CloudNamespaceExportDeleteCommand{
+				NamespaceOptions:       nsOpts(),
+				ExportSinkOptions:      sinkOpts(),
+				ResourceVersionOptions: temporalcloudcli.ResourceVersionOptions{ResourceVersion: tt.resourceVersion},
+			}
+			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
+				AsyncPollerOptions:      tt.asyncPollerOptions,
+				ExpectedError:           tt.expectedErr,
+			})
+		})
+	}
 }
 
 // --- EnableExportSink ---
 
-func TestEnableExportSink_Success(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+func TestEnableExportSink(t *testing.T) {
+	enabledSpec := &namespacev1.ExportSinkSpec{Name: "my-sink", Enabled: true, S3: testS3Spec()}
 
-	sink := testExportSink(false)
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: sink}, nil)
-
-	oldSpec := sink.Spec
-	newSpec := &namespacev1.ExportSinkSpec{
-		Name:    "my-sink",
-		Enabled: true,
-		S3:      testS3Spec(),
+	tests := []struct {
+		name                    string
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
+		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
+		expectedErr             string
+	}{
+		{
+			name: "Success",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: testExportSink(false)}, nil)
+				c.EXPECT().
+					UpdateNamespaceExportSink(mock.Anything, &cloudservice.UpdateNamespaceExportSinkRequest{
+						Namespace: "my-namespace", Spec: enabledSpec, ResourceVersion: "rv-1",
+					}, mock.Anything).
+					Return(&cloudservice.UpdateNamespaceExportSinkResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-en"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-en"},
+		},
+		{
+			name: "GetSinkError",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("api error"))
+			},
+			expectedErr: "api error",
+		},
+		{
+			name: "PromptDeclined",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: testExportSink(false)}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
+			expectedErr:   "Aborting enable.",
+		},
+		{
+			name: "UpdateError",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: testExportSink(false)}, nil)
+				c.EXPECT().
+					UpdateNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("update failed"))
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			expectedErr:   "update operation failed",
+		},
 	}
-	mockPrompter.EXPECT().
-		PromptApply(oldSpec, newSpec, false).
-		Return(nil)
-
-	op := &operation.AsyncOperation{Id: "op-123"}
-	mockCloud.EXPECT().
-		UpdateNamespaceExportSink(context.Background(), &cloudservice.UpdateNamespaceExportSinkRequest{
-			Namespace:       "my-namespace",
-			Spec:            newSpec,
-			ResourceVersion: "rv-1",
-		}).
-		Return(&cloudservice.UpdateNamespaceExportSinkResponse{AsyncOperation: op}, nil)
-
-	mockHandler.EXPECT().
-		HandleOperation(op, "my-sink").
-		Return(nil)
-
-	err := temporalcloudcli.EnableExportSink(context.Background(), temporalcloudcli.EnableExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.NoError(t, err)
-}
-
-func TestEnableExportSink_GetSinkError(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-	apiErr := errors.New("api error")
-
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(nil, apiErr)
-
-	err := temporalcloudcli.EnableExportSink(context.Background(), temporalcloudcli.EnableExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.ErrorIs(t, err, apiErr)
-}
-
-func TestEnableExportSink_PromptDeclined(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-	promptErr := errors.New("Aborting apply.")
-
-	sink := testExportSink(false)
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: sink}, nil)
-
-	mockPrompter.EXPECT().
-		PromptApply(sink.Spec, &namespacev1.ExportSinkSpec{Name: "my-sink", Enabled: true, S3: testS3Spec()}, false).
-		Return(promptErr)
-
-	err := temporalcloudcli.EnableExportSink(context.Background(), temporalcloudcli.EnableExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.ErrorIs(t, err, promptErr)
-}
-
-func TestEnableExportSink_UpdateError(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-	updateErr := errors.New("update error")
-
-	sink := testExportSink(false)
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: sink}, nil)
-
-	newSpec := &namespacev1.ExportSinkSpec{
-		Name:    "my-sink",
-		Enabled: true,
-		S3:      testS3Spec(),
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := temporalcloudcli.CloudNamespaceExportEnableCommand{
+				NamespaceOptions:  nsOpts(),
+				ExportSinkOptions: sinkOpts(),
+			}
+			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
+				AsyncPollerOptions:      tt.asyncPollerOptions,
+				ExpectedError:           tt.expectedErr,
+			})
+		})
 	}
-	mockPrompter.EXPECT().
-		PromptApply(sink.Spec, newSpec, false).
-		Return(nil)
-
-	mockCloud.EXPECT().
-		UpdateNamespaceExportSink(context.Background(), &cloudservice.UpdateNamespaceExportSinkRequest{
-			Namespace:       "my-namespace",
-			Spec:            newSpec,
-			ResourceVersion: "rv-1",
-		}).
-		Return(nil, updateErr)
-
-	mockHandler.EXPECT().
-		HandleUpdateErr(updateErr).
-		Return(updateErr)
-
-	err := temporalcloudcli.EnableExportSink(context.Background(), temporalcloudcli.EnableExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.ErrorIs(t, err, updateErr)
 }
 
 // --- DisableExportSink ---
 
-func TestDisableExportSink_Success(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+func TestDisableExportSink(t *testing.T) {
+	disabledSpec := &namespacev1.ExportSinkSpec{Name: "my-sink", Enabled: false, S3: testS3Spec()}
 
-	sink := testExportSink(true)
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: sink}, nil)
-
-	oldSpec := sink.Spec
-	newSpec := &namespacev1.ExportSinkSpec{
-		Name:    "my-sink",
-		Enabled: false,
-		S3:      testS3Spec(),
+	tests := []struct {
+		name                    string
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
+		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
+		expectedErr             string
+	}{
+		{
+			name: "Success",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: testExportSink(true)}, nil)
+				c.EXPECT().
+					UpdateNamespaceExportSink(mock.Anything, &cloudservice.UpdateNamespaceExportSinkRequest{
+						Namespace: "my-namespace", Spec: disabledSpec, ResourceVersion: "rv-1",
+					}, mock.Anything).
+					Return(&cloudservice.UpdateNamespaceExportSinkResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-dis"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-dis"},
+		},
+		{
+			name: "PromptDeclined",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: testExportSink(true)}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
+			expectedErr:   "Aborting disable.",
+		},
 	}
-	mockPrompter.EXPECT().
-		PromptApply(oldSpec, newSpec, false).
-		Return(nil)
-
-	op := &operation.AsyncOperation{Id: "op-123"}
-	mockCloud.EXPECT().
-		UpdateNamespaceExportSink(context.Background(), &cloudservice.UpdateNamespaceExportSinkRequest{
-			Namespace:       "my-namespace",
-			Spec:            newSpec,
-			ResourceVersion: "rv-1",
-		}).
-		Return(&cloudservice.UpdateNamespaceExportSinkResponse{AsyncOperation: op}, nil)
-
-	mockHandler.EXPECT().
-		HandleOperation(op, "my-sink").
-		Return(nil)
-
-	err := temporalcloudcli.DisableExportSink(context.Background(), temporalcloudcli.DisableExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.NoError(t, err)
-}
-
-func TestDisableExportSink_PromptDeclined(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-	promptErr := errors.New("Aborting apply.")
-
-	sink := testExportSink(true)
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: sink}, nil)
-
-	mockPrompter.EXPECT().
-		PromptApply(sink.Spec, &namespacev1.ExportSinkSpec{Name: "my-sink", Enabled: false, S3: testS3Spec()}, false).
-		Return(promptErr)
-
-	err := temporalcloudcli.DisableExportSink(context.Background(), temporalcloudcli.DisableExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.ErrorIs(t, err, promptErr)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := temporalcloudcli.CloudNamespaceExportDisableCommand{
+				NamespaceOptions:  nsOpts(),
+				ExportSinkOptions: sinkOpts(),
+			}
+			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
+				AsyncPollerOptions:      tt.asyncPollerOptions,
+				ExpectedError:           tt.expectedErr,
+			})
+		})
+	}
 }
 
 // --- CreateS3ExportSink ---
 
-func TestCreateS3ExportSink_Success(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+func TestCreateS3ExportSink(t *testing.T) {
+	expectedSpec := &namespacev1.ExportSinkSpec{Name: "my-sink", Enabled: true, S3: testS3Spec()}
 
-	expectedSpec := &namespacev1.ExportSinkSpec{
-		Name:    "my-sink",
-		Enabled: true,
-		S3:      testS3Spec(),
+	tests := []struct {
+		name                    string
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
+		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
+		expectedErr             string
+	}{
+		{
+			name: "Success",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					CreateNamespaceExportSink(mock.Anything, &cloudservice.CreateNamespaceExportSinkRequest{
+						Namespace: "my-namespace", Spec: expectedSpec,
+					}, mock.Anything).
+					Return(&cloudservice.CreateNamespaceExportSinkResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-create"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-create"},
+		},
+		{
+			name:          "PromptDeclined",
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
+			expectedErr:   "Aborting create.",
+		},
+		{
+			name: "CreateError",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					CreateNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("create failed"))
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			expectedErr:   "create operation failed",
+		},
 	}
-	mockPrompter.EXPECT().
-		PromptApply(&namespacev1.ExportSinkSpec{}, expectedSpec, false).
-		Return(nil)
-
-	op := &operation.AsyncOperation{Id: "op-123"}
-	mockCloud.EXPECT().
-		CreateNamespaceExportSink(context.Background(), &cloudservice.CreateNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Spec:      expectedSpec,
-		}).
-		Return(&cloudservice.CreateNamespaceExportSinkResponse{AsyncOperation: op}, nil)
-
-	mockHandler.EXPECT().
-		HandleOperation(op, "my-sink").
-		Return(nil)
-
-	err := temporalcloudcli.CreateS3ExportSink(context.Background(), temporalcloudcli.CreateS3ExportSinkParams{
-		Namespace:    "my-namespace",
-		SinkName:     "my-sink",
-		RoleName:     "my-role",
-		BucketName:   "my-bucket",
-		Region:       "us-east-1",
-		AwsAccountID: "123456789012",
-		Cloud:        mockCloud,
-		Prompter:     mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.NoError(t, err)
-}
-
-func TestCreateS3ExportSink_PromptDeclined(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-	promptErr := errors.New("Aborting apply.")
-
-	expectedSpec := &namespacev1.ExportSinkSpec{
-		Name:    "my-sink",
-		Enabled: true,
-		S3:      testS3Spec(),
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := temporalcloudcli.CloudNamespaceExportS3CreateCommand{
+				NamespaceOptions:  nsOpts(),
+				ExportSinkOptions: sinkOpts(),
+				ExportS3Options: temporalcloudcli.ExportS3Options{
+					RoleName:     "my-role",
+					BucketName:   "my-bucket",
+					Region:       "us-east-1",
+					AwsAccountId: "123456789012",
+				},
+			}
+			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
+				AsyncPollerOptions:      tt.asyncPollerOptions,
+				ExpectedError:           tt.expectedErr,
+			})
+		})
 	}
-	mockPrompter.EXPECT().
-		PromptApply(&namespacev1.ExportSinkSpec{}, expectedSpec, false).
-		Return(promptErr)
-
-	err := temporalcloudcli.CreateS3ExportSink(context.Background(), temporalcloudcli.CreateS3ExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		RoleName:         "my-role",
-		BucketName:       "my-bucket",
-		Region:           "us-east-1",
-		AwsAccountID:     "123456789012",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.ErrorIs(t, err, promptErr)
-}
-
-func TestCreateS3ExportSink_CreateError(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-	createErr := errors.New("create error")
-
-	expectedSpec := &namespacev1.ExportSinkSpec{
-		Name:    "my-sink",
-		Enabled: true,
-		S3:      testS3Spec(),
-	}
-	mockPrompter.EXPECT().
-		PromptApply(&namespacev1.ExportSinkSpec{}, expectedSpec, false).
-		Return(nil)
-
-	mockCloud.EXPECT().
-		CreateNamespaceExportSink(context.Background(), &cloudservice.CreateNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Spec:      expectedSpec,
-		}).
-		Return(nil, createErr)
-
-	mockHandler.EXPECT().
-		HandleCreateErr(createErr).
-		Return(createErr)
-
-	err := temporalcloudcli.CreateS3ExportSink(context.Background(), temporalcloudcli.CreateS3ExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		RoleName:         "my-role",
-		BucketName:       "my-bucket",
-		Region:           "us-east-1",
-		AwsAccountID:     "123456789012",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.ErrorIs(t, err, createErr)
 }
 
 // --- UpdateS3ExportSink ---
 
-func TestUpdateS3ExportSink_Success(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+func TestUpdateS3ExportSink(t *testing.T) {
+	newS3 := &sinkv1.S3Spec{
+		RoleName:     "new-role",
+		BucketName:   "my-bucket",
+		Region:       "us-east-1",
+		AwsAccountId: "123456789012",
+	}
 
-	sink := testExportSink(true)
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: sink}, nil)
-
-	newSpec := &namespacev1.ExportSinkSpec{
-		Name:    "my-sink",
-		Enabled: true,
-		S3: &sinkv1.S3Spec{
-			RoleName:     "new-role",
-			BucketName:   "my-bucket",
-			Region:       "us-east-1",
-			AwsAccountId: "123456789012",
+	tests := []struct {
+		name                    string
+		roleName                string
+		existingEnabled         bool
+		expectedEnabled         bool
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
+		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
+		expectedErr             string
+	}{
+		{
+			name:            "Success",
+			roleName:        "new-role",
+			existingEnabled: true,
+			expectedEnabled: true,
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: testExportSink(true)}, nil)
+				c.EXPECT().
+					UpdateNamespaceExportSink(mock.Anything, &cloudservice.UpdateNamespaceExportSinkRequest{
+						Namespace: "my-namespace",
+						Spec:      &namespacev1.ExportSinkSpec{Name: "my-sink", Enabled: true, S3: newS3},
+						ResourceVersion: "rv-1",
+					}, mock.Anything).
+					Return(&cloudservice.UpdateNamespaceExportSinkResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-upd"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
+		},
+		{
+			name:            "PreservesEnabledState",
+			roleName:        "my-role",
+			existingEnabled: false,
+			expectedEnabled: false,
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: testExportSink(false)}, nil)
+				c.EXPECT().
+					UpdateNamespaceExportSink(mock.Anything, &cloudservice.UpdateNamespaceExportSinkRequest{
+						Namespace: "my-namespace",
+						Spec: &namespacev1.ExportSinkSpec{
+							Name: "my-sink", Enabled: false, S3: testS3Spec(),
+						},
+						ResourceVersion: "rv-1",
+					}, mock.Anything).
+					Return(&cloudservice.UpdateNamespaceExportSinkResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-upd"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
+		},
+		{
+			name:     "GetSinkError",
+			roleName: "my-role",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("api error"))
+			},
+			expectedErr: "api error",
+		},
+		{
+			name:     "PromptDeclined",
+			roleName: "new-role",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: testExportSink(true)}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
+			expectedErr:   "Aborting update.",
 		},
 	}
-	mockPrompter.EXPECT().
-		PromptApply(sink.Spec, newSpec, false).
-		Return(nil)
-
-	op := &operation.AsyncOperation{Id: "op-123"}
-	mockCloud.EXPECT().
-		UpdateNamespaceExportSink(context.Background(), &cloudservice.UpdateNamespaceExportSinkRequest{
-			Namespace:       "my-namespace",
-			Spec:            newSpec,
-			ResourceVersion: "rv-1",
-		}).
-		Return(&cloudservice.UpdateNamespaceExportSinkResponse{AsyncOperation: op}, nil)
-
-	mockHandler.EXPECT().
-		HandleOperation(op, "my-sink").
-		Return(nil)
-
-	err := temporalcloudcli.UpdateS3ExportSink(context.Background(), temporalcloudcli.UpdateS3ExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		RoleName:         "new-role",
-		BucketName:       "my-bucket",
-		Region:           "us-east-1",
-		AwsAccountID:     "123456789012",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.NoError(t, err)
-}
-
-func TestUpdateS3ExportSink_PromptDeclined(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-	promptErr := errors.New("Aborting apply.")
-
-	sink := testExportSink(true)
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: sink}, nil)
-
-	newSpec := &namespacev1.ExportSinkSpec{
-		Name:    "my-sink",
-		Enabled: true,
-		S3: &sinkv1.S3Spec{
-			RoleName:     "new-role",
-			BucketName:   "my-bucket",
-			Region:       "us-east-1",
-			AwsAccountId: "123456789012",
-		},
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := temporalcloudcli.CloudNamespaceExportS3UpdateCommand{
+				NamespaceOptions:  nsOpts(),
+				ExportSinkOptions: sinkOpts(),
+				ExportS3Options: temporalcloudcli.ExportS3Options{
+					RoleName:     tt.roleName,
+					BucketName:   "my-bucket",
+					Region:       "us-east-1",
+					AwsAccountId: "123456789012",
+				},
+			}
+			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
+				AsyncPollerOptions:      tt.asyncPollerOptions,
+				ExpectedError:           tt.expectedErr,
+			})
+		})
 	}
-	mockPrompter.EXPECT().
-		PromptApply(sink.Spec, newSpec, false).
-		Return(promptErr)
-
-	err := temporalcloudcli.UpdateS3ExportSink(context.Background(), temporalcloudcli.UpdateS3ExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		RoleName:         "new-role",
-		BucketName:       "my-bucket",
-		Region:           "us-east-1",
-		AwsAccountID:     "123456789012",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.ErrorIs(t, err, promptErr)
-}
-
-func TestUpdateS3ExportSink_GetSinkError(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-	apiErr := errors.New("api error")
-
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(nil, apiErr)
-
-	err := temporalcloudcli.UpdateS3ExportSink(context.Background(), temporalcloudcli.UpdateS3ExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		RoleName:         "my-role",
-		BucketName:       "my-bucket",
-		Region:           "us-east-1",
-		AwsAccountID:     "123456789012",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.ErrorIs(t, err, apiErr)
-}
-
-func TestUpdateS3ExportSink_PreservesEnabledState(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-
-	// Sink is currently disabled — update should preserve that.
-	sink := testExportSink(false)
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: sink}, nil)
-
-	newSpec := &namespacev1.ExportSinkSpec{
-		Name:    "my-sink",
-		Enabled: false, // preserved from existing sink
-		S3:      testS3Spec(),
-	}
-	mockPrompter.EXPECT().
-		PromptApply(sink.Spec, newSpec, false).
-		Return(nil)
-
-	op := &operation.AsyncOperation{Id: "op-123"}
-	mockCloud.EXPECT().
-		UpdateNamespaceExportSink(context.Background(), &cloudservice.UpdateNamespaceExportSinkRequest{
-			Namespace:       "my-namespace",
-			Spec:            newSpec,
-			ResourceVersion: "rv-1",
-		}).
-		Return(&cloudservice.UpdateNamespaceExportSinkResponse{AsyncOperation: op}, nil)
-
-	mockHandler.EXPECT().
-		HandleOperation(op, "my-sink").
-		Return(nil)
-
-	err := temporalcloudcli.UpdateS3ExportSink(context.Background(), temporalcloudcli.UpdateS3ExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		RoleName:         "my-role",
-		BucketName:       "my-bucket",
-		Region:           "us-east-1",
-		AwsAccountID:     "123456789012",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.NoError(t, err)
 }
 
 // --- ValidateS3ExportSink ---
 
-func TestValidateS3ExportSink_Success(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+func TestValidateS3ExportSink(t *testing.T) {
+	expectedSpec := &namespacev1.ExportSinkSpec{Name: "my-sink", S3: testS3Spec()}
 
-	mockCloud.EXPECT().
-		ValidateNamespaceExportSink(context.Background(), &cloudservice.ValidateNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Spec: &namespacev1.ExportSinkSpec{
-				Name: "my-sink",
-				S3:   testS3Spec(),
+	tests := []struct {
+		name                    string
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		expectedErr             string
+	}{
+		{
+			name: "Success",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					ValidateNamespaceExportSink(mock.Anything, &cloudservice.ValidateNamespaceExportSinkRequest{
+						Namespace: "my-namespace", Spec: expectedSpec,
+					}, mock.Anything).
+					Return(&cloudservice.ValidateNamespaceExportSinkResponse{}, nil)
 			},
-		}).
-		Return(&cloudservice.ValidateNamespaceExportSinkResponse{}, nil)
-
-	var buf bytes.Buffer
-	err := temporalcloudcli.ValidateS3ExportSink(context.Background(), temporalcloudcli.ValidateS3ExportSinkParams{
-		Namespace:    "my-namespace",
-		SinkName:     "my-sink",
-		RoleName:     "my-role",
-		BucketName:   "my-bucket",
-		Region:       "us-east-1",
-		AwsAccountID: "123456789012",
-		Cloud:        mockCloud,
-		Printer:      newTestPrinter(&buf),
-	})
-	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "my-sink")
-}
-
-func TestValidateS3ExportSink_Error(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	apiErr := errors.New("invalid config")
-
-	mockCloud.EXPECT().
-		ValidateNamespaceExportSink(context.Background(), &cloudservice.ValidateNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Spec: &namespacev1.ExportSinkSpec{
-				Name: "my-sink",
-				S3:   testS3Spec(),
+		},
+		{
+			name: "Error",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					ValidateNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("invalid config"))
 			},
-		}).
-		Return(nil, apiErr)
-
-	var buf bytes.Buffer
-	err := temporalcloudcli.ValidateS3ExportSink(context.Background(), temporalcloudcli.ValidateS3ExportSinkParams{
-		Namespace:    "my-namespace",
-		SinkName:     "my-sink",
-		RoleName:     "my-role",
-		BucketName:   "my-bucket",
-		Region:       "us-east-1",
-		AwsAccountID: "123456789012",
-		Cloud:        mockCloud,
-		Printer:      newTestPrinter(&buf),
-	})
-	require.ErrorIs(t, err, apiErr)
+			expectedErr: "invalid config",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := temporalcloudcli.CloudNamespaceExportS3ValidateCommand{
+				NamespaceOptions:  nsOpts(),
+				ExportSinkOptions: sinkOpts(),
+				ExportS3Options: temporalcloudcli.ExportS3Options{
+					RoleName:     "my-role",
+					BucketName:   "my-bucket",
+					Region:       "us-east-1",
+					AwsAccountId: "123456789012",
+				},
+			}
+			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				ExpectedError:           tt.expectedErr,
+			})
+		})
+	}
 }
 
 // --- CreateGCSExportSink ---
 
-func TestCreateGCSExportSink_Success(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+func TestCreateGCSExportSink(t *testing.T) {
+	expectedSpec := &namespacev1.ExportSinkSpec{Name: "my-sink", Enabled: true, Gcs: testGCSSpec()}
 
-	expectedSpec := &namespacev1.ExportSinkSpec{
-		Name:    "my-sink",
-		Enabled: true,
-		Gcs:     testGCSSpec(),
+	tests := []struct {
+		name                    string
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
+		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
+		expectedErr             string
+	}{
+		{
+			name: "Success",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					CreateNamespaceExportSink(mock.Anything, &cloudservice.CreateNamespaceExportSinkRequest{
+						Namespace: "my-namespace", Spec: expectedSpec,
+					}, mock.Anything).
+					Return(&cloudservice.CreateNamespaceExportSinkResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-create"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-create"},
+		},
+		{
+			name:          "PromptDeclined",
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
+			expectedErr:   "Aborting create.",
+		},
 	}
-	mockPrompter.EXPECT().
-		PromptApply(&namespacev1.ExportSinkSpec{}, expectedSpec, false).
-		Return(nil)
-
-	op := &operation.AsyncOperation{Id: "op-123"}
-	mockCloud.EXPECT().
-		CreateNamespaceExportSink(context.Background(), &cloudservice.CreateNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Spec:      expectedSpec,
-		}).
-		Return(&cloudservice.CreateNamespaceExportSinkResponse{AsyncOperation: op}, nil)
-
-	mockHandler.EXPECT().
-		HandleOperation(op, "my-sink").
-		Return(nil)
-
-	err := temporalcloudcli.CreateGCSExportSink(context.Background(), temporalcloudcli.CreateGCSExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		SaID:             "my-sa@project.iam.gserviceaccount.com",
-		BucketName:       "my-bucket",
-		GcpProjectID:     "my-project",
-		Region:           "us-central1",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.NoError(t, err)
-}
-
-func TestCreateGCSExportSink_PromptDeclined(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-	promptErr := errors.New("Aborting apply.")
-
-	expectedSpec := &namespacev1.ExportSinkSpec{
-		Name:    "my-sink",
-		Enabled: true,
-		Gcs:     testGCSSpec(),
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := temporalcloudcli.CloudNamespaceExportGcsCreateCommand{
+				NamespaceOptions:  nsOpts(),
+				ExportSinkOptions: sinkOpts(),
+				ExportGcsOptions: temporalcloudcli.ExportGcsOptions{
+					SaId:         "my-sa@project.iam.gserviceaccount.com",
+					BucketName:   "my-bucket",
+					GcpProjectId: "my-project",
+					Region:       "us-central1",
+				},
+			}
+			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
+				AsyncPollerOptions:      tt.asyncPollerOptions,
+				ExpectedError:           tt.expectedErr,
+			})
+		})
 	}
-	mockPrompter.EXPECT().
-		PromptApply(&namespacev1.ExportSinkSpec{}, expectedSpec, false).
-		Return(promptErr)
-
-	err := temporalcloudcli.CreateGCSExportSink(context.Background(), temporalcloudcli.CreateGCSExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		SaID:             "my-sa@project.iam.gserviceaccount.com",
-		BucketName:       "my-bucket",
-		GcpProjectID:     "my-project",
-		Region:           "us-central1",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.ErrorIs(t, err, promptErr)
 }
 
 // --- UpdateGCSExportSink ---
 
-func TestUpdateGCSExportSink_Success(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-
+func TestUpdateGCSExportSink(t *testing.T) {
 	existingSink := &namespacev1.ExportSink{
 		ResourceVersion: "rv-1",
 		Spec: &namespacev1.ExportSinkSpec{
-			Name:    "my-sink",
-			Enabled: true,
-			Gcs:     testGCSSpec(),
+			Name: "my-sink", Enabled: true, Gcs: testGCSSpec(),
 		},
 	}
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: existingSink}, nil)
+	newGCS := &sinkv1.GCSSpec{
+		SaId:         "new-sa@project.iam.gserviceaccount.com",
+		BucketName:   "my-bucket",
+		GcpProjectId: "my-project",
+		Region:       "us-central1",
+	}
 
-	newSpec := &namespacev1.ExportSinkSpec{
-		Name:    "my-sink",
-		Enabled: true,
-		Gcs: &sinkv1.GCSSpec{
-			SaId:         "new-sa@project.iam.gserviceaccount.com",
-			BucketName:   "my-bucket",
-			GcpProjectId: "my-project",
-			Region:       "us-central1",
+	tests := []struct {
+		name                    string
+		saID                    string
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
+		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
+		expectedErr             string
+	}{
+		{
+			name: "Success",
+			saID: "new-sa@project.iam.gserviceaccount.com",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: existingSink}, nil)
+				c.EXPECT().
+					UpdateNamespaceExportSink(mock.Anything, &cloudservice.UpdateNamespaceExportSinkRequest{
+						Namespace: "my-namespace",
+						Spec: &namespacev1.ExportSinkSpec{
+							Name: "my-sink", Enabled: true, Gcs: newGCS,
+						},
+						ResourceVersion: "rv-1",
+					}, mock.Anything).
+					Return(&cloudservice.UpdateNamespaceExportSinkResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-upd"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
+		},
+		{
+			name: "GetSinkError",
+			saID: "my-sa@project.iam.gserviceaccount.com",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("api error"))
+			},
+			expectedErr: "api error",
+		},
+		{
+			name: "PromptDeclined",
+			saID: "new-sa@project.iam.gserviceaccount.com",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: existingSink}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
+			expectedErr:   "Aborting update.",
 		},
 	}
-	mockPrompter.EXPECT().
-		PromptApply(existingSink.Spec, newSpec, false).
-		Return(nil)
-
-	op := &operation.AsyncOperation{Id: "op-123"}
-	mockCloud.EXPECT().
-		UpdateNamespaceExportSink(context.Background(), &cloudservice.UpdateNamespaceExportSinkRequest{
-			Namespace:       "my-namespace",
-			Spec:            newSpec,
-			ResourceVersion: "rv-1",
-		}).
-		Return(&cloudservice.UpdateNamespaceExportSinkResponse{AsyncOperation: op}, nil)
-
-	mockHandler.EXPECT().
-		HandleOperation(op, "my-sink").
-		Return(nil)
-
-	err := temporalcloudcli.UpdateGCSExportSink(context.Background(), temporalcloudcli.UpdateGCSExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		SaID:             "new-sa@project.iam.gserviceaccount.com",
-		BucketName:       "my-bucket",
-		GcpProjectID:     "my-project",
-		Region:           "us-central1",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.NoError(t, err)
-}
-
-func TestUpdateGCSExportSink_PromptDeclined(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-	promptErr := errors.New("Aborting apply.")
-
-	existingSink := &namespacev1.ExportSink{
-		ResourceVersion: "rv-1",
-		Spec: &namespacev1.ExportSinkSpec{
-			Name:    "my-sink",
-			Enabled: true,
-			Gcs:     testGCSSpec(),
-		},
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := temporalcloudcli.CloudNamespaceExportGcsUpdateCommand{
+				NamespaceOptions:  nsOpts(),
+				ExportSinkOptions: sinkOpts(),
+				ExportGcsOptions: temporalcloudcli.ExportGcsOptions{
+					SaId:         tt.saID,
+					BucketName:   "my-bucket",
+					GcpProjectId: "my-project",
+					Region:       "us-central1",
+				},
+			}
+			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
+				AsyncPollerOptions:      tt.asyncPollerOptions,
+				ExpectedError:           tt.expectedErr,
+			})
+		})
 	}
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: existingSink}, nil)
-
-	newSpec := &namespacev1.ExportSinkSpec{
-		Name:    "my-sink",
-		Enabled: true,
-		Gcs: &sinkv1.GCSSpec{
-			SaId:         "new-sa@project.iam.gserviceaccount.com",
-			BucketName:   "my-bucket",
-			GcpProjectId: "my-project",
-			Region:       "us-central1",
-		},
-	}
-	mockPrompter.EXPECT().
-		PromptApply(existingSink.Spec, newSpec, false).
-		Return(promptErr)
-
-	err := temporalcloudcli.UpdateGCSExportSink(context.Background(), temporalcloudcli.UpdateGCSExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		SaID:             "new-sa@project.iam.gserviceaccount.com",
-		BucketName:       "my-bucket",
-		GcpProjectID:     "my-project",
-		Region:           "us-central1",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.ErrorIs(t, err, promptErr)
-}
-
-func TestUpdateGCSExportSink_GetSinkError(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockPrompter := cmdmock.NewMockPrompter(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-	apiErr := errors.New("api error")
-
-	mockCloud.EXPECT().
-		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Name:      "my-sink",
-		}).
-		Return(nil, apiErr)
-
-	err := temporalcloudcli.UpdateGCSExportSink(context.Background(), temporalcloudcli.UpdateGCSExportSinkParams{
-		Namespace:        "my-namespace",
-		SinkName:         "my-sink",
-		SaID:             "my-sa@project.iam.gserviceaccount.com",
-		BucketName:       "my-bucket",
-		GcpProjectID:     "my-project",
-		Region:           "us-central1",
-		Cloud:            mockCloud,
-		Prompter:         mockPrompter,
-		OperationHandler: mockHandler,
-	})
-	require.ErrorIs(t, err, apiErr)
 }
 
 // --- ValidateGCSExportSink ---
 
-func TestValidateGCSExportSink_Success(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+func TestValidateGCSExportSink(t *testing.T) {
+	expectedSpec := &namespacev1.ExportSinkSpec{Name: "my-sink", Gcs: testGCSSpec()}
 
-	mockCloud.EXPECT().
-		ValidateNamespaceExportSink(context.Background(), &cloudservice.ValidateNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Spec: &namespacev1.ExportSinkSpec{
-				Name: "my-sink",
-				Gcs:  testGCSSpec(),
+	tests := []struct {
+		name                    string
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		expectedErr             string
+	}{
+		{
+			name: "Success",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					ValidateNamespaceExportSink(mock.Anything, &cloudservice.ValidateNamespaceExportSinkRequest{
+						Namespace: "my-namespace", Spec: expectedSpec,
+					}, mock.Anything).
+					Return(&cloudservice.ValidateNamespaceExportSinkResponse{}, nil)
 			},
-		}).
-		Return(&cloudservice.ValidateNamespaceExportSinkResponse{}, nil)
-
-	var buf bytes.Buffer
-	err := temporalcloudcli.ValidateGCSExportSink(context.Background(), temporalcloudcli.ValidateGCSExportSinkParams{
-		Namespace:    "my-namespace",
-		SinkName:     "my-sink",
-		SaID:         "my-sa@project.iam.gserviceaccount.com",
-		BucketName:   "my-bucket",
-		GcpProjectID: "my-project",
-		Region:       "us-central1",
-		Cloud:        mockCloud,
-		Printer:      newTestPrinter(&buf),
-	})
-	require.NoError(t, err)
-	assert.Contains(t, buf.String(), "my-sink")
-}
-
-func TestValidateGCSExportSink_Error(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	apiErr := errors.New("invalid config")
-
-	mockCloud.EXPECT().
-		ValidateNamespaceExportSink(context.Background(), &cloudservice.ValidateNamespaceExportSinkRequest{
-			Namespace: "my-namespace",
-			Spec: &namespacev1.ExportSinkSpec{
-				Name: "my-sink",
-				Gcs:  testGCSSpec(),
+		},
+		{
+			name: "Error",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					ValidateNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("invalid config"))
 			},
-		}).
-		Return(nil, apiErr)
-
-	var buf bytes.Buffer
-	err := temporalcloudcli.ValidateGCSExportSink(context.Background(), temporalcloudcli.ValidateGCSExportSinkParams{
-		Namespace:    "my-namespace",
-		SinkName:     "my-sink",
-		SaID:         "my-sa@project.iam.gserviceaccount.com",
-		BucketName:   "my-bucket",
-		GcpProjectID: "my-project",
-		Region:       "us-central1",
-		Cloud:        mockCloud,
-		Printer:      newTestPrinter(&buf),
-	})
-	require.ErrorIs(t, err, apiErr)
+			expectedErr: "invalid config",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := temporalcloudcli.CloudNamespaceExportGcsValidateCommand{
+				NamespaceOptions:  nsOpts(),
+				ExportSinkOptions: sinkOpts(),
+				ExportGcsOptions: temporalcloudcli.ExportGcsOptions{
+					SaId:         "my-sa@project.iam.gserviceaccount.com",
+					BucketName:   "my-bucket",
+					GcpProjectId: "my-project",
+					Region:       "us-central1",
+				},
+			}
+			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				ExpectedError:           tt.expectedErr,
+			})
+		})
+	}
 }
