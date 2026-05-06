@@ -26,7 +26,7 @@ func (c *CloudNamespaceCapacityGetCommand) run(cctx *CommandContext, _ []string)
 	if err != nil {
 		return err
 	}
-	return cctx.Printer.PrintStructured(res.CapacityInfo, printer.StructuredOptions{})
+	return cctx.Printer.PrintResource(res.CapacityInfo, printer.PrintResourceOptions{})
 }
 
 func (c *CloudNamespaceCapacityUpdateCommand) run(cctx *CommandContext, _ []string) error {
