@@ -1,8 +1,6 @@
 package protoutils_test
 
 import (
-	"flag"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -14,10 +12,9 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/temporalio/cloud-cli/internal/goldentest"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/protoutils"
 )
-
-var updateGolden = flag.Bool("update-golden", false, "update golden files")
 
 func TestClearDeprecatedFields(t *testing.T) {
 	tests := []struct {
@@ -180,14 +177,7 @@ func TestStripDeprecatedJSONFields(t *testing.T) {
 			got, err := protoutils.StripDeprecatedJSONFields(data, tt.input)
 			require.NoError(t, err)
 
-			golden := filepath.Join("testdata", "strip_deprecated", tt.name+".golden.json")
-			if *updateGolden {
-				require.NoError(t, os.MkdirAll(filepath.Dir(golden), 0o755))
-				require.NoError(t, os.WriteFile(golden, got, 0o644))
-			}
-			want, err := os.ReadFile(golden)
-			require.NoError(t, err)
-			assert.JSONEq(t, string(want), string(got), "output does not match contents of golden file: have you run --update-golden?")
+			goldentest.AssertJSON(t, filepath.Join("testdata", "strip_deprecated", tt.name+".golden.json"), got)
 		})
 	}
 }
