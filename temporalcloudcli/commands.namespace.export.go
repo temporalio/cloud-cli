@@ -3,7 +3,9 @@ package temporalcloudcli
 import (
 	"errors"
 	"fmt"
+	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	sinkv1 "go.temporal.io/cloud-sdk/api/sink/v1"
@@ -11,6 +13,23 @@ import (
 
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
+
+// parseS3RoleARN extracts the IAM role name and AWS account ID from an IAM role ARN
+// of the form "arn:aws:iam::<account>:role/<name>".
+func parseS3RoleARN(roleARN string) (roleName, accountID string, err error) {
+	parsed, err := arn.Parse(roleARN)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid role ARN %q: %w", roleARN, err)
+	}
+	if parsed.Service != "iam" {
+		return "", "", fmt.Errorf("expected an IAM role ARN, got service %q", parsed.Service)
+	}
+	name, ok := strings.CutPrefix(parsed.Resource, "role/")
+	if !ok || name == "" {
+		return "", "", fmt.Errorf("expected an IAM role ARN with resource of the form role/<name>, got %q", parsed.Resource)
+	}
+	return name, parsed.AccountID, nil
+}
 
 func (c *CloudNamespaceExportGetCommand) run(cctx *CommandContext, _ []string) error {
 	client, err := cctx.GetCloudClient(c.ClientOptions)
@@ -176,6 +195,10 @@ func (c *CloudNamespaceExportDisableCommand) run(cctx *CommandContext, _ []strin
 }
 
 func (c *CloudNamespaceExportS3CreateCommand) run(cctx *CommandContext, _ []string) error {
+	roleName, accountID, err := parseS3RoleARN(c.RoleArn)
+	if err != nil {
+		return err
+	}
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -184,10 +207,10 @@ func (c *CloudNamespaceExportS3CreateCommand) run(cctx *CommandContext, _ []stri
 		Name:    c.SinkName,
 		Enabled: true,
 		S3: &sinkv1.S3Spec{
-			RoleName:     c.RoleName,
+			RoleName:     roleName,
 			BucketName:   c.BucketName,
 			Region:       c.Region,
-			AwsAccountId: c.AwsAccountId,
+			AwsAccountId: accountID,
 			KmsArn:       c.KmsArn,
 		},
 	}
@@ -208,6 +231,10 @@ func (c *CloudNamespaceExportS3CreateCommand) run(cctx *CommandContext, _ []stri
 }
 
 func (c *CloudNamespaceExportS3UpdateCommand) run(cctx *CommandContext, _ []string) error {
+	roleName, accountID, err := parseS3RoleARN(c.RoleArn)
+	if err != nil {
+		return err
+	}
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -225,10 +252,10 @@ func (c *CloudNamespaceExportS3UpdateCommand) run(cctx *CommandContext, _ []stri
 		Name:    c.SinkName,
 		Enabled: sink.Spec.GetEnabled(),
 		S3: &sinkv1.S3Spec{
-			RoleName:     c.RoleName,
+			RoleName:     roleName,
 			BucketName:   c.BucketName,
 			Region:       sink.Spec.GetS3().GetRegion(),
-			AwsAccountId: c.AwsAccountId,
+			AwsAccountId: accountID,
 			KmsArn:       c.KmsArn,
 		},
 	}
@@ -255,6 +282,10 @@ func (c *CloudNamespaceExportS3UpdateCommand) run(cctx *CommandContext, _ []stri
 }
 
 func (c *CloudNamespaceExportS3ValidateCommand) run(cctx *CommandContext, _ []string) error {
+	roleName, accountID, err := parseS3RoleARN(c.RoleArn)
+	if err != nil {
+		return err
+	}
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -262,10 +293,10 @@ func (c *CloudNamespaceExportS3ValidateCommand) run(cctx *CommandContext, _ []st
 	spec := &namespacev1.ExportSinkSpec{
 		Name: c.SinkName,
 		S3: &sinkv1.S3Spec{
-			RoleName:     c.RoleName,
+			RoleName:     roleName,
 			BucketName:   c.BucketName,
 			Region:       c.Region,
-			AwsAccountId: c.AwsAccountId,
+			AwsAccountId: accountID,
 			KmsArn:       c.KmsArn,
 		},
 	}

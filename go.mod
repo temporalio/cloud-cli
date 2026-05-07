@@ -3,6 +3,7 @@ module github.com/temporalio/cloud-cli
 go 1.26.2
 
 require (
+	github.com/aws/aws-sdk-go-v2 v1.41.7
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.18.0
 	github.com/kylelemons/godebug v1.1.0

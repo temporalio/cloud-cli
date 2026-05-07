@@ -161,21 +161,18 @@ func (v *ExportSinkOptions) BuildFlags(f *pflag.FlagSet) {
 }
 
 type ExportS3Options struct {
-	RoleName     string
-	BucketName   string
-	AwsAccountId string
-	KmsArn       string
-	FlagSet      *pflag.FlagSet
+	RoleArn    string
+	BucketName string
+	KmsArn     string
+	FlagSet    *pflag.FlagSet
 }
 
 func (v *ExportS3Options) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.StringVar(&v.RoleName, "role-name", "", "The IAM role ARN that Temporal Cloud assumes for writing to S3. Required.")
-	_ = cobra.MarkFlagRequired(f, "role-name")
+	f.StringVar(&v.RoleArn, "role-arn", "", "The IAM role ARN that Temporal Cloud assumes for writing to S3 (e.g. arn:aws:iam::123456789012:role/my-role). The role name and AWS account ID are parsed from this ARN. Required.")
+	_ = cobra.MarkFlagRequired(f, "role-arn")
 	f.StringVar(&v.BucketName, "bucket-name", "", "The name of the destination S3 bucket. Required.")
 	_ = cobra.MarkFlagRequired(f, "bucket-name")
-	f.StringVar(&v.AwsAccountId, "aws-account-id", "", "The AWS account ID associated with the bucket and role. Required.")
-	_ = cobra.MarkFlagRequired(f, "aws-account-id")
 	f.StringVar(&v.KmsArn, "kms-arn", "", "The AWS KMS key ARN for server-side encryption of exported data. Optional.")
 }
 
@@ -2736,9 +2733,9 @@ func NewCloudNamespaceExportS3CreateCommand(cctx *CommandContext, parent *CloudN
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create an S3 workflow history export sink"
 	if hasHighlighting {
-		s.Command.Long = "Create a new S3 workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1 --aws-account-id 123456789012\x1b[0m"
+		s.Command.Long = "Create a new S3 workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1\x1b[0m"
 	} else {
-		s.Command.Long = "Create a new S3 workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n```\ntemporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1 --aws-account-id 123456789012\n```"
+		s.Command.Long = "Create a new S3 workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n```\ntemporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -2773,9 +2770,9 @@ func NewCloudNamespaceExportS3UpdateCommand(cctx *CommandContext, parent *CloudN
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update an S3 workflow history export sink"
 	if hasHighlighting {
-		s.Command.Long = "Update the configuration of an existing S3 workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket \\\n  --aws-account-id 123456789012\x1b[0m"
+		s.Command.Long = "Update the configuration of an existing S3 workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket\x1b[0m"
 	} else {
-		s.Command.Long = "Update the configuration of an existing S3 workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n```\ntemporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket \\\n  --aws-account-id 123456789012\n```"
+		s.Command.Long = "Update the configuration of an existing S3 workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n```\ntemporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -2809,9 +2806,9 @@ func NewCloudNamespaceExportS3ValidateCommand(cctx *CommandContext, parent *Clou
 	s.Command.Use = "validate [flags]"
 	s.Command.Short = "Validate an S3 workflow history export sink configuration"
 	if hasHighlighting {
-		s.Command.Long = "Validate an S3 workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1 --aws-account-id 123456789012\x1b[0m"
+		s.Command.Long = "Validate an S3 workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1\x1b[0m"
 	} else {
-		s.Command.Long = "Validate an S3 workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n```\ntemporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1 --aws-account-id 123456789012\n```"
+		s.Command.Long = "Validate an S3 workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n```\ntemporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())

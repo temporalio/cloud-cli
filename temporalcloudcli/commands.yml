@@ -881,8 +881,8 @@ commands:
 
       ```
       temporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \
-        --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
-        --region us-east-1 --aws-account-id 123456789012
+        --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
+        --region us-east-1
       ```
     has-init: false
     option-sets:
@@ -902,8 +902,7 @@ commands:
 
       ```
       temporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \
-        --role-name arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket \
-        --aws-account-id 123456789012
+        --role-arn arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket
       ```
     has-init: false
     option-sets:
@@ -923,8 +922,8 @@ commands:
 
       ```
       temporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \
-        --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
-        --region us-east-1 --aws-account-id 123456789012
+        --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
+        --region us-east-1
       ```
     has-init: false
     option-sets:
@@ -948,8 +947,8 @@ commands:
 
       ```
       temporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \
-        --sa-id my-service-account@my-project.iam.gserviceaccount.com \
-        --bucket-name my-bucket --gcp-project-id my-project --region us-central1
+        --service-account-email my-service-account@my-project.iam.gserviceaccount.com \
+        --bucket-name my-bucket --region us-central1
       ```
     has-init: false
     option-sets:
@@ -969,8 +968,8 @@ commands:
 
       ```
       temporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \
-        --sa-id my-service-account@my-project.iam.gserviceaccount.com \
-        --bucket-name my-bucket --gcp-project-id my-project
+        --service-account-email my-service-account@my-project.iam.gserviceaccount.com \
+        --bucket-name my-bucket
       ```
     has-init: false
     option-sets:
@@ -990,8 +989,8 @@ commands:
 
       ```
       temporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \
-        --sa-id my-service-account@my-project.iam.gserviceaccount.com \
-        --bucket-name my-bucket --gcp-project-id my-project --region us-central1
+        --service-account-email my-service-account@my-project.iam.gserviceaccount.com \
+        --bucket-name my-bucket --region us-central1
       ```
     has-init: false
     option-sets:
@@ -3812,21 +3811,18 @@ option-sets:
           The name of the export sink.
   - name: export-s3
     options:
-      - name: role-name
+      - name: role-arn
         type: string
         required: true
         description: |
-          The IAM role ARN that Temporal Cloud assumes for writing to S3.
+          The IAM role ARN that Temporal Cloud assumes for writing to S3
+          (e.g. arn:aws:iam::123456789012:role/my-role). The role name and
+          AWS account ID are parsed from this ARN.
       - name: bucket-name
         type: string
         required: true
         description: |
           The name of the destination S3 bucket.
-      - name: aws-account-id
-        type: string
-        required: true
-        description: |
-          The AWS account ID associated with the bucket and role.
       - name: kms-arn
         type: string
         description: |
@@ -3840,21 +3836,18 @@ option-sets:
           The AWS region where the S3 bucket is located.
   - name: export-gcs
     options:
-      - name: sa-id
+      - name: service-account-email
         type: string
         required: true
         description: |
-          The customer service account ID that Temporal Cloud impersonates for writing to GCS.
+          The email of the customer service account that Temporal Cloud impersonates for
+          writing to GCS (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account
+          ID and GCP project ID are parsed from this email.
       - name: bucket-name
         type: string
         required: true
         description: |
           The name of the destination GCS bucket.
-      - name: gcp-project-id
-        type: string
-        required: true
-        description: |
-          The GCP project ID associated with the bucket and service account.
   - name: export-gcs-region
     options:
       - name: region

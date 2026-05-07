@@ -442,9 +442,8 @@ func TestCreateS3ExportSink(t *testing.T) {
 				NamespaceOptions:  nsOpts(),
 				ExportSinkOptions: sinkOpts(),
 				ExportS3Options: temporalcloudcli.ExportS3Options{
-					RoleName:     "my-role",
-					BucketName:   "my-bucket",
-					AwsAccountId: "123456789012",
+					RoleArn:    "arn:aws:iam::123456789012:role/my-role",
+					BucketName: "my-bucket",
 				},
 				ExportS3RegionOptions: temporalcloudcli.ExportS3RegionOptions{Region: "us-east-1"},
 			}
@@ -470,7 +469,7 @@ func TestUpdateS3ExportSink(t *testing.T) {
 
 	tests := []struct {
 		name                    string
-		roleName                string
+		roleArn                 string
 		existingEnabled         bool
 		expectedEnabled         bool
 		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
@@ -480,7 +479,7 @@ func TestUpdateS3ExportSink(t *testing.T) {
 	}{
 		{
 			name:            "Success",
-			roleName:        "new-role",
+			roleArn:         "arn:aws:iam::123456789012:role/new-role",
 			existingEnabled: true,
 			expectedEnabled: true,
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -502,7 +501,7 @@ func TestUpdateS3ExportSink(t *testing.T) {
 		},
 		{
 			name:            "PreservesEnabledState",
-			roleName:        "my-role",
+			roleArn:         "arn:aws:iam::123456789012:role/my-role",
 			existingEnabled: false,
 			expectedEnabled: false,
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -525,8 +524,8 @@ func TestUpdateS3ExportSink(t *testing.T) {
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
 		},
 		{
-			name:     "GetSinkError",
-			roleName: "my-role",
+			name:    "GetSinkError",
+			roleArn: "arn:aws:iam::123456789012:role/my-role",
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
 					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
@@ -535,8 +534,8 @@ func TestUpdateS3ExportSink(t *testing.T) {
 			expectedErr: "api error",
 		},
 		{
-			name:     "PromptDeclined",
-			roleName: "new-role",
+			name:    "PromptDeclined",
+			roleArn: "arn:aws:iam::123456789012:role/new-role",
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
 					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
@@ -545,6 +544,11 @@ func TestUpdateS3ExportSink(t *testing.T) {
 			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
 			expectedErr:   "Aborting update.",
 		},
+		{
+			name:        "InvalidRoleArn",
+			roleArn:     "not-an-arn",
+			expectedErr: "invalid role ARN",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -552,9 +556,8 @@ func TestUpdateS3ExportSink(t *testing.T) {
 				NamespaceOptions:  nsOpts(),
 				ExportSinkOptions: sinkOpts(),
 				ExportS3Options: temporalcloudcli.ExportS3Options{
-					RoleName:     tt.roleName,
-					BucketName:   "my-bucket",
-					AwsAccountId: "123456789012",
+					RoleArn:    tt.roleArn,
+					BucketName: "my-bucket",
 				},
 			}
 			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
@@ -603,9 +606,8 @@ func TestValidateS3ExportSink(t *testing.T) {
 				NamespaceOptions:  nsOpts(),
 				ExportSinkOptions: sinkOpts(),
 				ExportS3Options: temporalcloudcli.ExportS3Options{
-					RoleName:     "my-role",
-					BucketName:   "my-bucket",
-					AwsAccountId: "123456789012",
+					RoleArn:    "arn:aws:iam::123456789012:role/my-role",
+					BucketName: "my-bucket",
 				},
 				ExportS3RegionOptions: temporalcloudcli.ExportS3RegionOptions{Region: "us-east-1"},
 			}
