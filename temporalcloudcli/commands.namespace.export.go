@@ -81,7 +81,6 @@ type (
 		SinkName         string
 		RoleName         string
 		BucketName       string
-		Region           string
 		AwsAccountID     string
 		KmsArn           string
 		ResourceVersion  string
@@ -125,7 +124,6 @@ type (
 		SaID             string
 		BucketName       string
 		GcpProjectID     string
-		Region           string
 		ResourceVersion  string
 		AsyncOperationID string
 
@@ -328,16 +326,23 @@ func UpdateS3ExportSink(ctx context.Context, params UpdateS3ExportSinkParams) er
 	}
 
 	oldSpec := sink.Spec
+	newS3 := proto.Clone(oldSpec.GetS3()).(*sinkv1.S3Spec)
+	if params.RoleName != "" {
+		newS3.RoleName = params.RoleName
+	}
+	if params.AwsAccountID != "" {
+		newS3.AwsAccountId = params.AwsAccountID
+	}
+	if params.BucketName != "" {
+		newS3.BucketName = params.BucketName
+	}
+	if params.KmsArn != "" {
+		newS3.KmsArn = params.KmsArn
+	}
 	newSpec := &namespacev1.ExportSinkSpec{
 		Name:    params.SinkName,
 		Enabled: oldSpec.GetEnabled(),
-		S3: &sinkv1.S3Spec{
-			RoleName:     params.RoleName,
-			BucketName:   params.BucketName,
-			Region:       params.Region,
-			AwsAccountId: params.AwsAccountID,
-			KmsArn:       params.KmsArn,
-		},
+		S3:      newS3,
 	}
 
 	if err := params.Prompter.PromptApply(oldSpec, newSpec, false); err != nil {
@@ -419,15 +424,20 @@ func UpdateGCSExportSink(ctx context.Context, params UpdateGCSExportSinkParams) 
 	}
 
 	oldSpec := sink.Spec
+	newGcs := proto.Clone(oldSpec.GetGcs()).(*sinkv1.GCSSpec)
+	if params.SaID != "" {
+		newGcs.SaId = params.SaID
+	}
+	if params.GcpProjectID != "" {
+		newGcs.GcpProjectId = params.GcpProjectID
+	}
+	if params.BucketName != "" {
+		newGcs.BucketName = params.BucketName
+	}
 	newSpec := &namespacev1.ExportSinkSpec{
 		Name:    params.SinkName,
 		Enabled: oldSpec.GetEnabled(),
-		Gcs: &sinkv1.GCSSpec{
-			SaId:         params.SaID,
-			BucketName:   params.BucketName,
-			GcpProjectId: params.GcpProjectID,
-			Region:       params.Region,
-		},
+		Gcs:     newGcs,
 	}
 
 	if err := params.Prompter.PromptApply(oldSpec, newSpec, false); err != nil {
@@ -564,9 +574,13 @@ func (c *CloudNamespaceExportS3CreateCommand) run(cctx *CommandContext, _ []stri
 }
 
 func (c *CloudNamespaceExportS3UpdateCommand) run(cctx *CommandContext, _ []string) error {
-	roleName, accountID, err := ParseRoleARN(c.RoleArn)
-	if err != nil {
-		return err
+	var roleName, accountID string
+	if c.RoleArn != "" {
+		var err error
+		roleName, accountID, err = ParseRoleARN(c.RoleArn)
+		if err != nil {
+			return err
+		}
 	}
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
@@ -577,7 +591,6 @@ func (c *CloudNamespaceExportS3UpdateCommand) run(cctx *CommandContext, _ []stri
 		SinkName:         c.SinkName,
 		RoleName:         roleName,
 		BucketName:       c.BucketName,
-		Region:           c.Region,
 		AwsAccountID:     accountID,
 		KmsArn:           c.KmsArn,
 		ResourceVersion:  c.ResourceVersion,
@@ -634,9 +647,13 @@ func (c *CloudNamespaceExportGcsCreateCommand) run(cctx *CommandContext, _ []str
 }
 
 func (c *CloudNamespaceExportGcsUpdateCommand) run(cctx *CommandContext, _ []string) error {
-	saID, projectID, err := ParseServiceAccountEmail(c.ServiceAccountEmail)
-	if err != nil {
-		return err
+	var saID, projectID string
+	if c.ServiceAccountEmail != "" {
+		var err error
+		saID, projectID, err = ParseServiceAccountEmail(c.ServiceAccountEmail)
+		if err != nil {
+			return err
+		}
 	}
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
@@ -648,7 +665,6 @@ func (c *CloudNamespaceExportGcsUpdateCommand) run(cctx *CommandContext, _ []str
 		SaID:             saID,
 		BucketName:       c.BucketName,
 		GcpProjectID:     projectID,
-		Region:           c.Region,
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),

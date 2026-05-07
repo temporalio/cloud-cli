@@ -163,7 +163,6 @@ func (v *ExportSinkOptions) BuildFlags(f *pflag.FlagSet) {
 type ExportS3Options struct {
 	RoleArn    string
 	BucketName string
-	Region     string
 	KmsArn     string
 	FlagSet    *pflag.FlagSet
 }
@@ -174,15 +173,23 @@ func (v *ExportS3Options) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "role-arn")
 	f.StringVar(&v.BucketName, "bucket-name", "", "The name of the destination S3 bucket. Required.")
 	_ = cobra.MarkFlagRequired(f, "bucket-name")
+	f.StringVar(&v.KmsArn, "kms-arn", "", "The AWS KMS key ARN for server-side encryption of exported data. Optional.")
+}
+
+type ExportS3RegionOptions struct {
+	Region  string
+	FlagSet *pflag.FlagSet
+}
+
+func (v *ExportS3RegionOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
 	f.StringVar(&v.Region, "region", "", "The AWS region where the S3 bucket is located. Required.")
 	_ = cobra.MarkFlagRequired(f, "region")
-	f.StringVar(&v.KmsArn, "kms-arn", "", "The AWS KMS key ARN for server-side encryption of exported data. Optional.")
 }
 
 type ExportGcsOptions struct {
 	ServiceAccountEmail string
 	BucketName          string
-	Region              string
 	FlagSet             *pflag.FlagSet
 }
 
@@ -192,6 +199,15 @@ func (v *ExportGcsOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "service-account-email")
 	f.StringVar(&v.BucketName, "bucket-name", "", "The name of the destination GCS bucket. Required.")
 	_ = cobra.MarkFlagRequired(f, "bucket-name")
+}
+
+type ExportGcsRegionOptions struct {
+	Region  string
+	FlagSet *pflag.FlagSet
+}
+
+func (v *ExportGcsRegionOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
 	f.StringVar(&v.Region, "region", "", "The GCS bucket region. Required.")
 	_ = cobra.MarkFlagRequired(f, "region")
 }
@@ -2509,6 +2525,7 @@ type CloudNamespaceExportGcsCreateCommand struct {
 	AsyncOperationOptions
 	ExportSinkOptions
 	ExportGcsOptions
+	ExportGcsRegionOptions
 }
 
 func NewCloudNamespaceExportGcsCreateCommand(cctx *CommandContext, parent *CloudNamespaceExportGcsCommand) *CloudNamespaceExportGcsCreateCommand {
@@ -2528,6 +2545,7 @@ func NewCloudNamespaceExportGcsCreateCommand(cctx *CommandContext, parent *Cloud
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
 	s.ExportGcsOptions.BuildFlags(s.Command.Flags())
+	s.ExportGcsRegionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2544,7 +2562,8 @@ type CloudNamespaceExportGcsUpdateCommand struct {
 	AsyncOperationOptions
 	ResourceVersionOptions
 	ExportSinkOptions
-	ExportGcsOptions
+	ServiceAccountEmail string
+	BucketName          string
 }
 
 func NewCloudNamespaceExportGcsUpdateCommand(cctx *CommandContext, parent *CloudNamespaceExportGcsCommand) *CloudNamespaceExportGcsUpdateCommand {
@@ -2554,17 +2573,18 @@ func NewCloudNamespaceExportGcsUpdateCommand(cctx *CommandContext, parent *Cloud
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a GCS workflow history export sink"
 	if hasHighlighting {
-		s.Command.Long = "Update the configuration of an existing GCS workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --region us-central1\x1b[0m"
+		s.Command.Long = "Update the configuration of an existing GCS workflow history export sink.\nOnly the flags you provide are changed; omitted flags keep their current\nvalues. The enabled/disabled state and region are also preserved.\n\nExample (rotate service account only):\n\n\x1b[1mtemporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-new-service-account@my-project.iam.gserviceaccount.com\x1b[0m"
 	} else {
-		s.Command.Long = "Update the configuration of an existing GCS workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n```\ntemporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --region us-central1\n```"
+		s.Command.Long = "Update the configuration of an existing GCS workflow history export sink.\nOnly the flags you provide are changed; omitted flags keep their current\nvalues. The enabled/disabled state and region are also preserved.\n\nExample (rotate service account only):\n\n```\ntemporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-new-service-account@my-project.iam.gserviceaccount.com\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ServiceAccountEmail, "service-account-email", "", "The email of the customer service account that Temporal Cloud impersonates for writing to GCS (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and GCP project ID are parsed from this email. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.BucketName, "bucket-name", "", "The name of the destination GCS bucket. If omitted, the current value is kept.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
-	s.ExportGcsOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2580,6 +2600,7 @@ type CloudNamespaceExportGcsValidateCommand struct {
 	NamespaceOptions
 	ExportSinkOptions
 	ExportGcsOptions
+	ExportGcsRegionOptions
 }
 
 func NewCloudNamespaceExportGcsValidateCommand(cctx *CommandContext, parent *CloudNamespaceExportGcsCommand) *CloudNamespaceExportGcsValidateCommand {
@@ -2598,6 +2619,7 @@ func NewCloudNamespaceExportGcsValidateCommand(cctx *CommandContext, parent *Clo
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
 	s.ExportGcsOptions.BuildFlags(s.Command.Flags())
+	s.ExportGcsRegionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2692,6 +2714,7 @@ type CloudNamespaceExportS3CreateCommand struct {
 	AsyncOperationOptions
 	ExportSinkOptions
 	ExportS3Options
+	ExportS3RegionOptions
 }
 
 func NewCloudNamespaceExportS3CreateCommand(cctx *CommandContext, parent *CloudNamespaceExportS3Command) *CloudNamespaceExportS3CreateCommand {
@@ -2711,6 +2734,7 @@ func NewCloudNamespaceExportS3CreateCommand(cctx *CommandContext, parent *CloudN
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
 	s.ExportS3Options.BuildFlags(s.Command.Flags())
+	s.ExportS3RegionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2727,7 +2751,9 @@ type CloudNamespaceExportS3UpdateCommand struct {
 	AsyncOperationOptions
 	ResourceVersionOptions
 	ExportSinkOptions
-	ExportS3Options
+	RoleArn    string
+	BucketName string
+	KmsArn     string
 }
 
 func NewCloudNamespaceExportS3UpdateCommand(cctx *CommandContext, parent *CloudNamespaceExportS3Command) *CloudNamespaceExportS3UpdateCommand {
@@ -2737,17 +2763,19 @@ func NewCloudNamespaceExportS3UpdateCommand(cctx *CommandContext, parent *CloudN
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update an S3 workflow history export sink"
 	if hasHighlighting {
-		s.Command.Long = "Update the configuration of an existing S3 workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket \\\n  --region us-east-1\x1b[0m"
+		s.Command.Long = "Update the configuration of an existing S3 workflow history export sink.\nOnly the flags you provide are changed; omitted flags keep their current\nvalues. The enabled/disabled state and region are also preserved.\n\nExample (rotate IAM role only):\n\n\x1b[1mtemporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-new-role\x1b[0m"
 	} else {
-		s.Command.Long = "Update the configuration of an existing S3 workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n```\ntemporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket \\\n  --region us-east-1\n```"
+		s.Command.Long = "Update the configuration of an existing S3 workflow history export sink.\nOnly the flags you provide are changed; omitted flags keep their current\nvalues. The enabled/disabled state and region are also preserved.\n\nExample (rotate IAM role only):\n\n```\ntemporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-new-role\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.RoleArn, "role-arn", "", "The IAM role ARN that Temporal Cloud assumes for writing to S3 (e.g. arn:aws:iam::123456789012:role/my-role). The role name and AWS account ID are parsed from this ARN. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.BucketName, "bucket-name", "", "The name of the destination S3 bucket. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.KmsArn, "kms-arn", "", "The AWS KMS key ARN for server-side encryption of exported data. If omitted, the current value is kept.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
-	s.ExportS3Options.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2763,6 +2791,7 @@ type CloudNamespaceExportS3ValidateCommand struct {
 	NamespaceOptions
 	ExportSinkOptions
 	ExportS3Options
+	ExportS3RegionOptions
 }
 
 func NewCloudNamespaceExportS3ValidateCommand(cctx *CommandContext, parent *CloudNamespaceExportS3Command) *CloudNamespaceExportS3ValidateCommand {
@@ -2781,6 +2810,7 @@ func NewCloudNamespaceExportS3ValidateCommand(cctx *CommandContext, parent *Clou
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
 	s.ExportS3Options.BuildFlags(s.Command.Flags())
+	s.ExportS3RegionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

@@ -649,7 +649,6 @@ func TestUpdateS3ExportSink_Success(t *testing.T) {
 		SinkName:         "my-sink",
 		RoleName:         "new-role",
 		BucketName:       "my-bucket",
-		Region:           "us-east-1",
 		AwsAccountID:     "123456789012",
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
@@ -691,7 +690,6 @@ func TestUpdateS3ExportSink_PromptDeclined(t *testing.T) {
 		SinkName:         "my-sink",
 		RoleName:         "new-role",
 		BucketName:       "my-bucket",
-		Region:           "us-east-1",
 		AwsAccountID:     "123456789012",
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
@@ -718,7 +716,6 @@ func TestUpdateS3ExportSink_GetSinkError(t *testing.T) {
 		SinkName:         "my-sink",
 		RoleName:         "my-role",
 		BucketName:       "my-bucket",
-		Region:           "us-east-1",
 		AwsAccountID:     "123456789012",
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
@@ -768,8 +765,61 @@ func TestUpdateS3ExportSink_PreservesEnabledState(t *testing.T) {
 		SinkName:         "my-sink",
 		RoleName:         "my-role",
 		BucketName:       "my-bucket",
-		Region:           "us-east-1",
 		AwsAccountID:     "123456789012",
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
+		OperationHandler: mockHandler,
+	})
+	require.NoError(t, err)
+}
+
+func TestUpdateS3ExportSink_PartialUpdate(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+
+	sink := testExportSink(true)
+	mockCloud.EXPECT().
+		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
+			Namespace: "my-namespace",
+			Name:      "my-sink",
+		}).
+		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: sink}, nil)
+
+	// Only the IAM role and account ID change; bucket-name, region, and kms-arn
+	// must be preserved from the existing sink spec.
+	expectedNewSpec := &namespacev1.ExportSinkSpec{
+		Name:    "my-sink",
+		Enabled: true,
+		S3: &sinkv1.S3Spec{
+			RoleName:     "rotated-role",
+			BucketName:   "my-bucket",
+			Region:       "us-east-1",
+			AwsAccountId: "999988887777",
+		},
+	}
+	mockPrompter.EXPECT().
+		PromptApply(sink.Spec, expectedNewSpec, false).
+		Return(nil)
+
+	op := &operation.AsyncOperation{Id: "op-partial-s3"}
+	mockCloud.EXPECT().
+		UpdateNamespaceExportSink(context.Background(), &cloudservice.UpdateNamespaceExportSinkRequest{
+			Namespace:       "my-namespace",
+			Spec:            expectedNewSpec,
+			ResourceVersion: "rv-1",
+		}).
+		Return(&cloudservice.UpdateNamespaceExportSinkResponse{AsyncOperation: op}, nil)
+
+	mockHandler.EXPECT().
+		HandleOperation(op, "my-sink").
+		Return(nil)
+
+	err := temporalcloudcli.UpdateS3ExportSink(context.Background(), temporalcloudcli.UpdateS3ExportSinkParams{
+		Namespace:        "my-namespace",
+		SinkName:         "my-sink",
+		RoleName:         "rotated-role",
+		AwsAccountID:     "999988887777",
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
 		OperationHandler: mockHandler,
@@ -961,7 +1011,6 @@ func TestUpdateGCSExportSink_Success(t *testing.T) {
 		SaID:             "new-sa@project.iam.gserviceaccount.com",
 		BucketName:       "my-bucket",
 		GcpProjectID:     "my-project",
-		Region:           "us-central1",
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
 		OperationHandler: mockHandler,
@@ -1010,7 +1059,6 @@ func TestUpdateGCSExportSink_PromptDeclined(t *testing.T) {
 		SaID:             "new-sa@project.iam.gserviceaccount.com",
 		BucketName:       "my-bucket",
 		GcpProjectID:     "my-project",
-		Region:           "us-central1",
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
 		OperationHandler: mockHandler,
@@ -1037,12 +1085,71 @@ func TestUpdateGCSExportSink_GetSinkError(t *testing.T) {
 		SaID:             "my-sa@project.iam.gserviceaccount.com",
 		BucketName:       "my-bucket",
 		GcpProjectID:     "my-project",
-		Region:           "us-central1",
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
 		OperationHandler: mockHandler,
 	})
 	require.ErrorIs(t, err, apiErr)
+}
+
+func TestUpdateGCSExportSink_PartialUpdate(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+
+	existingSink := &namespacev1.ExportSink{
+		ResourceVersion: "rv-1",
+		Spec: &namespacev1.ExportSinkSpec{
+			Name:    "my-sink",
+			Enabled: true,
+			Gcs:     testGCSSpec(),
+		},
+	}
+	mockCloud.EXPECT().
+		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
+			Namespace: "my-namespace",
+			Name:      "my-sink",
+		}).
+		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: existingSink}, nil)
+
+	// Only the service account changes; bucket-name and region must be preserved.
+	expectedNewSpec := &namespacev1.ExportSinkSpec{
+		Name:    "my-sink",
+		Enabled: true,
+		Gcs: &sinkv1.GCSSpec{
+			SaId:         "new-sa@new-project.iam.gserviceaccount.com",
+			BucketName:   "my-bucket",
+			GcpProjectId: "new-project",
+			Region:       "us-central1",
+		},
+	}
+	mockPrompter.EXPECT().
+		PromptApply(existingSink.Spec, expectedNewSpec, false).
+		Return(nil)
+
+	op := &operation.AsyncOperation{Id: "op-partial-gcs"}
+	mockCloud.EXPECT().
+		UpdateNamespaceExportSink(context.Background(), &cloudservice.UpdateNamespaceExportSinkRequest{
+			Namespace:       "my-namespace",
+			Spec:            expectedNewSpec,
+			ResourceVersion: "rv-1",
+		}).
+		Return(&cloudservice.UpdateNamespaceExportSinkResponse{AsyncOperation: op}, nil)
+
+	mockHandler.EXPECT().
+		HandleOperation(op, "my-sink").
+		Return(nil)
+
+	err := temporalcloudcli.UpdateGCSExportSink(context.Background(), temporalcloudcli.UpdateGCSExportSinkParams{
+		Namespace:        "my-namespace",
+		SinkName:         "my-sink",
+		SaID:             "new-sa@new-project.iam.gserviceaccount.com",
+		GcpProjectID:     "new-project",
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
+		OperationHandler: mockHandler,
+	})
+	require.NoError(t, err)
 }
 
 // --- ValidateGCSExportSink ---
