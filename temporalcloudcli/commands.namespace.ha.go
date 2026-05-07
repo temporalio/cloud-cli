@@ -111,14 +111,8 @@ func (c *CloudNamespaceHaRegionListCommand) run(cctx *CommandContext, _ []string
 		return err
 	}
 
-	type regionStatus struct {
-		Region string
-		Status namespacev1.NamespaceRegionStatus_State
-	}
-	replicas := res.Namespace.GetReplicas()
-
 	return cctx.Printer.PrintResourceList(
-		struct{ Regions []*namespacev1.Replica }{Regions: replicas},
+		struct{ Regions []*namespacev1.Replica }{Regions: res.Namespace.GetReplicas()},
 		printer.PrintResourceOptions{},
 		printer.TableOptions{},
 	)
