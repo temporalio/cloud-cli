@@ -1,22 +1,35 @@
 package temporalcloudcli
 
 import (
+	"cmp"
 	"errors"
+	"slices"
+
+	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 
 	"github.com/temporalio/cloud-cli/internal/namespace"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
 func (c *CloudNamespaceTagListCommand) run(cctx *CommandContext, _ []string) error {
-	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	tags, err := namespaceClient.ListTags(cctx.Context, c.Namespace)
+	res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
 	if err != nil {
 		return err
 	}
+
+	tags := make([]namespace.Tag, 0, len(res.Namespace.GetTags()))
+	for key, value := range res.Namespace.GetTags() {
+		tags = append(tags, namespace.Tag{Key: key, Value: value})
+	}
+	slices.SortFunc(tags, func(a, b namespace.Tag) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
 
 	return cctx.Printer.PrintResourceList(
 		struct{ Tags []namespace.Tag }{Tags: tags},
@@ -26,63 +39,82 @@ func (c *CloudNamespaceTagListCommand) run(cctx *CommandContext, _ []string) err
 }
 
 func (c *CloudNamespaceTagCreateCommand) run(cctx *CommandContext, _ []string) error {
-	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	yes, err := cctx.promptYes("Create (y/yes)?", cctx.RootCommand.AutoConfirm)
+	yes, err := cctx.GetPrompter().PromptYes("Create")
 	if err != nil {
 		return err
 	}
-
 	if !yes {
 		return errors.New("Aborting create.")
 	}
 
-	setTag := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, namespaceClient.SetTag)
-	return setTag(namespace.SetTagParams{
+	resp, err := client.UpdateNamespaceTags(cctx, &cloudservice.UpdateNamespaceTagsRequest{
 		Namespace:        c.Namespace,
-		Key:              c.Key,
-		Value:            c.Value,
-		AsyncOperationID: c.AsyncOperationId,
+		TagsToUpsert:     map[string]string{c.Key: c.Value},
+		AsyncOperationId: c.AsyncOperationId,
 	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleCreateAsyncOperationResponse(cctx, resp, err)
 }
 
 func (c *CloudNamespaceTagUpdateCommand) run(cctx *CommandContext, _ []string) error {
-	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	setTag := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, namespaceClient.SetTag)
-	return setTag(namespace.SetTagParams{
+	res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
+	if err != nil {
+		return err
+	}
+	existingTags := res.Namespace.GetTags()
+	newTags := make(map[string]string, len(existingTags)+1)
+	for k, v := range existingTags {
+		newTags[k] = v
+	}
+	newTags[c.Key] = c.Value
+
+	yes, err := cctx.GetPrompter().PromptApply(
+		&namespacev1.Namespace{Tags: existingTags},
+		&namespacev1.Namespace{Tags: newTags},
+		false,
+	)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting update.")
+	}
+
+	resp, err := client.UpdateNamespaceTags(cctx, &cloudservice.UpdateNamespaceTagsRequest{
 		Namespace:        c.Namespace,
-		Key:              c.Key,
-		Value:            c.Value,
-		AsyncOperationID: c.AsyncOperationId,
+		TagsToUpsert:     map[string]string{c.Key: c.Value},
+		AsyncOperationId: c.AsyncOperationId,
 	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }
 
 func (c *CloudNamespaceTagDeleteCommand) run(cctx *CommandContext, _ []string) error {
-	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
+	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	yes, err := cctx.promptYes("Delete (y/yes)?", cctx.RootCommand.AutoConfirm)
+	yes, err := cctx.GetPrompter().PromptYes("Delete")
 	if err != nil {
 		return err
 	}
-
 	if !yes {
 		return errors.New("Aborting delete.")
 	}
 
-	deleteTags := wrapAsyncOperation(cctx, c.AsyncOperationOptions, c.Namespace, c.ClientOptions, namespaceClient.DeleteTags)
-	return deleteTags(namespace.DeleteTagsParams{
+	resp, err := client.UpdateNamespaceTags(cctx, &cloudservice.UpdateNamespaceTagsRequest{
 		Namespace:        c.Namespace,
-		Keys:             []string{c.Key},
-		AsyncOperationID: c.AsyncOperationId,
+		TagsToRemove:     []string{c.Key},
+		AsyncOperationId: c.AsyncOperationId,
 	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleDeleteOperation(cctx, resp, err)
 }
