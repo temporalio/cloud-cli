@@ -12,7 +12,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
-	"github.com/temporalio/cloud-cli/internal/namespace"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
 )
 
@@ -43,9 +42,9 @@ func TestListTags(t *testing.T) {
 					}, nil)
 			},
 			expectedJsonOutput: struct {
-				Tags []namespace.Tag
+				Tags []temporalcloudcli.Tag
 			}{
-				Tags: []namespace.Tag{
+				Tags: []temporalcloudcli.Tag{
 					{Key: "environment", Value: "production"},
 					{Key: "team", Value: "platform"},
 				},
@@ -62,8 +61,8 @@ func TestListTags(t *testing.T) {
 					}, nil)
 			},
 			expectedJsonOutput: struct {
-				Tags []namespace.Tag
-			}{Tags: []namespace.Tag{}},
+				Tags []temporalcloudcli.Tag
+			}{Tags: []temporalcloudcli.Tag{}},
 		},
 		{
 			name: "GetNamespaceError",
