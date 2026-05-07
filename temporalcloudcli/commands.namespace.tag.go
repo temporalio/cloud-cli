@@ -103,7 +103,23 @@ func (c *CloudNamespaceTagDeleteCommand) run(cctx *CommandContext, _ []string) e
 		return err
 	}
 
-	yes, err := cctx.GetPrompter().PromptYes("Delete")
+	res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
+	if err != nil {
+		return err
+	}
+	existingTags := res.Namespace.GetTags()
+	newTags := make(map[string]string, len(existingTags))
+	for k, v := range existingTags {
+		if k != c.Key {
+			newTags[k] = v
+		}
+	}
+
+	yes, err := cctx.GetPrompter().PromptApply(
+		&namespacev1.Namespace{Tags: existingTags},
+		&namespacev1.Namespace{Tags: newTags},
+		false,
+	)
 	if err != nil {
 		return err
 	}

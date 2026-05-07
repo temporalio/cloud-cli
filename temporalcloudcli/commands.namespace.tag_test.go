@@ -329,6 +329,14 @@ func TestUpdateTag(t *testing.T) {
 // --- DeleteTag ---
 
 func TestDeleteTag(t *testing.T) {
+	existingNamespace := &namespacev1.Namespace{
+		Namespace: "test-namespace.test-account",
+		Tags: map[string]string{
+			"environment": "production",
+			"team":        "platform",
+		},
+	}
+
 	tests := []struct {
 		name                    string
 		cmd                     temporalcloudcli.CloudNamespaceTagDeleteCommand
@@ -345,6 +353,9 @@ func TestDeleteTag(t *testing.T) {
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
+					GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: "test-namespace.test-account"}, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+				c.EXPECT().
 					UpdateNamespaceTags(mock.Anything, &cloudservice.UpdateNamespaceTagsRequest{
 						Namespace:    "test-namespace.test-account",
 						TagsToRemove: []string{"environment"},
@@ -353,7 +364,15 @@ func TestDeleteTag(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-delete"},
 					}, nil)
 			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, ExpectPromptYesMessage: "Delete", PromptResult: true},
+			promptOptions: temporalcloudcli.TestPromptOptions{
+				ExpectPrompApply: true,
+				ExpectPromptApplyExisting: &namespacev1.Namespace{Tags: map[string]string{
+					"environment": "production",
+					"team":        "platform",
+				}},
+				ExpectPromptApplyModified: &namespacev1.Namespace{Tags: map[string]string{"team": "platform"}},
+				PromptResult:              true,
+			},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-delete"},
 		},
 		{
@@ -365,6 +384,9 @@ func TestDeleteTag(t *testing.T) {
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+				c.EXPECT().
 					UpdateNamespaceTags(mock.Anything, &cloudservice.UpdateNamespaceTagsRequest{
 						Namespace:        "test-namespace.test-account",
 						TagsToRemove:     []string{"environment"},
@@ -374,8 +396,21 @@ func TestDeleteTag(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "custom-op-id"},
 					}, nil)
 			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "custom-op-id"},
+		},
+		{
+			name: "GetNamespaceError",
+			cmd: temporalcloudcli.CloudNamespaceTagDeleteCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
+				Key:              "environment",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("namespace not found"))
+			},
+			expectedErr: "namespace not found",
 		},
 		{
 			name: "PromptDeclined",
@@ -383,7 +418,12 @@ func TestDeleteTag(t *testing.T) {
 				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
 				Key:              "environment",
 			},
-			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: false},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
 			expectedErr:   "Aborting delete.",
 		},
 		{
@@ -394,10 +434,13 @@ func TestDeleteTag(t *testing.T) {
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+				c.EXPECT().
 					UpdateNamespaceTags(mock.Anything, mock.Anything, mock.Anything).
 					Return(nil, errors.New("API error"))
 			},
-			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			expectedErr:   "delete operation failed",
 		},
 	}
