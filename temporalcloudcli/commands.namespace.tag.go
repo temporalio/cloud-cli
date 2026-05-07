@@ -8,9 +8,13 @@ import (
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 
-	"github.com/temporalio/cloud-cli/internal/namespace"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
+
+type Tag struct {
+	Key   string
+	Value string
+}
 
 func (c *CloudNamespaceTagListCommand) run(cctx *CommandContext, _ []string) error {
 	client, err := cctx.GetCloudClient(c.ClientOptions)
@@ -23,16 +27,16 @@ func (c *CloudNamespaceTagListCommand) run(cctx *CommandContext, _ []string) err
 		return err
 	}
 
-	tags := make([]namespace.Tag, 0, len(res.Namespace.GetTags()))
+	tags := make([]Tag, 0, len(res.Namespace.GetTags()))
 	for key, value := range res.Namespace.GetTags() {
-		tags = append(tags, namespace.Tag{Key: key, Value: value})
+		tags = append(tags, Tag{Key: key, Value: value})
 	}
-	slices.SortFunc(tags, func(a, b namespace.Tag) int {
+	slices.SortFunc(tags, func(a, b Tag) int {
 		return cmp.Compare(a.Key, b.Key)
 	})
 
 	return cctx.Printer.PrintResourceList(
-		struct{ Tags []namespace.Tag }{Tags: tags},
+		struct{ Tags []Tag }{Tags: tags},
 		printer.PrintResourceOptions{},
 		printer.TableOptions{},
 	)
