@@ -31,6 +31,22 @@ func parseS3RoleARN(roleARN string) (roleName, accountID string, err error) {
 	return name, parsed.AccountID, nil
 }
 
+// parseGCSServiceAccountEmail extracts the service account ID (local part) and
+// GCP project ID from a service account email of the form
+// "<sa-id>@<project-id>.iam.gserviceaccount.com".
+func parseGCSServiceAccountEmail(email string) (saID, projectID string, err error) {
+	const domainSuffix = ".iam.gserviceaccount.com"
+	saID, domain, ok := strings.Cut(email, "@")
+	if !ok || saID == "" {
+		return "", "", fmt.Errorf("invalid service account email %q: expected <sa-id>@<project-id>.iam.gserviceaccount.com", email)
+	}
+	projectID, ok = strings.CutSuffix(domain, domainSuffix)
+	if !ok || projectID == "" {
+		return "", "", fmt.Errorf("invalid service account email %q: expected <sa-id>@<project-id>.iam.gserviceaccount.com", email)
+	}
+	return saID, projectID, nil
+}
+
 func (c *CloudNamespaceExportGetCommand) run(cctx *CommandContext, _ []string) error {
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
@@ -313,6 +329,10 @@ func (c *CloudNamespaceExportS3ValidateCommand) run(cctx *CommandContext, _ []st
 }
 
 func (c *CloudNamespaceExportGcsCreateCommand) run(cctx *CommandContext, _ []string) error {
+	saID, projectID, err := parseGCSServiceAccountEmail(c.ServiceAccountEmail)
+	if err != nil {
+		return err
+	}
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -321,9 +341,9 @@ func (c *CloudNamespaceExportGcsCreateCommand) run(cctx *CommandContext, _ []str
 		Name:    c.SinkName,
 		Enabled: true,
 		Gcs: &sinkv1.GCSSpec{
-			SaId:         c.SaId,
+			SaId:         saID,
 			BucketName:   c.BucketName,
-			GcpProjectId: c.GcpProjectId,
+			GcpProjectId: projectID,
 			Region:       c.Region,
 		},
 	}
@@ -344,6 +364,10 @@ func (c *CloudNamespaceExportGcsCreateCommand) run(cctx *CommandContext, _ []str
 }
 
 func (c *CloudNamespaceExportGcsUpdateCommand) run(cctx *CommandContext, _ []string) error {
+	saID, projectID, err := parseGCSServiceAccountEmail(c.ServiceAccountEmail)
+	if err != nil {
+		return err
+	}
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -361,9 +385,9 @@ func (c *CloudNamespaceExportGcsUpdateCommand) run(cctx *CommandContext, _ []str
 		Name:    c.SinkName,
 		Enabled: sink.Spec.GetEnabled(),
 		Gcs: &sinkv1.GCSSpec{
-			SaId:         c.SaId,
+			SaId:         saID,
 			BucketName:   c.BucketName,
-			GcpProjectId: c.GcpProjectId,
+			GcpProjectId: projectID,
 			Region:       sink.Spec.GetGcs().GetRegion(),
 		},
 	}
@@ -390,6 +414,10 @@ func (c *CloudNamespaceExportGcsUpdateCommand) run(cctx *CommandContext, _ []str
 }
 
 func (c *CloudNamespaceExportGcsValidateCommand) run(cctx *CommandContext, _ []string) error {
+	saID, projectID, err := parseGCSServiceAccountEmail(c.ServiceAccountEmail)
+	if err != nil {
+		return err
+	}
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -397,9 +425,9 @@ func (c *CloudNamespaceExportGcsValidateCommand) run(cctx *CommandContext, _ []s
 	spec := &namespacev1.ExportSinkSpec{
 		Name: c.SinkName,
 		Gcs: &sinkv1.GCSSpec{
-			SaId:         c.SaId,
+			SaId:         saID,
 			BucketName:   c.BucketName,
-			GcpProjectId: c.GcpProjectId,
+			GcpProjectId: projectID,
 			Region:       c.Region,
 		},
 	}

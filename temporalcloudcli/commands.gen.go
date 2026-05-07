@@ -188,20 +188,17 @@ func (v *ExportS3RegionOptions) BuildFlags(f *pflag.FlagSet) {
 }
 
 type ExportGcsOptions struct {
-	SaId         string
-	BucketName   string
-	GcpProjectId string
-	FlagSet      *pflag.FlagSet
+	ServiceAccountEmail string
+	BucketName          string
+	FlagSet             *pflag.FlagSet
 }
 
 func (v *ExportGcsOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.StringVar(&v.SaId, "sa-id", "", "The customer service account ID that Temporal Cloud impersonates for writing to GCS. Required.")
-	_ = cobra.MarkFlagRequired(f, "sa-id")
+	f.StringVar(&v.ServiceAccountEmail, "service-account-email", "", "The email of the customer service account that Temporal Cloud impersonates for writing to GCS (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and GCP project ID are parsed from this email. Required.")
+	_ = cobra.MarkFlagRequired(f, "service-account-email")
 	f.StringVar(&v.BucketName, "bucket-name", "", "The name of the destination GCS bucket. Required.")
 	_ = cobra.MarkFlagRequired(f, "bucket-name")
-	f.StringVar(&v.GcpProjectId, "gcp-project-id", "", "The GCP project ID associated with the bucket and service account. Required.")
-	_ = cobra.MarkFlagRequired(f, "gcp-project-id")
 }
 
 type ExportGcsRegionOptions struct {
@@ -2546,9 +2543,9 @@ func NewCloudNamespaceExportGcsCreateCommand(cctx *CommandContext, parent *Cloud
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create a GCS workflow history export sink"
 	if hasHighlighting {
-		s.Command.Long = "Create a new GCS workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project --region us-central1\x1b[0m"
+		s.Command.Long = "Create a new GCS workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --region us-central1\x1b[0m"
 	} else {
-		s.Command.Long = "Create a new GCS workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n```\ntemporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project --region us-central1\n```"
+		s.Command.Long = "Create a new GCS workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n```\ntemporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --region us-central1\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -2583,9 +2580,9 @@ func NewCloudNamespaceExportGcsUpdateCommand(cctx *CommandContext, parent *Cloud
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a GCS workflow history export sink"
 	if hasHighlighting {
-		s.Command.Long = "Update the configuration of an existing GCS workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project\x1b[0m"
+		s.Command.Long = "Update the configuration of an existing GCS workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket\x1b[0m"
 	} else {
-		s.Command.Long = "Update the configuration of an existing GCS workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n```\ntemporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project\n```"
+		s.Command.Long = "Update the configuration of an existing GCS workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n```\ntemporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -2619,9 +2616,9 @@ func NewCloudNamespaceExportGcsValidateCommand(cctx *CommandContext, parent *Clo
 	s.Command.Use = "validate [flags]"
 	s.Command.Short = "Validate a GCS workflow history export sink configuration"
 	if hasHighlighting {
-		s.Command.Long = "Validate a GCS workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project --region us-central1\x1b[0m"
+		s.Command.Long = "Validate a GCS workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --region us-central1\x1b[0m"
 	} else {
-		s.Command.Long = "Validate a GCS workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n```\ntemporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project --region us-central1\n```"
+		s.Command.Long = "Validate a GCS workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n```\ntemporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --region us-central1\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())

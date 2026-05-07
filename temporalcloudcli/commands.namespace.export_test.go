@@ -24,10 +24,11 @@ func testS3Spec() *sinkv1.S3Spec {
 	}
 }
 
-// testGCSSpec returns a sample GCS spec for use in tests.
+// testGCSSpec returns a sample GCS spec for use in tests. SaId is the local part
+// of the service account email; GcpProjectId is parsed from its domain.
 func testGCSSpec() *sinkv1.GCSSpec {
 	return &sinkv1.GCSSpec{
-		SaId:         "my-sa@project.iam.gserviceaccount.com",
+		SaId:         "my-sa",
 		BucketName:   "my-bucket",
 		GcpProjectId: "my-project",
 		Region:       "us-central1",
@@ -657,9 +658,8 @@ func TestCreateGCSExportSink(t *testing.T) {
 				NamespaceOptions:  nsOpts(),
 				ExportSinkOptions: sinkOpts(),
 				ExportGcsOptions: temporalcloudcli.ExportGcsOptions{
-					SaId:         "my-sa@project.iam.gserviceaccount.com",
-					BucketName:   "my-bucket",
-					GcpProjectId: "my-project",
+					ServiceAccountEmail: "my-sa@my-project.iam.gserviceaccount.com",
+					BucketName:          "my-bucket",
 				},
 				ExportGcsRegionOptions: temporalcloudcli.ExportGcsRegionOptions{Region: "us-central1"},
 			}
@@ -683,7 +683,7 @@ func TestUpdateGCSExportSink(t *testing.T) {
 		},
 	}
 	newGCS := &sinkv1.GCSSpec{
-		SaId:         "new-sa@project.iam.gserviceaccount.com",
+		SaId:         "new-sa",
 		BucketName:   "my-bucket",
 		GcpProjectId: "my-project",
 		Region:       "us-central1",
@@ -691,15 +691,15 @@ func TestUpdateGCSExportSink(t *testing.T) {
 
 	tests := []struct {
 		name                    string
-		saID                    string
+		email                   string
 		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
 		promptOptions           temporalcloudcli.TestPromptOptions
 		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
 		expectedErr             string
 	}{
 		{
-			name: "Success",
-			saID: "new-sa@project.iam.gserviceaccount.com",
+			name:  "Success",
+			email: "new-sa@my-project.iam.gserviceaccount.com",
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
 					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
@@ -720,8 +720,8 @@ func TestUpdateGCSExportSink(t *testing.T) {
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
 		},
 		{
-			name: "GetSinkError",
-			saID: "my-sa@project.iam.gserviceaccount.com",
+			name:  "GetSinkError",
+			email: "my-sa@my-project.iam.gserviceaccount.com",
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
 					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
@@ -730,8 +730,8 @@ func TestUpdateGCSExportSink(t *testing.T) {
 			expectedErr: "api error",
 		},
 		{
-			name: "PromptDeclined",
-			saID: "new-sa@project.iam.gserviceaccount.com",
+			name:  "PromptDeclined",
+			email: "new-sa@my-project.iam.gserviceaccount.com",
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
 					GetNamespaceExportSink(mock.Anything, mock.Anything, mock.Anything).
@@ -740,6 +740,11 @@ func TestUpdateGCSExportSink(t *testing.T) {
 			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
 			expectedErr:   "Aborting update.",
 		},
+		{
+			name:        "InvalidServiceAccountEmail",
+			email:       "not-an-email",
+			expectedErr: "invalid service account email",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -747,9 +752,8 @@ func TestUpdateGCSExportSink(t *testing.T) {
 				NamespaceOptions:  nsOpts(),
 				ExportSinkOptions: sinkOpts(),
 				ExportGcsOptions: temporalcloudcli.ExportGcsOptions{
-					SaId:         tt.saID,
-					BucketName:   "my-bucket",
-					GcpProjectId: "my-project",
+					ServiceAccountEmail: tt.email,
+					BucketName:          "my-bucket",
 				},
 			}
 			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
@@ -798,9 +802,8 @@ func TestValidateGCSExportSink(t *testing.T) {
 				NamespaceOptions:  nsOpts(),
 				ExportSinkOptions: sinkOpts(),
 				ExportGcsOptions: temporalcloudcli.ExportGcsOptions{
-					SaId:         "my-sa@project.iam.gserviceaccount.com",
-					BucketName:   "my-bucket",
-					GcpProjectId: "my-project",
+					ServiceAccountEmail: "my-sa@my-project.iam.gserviceaccount.com",
+					BucketName:          "my-bucket",
 				},
 				ExportGcsRegionOptions: temporalcloudcli.ExportGcsRegionOptions{Region: "us-central1"},
 			}
