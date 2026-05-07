@@ -31,7 +31,7 @@ func testS3Spec() *sinkv1.S3Spec {
 // testGCSSpec returns a sample GCS spec for use in tests.
 func testGCSSpec() *sinkv1.GCSSpec {
 	return &sinkv1.GCSSpec{
-		SaId:         "my-sa@project.iam.gserviceaccount.com",
+		SaId:         "my-sa",
 		BucketName:   "my-bucket",
 		GcpProjectId: "my-project",
 		Region:       "us-central1",
@@ -916,7 +916,7 @@ func TestCreateGCSExportSink_Success(t *testing.T) {
 	err := temporalcloudcli.CreateGCSExportSink(context.Background(), temporalcloudcli.CreateGCSExportSinkParams{
 		Namespace:        "my-namespace",
 		SinkName:         "my-sink",
-		SaID:             "my-sa@project.iam.gserviceaccount.com",
+		SaID:             "my-sa",
 		BucketName:       "my-bucket",
 		GcpProjectID:     "my-project",
 		Region:           "us-central1",
@@ -945,7 +945,7 @@ func TestCreateGCSExportSink_PromptDeclined(t *testing.T) {
 	err := temporalcloudcli.CreateGCSExportSink(context.Background(), temporalcloudcli.CreateGCSExportSinkParams{
 		Namespace:        "my-namespace",
 		SinkName:         "my-sink",
-		SaID:             "my-sa@project.iam.gserviceaccount.com",
+		SaID:             "my-sa",
 		BucketName:       "my-bucket",
 		GcpProjectID:     "my-project",
 		Region:           "us-central1",
@@ -982,7 +982,7 @@ func TestUpdateGCSExportSink_Success(t *testing.T) {
 		Name:    "my-sink",
 		Enabled: true,
 		Gcs: &sinkv1.GCSSpec{
-			SaId:         "new-sa@project.iam.gserviceaccount.com",
+			SaId:         "new-sa",
 			BucketName:   "my-bucket",
 			GcpProjectId: "my-project",
 			Region:       "us-central1",
@@ -1008,7 +1008,7 @@ func TestUpdateGCSExportSink_Success(t *testing.T) {
 	err := temporalcloudcli.UpdateGCSExportSink(context.Background(), temporalcloudcli.UpdateGCSExportSinkParams{
 		Namespace:        "my-namespace",
 		SinkName:         "my-sink",
-		SaID:             "new-sa@project.iam.gserviceaccount.com",
+		SaID:             "new-sa",
 		BucketName:       "my-bucket",
 		GcpProjectID:     "my-project",
 		Cloud:            mockCloud,
@@ -1043,7 +1043,7 @@ func TestUpdateGCSExportSink_PromptDeclined(t *testing.T) {
 		Name:    "my-sink",
 		Enabled: true,
 		Gcs: &sinkv1.GCSSpec{
-			SaId:         "new-sa@project.iam.gserviceaccount.com",
+			SaId:         "new-sa",
 			BucketName:   "my-bucket",
 			GcpProjectId: "my-project",
 			Region:       "us-central1",
@@ -1056,7 +1056,7 @@ func TestUpdateGCSExportSink_PromptDeclined(t *testing.T) {
 	err := temporalcloudcli.UpdateGCSExportSink(context.Background(), temporalcloudcli.UpdateGCSExportSinkParams{
 		Namespace:        "my-namespace",
 		SinkName:         "my-sink",
-		SaID:             "new-sa@project.iam.gserviceaccount.com",
+		SaID:             "new-sa",
 		BucketName:       "my-bucket",
 		GcpProjectID:     "my-project",
 		Cloud:            mockCloud,
@@ -1082,7 +1082,7 @@ func TestUpdateGCSExportSink_GetSinkError(t *testing.T) {
 	err := temporalcloudcli.UpdateGCSExportSink(context.Background(), temporalcloudcli.UpdateGCSExportSinkParams{
 		Namespace:        "my-namespace",
 		SinkName:         "my-sink",
-		SaID:             "my-sa@project.iam.gserviceaccount.com",
+		SaID:             "my-sa",
 		BucketName:       "my-bucket",
 		GcpProjectID:     "my-project",
 		Cloud:            mockCloud,
@@ -1117,7 +1117,7 @@ func TestUpdateGCSExportSink_PartialUpdate(t *testing.T) {
 		Name:    "my-sink",
 		Enabled: true,
 		Gcs: &sinkv1.GCSSpec{
-			SaId:         "new-sa@new-project.iam.gserviceaccount.com",
+			SaId:         "new-sa",
 			BucketName:   "my-bucket",
 			GcpProjectId: "new-project",
 			Region:       "us-central1",
@@ -1143,7 +1143,7 @@ func TestUpdateGCSExportSink_PartialUpdate(t *testing.T) {
 	err := temporalcloudcli.UpdateGCSExportSink(context.Background(), temporalcloudcli.UpdateGCSExportSinkParams{
 		Namespace:        "my-namespace",
 		SinkName:         "my-sink",
-		SaID:             "new-sa@new-project.iam.gserviceaccount.com",
+		SaID:             "new-sa",
 		GcpProjectID:     "new-project",
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
@@ -1171,7 +1171,7 @@ func TestValidateGCSExportSink_Success(t *testing.T) {
 	err := temporalcloudcli.ValidateGCSExportSink(context.Background(), temporalcloudcli.ValidateGCSExportSinkParams{
 		Namespace:    "my-namespace",
 		SinkName:     "my-sink",
-		SaID:         "my-sa@project.iam.gserviceaccount.com",
+		SaID:         "my-sa",
 		BucketName:   "my-bucket",
 		GcpProjectID: "my-project",
 		Region:       "us-central1",
@@ -1200,7 +1200,7 @@ func TestValidateGCSExportSink_Error(t *testing.T) {
 	err := temporalcloudcli.ValidateGCSExportSink(context.Background(), temporalcloudcli.ValidateGCSExportSinkParams{
 		Namespace:    "my-namespace",
 		SinkName:     "my-sink",
-		SaID:         "my-sa@project.iam.gserviceaccount.com",
+		SaID:         "my-sa",
 		BucketName:   "my-bucket",
 		GcpProjectID: "my-project",
 		Region:       "us-central1",
