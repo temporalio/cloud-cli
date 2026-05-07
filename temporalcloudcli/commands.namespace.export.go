@@ -540,6 +540,10 @@ func (c *CloudNamespaceExportDisableCommand) run(cctx *CommandContext, _ []strin
 }
 
 func (c *CloudNamespaceExportS3CreateCommand) run(cctx *CommandContext, _ []string) error {
+	roleName, accountID, err := ParseRoleARN(c.RoleArn)
+	if err != nil {
+		return err
+	}
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -547,10 +551,10 @@ func (c *CloudNamespaceExportS3CreateCommand) run(cctx *CommandContext, _ []stri
 	return CreateS3ExportSink(cctx.Context, CreateS3ExportSinkParams{
 		Namespace:        c.Namespace,
 		SinkName:         c.SinkName,
-		RoleName:         c.RoleName,
+		RoleName:         roleName,
 		BucketName:       c.BucketName,
 		Region:           c.Region,
-		AwsAccountID:     c.AwsAccountId,
+		AwsAccountID:     accountID,
 		KmsArn:           c.KmsArn,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
@@ -560,6 +564,10 @@ func (c *CloudNamespaceExportS3CreateCommand) run(cctx *CommandContext, _ []stri
 }
 
 func (c *CloudNamespaceExportS3UpdateCommand) run(cctx *CommandContext, _ []string) error {
+	roleName, accountID, err := ParseRoleARN(c.RoleArn)
+	if err != nil {
+		return err
+	}
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -567,10 +575,10 @@ func (c *CloudNamespaceExportS3UpdateCommand) run(cctx *CommandContext, _ []stri
 	return UpdateS3ExportSink(cctx.Context, UpdateS3ExportSinkParams{
 		Namespace:        c.Namespace,
 		SinkName:         c.SinkName,
-		RoleName:         c.RoleName,
+		RoleName:         roleName,
 		BucketName:       c.BucketName,
 		Region:           c.Region,
-		AwsAccountID:     c.AwsAccountId,
+		AwsAccountID:     accountID,
 		KmsArn:           c.KmsArn,
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
@@ -581,6 +589,10 @@ func (c *CloudNamespaceExportS3UpdateCommand) run(cctx *CommandContext, _ []stri
 }
 
 func (c *CloudNamespaceExportS3ValidateCommand) run(cctx *CommandContext, _ []string) error {
+	roleName, accountID, err := ParseRoleARN(c.RoleArn)
+	if err != nil {
+		return err
+	}
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -588,10 +600,10 @@ func (c *CloudNamespaceExportS3ValidateCommand) run(cctx *CommandContext, _ []st
 	return ValidateS3ExportSink(cctx.Context, ValidateS3ExportSinkParams{
 		Namespace:    c.Namespace,
 		SinkName:     c.SinkName,
-		RoleName:     c.RoleName,
+		RoleName:     roleName,
 		BucketName:   c.BucketName,
 		Region:       c.Region,
-		AwsAccountID: c.AwsAccountId,
+		AwsAccountID: accountID,
 		KmsArn:       c.KmsArn,
 		Cloud:        cloudClient.CloudService(),
 		Printer:      cctx.Printer,
@@ -599,6 +611,10 @@ func (c *CloudNamespaceExportS3ValidateCommand) run(cctx *CommandContext, _ []st
 }
 
 func (c *CloudNamespaceExportGcsCreateCommand) run(cctx *CommandContext, _ []string) error {
+	saID, projectID, err := ParseServiceAccountEmail(c.ServiceAccountEmail)
+	if err != nil {
+		return err
+	}
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -606,9 +622,9 @@ func (c *CloudNamespaceExportGcsCreateCommand) run(cctx *CommandContext, _ []str
 	return CreateGCSExportSink(cctx.Context, CreateGCSExportSinkParams{
 		Namespace:        c.Namespace,
 		SinkName:         c.SinkName,
-		SaID:             c.SaId,
+		SaID:             saID,
 		BucketName:       c.BucketName,
-		GcpProjectID:     c.GcpProjectId,
+		GcpProjectID:     projectID,
 		Region:           c.Region,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
@@ -618,6 +634,10 @@ func (c *CloudNamespaceExportGcsCreateCommand) run(cctx *CommandContext, _ []str
 }
 
 func (c *CloudNamespaceExportGcsUpdateCommand) run(cctx *CommandContext, _ []string) error {
+	saID, projectID, err := ParseServiceAccountEmail(c.ServiceAccountEmail)
+	if err != nil {
+		return err
+	}
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -625,9 +645,9 @@ func (c *CloudNamespaceExportGcsUpdateCommand) run(cctx *CommandContext, _ []str
 	return UpdateGCSExportSink(cctx.Context, UpdateGCSExportSinkParams{
 		Namespace:        c.Namespace,
 		SinkName:         c.SinkName,
-		SaID:             c.SaId,
+		SaID:             saID,
 		BucketName:       c.BucketName,
-		GcpProjectID:     c.GcpProjectId,
+		GcpProjectID:     projectID,
 		Region:           c.Region,
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
@@ -638,6 +658,10 @@ func (c *CloudNamespaceExportGcsUpdateCommand) run(cctx *CommandContext, _ []str
 }
 
 func (c *CloudNamespaceExportGcsValidateCommand) run(cctx *CommandContext, _ []string) error {
+	saID, projectID, err := ParseServiceAccountEmail(c.ServiceAccountEmail)
+	if err != nil {
+		return err
+	}
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -645,9 +669,9 @@ func (c *CloudNamespaceExportGcsValidateCommand) run(cctx *CommandContext, _ []s
 	return ValidateGCSExportSink(cctx.Context, ValidateGCSExportSinkParams{
 		Namespace:    c.Namespace,
 		SinkName:     c.SinkName,
-		SaID:         c.SaId,
+		SaID:         saID,
 		BucketName:   c.BucketName,
-		GcpProjectID: c.GcpProjectId,
+		GcpProjectID: projectID,
 		Region:       c.Region,
 		Cloud:        cloudClient.CloudService(),
 		Printer:      cctx.Printer,

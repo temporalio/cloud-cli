@@ -165,3 +165,125 @@ func TestAsyncOperationHandler_HandleDeleteErr_NotFound_NotIdempotent(t *testing
 	require.ErrorIs(t, err, notFoundErr)
 	assert.Empty(t, buf.String())
 }
+
+func TestParseRoleARN(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		input           string
+		wantRoleName    string
+		wantAccountID   string
+		wantErrContains string
+	}{
+		{
+			name:          "valid",
+			input:         "arn:aws:iam::123456789012:role/my-role",
+			wantRoleName:  "my-role",
+			wantAccountID: "123456789012",
+		},
+		{
+			name:          "valid with path",
+			input:         "arn:aws:iam::123456789012:role/path/to/role",
+			wantRoleName:  "path/to/role",
+			wantAccountID: "123456789012",
+		},
+		{
+			name:            "empty",
+			input:           "",
+			wantErrContains: "invalid role ARN",
+		},
+		{
+			name:            "wrong service",
+			input:           "arn:aws:s3:::my-bucket",
+			wantErrContains: `expected an IAM role ARN, got service "s3"`,
+		},
+		{
+			name:            "missing role/ prefix",
+			input:           "arn:aws:iam::123456789012:user/jane",
+			wantErrContains: `expected resource of the form role/<name>`,
+		},
+		{
+			name:            "empty role name",
+			input:           "arn:aws:iam::123456789012:role/",
+			wantErrContains: `expected resource of the form role/<name>`,
+		},
+		{
+			name:            "not an arn",
+			input:           "not-an-arn",
+			wantErrContains: "invalid role ARN",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			roleName, accountID, err := temporalcloudcli.ParseRoleARN(tt.input)
+			if tt.wantErrContains != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrContains)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantRoleName, roleName)
+			assert.Equal(t, tt.wantAccountID, accountID)
+		})
+	}
+}
+
+func TestParseServiceAccountEmail(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		input           string
+		wantSaID        string
+		wantProjectID   string
+		wantErrContains string
+	}{
+		{
+			name:          "valid",
+			input:         "my-sa@my-project.iam.gserviceaccount.com",
+			wantSaID:      "my-sa",
+			wantProjectID: "my-project",
+		},
+		{
+			name:            "empty",
+			input:           "",
+			wantErrContains: "invalid service account email",
+		},
+		{
+			name:            "missing @",
+			input:           "my-sa.iam.gserviceaccount.com",
+			wantErrContains: "invalid service account email",
+		},
+		{
+			name:            "wrong domain suffix",
+			input:           "my-sa@my-project.example.com",
+			wantErrContains: "invalid service account email",
+		},
+		{
+			name:            "empty local part",
+			input:           "@my-project.iam.gserviceaccount.com",
+			wantErrContains: "invalid service account email",
+		},
+		{
+			name:            "empty project part",
+			input:           "my-sa@.iam.gserviceaccount.com",
+			wantErrContains: "invalid service account email",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			saID, projectID, err := temporalcloudcli.ParseServiceAccountEmail(tt.input)
+			if tt.wantErrContains != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrContains)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantSaID, saID)
+			assert.Equal(t, tt.wantProjectID, projectID)
+		})
+	}
+}

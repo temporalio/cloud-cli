@@ -146,7 +146,7 @@ func (c *CloudAccountAuditLogSinkKinesisCreateCommand) run(cctx *CommandContext,
 	}
 	return CreateAuditLogSinkKinesis(cctx.Context, CreateAuditLogSinkKinesisParams{
 		Name:             c.Name,
-		RoleName:         c.RoleName,
+		RoleName:         c.RoleArn,
 		DestinationURI:   c.DestinationUri,
 		Region:           c.Region,
 		AsyncOperationID: c.AsyncOperationId,
@@ -163,7 +163,7 @@ func (c *CloudAccountAuditLogSinkKinesisUpdateCommand) run(cctx *CommandContext,
 	}
 	return UpdateAuditLogSinkKinesis(cctx.Context, UpdateAuditLogSinkKinesisParams{
 		Name:             c.Name,
-		RoleName:         c.RoleName,
+		RoleName:         c.RoleArn,
 		DestinationURI:   c.DestinationUri,
 		Region:           c.Region,
 		ResourceVersion:  c.ResourceVersion,
@@ -180,7 +180,7 @@ func (c *CloudAccountAuditLogSinkKinesisValidateCommand) run(cctx *CommandContex
 		return err
 	}
 	return ValidateAuditLogSinkKinesis(cctx.Context, ValidateAuditLogSinkKinesisParams{
-		RoleName:       c.RoleName,
+		RoleName:       c.RoleArn,
 		DestinationURI: c.DestinationUri,
 		Region:         c.Region,
 		Cloud:          cloudClient.CloudService(),

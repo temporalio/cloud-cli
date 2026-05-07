@@ -161,43 +161,37 @@ func (v *ExportSinkOptions) BuildFlags(f *pflag.FlagSet) {
 }
 
 type ExportS3Options struct {
-	RoleName     string
-	BucketName   string
-	Region       string
-	AwsAccountId string
-	KmsArn       string
-	FlagSet      *pflag.FlagSet
+	RoleArn    string
+	BucketName string
+	Region     string
+	KmsArn     string
+	FlagSet    *pflag.FlagSet
 }
 
 func (v *ExportS3Options) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.StringVar(&v.RoleName, "role-name", "", "The IAM role ARN that Temporal Cloud assumes for writing to S3. Required.")
-	_ = cobra.MarkFlagRequired(f, "role-name")
+	f.StringVar(&v.RoleArn, "role-arn", "", "The IAM role ARN that Temporal Cloud assumes for writing to S3 (e.g. arn:aws:iam::123456789012:role/my-role). The role name and AWS account ID are parsed from this ARN. Required.")
+	_ = cobra.MarkFlagRequired(f, "role-arn")
 	f.StringVar(&v.BucketName, "bucket-name", "", "The name of the destination S3 bucket. Required.")
 	_ = cobra.MarkFlagRequired(f, "bucket-name")
 	f.StringVar(&v.Region, "region", "", "The AWS region where the S3 bucket is located. Required.")
 	_ = cobra.MarkFlagRequired(f, "region")
-	f.StringVar(&v.AwsAccountId, "aws-account-id", "", "The AWS account ID associated with the bucket and role. Required.")
-	_ = cobra.MarkFlagRequired(f, "aws-account-id")
 	f.StringVar(&v.KmsArn, "kms-arn", "", "The AWS KMS key ARN for server-side encryption of exported data. Optional.")
 }
 
 type ExportGcsOptions struct {
-	SaId         string
-	BucketName   string
-	GcpProjectId string
-	Region       string
-	FlagSet      *pflag.FlagSet
+	ServiceAccountEmail string
+	BucketName          string
+	Region              string
+	FlagSet             *pflag.FlagSet
 }
 
 func (v *ExportGcsOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.StringVar(&v.SaId, "sa-id", "", "The customer service account ID that Temporal Cloud impersonates for writing to GCS. Required.")
-	_ = cobra.MarkFlagRequired(f, "sa-id")
+	f.StringVar(&v.ServiceAccountEmail, "service-account-email", "", "The email of the customer service account that Temporal Cloud impersonates for writing to GCS (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and GCP project ID are parsed from this email. Required.")
+	_ = cobra.MarkFlagRequired(f, "service-account-email")
 	f.StringVar(&v.BucketName, "bucket-name", "", "The name of the destination GCS bucket. Required.")
 	_ = cobra.MarkFlagRequired(f, "bucket-name")
-	f.StringVar(&v.GcpProjectId, "gcp-project-id", "", "The GCP project ID associated with the bucket and service account. Required.")
-	_ = cobra.MarkFlagRequired(f, "gcp-project-id")
 	f.StringVar(&v.Region, "region", "", "The GCS bucket region. Required.")
 	_ = cobra.MarkFlagRequired(f, "region")
 }
@@ -471,7 +465,7 @@ type CloudAccountAuditLogSinkKinesisCreateCommand struct {
 	ClientOptions
 	AsyncOperationOptions
 	Name           string
-	RoleName       string
+	RoleArn        string
 	DestinationUri string
 	Region         string
 }
@@ -482,12 +476,12 @@ func NewCloudAccountAuditLogSinkKinesisCreateCommand(cctx *CommandContext, paren
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create a Kinesis audit log sink"
-	s.Command.Long = "Create an account audit log sink that streams audit events to Amazon Kinesis.\n\nTemporal Cloud assumes the specified IAM role to write events to the Kinesis\nstream identified by the destination URI.\n\nExample:\n  temporal cloud account audit-log sink kinesis create \\\n    --name my-sink \\\n    --role-name arn:aws:iam::123456789012:role/MyRole \\\n    --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \\\n    --region us-east-1"
+	s.Command.Long = "Create an account audit log sink that streams audit events to Amazon Kinesis.\n\nTemporal Cloud assumes the specified IAM role to write events to the Kinesis\nstream identified by the destination URI.\n\nExample:\n  temporal cloud account audit-log sink kinesis create \\\n    --name my-sink \\\n    --role-arn arn:aws:iam::123456789012:role/MyRole \\\n    --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \\\n    --region us-east-1"
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Name of the audit log sink. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Flags().StringVar(&s.RoleName, "role-name", "", "ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "role-name")
+	s.Command.Flags().StringVar(&s.RoleArn, "role-arn", "", "ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "role-arn")
 	s.Command.Flags().StringVar(&s.DestinationUri, "destination-uri", "", "ARN of the Kinesis stream to deliver audit log events to. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "destination-uri")
 	s.Command.Flags().StringVar(&s.Region, "region", "", "AWS region where the Kinesis stream is located (e.g. us-east-1). Required.")
@@ -509,7 +503,7 @@ type CloudAccountAuditLogSinkKinesisUpdateCommand struct {
 	AsyncOperationOptions
 	ResourceVersionOptions
 	Name           string
-	RoleName       string
+	RoleArn        string
 	DestinationUri string
 	Region         string
 }
@@ -520,11 +514,11 @@ func NewCloudAccountAuditLogSinkKinesisUpdateCommand(cctx *CommandContext, paren
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a Kinesis audit log sink"
-	s.Command.Long = "Update an existing Kinesis audit log sink. Only the flags you provide are changed;\nomitted string flags retain their current values.\n\nExample:\n  temporal cloud account audit-log sink kinesis update \\\n    --name my-sink \\\n    --role-name arn:aws:iam::123456789012:role/NewRole"
+	s.Command.Long = "Update an existing Kinesis audit log sink. Only the flags you provide are changed;\nomitted string flags retain their current values.\n\nExample:\n  temporal cloud account audit-log sink kinesis update \\\n    --name my-sink \\\n    --role-arn arn:aws:iam::123456789012:role/NewRole"
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Name of the audit log sink to update. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Flags().StringVar(&s.RoleName, "role-name", "", "ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.RoleArn, "role-arn", "", "ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. If omitted, the current value is kept.")
 	s.Command.Flags().StringVar(&s.DestinationUri, "destination-uri", "", "ARN of the Kinesis stream to deliver audit log events to. If omitted, the current value is kept.")
 	s.Command.Flags().StringVar(&s.Region, "region", "", "AWS region where the Kinesis stream is located (e.g. us-east-1). If omitted, the current value is kept.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -542,7 +536,7 @@ type CloudAccountAuditLogSinkKinesisValidateCommand struct {
 	Parent  *CloudAccountAuditLogSinkKinesisCommand
 	Command cobra.Command
 	ClientOptions
-	RoleName       string
+	RoleArn        string
 	DestinationUri string
 	Region         string
 }
@@ -553,10 +547,10 @@ func NewCloudAccountAuditLogSinkKinesisValidateCommand(cctx *CommandContext, par
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "validate [flags]"
 	s.Command.Short = "Validate a Kinesis audit log sink configuration"
-	s.Command.Long = "Validate an audit log sink configuration against Amazon Kinesis without creating it.\nUse this to verify that the IAM role and Kinesis stream are correctly configured\nbefore creating or updating the sink.\n\nExample:\n  temporal cloud account audit-log sink kinesis validate \\\n    --name my-sink \\\n    --role-name arn:aws:iam::123456789012:role/MyRole \\\n    --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \\\n    --region us-east-1"
+	s.Command.Long = "Validate an audit log sink configuration against Amazon Kinesis without creating it.\nUse this to verify that the IAM role and Kinesis stream are correctly configured\nbefore creating or updating the sink.\n\nExample:\n  temporal cloud account audit-log sink kinesis validate \\\n    --name my-sink \\\n    --role-arn arn:aws:iam::123456789012:role/MyRole \\\n    --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \\\n    --region us-east-1"
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.RoleName, "role-name", "", "ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "role-name")
+	s.Command.Flags().StringVar(&s.RoleArn, "role-arn", "", "ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "role-arn")
 	s.Command.Flags().StringVar(&s.DestinationUri, "destination-uri", "", "ARN of the Kinesis stream to deliver audit log events to. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "destination-uri")
 	s.Command.Flags().StringVar(&s.Region, "region", "", "AWS region where the Kinesis stream is located (e.g. us-east-1). Required.")
@@ -620,10 +614,9 @@ type CloudAccountAuditLogSinkPubsubCreateCommand struct {
 	Command cobra.Command
 	ClientOptions
 	AsyncOperationOptions
-	Name             string
-	ServiceAccountId string
-	TopicName        string
-	GcpProjectId     string
+	Name                string
+	ServiceAccountEmail string
+	TopicName           string
 }
 
 func NewCloudAccountAuditLogSinkPubsubCreateCommand(cctx *CommandContext, parent *CloudAccountAuditLogSinkPubsubCommand) *CloudAccountAuditLogSinkPubsubCreateCommand {
@@ -633,19 +626,17 @@ func NewCloudAccountAuditLogSinkPubsubCreateCommand(cctx *CommandContext, parent
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create a PubSub audit log sink"
 	if hasHighlighting {
-		s.Command.Long = "Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub create \\\n  --name my-sink \\\n  --service-account-id my-sa \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\x1b[0m"
+		s.Command.Long = "Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub create \\\n  --name my-sink \\\n  --service-account-email my-sa@my-project.iam.gserviceaccount.com \\\n  --topic-name my-topic\x1b[0m"
 	} else {
-		s.Command.Long = "Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub create \\\n  --name my-sink \\\n  --service-account-id my-sa \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\n```"
+		s.Command.Long = "Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub create \\\n  --name my-sink \\\n  --service-account-email my-sa@my-project.iam.gserviceaccount.com \\\n  --topic-name my-topic\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the audit log sink. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The GCP service account ID that Temporal Cloud impersonates for writing records to the customer's PubSub topic. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-id")
+	s.Command.Flags().StringVar(&s.ServiceAccountEmail, "service-account-email", "", "The email of the GCP service account that Temporal Cloud impersonates for writing records to the customer's PubSub topic (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and GCP project ID are parsed from this email. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-email")
 	s.Command.Flags().StringVar(&s.TopicName, "topic-name", "", "The destination PubSub topic name where audit logs will be sent. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "topic-name")
-	s.Command.Flags().StringVar(&s.GcpProjectId, "gcp-project-id", "", "The GCP project ID of the PubSub topic and service account. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "gcp-project-id")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -662,10 +653,9 @@ type CloudAccountAuditLogSinkPubsubUpdateCommand struct {
 	ClientOptions
 	ResourceVersionOptions
 	AsyncOperationOptions
-	Name             string
-	ServiceAccountId string
-	TopicName        string
-	GcpProjectId     string
+	Name                string
+	ServiceAccountEmail string
+	TopicName           string
 }
 
 func NewCloudAccountAuditLogSinkPubsubUpdateCommand(cctx *CommandContext, parent *CloudAccountAuditLogSinkPubsubCommand) *CloudAccountAuditLogSinkPubsubUpdateCommand {
@@ -675,16 +665,15 @@ func NewCloudAccountAuditLogSinkPubsubUpdateCommand(cctx *CommandContext, parent
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a PubSub audit log sink"
 	if hasHighlighting {
-		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-id new-sa \\\n  --topic-name new-topic \\\n  --gcp-project-id new-project\x1b[0m"
+		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-email new-sa@new-project.iam.gserviceaccount.com \\\n  --topic-name new-topic\x1b[0m"
 	} else {
-		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-id new-sa \\\n  --topic-name new-topic \\\n  --gcp-project-id new-project\n```"
+		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-email new-sa@new-project.iam.gserviceaccount.com \\\n  --topic-name new-topic\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the audit log sink to update. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The GCP service account ID that Temporal Cloud impersonates for writing records to the customer's PubSub topic.")
+	s.Command.Flags().StringVar(&s.ServiceAccountEmail, "service-account-email", "", "The email of the GCP service account that Temporal Cloud impersonates for writing records to the customer's PubSub topic (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and GCP project ID are parsed from this email.")
 	s.Command.Flags().StringVar(&s.TopicName, "topic-name", "", "The destination PubSub topic name where audit logs will be sent.")
-	s.Command.Flags().StringVar(&s.GcpProjectId, "gcp-project-id", "", "The GCP project ID of the PubSub topic and service account.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
@@ -700,9 +689,8 @@ type CloudAccountAuditLogSinkPubsubValidateCommand struct {
 	Parent  *CloudAccountAuditLogSinkPubsubCommand
 	Command cobra.Command
 	ClientOptions
-	ServiceAccountId string
-	TopicName        string
-	GcpProjectId     string
+	ServiceAccountEmail string
+	TopicName           string
 }
 
 func NewCloudAccountAuditLogSinkPubsubValidateCommand(cctx *CommandContext, parent *CloudAccountAuditLogSinkPubsubCommand) *CloudAccountAuditLogSinkPubsubValidateCommand {
@@ -712,17 +700,15 @@ func NewCloudAccountAuditLogSinkPubsubValidateCommand(cctx *CommandContext, pare
 	s.Command.Use = "validate [flags]"
 	s.Command.Short = "Validate a PubSub audit log sink"
 	if hasHighlighting {
-		s.Command.Long = "Validates a PubSub audit log sink specification without creating or modifying any resources.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub validate \\\n  --name my-sink \\\n  --service-account-id my-sa \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\x1b[0m"
+		s.Command.Long = "Validates a PubSub audit log sink specification without creating or modifying any resources.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub validate \\\n  --name my-sink \\\n  --service-account-email my-sa@my-project.iam.gserviceaccount.com \\\n  --topic-name my-topic\x1b[0m"
 	} else {
-		s.Command.Long = "Validates a PubSub audit log sink specification without creating or modifying any resources.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub validate \\\n  --name my-sink \\\n  --service-account-id my-sa \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\n```"
+		s.Command.Long = "Validates a PubSub audit log sink specification without creating or modifying any resources.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub validate \\\n  --name my-sink \\\n  --service-account-email my-sa@my-project.iam.gserviceaccount.com \\\n  --topic-name my-topic\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The GCP service account ID that Temporal Cloud impersonates for writing records to the customer's PubSub topic. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-id")
+	s.Command.Flags().StringVar(&s.ServiceAccountEmail, "service-account-email", "", "The email of the GCP service account that Temporal Cloud impersonates for writing records to the customer's PubSub topic (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and GCP project ID are parsed from this email. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-email")
 	s.Command.Flags().StringVar(&s.TopicName, "topic-name", "", "The destination PubSub topic name where audit logs will be sent. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "topic-name")
-	s.Command.Flags().StringVar(&s.GcpProjectId, "gcp-project-id", "", "The GCP project ID of the PubSub topic and service account. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "gcp-project-id")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -2532,9 +2518,9 @@ func NewCloudNamespaceExportGcsCreateCommand(cctx *CommandContext, parent *Cloud
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create a GCS workflow history export sink"
 	if hasHighlighting {
-		s.Command.Long = "Create a new GCS workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project --region us-central1\x1b[0m"
+		s.Command.Long = "Create a new GCS workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --region us-central1\x1b[0m"
 	} else {
-		s.Command.Long = "Create a new GCS workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n```\ntemporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project --region us-central1\n```"
+		s.Command.Long = "Create a new GCS workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n```\ntemporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --region us-central1\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -2568,9 +2554,9 @@ func NewCloudNamespaceExportGcsUpdateCommand(cctx *CommandContext, parent *Cloud
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a GCS workflow history export sink"
 	if hasHighlighting {
-		s.Command.Long = "Update the configuration of an existing GCS workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project --region us-central1\x1b[0m"
+		s.Command.Long = "Update the configuration of an existing GCS workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --region us-central1\x1b[0m"
 	} else {
-		s.Command.Long = "Update the configuration of an existing GCS workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n```\ntemporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project --region us-central1\n```"
+		s.Command.Long = "Update the configuration of an existing GCS workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n```\ntemporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --region us-central1\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -2603,9 +2589,9 @@ func NewCloudNamespaceExportGcsValidateCommand(cctx *CommandContext, parent *Clo
 	s.Command.Use = "validate [flags]"
 	s.Command.Short = "Validate a GCS workflow history export sink configuration"
 	if hasHighlighting {
-		s.Command.Long = "Validate a GCS workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project --region us-central1\x1b[0m"
+		s.Command.Long = "Validate a GCS workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --region us-central1\x1b[0m"
 	} else {
-		s.Command.Long = "Validate a GCS workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n```\ntemporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project --region us-central1\n```"
+		s.Command.Long = "Validate a GCS workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n```\ntemporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --region us-central1\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -2715,9 +2701,9 @@ func NewCloudNamespaceExportS3CreateCommand(cctx *CommandContext, parent *CloudN
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create an S3 workflow history export sink"
 	if hasHighlighting {
-		s.Command.Long = "Create a new S3 workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1 --aws-account-id 123456789012\x1b[0m"
+		s.Command.Long = "Create a new S3 workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1\x1b[0m"
 	} else {
-		s.Command.Long = "Create a new S3 workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n```\ntemporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1 --aws-account-id 123456789012\n```"
+		s.Command.Long = "Create a new S3 workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n```\ntemporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -2751,9 +2737,9 @@ func NewCloudNamespaceExportS3UpdateCommand(cctx *CommandContext, parent *CloudN
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update an S3 workflow history export sink"
 	if hasHighlighting {
-		s.Command.Long = "Update the configuration of an existing S3 workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket \\\n  --region us-east-1 --aws-account-id 123456789012\x1b[0m"
+		s.Command.Long = "Update the configuration of an existing S3 workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket \\\n  --region us-east-1\x1b[0m"
 	} else {
-		s.Command.Long = "Update the configuration of an existing S3 workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n```\ntemporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket \\\n  --region us-east-1 --aws-account-id 123456789012\n```"
+		s.Command.Long = "Update the configuration of an existing S3 workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n```\ntemporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket \\\n  --region us-east-1\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -2786,9 +2772,9 @@ func NewCloudNamespaceExportS3ValidateCommand(cctx *CommandContext, parent *Clou
 	s.Command.Use = "validate [flags]"
 	s.Command.Short = "Validate an S3 workflow history export sink configuration"
 	if hasHighlighting {
-		s.Command.Long = "Validate an S3 workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1 --aws-account-id 123456789012\x1b[0m"
+		s.Command.Long = "Validate an S3 workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1\x1b[0m"
 	} else {
-		s.Command.Long = "Validate an S3 workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n```\ntemporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1 --aws-account-id 123456789012\n```"
+		s.Command.Long = "Validate an S3 workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n```\ntemporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
