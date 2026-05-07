@@ -481,7 +481,7 @@ type CloudAccountAuditLogSinkKinesisCreateCommand struct {
 	ClientOptions
 	AsyncOperationOptions
 	Name           string
-	RoleArn        string
+	RoleName       string
 	DestinationUri string
 	Region         string
 }
@@ -492,12 +492,12 @@ func NewCloudAccountAuditLogSinkKinesisCreateCommand(cctx *CommandContext, paren
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create a Kinesis audit log sink"
-	s.Command.Long = "Create an account audit log sink that streams audit events to Amazon Kinesis.\n\nTemporal Cloud assumes the specified IAM role to write events to the Kinesis\nstream identified by the destination URI.\n\nExample:\n  temporal cloud account audit-log sink kinesis create \\\n    --name my-sink \\\n    --role-arn arn:aws:iam::123456789012:role/MyRole \\\n    --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \\\n    --region us-east-1"
+	s.Command.Long = "Create an account audit log sink that streams audit events to Amazon Kinesis.\n\nTemporal Cloud assumes the specified IAM role to write events to the Kinesis\nstream identified by the destination URI.\n\nExample:\n  temporal cloud account audit-log sink kinesis create \\\n    --name my-sink \\\n    --role-name MyRole \\\n    --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \\\n    --region us-east-1"
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Name of the audit log sink. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Flags().StringVar(&s.RoleArn, "role-arn", "", "ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "role-arn")
+	s.Command.Flags().StringVar(&s.RoleName, "role-name", "", "Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "role-name")
 	s.Command.Flags().StringVar(&s.DestinationUri, "destination-uri", "", "ARN of the Kinesis stream to deliver audit log events to. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "destination-uri")
 	s.Command.Flags().StringVar(&s.Region, "region", "", "AWS region where the Kinesis stream is located (e.g. us-east-1). Required.")
@@ -519,7 +519,7 @@ type CloudAccountAuditLogSinkKinesisUpdateCommand struct {
 	AsyncOperationOptions
 	ResourceVersionOptions
 	Name           string
-	RoleArn        string
+	RoleName       string
 	DestinationUri string
 	Region         string
 }
@@ -530,11 +530,11 @@ func NewCloudAccountAuditLogSinkKinesisUpdateCommand(cctx *CommandContext, paren
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a Kinesis audit log sink"
-	s.Command.Long = "Update an existing Kinesis audit log sink. Only the flags you provide are changed;\nomitted string flags retain their current values.\n\nExample:\n  temporal cloud account audit-log sink kinesis update \\\n    --name my-sink \\\n    --role-arn arn:aws:iam::123456789012:role/NewRole"
+	s.Command.Long = "Update an existing Kinesis audit log sink. Only the flags you provide are changed;\nomitted string flags retain their current values.\n\nExample:\n  temporal cloud account audit-log sink kinesis update \\\n    --name my-sink \\\n    --role-name NewRole"
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Name of the audit log sink to update. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Flags().StringVar(&s.RoleArn, "role-arn", "", "ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.RoleName, "role-name", "", "Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. If omitted, the current value is kept.")
 	s.Command.Flags().StringVar(&s.DestinationUri, "destination-uri", "", "ARN of the Kinesis stream to deliver audit log events to. If omitted, the current value is kept.")
 	s.Command.Flags().StringVar(&s.Region, "region", "", "AWS region where the Kinesis stream is located (e.g. us-east-1). If omitted, the current value is kept.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -552,7 +552,7 @@ type CloudAccountAuditLogSinkKinesisValidateCommand struct {
 	Parent  *CloudAccountAuditLogSinkKinesisCommand
 	Command cobra.Command
 	ClientOptions
-	RoleArn        string
+	RoleName       string
 	DestinationUri string
 	Region         string
 }
@@ -563,10 +563,10 @@ func NewCloudAccountAuditLogSinkKinesisValidateCommand(cctx *CommandContext, par
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "validate [flags]"
 	s.Command.Short = "Validate a Kinesis audit log sink configuration"
-	s.Command.Long = "Validate an audit log sink configuration against Amazon Kinesis without creating it.\nUse this to verify that the IAM role and Kinesis stream are correctly configured\nbefore creating or updating the sink.\n\nExample:\n  temporal cloud account audit-log sink kinesis validate \\\n    --name my-sink \\\n    --role-arn arn:aws:iam::123456789012:role/MyRole \\\n    --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \\\n    --region us-east-1"
+	s.Command.Long = "Validate an audit log sink configuration against Amazon Kinesis without creating it.\nUse this to verify that the IAM role and Kinesis stream are correctly configured\nbefore creating or updating the sink.\n\nExample:\n  temporal cloud account audit-log sink kinesis validate \\\n    --name my-sink \\\n    --role-name MyRole \\\n    --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \\\n    --region us-east-1"
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.RoleArn, "role-arn", "", "ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "role-arn")
+	s.Command.Flags().StringVar(&s.RoleName, "role-name", "", "Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "role-name")
 	s.Command.Flags().StringVar(&s.DestinationUri, "destination-uri", "", "ARN of the Kinesis stream to deliver audit log events to. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "destination-uri")
 	s.Command.Flags().StringVar(&s.Region, "region", "", "AWS region where the Kinesis stream is located (e.g. us-east-1). Required.")

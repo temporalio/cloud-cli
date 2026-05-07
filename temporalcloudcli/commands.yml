@@ -3001,7 +3001,7 @@ commands:
       Example:
         temporal cloud account audit-log sink kinesis create \
           --name my-sink \
-          --role-arn arn:aws:iam::123456789012:role/MyRole \
+          --role-name MyRole \
           --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \
           --region us-east-1
     has-init: false
@@ -3014,11 +3014,11 @@ commands:
         required: true
         description: |
           Name of the audit log sink.
-      - name: role-arn
+      - name: role-name
         type: string
         required: true
         description: |
-          ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
+          Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
       - name: destination-uri
         type: string
         required: true
@@ -3039,7 +3039,7 @@ commands:
       Example:
         temporal cloud account audit-log sink kinesis update \
           --name my-sink \
-          --role-arn arn:aws:iam::123456789012:role/NewRole
+          --role-name NewRole
     has-init: false
     option-sets:
       - client
@@ -3051,10 +3051,10 @@ commands:
         required: true
         description: |
           Name of the audit log sink to update.
-      - name: role-arn
+      - name: role-name
         type: string
         description: |
-          ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
+          Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
           If omitted, the current value is kept.
       - name: destination-uri
         type: string
@@ -3077,18 +3077,18 @@ commands:
       Example:
         temporal cloud account audit-log sink kinesis validate \
           --name my-sink \
-          --role-arn arn:aws:iam::123456789012:role/MyRole \
+          --role-name MyRole \
           --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \
           --region us-east-1
     has-init: false
     option-sets:
       - client
     options:
-      - name: role-arn
+      - name: role-name
         type: string
         required: true
         description: |
-          ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
+          Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
       - name: destination-uri
         type: string
         required: true
