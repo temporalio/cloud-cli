@@ -116,12 +116,12 @@ func TestNamespaceConnectivityList(t *testing.T) {
 	}
 }
 
-// --- Create ---
+// --- Attach ---
 
-func TestNamespaceConnectivityCreate(t *testing.T) {
+func TestNamespaceConnectivityAttach(t *testing.T) {
 	tests := []struct {
 		name                    string
-		cmd                     temporalcloudcli.CloudNamespaceConnectivityCreateCommand
+		cmd                     temporalcloudcli.CloudNamespaceConnectivityAttachCommand
 		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
 		promptOptions           temporalcloudcli.TestPromptOptions
 		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
@@ -129,7 +129,7 @@ func TestNamespaceConnectivityCreate(t *testing.T) {
 	}{
 		{
 			name: "AppendsToExistingList",
-			cmd: temporalcloudcli.CloudNamespaceConnectivityCreateCommand{
+			cmd: temporalcloudcli.CloudNamespaceConnectivityAttachCommand{
 				ConnectivityRuleId: []string{"rule-b"},
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -154,7 +154,7 @@ func TestNamespaceConnectivityCreate(t *testing.T) {
 		},
 		{
 			name: "AppendsMultiple",
-			cmd: temporalcloudcli.CloudNamespaceConnectivityCreateCommand{
+			cmd: temporalcloudcli.CloudNamespaceConnectivityAttachCommand{
 				ConnectivityRuleId: []string{"rule-b", "rule-c"},
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -179,7 +179,7 @@ func TestNamespaceConnectivityCreate(t *testing.T) {
 		},
 		{
 			name: "AppendsToEmptyList",
-			cmd: temporalcloudcli.CloudNamespaceConnectivityCreateCommand{
+			cmd: temporalcloudcli.CloudNamespaceConnectivityAttachCommand{
 				ConnectivityRuleId: []string{"rule-a"},
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -203,7 +203,7 @@ func TestNamespaceConnectivityCreate(t *testing.T) {
 		},
 		{
 			name: "GetNamespaceError",
-			cmd: temporalcloudcli.CloudNamespaceConnectivityCreateCommand{
+			cmd: temporalcloudcli.CloudNamespaceConnectivityAttachCommand{
 				ConnectivityRuleId: []string{"rule-a"},
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -215,7 +215,7 @@ func TestNamespaceConnectivityCreate(t *testing.T) {
 		},
 		{
 			name: "PromptDeclined",
-			cmd: temporalcloudcli.CloudNamespaceConnectivityCreateCommand{
+			cmd: temporalcloudcli.CloudNamespaceConnectivityAttachCommand{
 				ConnectivityRuleId: []string{"rule-a"},
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -230,11 +230,11 @@ func TestNamespaceConnectivityCreate(t *testing.T) {
 					}, nil)
 			},
 			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
-			expectedErr:   "Aborting create.",
+			expectedErr:   "Aborting attach.",
 		},
 		{
 			name: "UpdateError",
-			cmd: temporalcloudcli.CloudNamespaceConnectivityCreateCommand{
+			cmd: temporalcloudcli.CloudNamespaceConnectivityAttachCommand{
 				ConnectivityRuleId: []string{"rule-a"},
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -256,7 +256,7 @@ func TestNamespaceConnectivityCreate(t *testing.T) {
 		},
 		{
 			name: "ResourceVersionOverride",
-			cmd: temporalcloudcli.CloudNamespaceConnectivityCreateCommand{
+			cmd: temporalcloudcli.CloudNamespaceConnectivityAttachCommand{
 				ConnectivityRuleId: []string{"rule-a"},
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -298,12 +298,12 @@ func TestNamespaceConnectivityCreate(t *testing.T) {
 	}
 }
 
-// --- Delete ---
+// --- Detach ---
 
-func TestNamespaceConnectivityDelete(t *testing.T) {
+func TestNamespaceConnectivityDetach(t *testing.T) {
 	tests := []struct {
 		name                    string
-		cmd                     temporalcloudcli.CloudNamespaceConnectivityDeleteCommand
+		cmd                     temporalcloudcli.CloudNamespaceConnectivityDetachCommand
 		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
 		promptOptions           temporalcloudcli.TestPromptOptions
 		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
@@ -311,7 +311,7 @@ func TestNamespaceConnectivityDelete(t *testing.T) {
 	}{
 		{
 			name: "RemovesAttachedRule",
-			cmd: temporalcloudcli.CloudNamespaceConnectivityDeleteCommand{
+			cmd: temporalcloudcli.CloudNamespaceConnectivityDetachCommand{
 				ConnectivityRuleId: []string{"rule-b"},
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -336,7 +336,7 @@ func TestNamespaceConnectivityDelete(t *testing.T) {
 		},
 		{
 			name: "RemovesMultiple",
-			cmd: temporalcloudcli.CloudNamespaceConnectivityDeleteCommand{
+			cmd: temporalcloudcli.CloudNamespaceConnectivityDetachCommand{
 				ConnectivityRuleId: []string{"rule-a", "rule-b"},
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -361,7 +361,7 @@ func TestNamespaceConnectivityDelete(t *testing.T) {
 		},
 		{
 			name: "NotAttachedPassesThrough",
-			cmd: temporalcloudcli.CloudNamespaceConnectivityDeleteCommand{
+			cmd: temporalcloudcli.CloudNamespaceConnectivityDetachCommand{
 				ConnectivityRuleId: []string{"rule-x"},
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -386,7 +386,7 @@ func TestNamespaceConnectivityDelete(t *testing.T) {
 		},
 		{
 			name: "GetNamespaceError",
-			cmd: temporalcloudcli.CloudNamespaceConnectivityDeleteCommand{
+			cmd: temporalcloudcli.CloudNamespaceConnectivityDetachCommand{
 				ConnectivityRuleId: []string{"rule-a"},
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -398,7 +398,7 @@ func TestNamespaceConnectivityDelete(t *testing.T) {
 		},
 		{
 			name: "PromptDeclined",
-			cmd: temporalcloudcli.CloudNamespaceConnectivityDeleteCommand{
+			cmd: temporalcloudcli.CloudNamespaceConnectivityDetachCommand{
 				ConnectivityRuleId: []string{"rule-a"},
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -413,11 +413,11 @@ func TestNamespaceConnectivityDelete(t *testing.T) {
 					}, nil)
 			},
 			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
-			expectedErr:   "Aborting delete.",
+			expectedErr:   "Aborting detach.",
 		},
 		{
 			name: "UpdateError",
-			cmd: temporalcloudcli.CloudNamespaceConnectivityDeleteCommand{
+			cmd: temporalcloudcli.CloudNamespaceConnectivityDetachCommand{
 				ConnectivityRuleId: []string{"rule-a"},
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -439,7 +439,7 @@ func TestNamespaceConnectivityDelete(t *testing.T) {
 		},
 		{
 			name: "ResourceVersionOverride",
-			cmd: temporalcloudcli.CloudNamespaceConnectivityDeleteCommand{
+			cmd: temporalcloudcli.CloudNamespaceConnectivityDetachCommand{
 				ConnectivityRuleId: []string{"rule-a"},
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {

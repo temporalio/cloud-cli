@@ -2254,13 +2254,13 @@ func NewCloudNamespaceConnectivityCommand(cctx *CommandContext, parent *CloudNam
 	s.Command.Short = "Manage connectivity rules attached to a namespace"
 	s.Command.Long = "Commands for attaching and detaching connectivity rules on a Temporal Cloud\nnamespace. Use 'cloud connectivity' to manage the rules themselves."
 	s.Command.Args = cobra.NoArgs
-	s.Command.AddCommand(&NewCloudNamespaceConnectivityCreateCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewCloudNamespaceConnectivityDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceConnectivityAttachCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceConnectivityDetachCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceConnectivityListCommand(cctx, &s).Command)
 	return &s
 }
 
-type CloudNamespaceConnectivityCreateCommand struct {
+type CloudNamespaceConnectivityAttachCommand struct {
 	Parent  *CloudNamespaceConnectivityCommand
 	Command cobra.Command
 	ClientOptions
@@ -2270,16 +2270,16 @@ type CloudNamespaceConnectivityCreateCommand struct {
 	ConnectivityRuleId []string
 }
 
-func NewCloudNamespaceConnectivityCreateCommand(cctx *CommandContext, parent *CloudNamespaceConnectivityCommand) *CloudNamespaceConnectivityCreateCommand {
-	var s CloudNamespaceConnectivityCreateCommand
+func NewCloudNamespaceConnectivityAttachCommand(cctx *CommandContext, parent *CloudNamespaceConnectivityCommand) *CloudNamespaceConnectivityAttachCommand {
+	var s CloudNamespaceConnectivityAttachCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "create [flags]"
+	s.Command.Use = "attach [flags]"
 	s.Command.Short = "Attach a connectivity rule to a namespace"
 	if hasHighlighting {
-		s.Command.Long = "Attach an existing connectivity rule to a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace connectivity create \\\n  --namespace my-namespace.my-account \\\n  --connectivity-rule-id <rule-id>\x1b[0m"
+		s.Command.Long = "Attach an existing connectivity rule to a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace connectivity attach \\\n  --namespace my-namespace.my-account \\\n  --connectivity-rule-id <rule-id>\x1b[0m"
 	} else {
-		s.Command.Long = "Attach an existing connectivity rule to a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace connectivity create \\\n  --namespace my-namespace.my-account \\\n  --connectivity-rule-id <rule-id>\n```"
+		s.Command.Long = "Attach an existing connectivity rule to a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace connectivity attach \\\n  --namespace my-namespace.my-account \\\n  --connectivity-rule-id <rule-id>\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.ConnectivityRuleId, "connectivity-rule-id", nil, "The ID of a connectivity rule to attach. Repeat to attach multiple. Required.")
@@ -2296,7 +2296,7 @@ func NewCloudNamespaceConnectivityCreateCommand(cctx *CommandContext, parent *Cl
 	return &s
 }
 
-type CloudNamespaceConnectivityDeleteCommand struct {
+type CloudNamespaceConnectivityDetachCommand struct {
 	Parent  *CloudNamespaceConnectivityCommand
 	Command cobra.Command
 	ClientOptions
@@ -2306,16 +2306,16 @@ type CloudNamespaceConnectivityDeleteCommand struct {
 	ConnectivityRuleId []string
 }
 
-func NewCloudNamespaceConnectivityDeleteCommand(cctx *CommandContext, parent *CloudNamespaceConnectivityCommand) *CloudNamespaceConnectivityDeleteCommand {
-	var s CloudNamespaceConnectivityDeleteCommand
+func NewCloudNamespaceConnectivityDetachCommand(cctx *CommandContext, parent *CloudNamespaceConnectivityCommand) *CloudNamespaceConnectivityDetachCommand {
+	var s CloudNamespaceConnectivityDetachCommand
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "delete [flags]"
+	s.Command.Use = "detach [flags]"
 	s.Command.Short = "Detach a connectivity rule from a namespace"
 	if hasHighlighting {
-		s.Command.Long = "Detach a connectivity rule from a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace connectivity delete \\\n  --namespace my-namespace.my-account \\\n  --connectivity-rule-id <rule-id>\x1b[0m"
+		s.Command.Long = "Detach a connectivity rule from a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace connectivity detach \\\n  --namespace my-namespace.my-account \\\n  --connectivity-rule-id <rule-id>\x1b[0m"
 	} else {
-		s.Command.Long = "Detach a connectivity rule from a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace connectivity delete \\\n  --namespace my-namespace.my-account \\\n  --connectivity-rule-id <rule-id>\n```"
+		s.Command.Long = "Detach a connectivity rule from a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace connectivity detach \\\n  --namespace my-namespace.my-account \\\n  --connectivity-rule-id <rule-id>\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.ConnectivityRuleId, "connectivity-rule-id", nil, "The ID of a connectivity rule to detach. Repeat to detach multiple. Required.")

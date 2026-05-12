@@ -719,7 +719,7 @@ commands:
     option-sets:
       - client
       - namespace
-  - name: cloud namespace connectivity create
+  - name: cloud namespace connectivity attach
     summary: Attach a connectivity rule to a namespace
     description: |
       Attach an existing connectivity rule to a Temporal Cloud namespace.
@@ -727,7 +727,7 @@ commands:
       Example:
 
       ```
-      temporal cloud namespace connectivity create \
+      temporal cloud namespace connectivity attach \
         --namespace my-namespace.my-account \
         --connectivity-rule-id <rule-id>
       ```
@@ -743,7 +743,7 @@ commands:
         description: |
           The ID of a connectivity rule to attach. Repeat to attach multiple.
         required: true
-  - name: cloud namespace connectivity delete
+  - name: cloud namespace connectivity detach
     summary: Detach a connectivity rule from a namespace
     description: |
       Detach a connectivity rule from a Temporal Cloud namespace.
@@ -751,7 +751,7 @@ commands:
       Example:
 
       ```
-      temporal cloud namespace connectivity delete \
+      temporal cloud namespace connectivity detach \
         --namespace my-namespace.my-account \
         --connectivity-rule-id <rule-id>
       ```

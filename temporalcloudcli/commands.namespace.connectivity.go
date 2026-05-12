@@ -35,7 +35,7 @@ func (c *CloudNamespaceConnectivityListCommand) run(cctx *CommandContext, _ []st
 	)
 }
 
-func (c *CloudNamespaceConnectivityCreateCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudNamespaceConnectivityAttachCommand) run(cctx *CommandContext, _ []string) error {
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func (c *CloudNamespaceConnectivityCreateCommand) run(cctx *CommandContext, _ []
 		return err
 	}
 	if !yes {
-		return errors.New("Aborting create.")
+		return errors.New("Aborting attach.")
 	}
 
 	rv := ns.ResourceVersion
@@ -69,7 +69,7 @@ func (c *CloudNamespaceConnectivityCreateCommand) run(cctx *CommandContext, _ []
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }
 
-func (c *CloudNamespaceConnectivityDeleteCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudNamespaceConnectivityDetachCommand) run(cctx *CommandContext, _ []string) error {
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -89,7 +89,7 @@ func (c *CloudNamespaceConnectivityDeleteCommand) run(cctx *CommandContext, _ []
 		return err
 	}
 	if !yes {
-		return errors.New("Aborting delete.")
+		return errors.New("Aborting detach.")
 	}
 
 	rv := ns.ResourceVersion
