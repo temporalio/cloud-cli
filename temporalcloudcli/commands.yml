@@ -881,8 +881,8 @@ commands:
 
       ```
       temporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \
-        --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
-        --region us-east-1 --aws-account-id 123456789012
+        --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
+        --region us-east-1
       ```
     has-init: false
     option-sets:
@@ -891,18 +891,19 @@ commands:
       - async-operation
       - export-sink
       - export-s3
+      - export-s3-region
   - name: cloud namespace export s3 update
     summary: Update an S3 workflow history export sink
     description: |
       Update the configuration of an existing S3 workflow history export sink.
-      The enabled/disabled state is preserved.
+      Only the flags you provide are changed; omitted flags keep their current
+      values. The enabled/disabled state and region are also preserved.
 
-      Example:
+      Example (rotate IAM role only):
 
       ```
       temporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \
-        --role-name arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket \
-        --region us-east-1 --aws-account-id 123456789012
+        --role-arn arn:aws:iam::123456789012:role/my-new-role
       ```
     has-init: false
     option-sets:
@@ -911,7 +912,24 @@ commands:
       - async-operation
       - resource-version
       - export-sink
-      - export-s3
+    options:
+      - name: role-arn
+        type: string
+        description: |
+          The IAM role ARN that Temporal Cloud assumes for writing to S3
+          (e.g. arn:aws:iam::123456789012:role/my-role). The role name and
+          AWS account ID are parsed from this ARN.
+          If omitted, the current value is kept.
+      - name: bucket-name
+        type: string
+        description: |
+          The name of the destination S3 bucket.
+          If omitted, the current value is kept.
+      - name: kms-arn
+        type: string
+        description: |
+          The AWS KMS key ARN for server-side encryption of exported data.
+          If omitted, the current value is kept.
   - name: cloud namespace export s3 validate
     summary: Validate an S3 workflow history export sink configuration
     description: |
@@ -922,8 +940,8 @@ commands:
 
       ```
       temporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \
-        --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
-        --region us-east-1 --aws-account-id 123456789012
+        --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
+        --region us-east-1
       ```
     has-init: false
     option-sets:
@@ -931,6 +949,7 @@ commands:
       - namespace
       - export-sink
       - export-s3
+      - export-s3-region
   - name: cloud namespace export gcs
     summary: Manage GCS workflow history export sinks
     description: |
@@ -946,8 +965,8 @@ commands:
 
       ```
       temporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \
-        --sa-id my-service-account@my-project.iam.gserviceaccount.com \
-        --bucket-name my-bucket --gcp-project-id my-project --region us-central1
+        --service-account-email my-service-account@my-project.iam.gserviceaccount.com \
+        --bucket-name my-bucket --region us-central1
       ```
     has-init: false
     option-sets:
@@ -956,18 +975,19 @@ commands:
       - async-operation
       - export-sink
       - export-gcs
+      - export-gcs-region
   - name: cloud namespace export gcs update
     summary: Update a GCS workflow history export sink
     description: |
       Update the configuration of an existing GCS workflow history export sink.
-      The enabled/disabled state is preserved.
+      Only the flags you provide are changed; omitted flags keep their current
+      values. The enabled/disabled state and region are also preserved.
 
-      Example:
+      Example (rotate service account only):
 
       ```
       temporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \
-        --sa-id my-service-account@my-project.iam.gserviceaccount.com \
-        --bucket-name my-bucket --gcp-project-id my-project --region us-central1
+        --service-account-email my-new-service-account@my-project.iam.gserviceaccount.com
       ```
     has-init: false
     option-sets:
@@ -976,7 +996,19 @@ commands:
       - async-operation
       - resource-version
       - export-sink
-      - export-gcs
+    options:
+      - name: service-account-email
+        type: string
+        description: |
+          The email of the customer service account that Temporal Cloud impersonates
+          for writing to GCS (e.g. my-sa@my-project.iam.gserviceaccount.com).
+          The service account ID and GCP project ID are parsed from this email.
+          If omitted, the current value is kept.
+      - name: bucket-name
+        type: string
+        description: |
+          The name of the destination GCS bucket.
+          If omitted, the current value is kept.
   - name: cloud namespace export gcs validate
     summary: Validate a GCS workflow history export sink configuration
     description: |
@@ -987,8 +1019,8 @@ commands:
 
       ```
       temporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \
-        --sa-id my-service-account@my-project.iam.gserviceaccount.com \
-        --bucket-name my-bucket --gcp-project-id my-project --region us-central1
+        --service-account-email my-service-account@my-project.iam.gserviceaccount.com \
+        --bucket-name my-bucket --region us-central1
       ```
     has-init: false
     option-sets:
@@ -996,6 +1028,7 @@ commands:
       - namespace
       - export-sink
       - export-gcs
+      - export-gcs-region
 
   # Namespace codec commands
   - name: cloud namespace codec
@@ -2968,7 +3001,7 @@ commands:
       Example:
         temporal cloud account audit-log sink kinesis create \
           --name my-sink \
-          --role-name arn:aws:iam::123456789012:role/MyRole \
+          --role-name MyRole \
           --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \
           --region us-east-1
     has-init: false
@@ -2985,7 +3018,7 @@ commands:
         type: string
         required: true
         description: |
-          ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
+          Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
       - name: destination-uri
         type: string
         required: true
@@ -3006,7 +3039,7 @@ commands:
       Example:
         temporal cloud account audit-log sink kinesis update \
           --name my-sink \
-          --role-name arn:aws:iam::123456789012:role/NewRole
+          --role-name NewRole
     has-init: false
     option-sets:
       - client
@@ -3021,7 +3054,7 @@ commands:
       - name: role-name
         type: string
         description: |
-          ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
+          Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
           If omitted, the current value is kept.
       - name: destination-uri
         type: string
@@ -3044,7 +3077,7 @@ commands:
       Example:
         temporal cloud account audit-log sink kinesis validate \
           --name my-sink \
-          --role-name arn:aws:iam::123456789012:role/MyRole \
+          --role-name MyRole \
           --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \
           --region us-east-1
     has-init: false
@@ -3055,7 +3088,7 @@ commands:
         type: string
         required: true
         description: |
-          ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
+          Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
       - name: destination-uri
         type: string
         required: true
@@ -3092,9 +3125,8 @@ commands:
       ```
       temporal cloud account audit-log sink pubsub create \
         --name my-sink \
-        --service-account-id my-sa \
-        --topic-name my-topic \
-        --gcp-project-id my-project
+        --service-account-email my-sa@my-project.iam.gserviceaccount.com \
+        --topic-name my-topic
       ```
     has-init: false
     option-sets:
@@ -3106,22 +3138,19 @@ commands:
         required: true
         description: |
           The name of the audit log sink.
-      - name: service-account-id
+      - name: service-account-email
         type: string
         required: true
         description: |
-          The GCP service account ID that Temporal Cloud impersonates for writing
-          records to the customer's PubSub topic.
+          The email of the GCP service account that Temporal Cloud impersonates for
+          writing records to the customer's PubSub topic
+          (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and
+          GCP project ID are parsed from this email.
       - name: topic-name
         type: string
         required: true
         description: |
           The destination PubSub topic name where audit logs will be sent.
-      - name: gcp-project-id
-        type: string
-        required: true
-        description: |
-          The GCP project ID of the PubSub topic and service account.
 
   - name: cloud account audit-log sink pubsub update
     summary: Update a PubSub audit log sink
@@ -3133,9 +3162,8 @@ commands:
       ```
       temporal cloud account audit-log sink pubsub update \
         --name my-sink \
-        --service-account-id new-sa \
-        --topic-name new-topic \
-        --gcp-project-id new-project
+        --service-account-email new-sa@new-project.iam.gserviceaccount.com \
+        --topic-name new-topic
       ```
     has-init: false
     option-sets:
@@ -3148,19 +3176,17 @@ commands:
         required: true
         description: |
           The name of the audit log sink to update.
-      - name: service-account-id
+      - name: service-account-email
         type: string
         description: |
-          The GCP service account ID that Temporal Cloud impersonates for writing
-          records to the customer's PubSub topic.
+          The email of the GCP service account that Temporal Cloud impersonates for
+          writing records to the customer's PubSub topic
+          (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and
+          GCP project ID are parsed from this email.
       - name: topic-name
         type: string
         description: |
           The destination PubSub topic name where audit logs will be sent.
-      - name: gcp-project-id
-        type: string
-        description: |
-          The GCP project ID of the PubSub topic and service account.
 
   - name: cloud account audit-log sink pubsub validate
     summary: Validate a PubSub audit log sink
@@ -3172,30 +3198,26 @@ commands:
       ```
       temporal cloud account audit-log sink pubsub validate \
         --name my-sink \
-        --service-account-id my-sa \
-        --topic-name my-topic \
-        --gcp-project-id my-project
+        --service-account-email my-sa@my-project.iam.gserviceaccount.com \
+        --topic-name my-topic
       ```
     has-init: false
     option-sets:
       - client
     options:
-      - name: service-account-id
+      - name: service-account-email
         type: string
         required: true
         description: |
-          The GCP service account ID that Temporal Cloud impersonates for writing
-          records to the customer's PubSub topic.
+          The email of the GCP service account that Temporal Cloud impersonates for
+          writing records to the customer's PubSub topic
+          (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and
+          GCP project ID are parsed from this email.
       - name: topic-name
         type: string
         required: true
         description: |
           The destination PubSub topic name where audit logs will be sent.
-      - name: gcp-project-id
-        type: string
-        required: true
-        description: |
-          The GCP project ID of the PubSub topic and service account.
 
   # Account metrics commands
   - name: cloud account metrics
@@ -3808,47 +3830,45 @@ option-sets:
           The name of the export sink.
   - name: export-s3
     options:
-      - name: role-name
+      - name: role-arn
         type: string
         required: true
         description: |
-          The IAM role ARN that Temporal Cloud assumes for writing to S3.
+          The IAM role ARN that Temporal Cloud assumes for writing to S3
+          (e.g. arn:aws:iam::123456789012:role/my-role). The role name and
+          AWS account ID are parsed from this ARN.
       - name: bucket-name
         type: string
         required: true
         description: |
           The name of the destination S3 bucket.
+      - name: kms-arn
+        type: string
+        description: |
+          The AWS KMS key ARN for server-side encryption of exported data. Optional.
+  - name: export-s3-region
+    options:
       - name: region
         type: string
         required: true
         description: |
           The AWS region where the S3 bucket is located.
-      - name: aws-account-id
-        type: string
-        required: true
-        description: |
-          The AWS account ID associated with the bucket and role.
-      - name: kms-arn
-        type: string
-        description: |
-          The AWS KMS key ARN for server-side encryption of exported data. Optional.
   - name: export-gcs
     options:
-      - name: sa-id
+      - name: service-account-email
         type: string
         required: true
         description: |
-          The customer service account ID that Temporal Cloud impersonates for writing to GCS.
+          The email of the customer service account that Temporal Cloud impersonates
+          for writing to GCS (e.g. my-sa@my-project.iam.gserviceaccount.com).
+          The service account ID and GCP project ID are parsed from this email.
       - name: bucket-name
         type: string
         required: true
         description: |
           The name of the destination GCS bucket.
-      - name: gcp-project-id
-        type: string
-        required: true
-        description: |
-          The GCP project ID associated with the bucket and service account.
+  - name: export-gcs-region
+    options:
       - name: region
         type: string
         required: true

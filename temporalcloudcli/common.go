@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 	"google.golang.org/grpc"
@@ -37,6 +38,38 @@ func isNotFoundErr(e error) bool {
 		return false
 	}
 	return s.Code() == codes.NotFound
+}
+
+// ParseRoleARN extracts the IAM role name and AWS account ID from an IAM role
+// ARN of the form "arn:aws:iam::<account>:role/<name>".
+func ParseRoleARN(roleARN string) (roleName, accountID string, err error) {
+	parsed, err := arn.Parse(roleARN)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid role ARN %q: %w", roleARN, err)
+	}
+	if parsed.Service != "iam" {
+		return "", "", fmt.Errorf("expected an IAM role ARN, got service %q", parsed.Service)
+	}
+	name, ok := strings.CutPrefix(parsed.Resource, "role/")
+	if !ok || name == "" {
+		return "", "", fmt.Errorf("expected resource of the form role/<name>, got %q", parsed.Resource)
+	}
+	return name, parsed.AccountID, nil
+}
+
+// ParseServiceAccountEmail extracts the service account ID (local part) and
+// GCP project ID from an email of the form "<sa-id>@<project-id>.iam.gserviceaccount.com".
+func ParseServiceAccountEmail(email string) (saID, projectID string, err error) {
+	const domainSuffix = ".iam.gserviceaccount.com"
+	saID, domain, ok := strings.Cut(email, "@")
+	if !ok || saID == "" {
+		return "", "", fmt.Errorf("invalid service account email %q: expected <sa-id>@<project-id>.iam.gserviceaccount.com", email)
+	}
+	projectID, ok = strings.CutSuffix(domain, domainSuffix)
+	if !ok || projectID == "" {
+		return "", "", fmt.Errorf("invalid service account email %q: expected <sa-id>@<project-id>.iam.gserviceaccount.com", email)
+	}
+	return saID, projectID, nil
 }
 
 // loadJSONSpec loads a JSON specification from either a file path (prefixed with '@')

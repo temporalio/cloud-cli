@@ -33,7 +33,7 @@ func auditLogSinkPubSubSpec() *accountv1.AuditLogSinkSpec {
 		Enabled: true,
 		SinkType: &accountv1.AuditLogSinkSpec_PubSubSink{
 			PubSubSink: &sinkv1.PubSubSpec{
-				ServiceAccountId: "my-sa@project.iam.gserviceaccount.com",
+				ServiceAccountId: "my-sa",
 				TopicName:        "my-topic",
 				GcpProjectId:     "my-project",
 			},
@@ -64,7 +64,7 @@ func TestCreateAuditLogSinkPubSub_Success(t *testing.T) {
 
 	err := temporalcloudcli.CreateAuditLogSinkPubSub(context.Background(), temporalcloudcli.CreateAuditLogSinkPubSubParams{
 		Name:             "my-sink",
-		ServiceAccountID: "my-sa@project.iam.gserviceaccount.com",
+		ServiceAccountID: "my-sa",
 		TopicName:        "my-topic",
 		GCPProjectID:     "my-project",
 		Cloud:            mockCloud,
@@ -89,7 +89,7 @@ func TestCreateAuditLogSinkPubSub_PromptDeclined(t *testing.T) {
 
 	err := temporalcloudcli.CreateAuditLogSinkPubSub(context.Background(), temporalcloudcli.CreateAuditLogSinkPubSubParams{
 		Name:             "my-sink",
-		ServiceAccountID: "my-sa@project.iam.gserviceaccount.com",
+		ServiceAccountID: "my-sa",
 		TopicName:        "my-topic",
 		GCPProjectID:     "my-project",
 		Cloud:            mockCloud,
@@ -122,7 +122,7 @@ func TestCreateAuditLogSinkPubSub_APIError(t *testing.T) {
 
 	err := temporalcloudcli.CreateAuditLogSinkPubSub(context.Background(), temporalcloudcli.CreateAuditLogSinkPubSubParams{
 		Name:             "my-sink",
-		ServiceAccountID: "my-sa@project.iam.gserviceaccount.com",
+		ServiceAccountID: "my-sa",
 		TopicName:        "my-topic",
 		GCPProjectID:     "my-project",
 		Cloud:            mockCloud,
@@ -143,7 +143,7 @@ func TestUpdateAuditLogSinkPubSub_Success(t *testing.T) {
 
 	oldSpec := auditLogSinkPubSubSpec()
 	newSpec := auditLogSinkPubSubSpec()
-	newSpec.GetPubSubSink().ServiceAccountId = "new-sa@project.iam.gserviceaccount.com"
+	newSpec.GetPubSubSink().ServiceAccountId = "new-sa"
 	newSpec.GetPubSubSink().TopicName = "new-topic"
 
 	mockCloud.EXPECT().
@@ -167,7 +167,7 @@ func TestUpdateAuditLogSinkPubSub_Success(t *testing.T) {
 
 	err := temporalcloudcli.UpdateAuditLogSinkPubSub(context.Background(), temporalcloudcli.UpdateAuditLogSinkPubSubParams{
 		Name:             "my-sink",
-		ServiceAccountID: "new-sa@project.iam.gserviceaccount.com",
+		ServiceAccountID: "new-sa",
 		TopicName:        "new-topic",
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
@@ -308,7 +308,7 @@ func TestValidateAuditLogSinkPubSub_Success(t *testing.T) {
 	spec := &accountv1.AuditLogSinkSpec{
 		SinkType: &accountv1.AuditLogSinkSpec_PubSubSink{
 			PubSubSink: &sinkv1.PubSubSpec{
-				ServiceAccountId: "my-sa@project.iam.gserviceaccount.com",
+				ServiceAccountId: "my-sa",
 				TopicName:        "my-topic",
 				GcpProjectId:     "my-project",
 			},
@@ -321,7 +321,7 @@ func TestValidateAuditLogSinkPubSub_Success(t *testing.T) {
 
 	var buf bytes.Buffer
 	err := temporalcloudcli.ValidateAuditLogSinkPubSub(context.Background(), temporalcloudcli.ValidateAuditLogSinkPubSubParams{
-		ServiceAccountID: "my-sa@project.iam.gserviceaccount.com",
+		ServiceAccountID: "my-sa",
 		TopicName:        "my-topic",
 		GCPProjectID:     "my-project",
 		Cloud:            mockCloud,
@@ -342,7 +342,7 @@ func TestValidateAuditLogSinkPubSub_APIError(t *testing.T) {
 	spec := &accountv1.AuditLogSinkSpec{
 		SinkType: &accountv1.AuditLogSinkSpec_PubSubSink{
 			PubSubSink: &sinkv1.PubSubSpec{
-				ServiceAccountId: "my-sa@project.iam.gserviceaccount.com",
+				ServiceAccountId: "my-sa",
 				TopicName:        "my-topic",
 				GcpProjectId:     "my-project",
 			},
@@ -355,7 +355,7 @@ func TestValidateAuditLogSinkPubSub_APIError(t *testing.T) {
 
 	var buf bytes.Buffer
 	err := temporalcloudcli.ValidateAuditLogSinkPubSub(context.Background(), temporalcloudcli.ValidateAuditLogSinkPubSubParams{
-		ServiceAccountID: "my-sa@project.iam.gserviceaccount.com",
+		ServiceAccountID: "my-sa",
 		TopicName:        "my-topic",
 		GCPProjectID:     "my-project",
 		Cloud:            mockCloud,

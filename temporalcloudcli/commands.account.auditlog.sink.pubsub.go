@@ -133,29 +133,37 @@ func ValidateAuditLogSinkPubSub(ctx context.Context, params ValidateAuditLogSink
 }
 
 func (c *CloudAccountAuditLogSinkPubsubValidateCommand) run(cctx *CommandContext, _ []string) error {
+	saID, projectID, err := ParseServiceAccountEmail(c.ServiceAccountEmail)
+	if err != nil {
+		return err
+	}
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 	return ValidateAuditLogSinkPubSub(cctx.Context, ValidateAuditLogSinkPubSubParams{
-		ServiceAccountID: c.ServiceAccountId,
+		ServiceAccountID: saID,
 		TopicName:        c.TopicName,
-		GCPProjectID:     c.GcpProjectId,
+		GCPProjectID:     projectID,
 		Cloud:            cloudClient.CloudService(),
 		Printer:          cctx.Printer,
 	})
 }
 
 func (c *CloudAccountAuditLogSinkPubsubCreateCommand) run(cctx *CommandContext, _ []string) error {
+	saID, projectID, err := ParseServiceAccountEmail(c.ServiceAccountEmail)
+	if err != nil {
+		return err
+	}
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 	return CreateAuditLogSinkPubSub(cctx.Context, CreateAuditLogSinkPubSubParams{
 		Name:             c.Name,
-		ServiceAccountID: c.ServiceAccountId,
+		ServiceAccountID: saID,
 		TopicName:        c.TopicName,
-		GCPProjectID:     c.GcpProjectId,
+		GCPProjectID:     projectID,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
 		Prompter:         newPrompter(cctx),
@@ -164,15 +172,25 @@ func (c *CloudAccountAuditLogSinkPubsubCreateCommand) run(cctx *CommandContext, 
 }
 
 func (c *CloudAccountAuditLogSinkPubsubUpdateCommand) run(cctx *CommandContext, _ []string) error {
+	// service-account-email is optional on update; if omitted, leave both fields
+	// empty so UpdateAuditLogSinkPubSub treats them as "no change".
+	var saID, projectID string
+	if c.ServiceAccountEmail != "" {
+		var err error
+		saID, projectID, err = ParseServiceAccountEmail(c.ServiceAccountEmail)
+		if err != nil {
+			return err
+		}
+	}
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 	return UpdateAuditLogSinkPubSub(cctx.Context, UpdateAuditLogSinkPubSubParams{
 		Name:             c.Name,
-		ServiceAccountID: c.ServiceAccountId,
+		ServiceAccountID: saID,
 		TopicName:        c.TopicName,
-		GCPProjectID:     c.GcpProjectId,
+		GCPProjectID:     projectID,
 		ResourceVersion:  c.ResourceVersion,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
