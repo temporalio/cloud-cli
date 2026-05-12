@@ -1345,6 +1345,67 @@ commands:
         description: |
           The target region to failover to (e.g., aws-us-west-2).
 
+  # Namespace capacity commands
+  - name: cloud namespace capacity
+    summary: Manage namespace capacity
+    description: |
+      Commands for managing the capacity of Temporal Cloud namespaces.
+
+      Capacity controls whether a namespace runs in on-demand mode or
+      provisioned mode (with a fixed TRU allocation).
+    has-init: false
+  - name: cloud namespace capacity get
+    summary: Get namespace capacity information
+    description: |
+      Retrieve capacity information for a Temporal Cloud namespace, including
+      the current mode (on-demand or provisioned), mode options, and recent usage stats.
+
+      Example:
+
+      ```
+      temporal cloud namespace capacity get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace capacity update
+    summary: Update namespace capacity
+    description: |
+      Update the capacity of a Temporal Cloud namespace. Choose either on-demand
+      mode or provisioned mode (with a fixed TRU allocation).
+
+      Example (switch to on-demand):
+
+      ```
+      temporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode on_demand
+      ```
+
+      Example (switch to provisioned with 4 TRUs):
+
+      ```
+      temporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode provisioned --capacity-value 4
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: capacity-mode
+        type: string-enum
+        enum-values: [on_demand, provisioned]
+        required: true
+        description: |
+          Capacity mode for the namespace. Must be either 'on_demand' or 'provisioned'.
+      - name: capacity-value
+        type: float
+        description: |
+          The provisioned capacity in Temporal Resource Units (TRUs). Required and
+          must be greater than 0 when --capacity-mode is 'provisioned'. Ignored
+          when --capacity-mode is 'on_demand'.
+
   # Nexus endpoint commands
   - name: cloud nexus
     summary: Manage Temporal Cloud Nexus Operations

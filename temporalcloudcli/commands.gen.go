@@ -1828,6 +1828,7 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.Long = "Commands for creating, updating, and managing Temporal Cloud namespaces.\n\nNamespaces provide isolation for workflows and activities. Each namespace\nhas its own configuration including retention period, region, and access\ncontrols."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudNamespaceApplyCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCapacityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCertCaCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCertFilterCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCodecCommand(cctx, &s).Command)
@@ -1877,6 +1878,91 @@ func NewCloudNamespaceApplyCommand(cctx *CommandContext, parent *CloudNamespaceC
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCapacityCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceCapacityCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceCapacityCommand {
+	var s CloudNamespaceCapacityCommand
+	s.Parent = parent
+	s.Command.Use = "capacity"
+	s.Command.Short = "Manage namespace capacity"
+	s.Command.Long = "Commands for managing the capacity of Temporal Cloud namespaces.\n\nCapacity controls whether a namespace runs in on-demand mode or\nprovisioned mode (with a fixed TRU allocation)."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceCapacityGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCapacityUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceCapacityGetCommand struct {
+	Parent  *CloudNamespaceCapacityCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceCapacityGetCommand(cctx *CommandContext, parent *CloudNamespaceCapacityCommand) *CloudNamespaceCapacityGetCommand {
+	var s CloudNamespaceCapacityGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get namespace capacity information"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve capacity information for a Temporal Cloud namespace, including\nthe current mode (on-demand or provisioned), mode options, and recent usage stats.\n\nExample:\n\n\x1b[1mtemporal cloud namespace capacity get --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve capacity information for a Temporal Cloud namespace, including\nthe current mode (on-demand or provisioned), mode options, and recent usage stats.\n\nExample:\n\n```\ntemporal cloud namespace capacity get --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCapacityUpdateCommand struct {
+	Parent  *CloudNamespaceCapacityCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	CapacityMode  cliext.FlagStringEnum
+	CapacityValue float32
+}
+
+func NewCloudNamespaceCapacityUpdateCommand(cctx *CommandContext, parent *CloudNamespaceCapacityCommand) *CloudNamespaceCapacityUpdateCommand {
+	var s CloudNamespaceCapacityUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update namespace capacity"
+	if hasHighlighting {
+		s.Command.Long = "Update the capacity of a Temporal Cloud namespace. Choose either on-demand\nmode or provisioned mode (with a fixed TRU allocation).\n\nExample (switch to on-demand):\n\n\x1b[1mtemporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode on_demand\x1b[0m\n\nExample (switch to provisioned with 4 TRUs):\n\n\x1b[1mtemporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode provisioned --capacity-value 4\x1b[0m"
+	} else {
+		s.Command.Long = "Update the capacity of a Temporal Cloud namespace. Choose either on-demand\nmode or provisioned mode (with a fixed TRU allocation).\n\nExample (switch to on-demand):\n\n```\ntemporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode on_demand\n```\n\nExample (switch to provisioned with 4 TRUs):\n\n```\ntemporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode provisioned --capacity-value 4\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.CapacityMode = cliext.NewFlagStringEnum([]string{"on_demand", "provisioned"}, "")
+	s.Command.Flags().Var(&s.CapacityMode, "capacity-mode", "Capacity mode for the namespace. Must be either 'on_demand' or 'provisioned'. Accepted values: on_demand, provisioned. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "capacity-mode")
+	s.Command.Flags().Float32Var(&s.CapacityValue, "capacity-value", 0, "The provisioned capacity in Temporal Resource Units (TRUs). Required and must be greater than 0 when --capacity-mode is 'provisioned'. Ignored when --capacity-mode is 'on_demand'.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
