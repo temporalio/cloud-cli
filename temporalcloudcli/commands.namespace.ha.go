@@ -3,8 +3,6 @@ package temporalcloudcli
 import (
 	"errors"
 	"fmt"
-	"maps"
-	"slices"
 
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
@@ -113,19 +111,8 @@ func (c *CloudNamespaceHaRegionListCommand) run(cctx *CommandContext, _ []string
 		return err
 	}
 
-	type regionStatus struct {
-		Region string
-		Status namespacev1.NamespaceRegionStatus_State
-	}
-	m := res.Namespace.GetRegionStatus()
-	keys := slices.Sorted(maps.Keys(m))
-	regions := make([]regionStatus, len(keys))
-	for i, k := range keys {
-		regions[i] = regionStatus{Region: k, Status: m[k].GetState()}
-	}
-
 	return cctx.Printer.PrintResourceList(
-		struct{ Regions []regionStatus }{Regions: regions},
+		struct{ Regions []*namespacev1.Replica }{Regions: res.Namespace.GetReplicas()},
 		printer.PrintResourceOptions{},
 		printer.TableOptions{},
 	)

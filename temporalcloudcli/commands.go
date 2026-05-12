@@ -549,6 +549,7 @@ func registerKnownPrinterEnumToStringConverters(p *printer.Printer) {
 	printer.RegisterEnumToStringConverter[namespacev1.Capacity_Request_State](p, "STATE_", namespacev1.Capacity_Request_State_name)
 	printer.RegisterEnumToStringConverter[namespacev1.NamespaceSpec_SearchAttributeType](p, "SEARCH_ATTRIBUTE_TYPE_", namespacev1.NamespaceSpec_SearchAttributeType_name)
 	printer.RegisterEnumToStringConverter[namespacev1.ExportSink_Health](p, "HEALTH_", namespacev1.ExportSink_Health_name)
+	printer.RegisterEnumToStringConverter[namespacev1.Replica_ReplicaState](p, "REPLICA_STATE_", namespacev1.Replica_ReplicaState_name)
 	printer.RegisterEnumToStringConverter[identityv1.OwnerType](p, "OWNER_TYPE_", identityv1.OwnerType_name)
 	printer.RegisterEnumToStringConverter[identityv1.AccountAccess_Role](p, "ROLE_", identityv1.AccountAccess_Role_name)
 	printer.RegisterEnumToStringConverter[identityv1.NamespaceAccess_Permission](p, "PERMISSION_", identityv1.NamespaceAccess_Permission_name)
