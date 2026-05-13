@@ -2,6 +2,7 @@ package temporalcloudcli
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
@@ -36,6 +37,14 @@ func (c *CloudNamespaceConnectivityListCommand) run(cctx *CommandContext, _ []st
 }
 
 func (c *CloudNamespaceConnectivityAttachCommand) run(cctx *CommandContext, _ []string) error {
+	seen := make(map[string]struct{}, len(c.ConnectivityRuleId))
+	for _, id := range c.ConnectivityRuleId {
+		if _, dup := seen[id]; dup {
+			return fmt.Errorf("connectivity rule ID %q specified more than once", id)
+		}
+		seen[id] = struct{}{}
+	}
+
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -45,6 +54,11 @@ func (c *CloudNamespaceConnectivityAttachCommand) run(cctx *CommandContext, _ []
 		return err
 	}
 	ns := res.Namespace
+	for _, id := range c.ConnectivityRuleId {
+		if slices.Contains(ns.Spec.GetConnectivityRuleIds(), id) {
+			return fmt.Errorf("connectivity rule %q is already attached to namespace %q", id, c.Namespace)
+		}
+	}
 	newSpec := proto.Clone(ns.Spec).(*namespacev1.NamespaceSpec)
 	newSpec.ConnectivityRuleIds = append(newSpec.ConnectivityRuleIds, c.ConnectivityRuleId...)
 

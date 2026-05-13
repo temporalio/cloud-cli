@@ -214,6 +214,31 @@ func TestNamespaceConnectivityAttach(t *testing.T) {
 			expectedErr: "namespace not found",
 		},
 		{
+			name: "DuplicateInputRuleIds",
+			cmd: temporalcloudcli.CloudNamespaceConnectivityAttachCommand{
+				ConnectivityRuleId: []string{"rule-a", "rule-a"},
+			},
+			expectedErr: `connectivity rule ID "rule-a" specified more than once`,
+		},
+		{
+			name: "AlreadyAttachedRule",
+			cmd: temporalcloudcli.CloudNamespaceConnectivityAttachCommand{
+				ConnectivityRuleId: []string{"rule-b", "rule-a"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{
+						Namespace: &namespacev1.Namespace{
+							Namespace:       testConnectivityNamespace,
+							ResourceVersion: testConnectivityRV,
+							Spec:            &namespacev1.NamespaceSpec{ConnectivityRuleIds: []string{"rule-a"}},
+						},
+					}, nil)
+			},
+			expectedErr: `connectivity rule "rule-a" is already attached to namespace "my-ns.my-acct"`,
+		},
+		{
 			name: "PromptDeclined",
 			cmd: temporalcloudcli.CloudNamespaceConnectivityAttachCommand{
 				ConnectivityRuleId: []string{"rule-a"},
