@@ -234,6 +234,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.Command.AddCommand(&NewCloudAccountCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudApikeyCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudAsyncOperationCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudCertificatesCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudConnectivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudCustomRoleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudLoginCommand(cctx, &s).Command)
@@ -1271,6 +1272,97 @@ func NewCloudAsyncOperationGetCommand(cctx *CommandContext, parent *CloudAsyncOp
 	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "The ID of the async operation to retrieve. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "async-operation-id")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudCertificatesCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+}
+
+func NewCloudCertificatesCommand(cctx *CommandContext, parent *CloudCommand) *CloudCertificatesCommand {
+	var s CloudCertificatesCommand
+	s.Parent = parent
+	s.Command.Use = "certificates"
+	s.Command.Short = "Helper tool to generate self-signed certificates that can be used\nto secure connections to Temporal Cloud using mTLS\n"
+	s.Command.Long = "The Temporal Certs CLI is a helper tool to generate self-signed certificates\nfor securing connections to Temporal Cloud using mutual TLS (mTLS).\nIt provides commands to create a Certificate Authority (CA) certificate and private key,\nas well as client certificates signed by the CA."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudCertificatesGenerateCaCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudCertificatesGenerateClientCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudCertificatesGenerateCaCommand struct {
+	Parent         *CloudCertificatesCommand
+	Command        cobra.Command
+	CaCertPath     string
+	CaKeyPath      string
+	Organization   string
+	ValidityPeriod cliext.FlagDuration
+}
+
+func NewCloudCertificatesGenerateCaCommand(cctx *CommandContext, parent *CloudCertificatesCommand) *CloudCertificatesGenerateCaCommand {
+	var s CloudCertificatesGenerateCaCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "generate-ca [flags]"
+	s.Command.Short = "Generate a self-signed CA certificate and private key"
+	s.Command.Long = "This command generates a self-signed Certificate Authority (CA) certificate and a corresponding private key.\nThe CA certificate can be used to sign client certificates for secure communication with Temporal Cloud.\nYou can specify the organization name and validity period for the CA certificate."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.CaCertPath, "ca-cert-path", "ca.pem", "Path to save the generated CA certificate.")
+	s.Command.Flags().StringVar(&s.CaKeyPath, "ca-key-path", "ca.key", "Path to save the generated CA private key.")
+	s.Command.Flags().StringVar(&s.Organization, "organization", "", "Organization name to include in the CA certificate. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "organization")
+	s.ValidityPeriod = 0
+	s.Command.Flags().Var(&s.ValidityPeriod, "validity-period", "The duration for which the CA certificate will be valid for. Example: 30d10h (30 days and 10 hours). Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "validity-period")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudCertificatesGenerateClientCommand struct {
+	Parent             *CloudCertificatesCommand
+	Command            cobra.Command
+	CaCertPath         string
+	CaKeyPath          string
+	ClientCertPath     string
+	ClientKeyPath      string
+	ValidityPeriod     cliext.FlagDuration
+	Organization       string
+	OrganizationalUnit string
+	CommonName         string
+}
+
+func NewCloudCertificatesGenerateClientCommand(cctx *CommandContext, parent *CloudCertificatesCommand) *CloudCertificatesGenerateClientCommand {
+	var s CloudCertificatesGenerateClientCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "generate-client [flags]"
+	s.Command.Short = "Generate a client certificate and private key signed by the CA"
+	if hasHighlighting {
+		s.Command.Long = "This command generates a client certificate and a corresponding private key,\nsigned by the CA certificate created using the \x1b[1mcertificates generate-ca\x1b[0m command.\nThe client certificate can be used for mutual TLS authentication when connecting to Temporal Cloud.\nYou can specify various details for the client certificate, including organization,\norganizational unit, common name, and validity period."
+	} else {
+		s.Command.Long = "This command generates a client certificate and a corresponding private key,\nsigned by the CA certificate created using the `certificates generate-ca` command.\nThe client certificate can be used for mutual TLS authentication when connecting to Temporal Cloud.\nYou can specify various details for the client certificate, including organization,\norganizational unit, common name, and validity period."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.CaCertPath, "ca-cert-path", "ca.pem", "Path to the CA certificate used for signing.")
+	s.Command.Flags().StringVar(&s.CaKeyPath, "ca-key-path", "ca.key", "Path to the CA private key used for signing.")
+	s.Command.Flags().StringVar(&s.ClientCertPath, "client-cert-path", "client.pem", "Path to save the generated client certificate.")
+	s.Command.Flags().StringVar(&s.ClientKeyPath, "client-key-path", "client.key", "Path to save the generated client private key.")
+	s.ValidityPeriod = 0
+	s.Command.Flags().Var(&s.ValidityPeriod, "validity-period", "The duration for which the client certificate will be valid for. Defaults to one day before the CA's expiry. Example: 30d10h (30 days and 10 hours).")
+	s.Command.Flags().StringVar(&s.Organization, "organization", "", "Organization name to include in the client certificate.")
+	s.Command.Flags().StringVar(&s.OrganizationalUnit, "organizational-unit", "", "Organizational unit to include in the client certificate.")
+	s.Command.Flags().StringVar(&s.CommonName, "common-name", "", "Common name to include in the client certificate.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
