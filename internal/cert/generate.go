@@ -66,6 +66,7 @@ func GenerateCA(organization string, validityPeriod time.Duration) (certPEM, key
 		BasicConstraintsValid: true,
 		DNSNames:              []string{dnsRoot},
 		MaxPathLen:            0,
+		MaxPathLenZero:        true,
 	}
 
 	key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
