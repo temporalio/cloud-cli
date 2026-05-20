@@ -25,7 +25,7 @@ type ClientOptions struct {
 func (v *ClientOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVar(&v.ApiKey, "api-key", "", "API key for authenticating with Temporal Cloud. Can be used instead of interactive login for automation and CI/CD pipelines.")
-	f.StringVar(&v.Server, "server", "saas-api.tmprl-test.cloud:443", "Override the Temporal Cloud API server address. Used for connecting to non-production environments.")
+	f.StringVar(&v.Server, "server", "saas-api.tmprl.cloud:443", "Override the Temporal Cloud API server address. Used for connecting to non-production environments.")
 	_ = f.MarkHidden("server")
 }
 
@@ -1770,11 +1770,11 @@ func NewCloudLoginCommand(cctx *CommandContext, parent *CloudCommand) *CloudLogi
 		s.Command.Long = "Authenticate with Temporal Cloud using browser-based OAuth login.\n\nThis command opens your default browser to complete authentication. Once\nlogged in, your credentials are stored locally for subsequent commands.\n\nExample:\n\n```\ntemporal cloud login\n```\n\nFor headless environments, use --disable-pop-up and follow the printed URL."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Domain, "domain", "login.tmprl-test.cloud", "Authentication domain for the OAuth provider.")
+	s.Command.Flags().StringVar(&s.Domain, "domain", "login.tmprl.cloud", "Authentication domain for the OAuth provider.")
 	_ = s.Command.Flags().MarkHidden("domain")
-	s.Command.Flags().StringVar(&s.Audience, "audience", "https://saas-api.tmprl-test.cloud", "OAuth audience parameter for token generation.")
+	s.Command.Flags().StringVar(&s.Audience, "audience", "https://saas-api.tmprl.cloud", "OAuth audience parameter for token generation.")
 	_ = s.Command.Flags().MarkHidden("audience")
-	s.Command.Flags().StringVar(&s.ClientId, "client-id", "XBimMwn90eAnjsiGVbAJ3Hgd9z06jjJB", "OAuth client identifier for authentication.")
+	s.Command.Flags().StringVar(&s.ClientId, "client-id", "Cd2erICRRO9hzuGeoQyqO9iPfiCgCvMZ", "OAuth client identifier for authentication.")
 	_ = s.Command.Flags().MarkHidden("client-id")
 	s.Command.Flags().StringVar(&s.RedirectUrl, "redirect-url", "http://127.0.0.1:56628/callback", "Redirect URL for OAuth authentication flow.")
 	_ = s.Command.Flags().MarkHidden("redirect-url")
@@ -1805,7 +1805,7 @@ func NewCloudLogoutCommand(cctx *CommandContext, parent *CloudCommand) *CloudLog
 		s.Command.Long = "Log out from Temporal Cloud by clearing stored authentication tokens\nand credentials from the local configuration.\n\nExample:\n\n```\ntemporal cloud logout\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Domain, "domain", "login.tmprl-test.cloud", "Authentication domain for the OAuth provider.")
+	s.Command.Flags().StringVar(&s.Domain, "domain", "login.tmprl.cloud", "Authentication domain for the OAuth provider.")
 	_ = s.Command.Flags().MarkHidden("domain")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
