@@ -61,17 +61,17 @@ commands:
         hidden: true
         description: |
           Authentication domain for the OAuth provider.
-        default: login.tmprl-test.cloud
+        default: login.tmprl.cloud
       - name: audience
         type: string
         hidden: true
-        default: https://saas-api.tmprl-test.cloud
+        default: https://saas-api.tmprl.cloud
         description: |
           OAuth audience parameter for token generation.
       - name: client-id
         type: string
         hidden: true
-        default: XBimMwn90eAnjsiGVbAJ3Hgd9z06jjJB
+        default: Cd2erICRRO9hzuGeoQyqO9iPfiCgCvMZ
         description: |
           OAuth client identifier for authentication.
       - name: redirect-url
@@ -135,7 +135,7 @@ commands:
         hidden: true
         description: |
           Authentication domain for the OAuth provider.
-        default: login.tmprl-test.cloud
+        default: login.tmprl.cloud
 
   # Namespace commands
   - name: cloud namespace
@@ -3841,7 +3841,7 @@ option-sets:
           Override the Temporal Cloud API server address. Used for connecting
           to non-production environments.
         hidden: true
-        default: saas-api.tmprl-test.cloud:443
+        default: saas-api.tmprl.cloud:443
   - name: diff
     options:
       - name: verbose-diff
