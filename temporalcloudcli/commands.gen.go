@@ -1511,7 +1511,7 @@ func NewCloudCustomRoleCommand(cctx *CommandContext, parent *CloudCommand) *Clou
 	var s CloudCustomRoleCommand
 	s.Parent = parent
 	s.Command.Use = "custom-role"
-	s.Command.Short = "Manage Temporal Cloud custom roles"
+	s.Command.Short = "[Experimental] Manage Temporal Cloud custom roles"
 	s.Command.Long = "Commands for managing Temporal Cloud custom roles.\n\nCustom roles enable fine-grained authorization by binding sets of\npermissions (resource + actions) to a named role that can be assigned\nto users, user groups, and service accounts."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudCustomRoleApplyCommand(cctx, &s).Command)
@@ -1539,7 +1539,7 @@ func NewCloudCustomRoleApplyCommand(cctx *CommandContext, parent *CloudCustomRol
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "apply [flags]"
-	s.Command.Short = "Create or update a custom role from a specification"
+	s.Command.Short = "[Experimental] Create or update a custom role from a specification"
 	if hasHighlighting {
 		s.Command.Long = "Apply a custom role configuration to Temporal Cloud. Creates a new role\nif no role with the given name exists, or updates the existing one to\nmatch the specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role apply --spec @custom-role.json\x1b[0m"
 	} else {
@@ -1573,7 +1573,7 @@ func NewCloudCustomRoleCreateCommand(cctx *CommandContext, parent *CloudCustomRo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "create [flags]"
-	s.Command.Short = "Create a Temporal Cloud custom role"
+	s.Command.Short = "[Experimental] Create a Temporal Cloud custom role"
 	if hasHighlighting {
 		s.Command.Long = "Create a new Temporal Cloud custom role from a JSON specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample with inline JSON:\n\n\x1b[1mtemporal cloud custom-role create --spec '{\"name\":\"reader\",\"description\":\"...\",\"permissions\":[...]}'\x1b[0m\n\nExample with file path:\n\n\x1b[1mtemporal cloud custom-role create --spec @custom-role.json\x1b[0m"
 	} else {
@@ -1606,7 +1606,7 @@ func NewCloudCustomRoleDeleteCommand(cctx *CommandContext, parent *CloudCustomRo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "delete [flags]"
-	s.Command.Short = "Delete a Temporal Cloud custom role"
+	s.Command.Short = "[Experimental] Delete a Temporal Cloud custom role"
 	if hasHighlighting {
 		s.Command.Long = "Delete a Temporal Cloud custom role. This action is irreversible.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role delete --role-id my-role-id\x1b[0m"
 	} else {
@@ -1640,7 +1640,7 @@ func NewCloudCustomRoleEditCommand(cctx *CommandContext, parent *CloudCustomRole
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "edit [flags]"
-	s.Command.Short = "Interactively edit a custom role configuration"
+	s.Command.Short = "[Experimental] Interactively edit a custom role configuration"
 	if hasHighlighting {
 		s.Command.Long = "Open a custom role configuration in your default editor for interactive\nmodification. After saving and closing the editor, the changes are\napplied to Temporal Cloud.\n\nThe editor is determined by the EDITOR environment variable, falling\nback to 'vi' if not set.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role edit --role-id my-role-id\x1b[0m"
 	} else {
@@ -1672,7 +1672,7 @@ func NewCloudCustomRoleGetCommand(cctx *CommandContext, parent *CloudCustomRoleC
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "get [flags]"
-	s.Command.Short = "Retrieve custom role details"
+	s.Command.Short = "[Experimental] Retrieve custom role details"
 	if hasHighlighting {
 		s.Command.Long = "Retrieve the configuration and status of a Temporal Cloud custom role.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role get --role-id my-role-id\x1b[0m"
 	} else {
@@ -1702,7 +1702,7 @@ func NewCloudCustomRoleListCommand(cctx *CommandContext, parent *CloudCustomRole
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list [flags]"
-	s.Command.Short = "List Temporal Cloud custom roles"
+	s.Command.Short = "[Experimental] List Temporal Cloud custom roles"
 	if hasHighlighting {
 		s.Command.Long = "List all Temporal Cloud custom roles accessible with the current\nauthentication credentials.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role list\x1b[0m"
 	} else {
@@ -1735,7 +1735,7 @@ func NewCloudCustomRoleUpdateCommand(cctx *CommandContext, parent *CloudCustomRo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "update [flags]"
-	s.Command.Short = "Update an existing Temporal Cloud custom role"
+	s.Command.Short = "[Experimental] Update an existing Temporal Cloud custom role"
 	if hasHighlighting {
 		s.Command.Long = "Update an existing Temporal Cloud custom role from a JSON specification.\nReplaces the role's spec with the provided one.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role update --role-id my-role-id --spec @custom-role.json\x1b[0m"
 	} else {
@@ -4249,7 +4249,7 @@ func NewCloudServiceAccountSetCustomRolesCommand(cctx *CommandContext, parent *C
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "set-custom-roles [flags]"
-	s.Command.Short = "Set custom role assignments for a service account"
+	s.Command.Short = "[Experimental] Set custom role assignments for a service account"
 	if hasHighlighting {
 		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud service account.\nReplaces the service account's current custom role list. Pass no\n--custom-role flags to remove all custom roles.\n\nNot valid for namespace-scoped service accounts.\n\nExample:\n\n\x1b[1mtemporal cloud service-account set-custom-roles --service-account-id my-sa-id \\\n  --custom-role role-id-1 --custom-role role-id-2\x1b[0m"
 	} else {
@@ -4597,7 +4597,7 @@ func NewCloudUserSetCustomRolesCommand(cctx *CommandContext, parent *CloudUserCo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "set-custom-roles [flags]"
-	s.Command.Short = "Set custom role assignments for a user"
+	s.Command.Short = "[Experimental] Set custom role assignments for a user"
 	if hasHighlighting {
 		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user. Replaces the\nuser's current custom role list. Pass no --custom-role flags to remove\nall custom roles.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n\x1b[1mtemporal cloud user set-custom-roles --user-email alice@example.com \\\n  --custom-role role-id-1 --custom-role role-id-2\x1b[0m"
 	} else {
@@ -5141,7 +5141,7 @@ func NewCloudUserGroupSetCustomRolesCommand(cctx *CommandContext, parent *CloudU
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "set-custom-roles [flags]"
-	s.Command.Short = "Set custom role assignments for a user group"
+	s.Command.Short = "[Experimental] Set custom role assignments for a user group"
 	if hasHighlighting {
 		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user group. Replaces\nthe group's current custom role list. Pass no --custom-role flags to\nremove all custom roles.\n\nExample:\n\n\x1b[1mtemporal cloud user-group set-custom-roles --group-id my-group-id \\\n  --custom-role role-id-1 --custom-role role-id-2\x1b[0m"
 	} else {

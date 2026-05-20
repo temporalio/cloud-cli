@@ -1894,7 +1894,7 @@ commands:
           The account-level role to assign. Valid values: owner, admin, developer,
           finance-admin, read, metrics-read.
   - name: cloud user-group set-custom-roles
-    summary: Set custom role assignments for a user group
+    summary: '[Experimental] Set custom role assignments for a user group'
     description: |
       Set the custom roles assigned to a Temporal Cloud user group. Replaces
       the group's current custom role list. Pass no --custom-role flags to
@@ -2018,7 +2018,7 @@ commands:
 
   # Custom role commands
   - name: cloud custom-role
-    summary: Manage Temporal Cloud custom roles
+    summary: '[Experimental] Manage Temporal Cloud custom roles'
     description: |
       Commands for managing Temporal Cloud custom roles.
 
@@ -2035,7 +2035,7 @@ commands:
       tags:
         - custom-roles
   - name: cloud custom-role get
-    summary: Retrieve custom role details
+    summary: '[Experimental] Retrieve custom role details'
     description: |
       Retrieve the configuration and status of a Temporal Cloud custom role.
 
@@ -2049,7 +2049,7 @@ commands:
       - client
       - role-id
   - name: cloud custom-role list
-    summary: List Temporal Cloud custom roles
+    summary: '[Experimental] List Temporal Cloud custom roles'
     description: |
       List all Temporal Cloud custom roles accessible with the current
       authentication credentials.
@@ -2072,7 +2072,7 @@ commands:
         description: |
           Token for retrieving the next page of results in a paginated list.
   - name: cloud custom-role create
-    summary: Create a Temporal Cloud custom role
+    summary: '[Experimental] Create a Temporal Cloud custom role'
     description: |
       Create a new Temporal Cloud custom role from a JSON specification.
 
@@ -2102,7 +2102,7 @@ commands:
           Custom role specification in JSON format. Provide inline JSON
           directly, or use '@path/to/file.json' to load from a file.
   - name: cloud custom-role update
-    summary: Update an existing Temporal Cloud custom role
+    summary: '[Experimental] Update an existing Temporal Cloud custom role'
     description: |
       Update an existing Temporal Cloud custom role from a JSON specification.
       Replaces the role's spec with the provided one.
@@ -2126,7 +2126,7 @@ commands:
           Custom role specification in JSON format. Provide inline JSON
           directly, or use '@path/to/file.json' to load from a file.
   - name: cloud custom-role delete
-    summary: Delete a Temporal Cloud custom role
+    summary: '[Experimental] Delete a Temporal Cloud custom role'
     description: |
       Delete a Temporal Cloud custom role. This action is irreversible.
 
@@ -2142,7 +2142,7 @@ commands:
       - async-operation
       - resource-version
   - name: cloud custom-role apply
-    summary: Create or update a custom role from a specification
+    summary: '[Experimental] Create or update a custom role from a specification'
     description: |
       Apply a custom role configuration to Temporal Cloud. Creates a new role
       if no role with the given name exists, or updates the existing one to
@@ -2170,7 +2170,7 @@ commands:
           Custom role specification in JSON format. Provide inline JSON
           directly, or use '@path/to/file.json' to load from a file.
   - name: cloud custom-role edit
-    summary: Interactively edit a custom role configuration
+    summary: '[Experimental] Interactively edit a custom role configuration'
     description: |
       Open a custom role configuration in your default editor for interactive
       modification. After saving and closing the editor, the changes are
@@ -2427,7 +2427,7 @@ commands:
           The account-level role to assign. Valid values: owner, admin, developer,
           finance-admin, read, metrics-read.
   - name: cloud user set-custom-roles
-    summary: Set custom role assignments for a user
+    summary: '[Experimental] Set custom role assignments for a user'
     description: |
       Set the custom roles assigned to a Temporal Cloud user. Replaces the
       user's current custom role list. Pass no --custom-role flags to remove
@@ -2793,7 +2793,7 @@ commands:
           Only valid for namespace-scoped service accounts.
 
   - name: cloud service-account set-custom-roles
-    summary: Set custom role assignments for a service account
+    summary: '[Experimental] Set custom role assignments for a service account'
     description: |
       Set the custom roles assigned to a Temporal Cloud service account.
       Replaces the service account's current custom role list. Pass no
