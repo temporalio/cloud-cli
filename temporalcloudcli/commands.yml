@@ -2427,6 +2427,11 @@ commands:
     option-sets:
       - client
       - async-operation
+    options:
+      - name: enable-stable-ips
+        type: bool
+        description: |
+          Connect the namespace via a predictable set of IPs on the public internet.
 
   - name: cloud connectivity private
     summary: Manage private connectivity rules

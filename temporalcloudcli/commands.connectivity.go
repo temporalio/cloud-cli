@@ -28,6 +28,7 @@ type (
 	}
 
 	CreatePublicConnectivityRuleParams struct {
+		EnableStableIps  bool
 		AsyncOperationID string
 
 		Cloud            cloudservice.CloudServiceClient
@@ -99,7 +100,9 @@ func GetConnectivityRule(ctx context.Context, params GetConnectivityRuleParams) 
 func CreatePublicConnectivityRule(ctx context.Context, params CreatePublicConnectivityRuleParams) error {
 	spec := &connectivityrulev1.ConnectivityRuleSpec{
 		ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PublicRule{
-			PublicRule: &connectivityrulev1.PublicConnectivityRule{},
+			PublicRule: &connectivityrulev1.PublicConnectivityRule{
+				EnableStableIps: params.EnableStableIps,
+			},
 		},
 	}
 
@@ -213,6 +216,7 @@ func (c *CloudConnectivityPublicCreateCommand) run(cctx *CommandContext, _ []str
 		return err
 	}
 	return CreatePublicConnectivityRule(cctx.Context, CreatePublicConnectivityRuleParams{
+		EnableStableIps:  c.EnableStableIps,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
 		Prompter:         newPrompter(cctx),
