@@ -3,6 +3,7 @@ module github.com/temporalio/cloud-cli
 go 1.26.2
 
 require (
+	github.com/aws/aws-sdk-go-v2 v1.41.7
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.18.0
 	github.com/kylelemons/godebug v1.1.0
@@ -13,7 +14,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/cli/cliext v0.0.0-20260112210410-f2d230be226c
 	go.temporal.io/api v1.59.0
-	go.temporal.io/cloud-sdk v0.10.0
+	go.temporal.io/cloud-sdk v0.13.0
 	go.temporal.io/sdk v1.38.0
 	go.temporal.io/sdk/contrib/envconfig v0.1.0
 	golang.org/x/oauth2 v0.34.0
@@ -23,7 +24,6 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.41.7 // indirect
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
 	github.com/facebookgo/clock v0.0.0-20150410010913-600d898af40a // indirect
