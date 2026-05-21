@@ -203,7 +203,7 @@ func TestCreatePublicConnectivityRule_EnableStableIps(t *testing.T) {
 	mockHandler.EXPECT().HandleOperation(op, "rule-stable").Return(nil)
 
 	err := temporalcloudcli.CreatePublicConnectivityRule(context.Background(), temporalcloudcli.CreatePublicConnectivityRuleParams{
-		EnableStableIps:  true,
+		EnableStableIPs:  true,
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
 		OperationHandler: mockHandler,
