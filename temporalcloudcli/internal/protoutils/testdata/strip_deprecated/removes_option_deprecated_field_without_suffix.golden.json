@@ -3,6 +3,7 @@
     "capacitySpec": null,
     "codecServer": null,
     "connectivityRuleIds": [],
+    "fairness": null,
     "highAvailability": null,
     "lifecycle": null,
     "mtlsAuth": null,

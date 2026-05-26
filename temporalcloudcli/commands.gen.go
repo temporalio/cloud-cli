@@ -1470,6 +1470,7 @@ type CloudConnectivityPublicCreateCommand struct {
 	Command cobra.Command
 	ClientOptions
 	AsyncOperationOptions
+	EnableStableIps bool
 }
 
 func NewCloudConnectivityPublicCreateCommand(cctx *CommandContext, parent *CloudConnectivityPublicCommand) *CloudConnectivityPublicCreateCommand {
@@ -1484,6 +1485,7 @@ func NewCloudConnectivityPublicCreateCommand(cctx *CommandContext, parent *Cloud
 		s.Command.Long = "Create a new public internet connectivity rule.\n\nExample:\n\n```\ntemporal cloud connectivity public create\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.EnableStableIps, "enable-stable-ips", false, "Connect the namespace via a predictable set of IPs on the public internet.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
