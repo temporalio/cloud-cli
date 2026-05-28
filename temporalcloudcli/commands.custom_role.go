@@ -84,6 +84,13 @@ func (c *CloudCustomRoleUpdateCommand) run(cctx *CommandContext, _ []string) err
 	if err != nil {
 		return err
 	}
+	yes, err := cctx.GetPrompter().PromptApply(res.CustomRole.Spec, spec, false)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting update.")
+	}
 	rv := res.CustomRole.ResourceVersion
 	if c.ResourceVersion != "" {
 		rv = c.ResourceVersion

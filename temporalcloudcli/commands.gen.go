@@ -149,6 +149,16 @@ func (v *RoleIdOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "role-id")
 }
 
+type CustomRoleOptions struct {
+	CustomRole []string
+	FlagSet    *pflag.FlagSet
+}
+
+func (v *CustomRoleOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringArrayVar(&v.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple. When provided, replaces the existing custom role list.")
+}
+
 type ExportSinkOptions struct {
 	SinkName string
 	FlagSet  *pflag.FlagSet
@@ -1505,7 +1515,7 @@ func NewCloudCustomRoleCommand(cctx *CommandContext, parent *CloudCommand) *Clou
 	var s CloudCustomRoleCommand
 	s.Parent = parent
 	s.Command.Use = "custom-role"
-	s.Command.Short = "Manage Temporal Cloud custom roles"
+	s.Command.Short = "[Experimental] Manage Temporal Cloud custom roles"
 	s.Command.Long = "Commands for managing Temporal Cloud custom roles.\n\nCustom roles enable fine-grained authorization by binding sets of\npermissions (resource + actions) to a named role that can be assigned\nto users, user groups, and service accounts."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudCustomRoleApplyCommand(cctx, &s).Command)
@@ -1533,7 +1543,7 @@ func NewCloudCustomRoleApplyCommand(cctx *CommandContext, parent *CloudCustomRol
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "apply [flags]"
-	s.Command.Short = "Create or update a custom role from a specification"
+	s.Command.Short = "[Experimental] Create or update a custom role from a specification"
 	if hasHighlighting {
 		s.Command.Long = "Apply a custom role configuration to Temporal Cloud. Creates a new role\nif no role with the given name exists, or updates the existing one to\nmatch the specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role apply --spec @custom-role.json\x1b[0m"
 	} else {
@@ -1567,7 +1577,7 @@ func NewCloudCustomRoleCreateCommand(cctx *CommandContext, parent *CloudCustomRo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "create [flags]"
-	s.Command.Short = "Create a Temporal Cloud custom role"
+	s.Command.Short = "[Experimental] Create a Temporal Cloud custom role"
 	if hasHighlighting {
 		s.Command.Long = "Create a new Temporal Cloud custom role from a JSON specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample with inline JSON:\n\n\x1b[1mtemporal cloud custom-role create --spec '{\"name\":\"reader\",\"description\":\"...\",\"permissions\":[...]}'\x1b[0m\n\nExample with file path:\n\n\x1b[1mtemporal cloud custom-role create --spec @custom-role.json\x1b[0m"
 	} else {
@@ -1600,7 +1610,7 @@ func NewCloudCustomRoleDeleteCommand(cctx *CommandContext, parent *CloudCustomRo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "delete [flags]"
-	s.Command.Short = "Delete a Temporal Cloud custom role"
+	s.Command.Short = "[Experimental] Delete a Temporal Cloud custom role"
 	if hasHighlighting {
 		s.Command.Long = "Delete a Temporal Cloud custom role. This action is irreversible.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role delete --role-id my-role-id\x1b[0m"
 	} else {
@@ -1634,7 +1644,7 @@ func NewCloudCustomRoleEditCommand(cctx *CommandContext, parent *CloudCustomRole
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "edit [flags]"
-	s.Command.Short = "Interactively edit a custom role configuration"
+	s.Command.Short = "[Experimental] Interactively edit a custom role configuration"
 	if hasHighlighting {
 		s.Command.Long = "Open a custom role configuration in your default editor for interactive\nmodification. After saving and closing the editor, the changes are\napplied to Temporal Cloud.\n\nThe editor is determined by the EDITOR environment variable, falling\nback to 'vi' if not set.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role edit --role-id my-role-id\x1b[0m"
 	} else {
@@ -1666,7 +1676,7 @@ func NewCloudCustomRoleGetCommand(cctx *CommandContext, parent *CloudCustomRoleC
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "get [flags]"
-	s.Command.Short = "Retrieve custom role details"
+	s.Command.Short = "[Experimental] Retrieve custom role details"
 	if hasHighlighting {
 		s.Command.Long = "Retrieve the configuration and status of a Temporal Cloud custom role.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role get --role-id my-role-id\x1b[0m"
 	} else {
@@ -1696,7 +1706,7 @@ func NewCloudCustomRoleListCommand(cctx *CommandContext, parent *CloudCustomRole
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list [flags]"
-	s.Command.Short = "List Temporal Cloud custom roles"
+	s.Command.Short = "[Experimental] List Temporal Cloud custom roles"
 	if hasHighlighting {
 		s.Command.Long = "List all Temporal Cloud custom roles accessible with the current\nauthentication credentials.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role list\x1b[0m"
 	} else {
@@ -1729,7 +1739,7 @@ func NewCloudCustomRoleUpdateCommand(cctx *CommandContext, parent *CloudCustomRo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "update [flags]"
-	s.Command.Short = "Update an existing Temporal Cloud custom role"
+	s.Command.Short = "[Experimental] Update an existing Temporal Cloud custom role"
 	if hasHighlighting {
 		s.Command.Long = "Update an existing Temporal Cloud custom role from a JSON specification.\nReplaces the role's spec with the provided one.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role update --role-id my-role-id --spec @custom-role.json\x1b[0m"
 	} else {
@@ -4232,6 +4242,7 @@ func NewCloudServiceAccountCommand(cctx *CommandContext, parent *CloudCommand) *
 	s.Command.AddCommand(&NewCloudServiceAccountEditCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudServiceAccountGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudServiceAccountListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudServiceAccountSetCustomRolesCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudServiceAccountUpdateCommand(cctx, &s).Command)
 	return &s
 }
@@ -4245,6 +4256,7 @@ type CloudServiceAccountCreateCommand struct {
 	Description     string
 	AccountRole     string
 	NamespaceAccess []string
+	CustomRole      []string
 }
 
 func NewCloudServiceAccountCreateCommand(cctx *CommandContext, parent *CloudServiceAccountCommand) *CloudServiceAccountCreateCommand {
@@ -4264,6 +4276,7 @@ func NewCloudServiceAccountCreateCommand(cctx *CommandContext, parent *CloudServ
 	s.Command.Flags().StringVar(&s.Description, "description", "", "An optional description for the service account.")
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
 	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.Command.Flags().StringArrayVar(&s.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -4445,12 +4458,49 @@ func NewCloudServiceAccountListCommand(cctx *CommandContext, parent *CloudServic
 	return &s
 }
 
+type CloudServiceAccountSetCustomRolesCommand struct {
+	Parent  *CloudServiceAccountCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	CustomRoleOptions
+	ServiceAccountId string
+}
+
+func NewCloudServiceAccountSetCustomRolesCommand(cctx *CommandContext, parent *CloudServiceAccountCommand) *CloudServiceAccountSetCustomRolesCommand {
+	var s CloudServiceAccountSetCustomRolesCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set-custom-roles [flags]"
+	s.Command.Short = "[Experimental] Set custom role assignments for a service account"
+	if hasHighlighting {
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud service account.\nReplaces the service account's current custom role list. Pass no\n--custom-role flags to remove all custom roles.\n\nNot valid for namespace-scoped service accounts.\n\nExample:\n\n\x1b[1mtemporal cloud service-account set-custom-roles --service-account-id my-sa-id \\\n  --custom-role role-id-1 --custom-role role-id-2\x1b[0m"
+	} else {
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud service account.\nReplaces the service account's current custom role list. Pass no\n--custom-role flags to remove all custom roles.\n\nNot valid for namespace-scoped service accounts.\n\nExample:\n\n```\ntemporal cloud service-account set-custom-roles --service-account-id my-sa-id \\\n  --custom-role role-id-1 --custom-role role-id-2\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The ID of the service account. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.CustomRoleOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type CloudServiceAccountUpdateCommand struct {
 	Parent  *CloudServiceAccountCommand
 	Command cobra.Command
 	ClientOptions
 	AsyncOperationOptions
 	ResourceVersionOptions
+	CustomRoleOptions
 	ServiceAccountId    string
 	Name                string
 	Description         string
@@ -4481,6 +4531,7 @@ func NewCloudServiceAccountUpdateCommand(cctx *CommandContext, parent *CloudServ
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.CustomRoleOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -4508,6 +4559,7 @@ func NewCloudUserCommand(cctx *CommandContext, parent *CloudCommand) *CloudUserC
 	s.Command.AddCommand(&NewCloudUserInviteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserSetAccountRoleCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserSetCustomRolesCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserSetNamespacePermissionsCommand(cctx, &s).Command)
 	return &s
 }
@@ -4653,6 +4705,7 @@ type CloudUserInviteCommand struct {
 	Email           string
 	AccountRole     string
 	NamespaceAccess []string
+	CustomRole      []string
 }
 
 func NewCloudUserInviteCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserInviteCommand {
@@ -4671,6 +4724,7 @@ func NewCloudUserInviteCommand(cctx *CommandContext, parent *CloudUserCommand) *
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "email")
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
 	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.Command.Flags().StringArrayVar(&s.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -4752,6 +4806,41 @@ func NewCloudUserSetAccountRoleCommand(cctx *CommandContext, parent *CloudUserCo
 	return &s
 }
 
+type CloudUserSetCustomRolesCommand struct {
+	Parent  *CloudUserCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	UserIdentificationOptions
+	CustomRoleOptions
+}
+
+func NewCloudUserSetCustomRolesCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserSetCustomRolesCommand {
+	var s CloudUserSetCustomRolesCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set-custom-roles [flags]"
+	s.Command.Short = "[Experimental] Set custom role assignments for a user"
+	if hasHighlighting {
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user. Replaces the\nuser's current custom role list. Pass no --custom-role flags to remove\nall custom roles.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n\x1b[1mtemporal cloud user set-custom-roles --user-email alice@example.com \\\n  --custom-role role-id-1 --custom-role role-id-2\x1b[0m"
+	} else {
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user. Replaces the\nuser's current custom role list. Pass no --custom-role flags to remove\nall custom roles.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n```\ntemporal cloud user set-custom-roles --user-email alice@example.com \\\n  --custom-role role-id-1 --custom-role role-id-2\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
+	s.CustomRoleOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type CloudUserSetNamespacePermissionsCommand struct {
 	Parent  *CloudUserCommand
 	Command cobra.Command
@@ -4810,6 +4899,7 @@ func NewCloudUserGroupCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.AddCommand(&NewCloudUserGroupListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserGroupMembersCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserGroupSetAccountRoleCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGroupSetCustomRolesCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserGroupSetNamespacePermissionsCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserGroupUpdateCommand(cctx, &s).Command)
 	return &s
@@ -4859,6 +4949,7 @@ type CloudUserGroupCreateCloudGroupCommand struct {
 	DisplayName     string
 	AccountRole     string
 	NamespaceAccess []string
+	CustomRole      []string
 }
 
 func NewCloudUserGroupCreateCloudGroupCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupCreateCloudGroupCommand {
@@ -4877,6 +4968,7 @@ func NewCloudUserGroupCreateCloudGroupCommand(cctx *CommandContext, parent *Clou
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "display-name")
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
 	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.Command.Flags().StringArrayVar(&s.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -4896,6 +4988,7 @@ type CloudUserGroupCreateGoogleGroupCommand struct {
 	GoogleGroupEmail string
 	AccountRole      string
 	NamespaceAccess  []string
+	CustomRole       []string
 }
 
 func NewCloudUserGroupCreateGoogleGroupCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupCreateGoogleGroupCommand {
@@ -4916,6 +5009,7 @@ func NewCloudUserGroupCreateGoogleGroupCommand(cctx *CommandContext, parent *Clo
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "google-group-email")
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
 	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.Command.Flags().StringArrayVar(&s.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -4935,6 +5029,7 @@ type CloudUserGroupCreateScimGroupCommand struct {
 	ScimIdpId       string
 	AccountRole     string
 	NamespaceAccess []string
+	CustomRole      []string
 }
 
 func NewCloudUserGroupCreateScimGroupCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupCreateScimGroupCommand {
@@ -4955,6 +5050,7 @@ func NewCloudUserGroupCreateScimGroupCommand(cctx *CommandContext, parent *Cloud
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "scim-idp-id")
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
 	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.Command.Flags().StringArrayVar(&s.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -5254,6 +5350,41 @@ func NewCloudUserGroupSetAccountRoleCommand(cctx *CommandContext, parent *CloudU
 	return &s
 }
 
+type CloudUserGroupSetCustomRolesCommand struct {
+	Parent  *CloudUserGroupCommand
+	Command cobra.Command
+	ClientOptions
+	GroupIdOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	CustomRoleOptions
+}
+
+func NewCloudUserGroupSetCustomRolesCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupSetCustomRolesCommand {
+	var s CloudUserGroupSetCustomRolesCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set-custom-roles [flags]"
+	s.Command.Short = "[Experimental] Set custom role assignments for a user group"
+	if hasHighlighting {
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user group. Replaces\nthe group's current custom role list. Pass no --custom-role flags to\nremove all custom roles.\n\nExample:\n\n\x1b[1mtemporal cloud user-group set-custom-roles --group-id my-group-id \\\n  --custom-role role-id-1 --custom-role role-id-2\x1b[0m"
+	} else {
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user group. Replaces\nthe group's current custom role list. Pass no --custom-role flags to\nremove all custom roles.\n\nExample:\n\n```\ntemporal cloud user-group set-custom-roles --group-id my-group-id \\\n  --custom-role role-id-1 --custom-role role-id-2\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.GroupIdOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.CustomRoleOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type CloudUserGroupSetNamespacePermissionsCommand struct {
 	Parent  *CloudUserGroupCommand
 	Command cobra.Command
@@ -5297,6 +5428,7 @@ type CloudUserGroupUpdateCommand struct {
 	GroupIdOptions
 	AsyncOperationOptions
 	ResourceVersionOptions
+	CustomRoleOptions
 	AccountRole     string
 	NamespaceAccess []string
 }
@@ -5308,9 +5440,9 @@ func NewCloudUserGroupUpdateCommand(cctx *CommandContext, parent *CloudUserGroup
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a Temporal Cloud user group"
 	if hasHighlighting {
-		s.Command.Long = "Update an existing Temporal Cloud user group's access settings.\n\nProvide at least one of --account-role or --namespace-access.\n\nExample:\n\n\x1b[1mtemporal cloud user-group update --group-id my-group-id --account-role developer\ntemporal cloud user-group update --group-id my-group-id \\\n  --namespace-access my-namespace.my-account=write\ntemporal cloud user-group update --group-id my-group-id --account-role admin \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\x1b[0m"
+		s.Command.Long = "Update an existing Temporal Cloud user group's access settings.\n\nProvide at least one of --account-role, --namespace-access, or --custom-role.\n\nExample:\n\n\x1b[1mtemporal cloud user-group update --group-id my-group-id --account-role developer\ntemporal cloud user-group update --group-id my-group-id \\\n  --namespace-access my-namespace.my-account=write\ntemporal cloud user-group update --group-id my-group-id --account-role admin \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\x1b[0m"
 	} else {
-		s.Command.Long = "Update an existing Temporal Cloud user group's access settings.\n\nProvide at least one of --account-role or --namespace-access.\n\nExample:\n\n```\ntemporal cloud user-group update --group-id my-group-id --account-role developer\ntemporal cloud user-group update --group-id my-group-id \\\n  --namespace-access my-namespace.my-account=write\ntemporal cloud user-group update --group-id my-group-id --account-role admin \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\n```"
+		s.Command.Long = "Update an existing Temporal Cloud user group's access settings.\n\nProvide at least one of --account-role, --namespace-access, or --custom-role.\n\nExample:\n\n```\ntemporal cloud user-group update --group-id my-group-id --account-role developer\ntemporal cloud user-group update --group-id my-group-id \\\n  --namespace-access my-namespace.my-account=write\ntemporal cloud user-group update --group-id my-group-id --account-role admin \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account role to assign to the group. Role must be one of: admin, developer, finance-admin, read.")
@@ -5319,6 +5451,7 @@ func NewCloudUserGroupUpdateCommand(cctx *CommandContext, parent *CloudUserGroup
 	s.GroupIdOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.CustomRoleOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

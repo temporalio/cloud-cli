@@ -213,6 +213,7 @@ func TestUpdateCustomRole(t *testing.T) {
 		name                    string
 		cmd                     temporalcloudcli.CloudCustomRoleUpdateCommand
 		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
 		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
 		expectedErr             string
 	}{
@@ -236,6 +237,7 @@ func TestUpdateCustomRole(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-update"},
 					}, nil)
 			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-update"},
 		},
 		{
@@ -259,7 +261,22 @@ func TestUpdateCustomRole(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-update"},
 					}, nil)
 			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-update"},
+		},
+		{
+			name: "PromptDeclined",
+			cmd: temporalcloudcli.CloudCustomRoleUpdateCommand{
+				RoleIdOptions: temporalcloudcli.RoleIdOptions{RoleId: "role-1"},
+				Spec:          testRoleSpecJSON,
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetCustomRole(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetCustomRoleResponse{CustomRole: testRole}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
+			expectedErr:   "Aborting update.",
 		},
 		{
 			name: "InvalidJSON",
@@ -287,6 +304,7 @@ func TestUpdateCustomRole(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
 				AsyncPollerOptions:      tt.asyncPollerOptions,
 				JSONOutput:              true,
 				ExpectedError:           tt.expectedErr,

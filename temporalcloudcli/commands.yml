@@ -1809,6 +1809,10 @@ commands:
         description: |
           Namespace access to grant, in the format 'namespace=permission'.
           Permission must be one of: admin, write, read. Can be repeated.
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple.
   - name: cloud user-group create-google-group
     summary: Create a Google-group-backed user group
     description: |
@@ -1850,6 +1854,10 @@ commands:
         description: |
           Namespace access to grant, in the format 'namespace=permission'.
           Permission must be one of: admin, write, read. Can be repeated.
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple.
   - name: cloud user-group create-scim-group
     summary: Create a SCIM-backed user group
     description: |
@@ -1891,6 +1899,10 @@ commands:
         description: |
           Namespace access to grant, in the format 'namespace=permission'.
           Permission must be one of: admin, write, read. Can be repeated.
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple.
   - name: cloud user-group get
     summary: Retrieve user group details
     description: |
@@ -1966,7 +1978,7 @@ commands:
     description: |
       Update an existing Temporal Cloud user group's access settings.
 
-      Provide at least one of --account-role or --namespace-access.
+      Provide at least one of --account-role, --namespace-access, or --custom-role.
 
       Example:
 
@@ -1984,6 +1996,7 @@ commands:
       - group-id
       - async-operation
       - resource-version
+      - custom-role
     options:
       - name: account-role
         type: string
@@ -2044,6 +2057,26 @@ commands:
         description: |
           The account-level role to assign. Valid values: owner, admin, developer,
           finance-admin, read, metrics-read.
+  - name: cloud user-group set-custom-roles
+    summary: '[Experimental] Set custom role assignments for a user group'
+    description: |
+      Set the custom roles assigned to a Temporal Cloud user group. Replaces
+      the group's current custom role list. Pass no --custom-role flags to
+      remove all custom roles.
+
+      Example:
+
+      ```
+      temporal cloud user-group set-custom-roles --group-id my-group-id \
+        --custom-role role-id-1 --custom-role role-id-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - group-id
+      - async-operation
+      - resource-version
+      - custom-role
   - name: cloud user-group set-namespace-permissions
     summary: Set namespace permissions for a user group
     description: |
@@ -2149,7 +2182,7 @@ commands:
 
   # Custom role commands
   - name: cloud custom-role
-    summary: Manage Temporal Cloud custom roles
+    summary: '[Experimental] Manage Temporal Cloud custom roles'
     description: |
       Commands for managing Temporal Cloud custom roles.
 
@@ -2166,7 +2199,7 @@ commands:
       tags:
         - custom-roles
   - name: cloud custom-role get
-    summary: Retrieve custom role details
+    summary: '[Experimental] Retrieve custom role details'
     description: |
       Retrieve the configuration and status of a Temporal Cloud custom role.
 
@@ -2180,7 +2213,7 @@ commands:
       - client
       - role-id
   - name: cloud custom-role list
-    summary: List Temporal Cloud custom roles
+    summary: '[Experimental] List Temporal Cloud custom roles'
     description: |
       List all Temporal Cloud custom roles accessible with the current
       authentication credentials.
@@ -2203,7 +2236,7 @@ commands:
         description: |
           Token for retrieving the next page of results in a paginated list.
   - name: cloud custom-role create
-    summary: Create a Temporal Cloud custom role
+    summary: '[Experimental] Create a Temporal Cloud custom role'
     description: |
       Create a new Temporal Cloud custom role from a JSON specification.
 
@@ -2233,7 +2266,7 @@ commands:
           Custom role specification in JSON format. Provide inline JSON
           directly, or use '@path/to/file.json' to load from a file.
   - name: cloud custom-role update
-    summary: Update an existing Temporal Cloud custom role
+    summary: '[Experimental] Update an existing Temporal Cloud custom role'
     description: |
       Update an existing Temporal Cloud custom role from a JSON specification.
       Replaces the role's spec with the provided one.
@@ -2257,7 +2290,7 @@ commands:
           Custom role specification in JSON format. Provide inline JSON
           directly, or use '@path/to/file.json' to load from a file.
   - name: cloud custom-role delete
-    summary: Delete a Temporal Cloud custom role
+    summary: '[Experimental] Delete a Temporal Cloud custom role'
     description: |
       Delete a Temporal Cloud custom role. This action is irreversible.
 
@@ -2273,7 +2306,7 @@ commands:
       - async-operation
       - resource-version
   - name: cloud custom-role apply
-    summary: Create or update a custom role from a specification
+    summary: '[Experimental] Create or update a custom role from a specification'
     description: |
       Apply a custom role configuration to Temporal Cloud. Creates a new role
       if no role with the given name exists, or updates the existing one to
@@ -2301,7 +2334,7 @@ commands:
           Custom role specification in JSON format. Provide inline JSON
           directly, or use '@path/to/file.json' to load from a file.
   - name: cloud custom-role edit
-    summary: Interactively edit a custom role configuration
+    summary: '[Experimental] Interactively edit a custom role configuration'
     description: |
       Open a custom role configuration in your default editor for interactive
       modification. After saving and closing the editor, the changes are
@@ -2562,6 +2595,28 @@ commands:
         description: |
           The account-level role to assign. Valid values: owner, admin, developer,
           finance-admin, read, metrics-read.
+  - name: cloud user set-custom-roles
+    summary: '[Experimental] Set custom role assignments for a user'
+    description: |
+      Set the custom roles assigned to a Temporal Cloud user. Replaces the
+      user's current custom role list. Pass no --custom-role flags to remove
+      all custom roles.
+
+      Specify the user with either --user-id or --user-email (not both).
+
+      Example:
+
+      ```
+      temporal cloud user set-custom-roles --user-email alice@example.com \
+        --custom-role role-id-1 --custom-role role-id-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - user-identification
+      - custom-role
   - name: cloud user delete
     summary: Delete a Temporal Cloud user
     description: |
@@ -2674,6 +2729,10 @@ commands:
         description: |
           Namespace access to grant, in the format 'namespace=permission'.
           Permission must be one of: admin, write, read. Can be repeated.
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple.
   - name: cloud user list
     summary: List Temporal Cloud users
     description: |
@@ -2805,6 +2864,10 @@ commands:
         description: |
           Namespace access to grant, in the format 'namespace=permission'.
           Permission must be one of: admin, write, read. Can be repeated.
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple.
 
   - name: cloud service-account create-namespace-scoped
     summary: Create a namespace-scoped service account
@@ -2866,6 +2929,7 @@ commands:
       - client
       - async-operation
       - resource-version
+      - custom-role
     options:
       - name: service-account-id
         type: string
@@ -2896,6 +2960,34 @@ commands:
         description: |
           The permission to grant on the scoped namespace. Valid values: admin, write, read.
           Only valid for namespace-scoped service accounts.
+
+  - name: cloud service-account set-custom-roles
+    summary: '[Experimental] Set custom role assignments for a service account'
+    description: |
+      Set the custom roles assigned to a Temporal Cloud service account.
+      Replaces the service account's current custom role list. Pass no
+      --custom-role flags to remove all custom roles.
+
+      Not valid for namespace-scoped service accounts.
+
+      Example:
+
+      ```
+      temporal cloud service-account set-custom-roles --service-account-id my-sa-id \
+        --custom-role role-id-1 --custom-role role-id-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - custom-role
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account.
 
   - name: cloud service-account edit
     summary: Interactively edit a service account
@@ -3957,6 +4049,13 @@ option-sets:
         required: true
         description: |
           The ID of the custom role.
+  - name: custom-role
+    options:
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple. When provided,
+          replaces the existing custom role list.
   - name: export-sink
     options:
       - name: sink-name
