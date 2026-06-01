@@ -314,6 +314,7 @@ type (
 		RetentionDays                      int32
 		ApiKeyAuthEnabled                  bool
 		EnableDeleteProtection             bool
+		EnableTaskQueueFairness            bool
 		AsyncOperationID                   string
 		CACertificateOptions               CaCertificateOptions
 		CertificateFilterOptions           CertificateFilterOptions
@@ -385,6 +386,7 @@ func CreateNamespace(ctx context.Context, params CreateNamespaceParams) error {
 		RetentionDays:       params.RetentionDays,
 		ApiKeyAuth:          &namespacev1.ApiKeyAuthSpec{Enabled: params.ApiKeyAuthEnabled},
 		Lifecycle:           &namespacev1.LifecycleSpec{EnableDeleteProtection: params.EnableDeleteProtection},
+		Fairness:            &namespacev1.FairnessSpec{TaskQueueFairnessEnabled: params.EnableTaskQueueFairness},
 		ConnectivityRuleIds: params.ConnectionRuleIDs,
 	}
 
@@ -434,6 +436,7 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		RetentionDays:                      int32(c.RetentionDays),
 		ApiKeyAuthEnabled:                  c.ApiKeyAuthEnabled,
 		EnableDeleteProtection:             c.EnableDeleteProtection,
+		EnableTaskQueueFairness:            c.EnableTaskQueueFairness,
 		AsyncOperationID:                   c.AsyncOperationId,
 		CACertificateOptions:               c.CaCertificateOptions,
 		CertificateFilterOptions:           c.CertificateFilterOptions,

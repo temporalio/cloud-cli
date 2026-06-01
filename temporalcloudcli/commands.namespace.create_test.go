@@ -37,6 +37,7 @@ func baseNamespaceSpec() *namespacev1.NamespaceSpec {
 		Regions:    []string{"aws-us-east-1"},
 		ApiKeyAuth: &namespacev1.ApiKeyAuthSpec{Enabled: false},
 		Lifecycle:  &namespacev1.LifecycleSpec{EnableDeleteProtection: false},
+		Fairness:   &namespacev1.FairnessSpec{TaskQueueFairnessEnabled: false},
 	}
 }
 
@@ -91,6 +92,7 @@ func TestCreateNamespace_BuildsSpec(t *testing.T) {
 		RetentionDays: 30,
 		ApiKeyAuth:    &namespacev1.ApiKeyAuthSpec{Enabled: true},
 		Lifecycle:     &namespacev1.LifecycleSpec{EnableDeleteProtection: false},
+		Fairness:      &namespacev1.FairnessSpec{TaskQueueFairnessEnabled: true},
 		MtlsAuth: &namespacev1.MtlsAuthSpec{
 			CertificateFilters: []*namespacev1.CertificateFilterSpec{
 				{CommonName: "test.temporal.io"},
@@ -121,10 +123,11 @@ func TestCreateNamespace_BuildsSpec(t *testing.T) {
 
 	var buf bytes.Buffer
 	err := temporalcloudcli.CreateNamespace(context.Background(), temporalcloudcli.CreateNamespaceParams{
-		Name:              "my-namespace",
-		Regions:           []string{"aws-us-east-1"},
-		RetentionDays:     30,
-		ApiKeyAuthEnabled: true,
+		Name:                    "my-namespace",
+		Regions:                 []string{"aws-us-east-1"},
+		RetentionDays:           30,
+		ApiKeyAuthEnabled:       true,
+		EnableTaskQueueFairness: true,
 		CertificateFilterOptions: temporalcloudcli.CertificateFilterOptions{
 			CertificateFilter: []string{
 				`{"commonName":"test.temporal.io"}`,

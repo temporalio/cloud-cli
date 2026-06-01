@@ -408,6 +408,10 @@ commands:
         type: bool
         description: |
           Prevent accidental deletion of this namespace.
+      - name: enable-task-queue-fairness
+        type: bool
+        description: |
+          Enable task queue fairness for the namespace.
       - name: search-attribute
         type: string[]
         description: |
@@ -548,6 +552,49 @@ commands:
         description: |
           Resource version for optimistic concurrency control. If not provided,
           the current version is fetched automatically.
+
+  # Namespace fairness commands
+  - name: cloud namespace fairness
+    summary: Manage namespace task queue fairness settings
+    description: |
+      Commands for managing task queue fairness configuration of Temporal Cloud namespaces.
+    has-init: false
+  - name: cloud namespace fairness get
+    summary: Get namespace task queue fairness configuration
+    description: |
+      Retrieve the current task queue fairness configuration for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace fairness get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace fairness set
+    summary: Set namespace task queue fairness configuration
+    description: |
+      Set the task queue fairness configuration for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace fairness set --namespace my-namespace.my-account --enable-task-queue-fairness=true
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: enable-task-queue-fairness
+        type: bool
+        required: true
+        description: |
+          Enable or disable task queue fairness for the namespace.
 
   # Namespace cert-ca commands
   - name: cloud namespace cert-ca
