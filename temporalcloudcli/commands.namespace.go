@@ -314,7 +314,7 @@ type (
 		RetentionDays                      int32
 		ApiKeyAuthEnabled                  bool
 		EnableDeleteProtection             bool
-		EnableTaskQueueFairness            bool
+		EnableTaskQueueFairness            *bool
 		AsyncOperationID                   string
 		CACertificateOptions               CaCertificateOptions
 		CertificateFilterOptions           CertificateFilterOptions
@@ -386,8 +386,13 @@ func CreateNamespace(ctx context.Context, params CreateNamespaceParams) error {
 		RetentionDays:       params.RetentionDays,
 		ApiKeyAuth:          &namespacev1.ApiKeyAuthSpec{Enabled: params.ApiKeyAuthEnabled},
 		Lifecycle:           &namespacev1.LifecycleSpec{EnableDeleteProtection: params.EnableDeleteProtection},
-		Fairness:            &namespacev1.FairnessSpec{TaskQueueFairnessEnabled: params.EnableTaskQueueFairness},
 		ConnectivityRuleIds: params.ConnectionRuleIDs,
+	}
+
+	// Only set fairness when the flag was explicitly provided; otherwise leave it
+	// unset so the server applies its default.
+	if params.EnableTaskQueueFairness != nil {
+		spec.Fairness = &namespacev1.FairnessSpec{TaskQueueFairnessEnabled: *params.EnableTaskQueueFairness}
 	}
 
 	if len(certBytes) > 0 {
@@ -430,13 +435,20 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		return err
 	}
 
+	// Only forward fairness when the flag was explicitly provided, so an omitted
+	// flag leaves the sub-spec unset rather than implicitly disabling it.
+	var enableTaskQueueFairness *bool
+	if c.Command.Flags().Changed("enable-task-queue-fairness") {
+		enableTaskQueueFairness = &c.EnableTaskQueueFairness
+	}
+
 	return CreateNamespace(cctx.Context, CreateNamespaceParams{
 		Name:                               c.Name,
 		Regions:                            c.Region,
 		RetentionDays:                      int32(c.RetentionDays),
 		ApiKeyAuthEnabled:                  c.ApiKeyAuthEnabled,
 		EnableDeleteProtection:             c.EnableDeleteProtection,
-		EnableTaskQueueFairness:            c.EnableTaskQueueFairness,
+		EnableTaskQueueFairness:            enableTaskQueueFairness,
 		AsyncOperationID:                   c.AsyncOperationId,
 		CACertificateOptions:               c.CaCertificateOptions,
 		CertificateFilterOptions:           c.CertificateFilterOptions,
