@@ -185,9 +185,9 @@ type SharedServerSuite struct {
 
 func (s *SharedServerSuite) SetupSuite() {
 	s.apiKey = os.Getenv("TEMPORAL_API_KEY")
-	s.Suite.Require().NotEmpty(s.apiKey, "Could not load TEMPORAL_API_KEY. Are you running with `mise run test` and have you filled out your .env? See README.md for details.")
+	s.Suite.Require().NotEmpty(s.apiKey, "Could not load TEMPORAL_API_KEY. Are you running with `make test` and have you filled out your .env? See README.md for details.")
 	s.server = os.Getenv("TEMPORAL_CLOUD_SERVER")
-	s.Suite.Require().NotEmpty(s.server, "Could not load TEMPORAL_CLOUD_SERVER. Are you running with `mise run test` and have you filled out your .env? See README.md for details.")
+	s.Suite.Require().NotEmpty(s.server, "Could not load TEMPORAL_CLOUD_SERVER. Are you running with `make test` and have you filled out your .env? See README.md for details.")
 }
 
 func (s *SharedServerSuite) TearDownSuite() {

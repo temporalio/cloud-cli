@@ -27,4 +27,4 @@ test:
 	go test ./...
 
 mocks:
-	mockery
+	go tool mockery

@@ -27,4 +27,4 @@ TEMPORAL_CLOUD_SERVER=<server>
 
 *NOTE* This will create and delete resources on the account. 
 
-Then run with `mise run test` to run the tests.
+Then run with `make test` to run the tests.
