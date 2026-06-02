@@ -481,9 +481,9 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 func (c *CloudCommand) initCommand(cctx *CommandContext) {
 	c.Command.Version = VersionString()
 
-	// Cobra auto-injects a `completion` subcommand on every root command; disable
-	// it because the cloud plugin is invoked as `temporal cloud ...` and shell
-	// completion belongs to the parent `temporal` CLI, not this plugin.
+	// Disable cobra's auto-injected `completion` subcommand: it needs further
+	// updates to generate working shell completions for extension subcommands
+	// invoked via the parent `temporal` CLI.
 	c.Command.CompletionOptions.DisableDefaultCmd = true
 
 	// Set custom usage template with proper flag wrapping
