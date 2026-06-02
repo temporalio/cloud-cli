@@ -43,7 +43,7 @@ func (s *SharedServerSuite) TestNamespaceCreate() {
 		"create",
 		"--auto-confirm=true",
 		"--name", namespaceName,
-		"--region", "aws-us-east-1",
+		"--region", "aws-ca-centrai-1",
 		"--retention-days", "30",
 		"--api-key-auth-enabled",
 		"--search-attribute", "MyText=Text",
@@ -76,7 +76,7 @@ func (s *SharedServerSuite) TestNamespaceCreate() {
 
 	gotSpec := getNsRes.Namespace.Spec
 	s.Suite.Equal(namespaceName, gotSpec.Name)
-	s.Suite.Equal("aws-us-east-1", getNsRes.Namespace.ActiveRegion)
+	s.Suite.Equal("aws-ca-centrai-1", getNsRes.Namespace.ActiveRegion)
 	s.Suite.Equal(int32(30), gotSpec.RetentionDays)
 	s.Suite.Require().NotNil(gotSpec.ApiKeyAuth)
 	s.Suite.True(gotSpec.ApiKeyAuth.Enabled)
@@ -98,7 +98,7 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 
 	namespaceSpec := &namespace.NamespaceSpec{
 		Name:          newNamespaceName,
-		Regions:       []string{"aws-us-east-1"},
+		Regions:       []string{"aws-ca-centrai-1"},
 		RetentionDays: 30,
 		ApiKeyAuth: &namespace.ApiKeyAuthSpec{
 			Enabled: true,
