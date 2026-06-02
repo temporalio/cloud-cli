@@ -1,29 +1,30 @@
-# Temporal Cloud CLI
+# cloud-cli
+CLI Plugin for Temporal Cloud
 
-Plugin for the Temporal command-line interface to work with [Temporal Cloud](https://docs.temporal.io/cloud)
+## Installing
 
-## Quick install
+### Using `go install`
 
-### Install via Homebrew
+#### Dependencies
 
-    brew install temporalio/prerelease/cloud-cli
+- [`temporal` CLI](https://temporal.io/setup/install-temporal-cli) 
+- [go](https://go.dev/doc/install) (check [go.mod](./go.mod) for the version)
 
-### Install via download
+Clone the repo, then run the following command from the root of the project to build and install the cloud extension:
 
-1. Install the [`temporal` CLI](https://temporal.io/setup/install-temporal-cli)
-2. Download the [latest version](https://github.com/temporalio/cloud-cli/releases/latest) for your OS and architecture:
-3. Extract the downloaded archive.
-4. Add the `temporal-cloud` binary to your `PATH` (`temoporal-cloud.exe` for Windows).
+```sh
+$ go install ./cmd/temporal-cloud
+```
 
-### Build
+You should now be able to run cloud extension commands by running `temporal cloud`. 
 
-1. Install the [`temporal` CLI](https://temporal.io/setup/install-temporal-cli)
-2. Install [Go](https://go.dev/doc/install) (check [go.mod](./go.mod) for the version)
-3. Clone repository
-4. Switch to cloned directory, and run `go build ./cmd/temporal-cloud`
+## Testing
+In order to run the tests, you need a temporal cloud api key. Create one in the [cloud dashboard](https://cloud.temporal.io/) and place it in a .env file at the root directory of the repo as follows:
+```
+TEMPORAL_API_KEY=<api key>
+TEMPORAL_CLOUD_SERVER=<server>
+```
 
-The executable will be at `temporal-cloud` (`temporal-cloud.exe` for Windows).
+*NOTE* This will create and delete resources on the account. 
 
-## Usage
-
-Once installed, invoke the plugin via `temporal cloud`
+Then run with `make test` to run the tests.
