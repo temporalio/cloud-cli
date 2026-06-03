@@ -29,7 +29,7 @@ func TestCreateAuditLogSinkKinesis_Success(t *testing.T) {
 		Name: "my-sink",
 		SinkType: &accountv1.AuditLogSinkSpec_KinesisSink{
 			KinesisSink: &sinkv1.KinesisSpec{
-				RoleName:       "arn:aws:iam::123456789012:role/MyRole",
+				RoleName:       "MyRole",
 				DestinationUri: "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 				Region:         "us-east-1",
 			},
@@ -54,7 +54,7 @@ func TestCreateAuditLogSinkKinesis_Success(t *testing.T) {
 
 	err := temporalcloudcli.CreateAuditLogSinkKinesis(context.Background(), temporalcloudcli.CreateAuditLogSinkKinesisParams{
 		Name:             "my-sink",
-		RoleName:         "arn:aws:iam::123456789012:role/MyRole",
+		RoleName:         "MyRole",
 		DestinationURI:   "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 		Region:           "us-east-1",
 		Cloud:            mockCloud,
@@ -75,7 +75,7 @@ func TestCreateAuditLogSinkKinesis_PromptDeclined(t *testing.T) {
 		Name: "my-sink",
 		SinkType: &accountv1.AuditLogSinkSpec_KinesisSink{
 			KinesisSink: &sinkv1.KinesisSpec{
-				RoleName:       "arn:aws:iam::123456789012:role/MyRole",
+				RoleName:       "MyRole",
 				DestinationUri: "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 				Region:         "us-east-1",
 			},
@@ -89,7 +89,7 @@ func TestCreateAuditLogSinkKinesis_PromptDeclined(t *testing.T) {
 
 	err := temporalcloudcli.CreateAuditLogSinkKinesis(context.Background(), temporalcloudcli.CreateAuditLogSinkKinesisParams{
 		Name:             "my-sink",
-		RoleName:         "arn:aws:iam::123456789012:role/MyRole",
+		RoleName:         "MyRole",
 		DestinationURI:   "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 		Region:           "us-east-1",
 		Cloud:            mockCloud,
@@ -110,7 +110,7 @@ func TestCreateAuditLogSinkKinesis_CreateError(t *testing.T) {
 		Name: "my-sink",
 		SinkType: &accountv1.AuditLogSinkSpec_KinesisSink{
 			KinesisSink: &sinkv1.KinesisSpec{
-				RoleName:       "arn:aws:iam::123456789012:role/MyRole",
+				RoleName:       "MyRole",
 				DestinationUri: "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 				Region:         "us-east-1",
 			},
@@ -134,7 +134,7 @@ func TestCreateAuditLogSinkKinesis_CreateError(t *testing.T) {
 
 	err := temporalcloudcli.CreateAuditLogSinkKinesis(context.Background(), temporalcloudcli.CreateAuditLogSinkKinesisParams{
 		Name:             "my-sink",
-		RoleName:         "arn:aws:iam::123456789012:role/MyRole",
+		RoleName:         "MyRole",
 		DestinationURI:   "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 		Region:           "us-east-1",
 		Cloud:            mockCloud,
@@ -154,7 +154,7 @@ func TestUpdateAuditLogSinkKinesis_Success(t *testing.T) {
 		Name: "my-sink",
 		SinkType: &accountv1.AuditLogSinkSpec_KinesisSink{
 			KinesisSink: &sinkv1.KinesisSpec{
-				RoleName:       "arn:aws:iam::123456789012:role/OldRole",
+				RoleName:       "OldRole",
 				DestinationUri: "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 				Region:         "us-east-1",
 			},
@@ -174,7 +174,7 @@ func TestUpdateAuditLogSinkKinesis_Success(t *testing.T) {
 		Name: "my-sink",
 		SinkType: &accountv1.AuditLogSinkSpec_KinesisSink{
 			KinesisSink: &sinkv1.KinesisSpec{
-				RoleName:       "arn:aws:iam::123456789012:role/NewRole",
+				RoleName:       "NewRole",
 				DestinationUri: "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 				Region:         "us-east-1",
 			},
@@ -200,7 +200,7 @@ func TestUpdateAuditLogSinkKinesis_Success(t *testing.T) {
 
 	err := temporalcloudcli.UpdateAuditLogSinkKinesis(context.Background(), temporalcloudcli.UpdateAuditLogSinkKinesisParams{
 		Name:             "my-sink",
-		RoleName:         "arn:aws:iam::123456789012:role/NewRole",
+		RoleName:         "NewRole",
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
 		OperationHandler: mockRunner,
@@ -239,7 +239,7 @@ func TestUpdateAuditLogSinkKinesis_PromptDeclined(t *testing.T) {
 		Name: "my-sink",
 		SinkType: &accountv1.AuditLogSinkSpec_KinesisSink{
 			KinesisSink: &sinkv1.KinesisSpec{
-				RoleName:       "arn:aws:iam::123456789012:role/OldRole",
+				RoleName:       "OldRole",
 				DestinationUri: "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 				Region:         "us-east-1",
 			},
@@ -258,7 +258,7 @@ func TestUpdateAuditLogSinkKinesis_PromptDeclined(t *testing.T) {
 		Name: "my-sink",
 		SinkType: &accountv1.AuditLogSinkSpec_KinesisSink{
 			KinesisSink: &sinkv1.KinesisSpec{
-				RoleName:       "arn:aws:iam::123456789012:role/NewRole",
+				RoleName:       "NewRole",
 				DestinationUri: "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 				Region:         "us-east-1",
 			},
@@ -271,7 +271,7 @@ func TestUpdateAuditLogSinkKinesis_PromptDeclined(t *testing.T) {
 
 	err := temporalcloudcli.UpdateAuditLogSinkKinesis(context.Background(), temporalcloudcli.UpdateAuditLogSinkKinesisParams{
 		Name:             "my-sink",
-		RoleName:         "arn:aws:iam::123456789012:role/NewRole",
+		RoleName:         "NewRole",
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
 		OperationHandler: mockRunner,
@@ -290,7 +290,7 @@ func TestUpdateAuditLogSinkKinesis_UpdateError(t *testing.T) {
 		Name: "my-sink",
 		SinkType: &accountv1.AuditLogSinkSpec_KinesisSink{
 			KinesisSink: &sinkv1.KinesisSpec{
-				RoleName:       "arn:aws:iam::123456789012:role/OldRole",
+				RoleName:       "OldRole",
 				DestinationUri: "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 				Region:         "us-east-1",
 			},
@@ -310,7 +310,7 @@ func TestUpdateAuditLogSinkKinesis_UpdateError(t *testing.T) {
 		Name: "my-sink",
 		SinkType: &accountv1.AuditLogSinkSpec_KinesisSink{
 			KinesisSink: &sinkv1.KinesisSpec{
-				RoleName:       "arn:aws:iam::123456789012:role/OldRole",
+				RoleName:       "OldRole",
 				DestinationUri: "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 				Region:         "us-east-1",
 			},
@@ -352,7 +352,7 @@ func TestUpdateAuditLogSinkKinesis_ResourceVersionOverride(t *testing.T) {
 		Name: "my-sink",
 		SinkType: &accountv1.AuditLogSinkSpec_KinesisSink{
 			KinesisSink: &sinkv1.KinesisSpec{
-				RoleName:       "arn:aws:iam::123456789012:role/MyRole",
+				RoleName:       "MyRole",
 				DestinationUri: "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 				Region:         "us-east-1",
 			},
@@ -372,7 +372,7 @@ func TestUpdateAuditLogSinkKinesis_ResourceVersionOverride(t *testing.T) {
 		Name: "my-sink",
 		SinkType: &accountv1.AuditLogSinkSpec_KinesisSink{
 			KinesisSink: &sinkv1.KinesisSpec{
-				RoleName:       "arn:aws:iam::123456789012:role/MyRole",
+				RoleName:       "MyRole",
 				DestinationUri: "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 				Region:         "us-east-1",
 			},
@@ -414,7 +414,7 @@ func TestValidateAuditLogSinkKinesis_Success(t *testing.T) {
 	spec := &accountv1.AuditLogSinkSpec{
 		SinkType: &accountv1.AuditLogSinkSpec_KinesisSink{
 			KinesisSink: &sinkv1.KinesisSpec{
-				RoleName:       "arn:aws:iam::123456789012:role/MyRole",
+				RoleName:       "MyRole",
 				DestinationUri: "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 				Region:         "us-east-1",
 			},
@@ -429,7 +429,7 @@ func TestValidateAuditLogSinkKinesis_Success(t *testing.T) {
 
 	var buf bytes.Buffer
 	err := temporalcloudcli.ValidateAuditLogSinkKinesis(context.Background(), temporalcloudcli.ValidateAuditLogSinkKinesisParams{
-		RoleName:       "arn:aws:iam::123456789012:role/MyRole",
+		RoleName:       "MyRole",
 		DestinationURI: "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 		Region:         "us-east-1",
 		Cloud:          mockCloud,
@@ -452,7 +452,7 @@ func TestValidateAuditLogSinkKinesis_Error(t *testing.T) {
 	spec := &accountv1.AuditLogSinkSpec{
 		SinkType: &accountv1.AuditLogSinkSpec_KinesisSink{
 			KinesisSink: &sinkv1.KinesisSpec{
-				RoleName:       "arn:aws:iam::123456789012:role/MyRole",
+				RoleName:       "MyRole",
 				DestinationUri: "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 				Region:         "us-east-1",
 			},
@@ -467,7 +467,7 @@ func TestValidateAuditLogSinkKinesis_Error(t *testing.T) {
 
 	var buf bytes.Buffer
 	err := temporalcloudcli.ValidateAuditLogSinkKinesis(context.Background(), temporalcloudcli.ValidateAuditLogSinkKinesisParams{
-		RoleName:       "arn:aws:iam::123456789012:role/MyRole",
+		RoleName:       "MyRole",
 		DestinationURI: "arn:aws:kinesis:us-east-1:123456789012:stream/MyStream",
 		Region:         "us-east-1",
 		Cloud:          mockCloud,

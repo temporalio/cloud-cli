@@ -94,6 +94,12 @@ func (c *CloudUserGroupCreateCloudGroupCommand) run(cctx *CommandContext, _ []st
 	if err != nil {
 		return err
 	}
+	if c.Command.Flags().Changed("custom-role") {
+		if accountAccess == nil {
+			return errors.New("--custom-role requires --account-role; a principal must have a account role")
+		}
+		accountAccess.CustomRoles = dedupeStrings(c.CustomRole)
+	}
 	yes, err := cctx.GetPrompter().PromptYes("Create")
 	if err != nil {
 		return err
@@ -130,6 +136,12 @@ func (c *CloudUserGroupCreateGoogleGroupCommand) run(cctx *CommandContext, _ []s
 	namespaceAccesses, err := parseNamespaceAccesses(c.NamespaceAccess)
 	if err != nil {
 		return err
+	}
+	if c.Command.Flags().Changed("custom-role") {
+		if accountAccess == nil {
+			return errors.New("--custom-role requires --account-role; a principal must have a account role")
+		}
+		accountAccess.CustomRoles = dedupeStrings(c.CustomRole)
 	}
 	yes, err := cctx.GetPrompter().PromptYes("Create")
 	if err != nil {
@@ -169,6 +181,12 @@ func (c *CloudUserGroupCreateScimGroupCommand) run(cctx *CommandContext, _ []str
 	namespaceAccesses, err := parseNamespaceAccesses(c.NamespaceAccess)
 	if err != nil {
 		return err
+	}
+	if c.Command.Flags().Changed("custom-role") {
+		if accountAccess == nil {
+			return errors.New("--custom-role requires --account-role; a principal must have a account role")
+		}
+		accountAccess.CustomRoles = dedupeStrings(c.CustomRole)
 	}
 	yes, err := cctx.GetPrompter().PromptYes("Create")
 	if err != nil {
@@ -288,10 +306,11 @@ func (c *CloudUserGroupEditCommand) run(cctx *CommandContext, _ []string) error 
 }
 
 func (c *CloudUserGroupUpdateCommand) run(cctx *CommandContext, _ []string) error {
-	if c.AccountRole == "" && len(c.NamespaceAccess) == 0 {
-		return errors.New("must provide at least one of --account-role or --namespace-access")
+	customRoleProvided := c.Command.Flags().Changed("custom-role")
+	if c.AccountRole == "" && len(c.NamespaceAccess) == 0 && !customRoleProvided {
+		return errors.New("must provide at least one of --account-role, --namespace-access, or --custom-role")
 	}
-	// Validate namespace access changes before any API call.
+	// Validate inputs before any API call.
 	if _, err := applyNamespaceAccessChanges(nil, c.NamespaceAccess); err != nil {
 		return err
 	}
@@ -316,6 +335,11 @@ func (c *CloudUserGroupUpdateCommand) run(cctx *CommandContext, _ []string) erro
 		newSpec.Access = &identityv1.Access{}
 	}
 	if accountAccess != nil {
+		// Preserve existing CustomRoles so changing the account role
+		// doesn't silently wipe them.
+		if newSpec.Access.AccountAccess != nil {
+			accountAccess.CustomRoles = newSpec.Access.AccountAccess.CustomRoles
+		}
 		newSpec.Access.AccountAccess = accountAccess
 	}
 	if len(c.NamespaceAccess) > 0 {
@@ -324,6 +348,15 @@ func (c *CloudUserGroupUpdateCommand) run(cctx *CommandContext, _ []string) erro
 			return err
 		}
 		newSpec.Access.NamespaceAccesses = namespaceAccesses
+	}
+	if customRoleProvided {
+		if newSpec.Access.AccountAccess == nil {
+			return errors.New("group has no account access; assign an account role with --account-role first")
+		}
+		newSpec.Access.AccountAccess.CustomRoles = applyCustomRoleChanges(
+			newSpec.Access.AccountAccess.CustomRoles,
+			c.CustomRole, customRoleProvided,
+		)
 	}
 	yes, err := cctx.GetPrompter().PromptApply(res.Group.Spec, newSpec, false)
 	if err != nil {
@@ -361,6 +394,9 @@ func (c *CloudUserGroupSetAccountRoleCommand) run(cctx *CommandContext, _ []stri
 	newSpec := proto.Clone(res.Group.Spec).(*identityv1.UserGroupSpec)
 	if newSpec.Access == nil {
 		newSpec.Access = &identityv1.Access{}
+	}
+	if newSpec.Access.AccountAccess != nil {
+		accountAccess.CustomRoles = newSpec.Access.AccountAccess.CustomRoles
 	}
 	newSpec.Access.AccountAccess = accountAccess
 	yes, err := cctx.GetPrompter().PromptApply(res.Group.Spec, newSpec, false)
@@ -411,6 +447,41 @@ func (c *CloudUserGroupSetNamespacePermissionsCommand) run(cctx *CommandContext,
 	}
 	if !yes {
 		return errors.New("Aborting set-namespace-permissions.")
+	}
+	rv := res.Group.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.UpdateUserGroup(cctx, &cloudservice.UpdateUserGroupRequest{
+		GroupId:          c.GroupId,
+		Spec:             newSpec,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
+func (c *CloudUserGroupSetCustomRolesCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	res, err := client.GetUserGroup(cctx, &cloudservice.GetUserGroupRequest{GroupId: c.GroupId})
+	if err != nil {
+		return err
+	}
+	newSpec := proto.Clone(res.Group.Spec).(*identityv1.UserGroupSpec)
+	if newSpec.Access == nil || newSpec.Access.AccountAccess == nil {
+		return errors.New("group has no account access; assign an account role with `temporal cloud user-group set-account-role` first")
+	}
+	newSpec.Access.AccountAccess.CustomRoles = dedupeStrings(c.CustomRole)
+
+	yes, err := cctx.GetPrompter().PromptApply(res.Group.Spec, newSpec, false)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting set.")
 	}
 	rv := res.Group.ResourceVersion
 	if c.ResourceVersion != "" {

@@ -174,6 +174,43 @@ func TestCreatePublicConnectivityRule_Success(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// TestCreatePublicConnectivityRule_EnableStableIps verifies that --enable-stable-ips is propagated to the spec.
+func TestCreatePublicConnectivityRule_EnableStableIps(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+
+	expectedSpec := &connectivityrulev1.ConnectivityRuleSpec{
+		ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PublicRule{
+			PublicRule: &connectivityrulev1.PublicConnectivityRule{
+				EnableStableIps: true,
+			},
+		},
+	}
+	op := &operation.AsyncOperation{Id: "op-stable"}
+	mockPrompter.EXPECT().
+		PromptApply(&connectivityrulev1.ConnectivityRuleSpec{}, expectedSpec, false).
+		Return(nil)
+	mockCloud.EXPECT().
+		CreateConnectivityRule(context.Background(), &cloudservice.CreateConnectivityRuleRequest{
+			Spec: expectedSpec,
+		}).
+		Return(&cloudservice.CreateConnectivityRuleResponse{
+			ConnectivityRuleId: "rule-stable",
+			AsyncOperation:     op,
+		}, nil)
+
+	mockHandler.EXPECT().HandleOperation(op, "rule-stable").Return(nil)
+
+	err := temporalcloudcli.CreatePublicConnectivityRule(context.Background(), temporalcloudcli.CreatePublicConnectivityRuleParams{
+		EnableStableIPs:  true,
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
+		OperationHandler: mockHandler,
+	})
+	require.NoError(t, err)
+}
+
 // TestCreatePublicConnectivityRule_APIError verifies that an API error goes through HandleErr.
 func TestCreatePublicConnectivityRule_APIError(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)

@@ -1,0 +1,8 @@
+{
+    "accountAccess": null,
+    "namespaceAccesses": {
+        "ns1": {
+            "permission": "PERMISSION_READ"
+        }
+    }
+}

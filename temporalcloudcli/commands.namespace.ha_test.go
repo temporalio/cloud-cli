@@ -290,3 +290,80 @@ func TestHaUpdate(t *testing.T) {
 		})
 	}
 }
+
+// --- HaRegionList ---
+
+func TestHaRegionList(t *testing.T) {
+	testReplicas := []*namespacev1.Replica{
+		{
+			Id:        "replica-1",
+			IsPrimary: true,
+			State:     namespacev1.Replica_REPLICA_STATE_ACTIVE,
+			Region:    "aws-us-west-2",
+		},
+		{
+			Id:        "replica-2",
+			IsPrimary: false,
+			State:     namespacev1.Replica_REPLICA_STATE_ADDING,
+			Region:    "aws-us-east-1",
+		},
+	}
+
+	tests := []struct {
+		name                    string
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		expectedErr             string
+		expectedJsonOutput      any
+	}{
+		{
+			name: "Success",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: "my-ns"}, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{
+						Namespace: &namespacev1.Namespace{
+							Namespace: "my-ns",
+							Replicas:  testReplicas,
+						},
+					}, nil)
+			},
+			expectedJsonOutput: struct {
+				Regions []*namespacev1.Replica
+			}{Regions: testReplicas},
+		},
+		{
+			name: "Empty",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: "my-ns"}, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{
+						Namespace: &namespacev1.Namespace{Namespace: "my-ns"},
+					}, nil)
+			},
+			expectedJsonOutput: struct {
+				Regions []*namespacev1.Replica
+			}{},
+		},
+		{
+			name: "GetNamespaceError",
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("not found"))
+			},
+			expectedErr: "not found",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNamespaceHaRegionListCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns"},
+			}, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				JSONOutput:              true,
+				ExpectedError:           tt.expectedErr,
+				ExpectedOutputJson:      tt.expectedJsonOutput,
+			})
+		})
+	}
+}

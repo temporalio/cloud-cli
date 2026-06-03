@@ -1,22 +1,19 @@
 package temporalcloudcli
 
 import (
-	"bytes"
-	"cmp"
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
@@ -43,6 +40,38 @@ func isNotFoundErr(e error) bool {
 	return s.Code() == codes.NotFound
 }
 
+// ParseRoleARN extracts the IAM role name and AWS account ID from an IAM role
+// ARN of the form "arn:aws:iam::<account>:role/<name>".
+func ParseRoleARN(roleARN string) (roleName, accountID string, err error) {
+	parsed, err := arn.Parse(roleARN)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid role ARN %q: %w", roleARN, err)
+	}
+	if parsed.Service != "iam" {
+		return "", "", fmt.Errorf("expected an IAM role ARN, got service %q", parsed.Service)
+	}
+	name, ok := strings.CutPrefix(parsed.Resource, "role/")
+	if !ok || name == "" {
+		return "", "", fmt.Errorf("expected resource of the form role/<name>, got %q", parsed.Resource)
+	}
+	return name, parsed.AccountID, nil
+}
+
+// ParseServiceAccountEmail extracts the service account ID (local part) and
+// GCP project ID from an email of the form "<sa-id>@<project-id>.iam.gserviceaccount.com".
+func ParseServiceAccountEmail(email string) (saID, projectID string, err error) {
+	const domainSuffix = ".iam.gserviceaccount.com"
+	saID, domain, ok := strings.Cut(email, "@")
+	if !ok || saID == "" {
+		return "", "", fmt.Errorf("invalid service account email %q: expected <sa-id>@<project-id>.iam.gserviceaccount.com", email)
+	}
+	projectID, ok = strings.CutSuffix(domain, domainSuffix)
+	if !ok || projectID == "" {
+		return "", "", fmt.Errorf("invalid service account email %q: expected <sa-id>@<project-id>.iam.gserviceaccount.com", email)
+	}
+	return saID, projectID, nil
+}
+
 // loadJSONSpec loads a JSON specification from either a file path (prefixed with '@')
 // or treats the input as inline JSON. Returns the parsed data as a byte slice.
 func loadJSONSpec(spec string) ([]byte, error) {
@@ -57,63 +86,6 @@ func loadJSONSpec(spec string) ([]byte, error) {
 
 	// Treat as inline JSON
 	return []byte(spec), nil
-}
-
-func runEditorForJSONEditForProtos(existing, value proto.Message) error {
-	marshaler := protojson.MarshalOptions{
-		EmitUnpopulated: true,
-		Indent:          "    ",
-	}
-	existingBytes, err := marshaler.Marshal(existing)
-	if err != nil {
-		return fmt.Errorf("unable to convert existing object to json: %v", err)
-	}
-	updatedBytes, err := runEditor(existingBytes)
-	if err != nil {
-		return err
-	}
-	unmarshaller := protojson.UnmarshalOptions{}
-	return unmarshaller.Unmarshal(updatedBytes, value)
-}
-
-func runEditor(existing []byte) ([]byte, error) {
-	f, err := os.CreateTemp("", "cloud-cli-edit-*.json")
-	if err != nil {
-		return nil, fmt.Errorf("unable to create temp file for editing: %v", err)
-	}
-
-	defer func() {
-		// Clean up temp file.
-		_ = os.Remove(f.Name())
-	}()
-
-	if _, err := f.Write(existing); err != nil {
-		return nil, fmt.Errorf("unable to write existing data to temp file for editing: %v", err)
-	}
-
-	if err := f.Close(); err != nil {
-		return nil, fmt.Errorf("unable to close temp file: %v", err)
-	}
-
-	editor := strings.Split(cmp.Or(os.Getenv("VISUAL"), os.Getenv("EDITOR"), "vim"), " ")
-	program, args := editor[0], editor[1:]
-
-	cmd := exec.Command(program, append(args, f.Name())...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("error executing %q: %v", editor, err)
-	}
-
-	updated, err := os.ReadFile(f.Name())
-	if err != nil {
-		return nil, fmt.Errorf("unable to read updated data from temp file: %v", err)
-	}
-
-	if bytes.Equal(existing, updated) {
-		return nil, fmt.Errorf("no changes detected")
-	}
-	return updated, nil
 }
 
 func promptApplyResource(cctx *CommandContext, existing, actual proto.Message, verboseDiff bool) error {

@@ -61,17 +61,17 @@ commands:
         hidden: true
         description: |
           Authentication domain for the OAuth provider.
-        default: login.tmprl-test.cloud
+        default: login.tmprl.cloud
       - name: audience
         type: string
         hidden: true
-        default: https://saas-api.tmprl-test.cloud
+        default: https://saas-api.tmprl.cloud
         description: |
           OAuth audience parameter for token generation.
       - name: client-id
         type: string
         hidden: true
-        default: XBimMwn90eAnjsiGVbAJ3Hgd9z06jjJB
+        default: Cd2erICRRO9hzuGeoQyqO9iPfiCgCvMZ
         description: |
           OAuth client identifier for authentication.
       - name: redirect-url
@@ -135,7 +135,7 @@ commands:
         hidden: true
         description: |
           Authentication domain for the OAuth provider.
-        default: login.tmprl-test.cloud
+        default: login.tmprl.cloud
 
   # Namespace commands
   - name: cloud namespace
@@ -698,6 +698,76 @@ commands:
         description: |
           The subject alternative name (SAN) from the certificate.
 
+  # Namespace connectivity commands
+  - name: cloud namespace connectivity
+    summary: Manage connectivity rules attached to a namespace
+    description: |
+      Commands for attaching and detaching connectivity rules on a Temporal Cloud
+      namespace. Use 'cloud connectivity' to manage the rules themselves.
+    has-init: false
+  - name: cloud namespace connectivity list
+    summary: List connectivity rules attached to a namespace
+    description: |
+      List all connectivity rules currently attached to a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace connectivity list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace connectivity attach
+    summary: Attach a connectivity rule to a namespace
+    description: |
+      Attach an existing connectivity rule to a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace connectivity attach \
+        --namespace my-namespace.my-account \
+        --connectivity-rule-id <rule-id>
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: connectivity-rule-id
+        type: string[]
+        description: |
+          The ID of a connectivity rule to attach. Repeat to attach multiple.
+        required: true
+  - name: cloud namespace connectivity detach
+    summary: Detach a connectivity rule from a namespace
+    description: |
+      Detach a connectivity rule from a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace connectivity detach \
+        --namespace my-namespace.my-account \
+        --connectivity-rule-id <rule-id>
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: connectivity-rule-id
+        type: string[]
+        description: |
+          The ID of a connectivity rule to detach. Repeat to detach multiple.
+        required: true
+
   # Namespace search-attribute commands
   - name: cloud namespace search-attribute
     summary: Manage custom search attributes for namespaces
@@ -881,8 +951,8 @@ commands:
 
       ```
       temporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \
-        --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
-        --region us-east-1 --aws-account-id 123456789012
+        --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
+        --region us-east-1
       ```
     has-init: false
     option-sets:
@@ -891,18 +961,19 @@ commands:
       - async-operation
       - export-sink
       - export-s3
+      - export-s3-region
   - name: cloud namespace export s3 update
     summary: Update an S3 workflow history export sink
     description: |
       Update the configuration of an existing S3 workflow history export sink.
-      The enabled/disabled state is preserved.
+      Only the flags you provide are changed; omitted flags keep their current
+      values. The enabled/disabled state and region are also preserved.
 
-      Example:
+      Example (rotate IAM role only):
 
       ```
       temporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \
-        --role-name arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket \
-        --region us-east-1 --aws-account-id 123456789012
+        --role-arn arn:aws:iam::123456789012:role/my-new-role
       ```
     has-init: false
     option-sets:
@@ -911,7 +982,24 @@ commands:
       - async-operation
       - resource-version
       - export-sink
-      - export-s3
+    options:
+      - name: role-arn
+        type: string
+        description: |
+          The IAM role ARN that Temporal Cloud assumes for writing to S3
+          (e.g. arn:aws:iam::123456789012:role/my-role). The role name and
+          AWS account ID are parsed from this ARN.
+          If omitted, the current value is kept.
+      - name: bucket-name
+        type: string
+        description: |
+          The name of the destination S3 bucket.
+          If omitted, the current value is kept.
+      - name: kms-arn
+        type: string
+        description: |
+          The AWS KMS key ARN for server-side encryption of exported data.
+          If omitted, the current value is kept.
   - name: cloud namespace export s3 validate
     summary: Validate an S3 workflow history export sink configuration
     description: |
@@ -922,8 +1010,8 @@ commands:
 
       ```
       temporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \
-        --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
-        --region us-east-1 --aws-account-id 123456789012
+        --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
+        --region us-east-1
       ```
     has-init: false
     option-sets:
@@ -931,6 +1019,7 @@ commands:
       - namespace
       - export-sink
       - export-s3
+      - export-s3-region
   - name: cloud namespace export gcs
     summary: Manage GCS workflow history export sinks
     description: |
@@ -946,8 +1035,8 @@ commands:
 
       ```
       temporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \
-        --sa-id my-service-account@my-project.iam.gserviceaccount.com \
-        --bucket-name my-bucket --gcp-project-id my-project --region us-central1
+        --service-account-email my-service-account@my-project.iam.gserviceaccount.com \
+        --bucket-name my-bucket --region us-central1
       ```
     has-init: false
     option-sets:
@@ -956,18 +1045,19 @@ commands:
       - async-operation
       - export-sink
       - export-gcs
+      - export-gcs-region
   - name: cloud namespace export gcs update
     summary: Update a GCS workflow history export sink
     description: |
       Update the configuration of an existing GCS workflow history export sink.
-      The enabled/disabled state is preserved.
+      Only the flags you provide are changed; omitted flags keep their current
+      values. The enabled/disabled state and region are also preserved.
 
-      Example:
+      Example (rotate service account only):
 
       ```
       temporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \
-        --sa-id my-service-account@my-project.iam.gserviceaccount.com \
-        --bucket-name my-bucket --gcp-project-id my-project --region us-central1
+        --service-account-email my-new-service-account@my-project.iam.gserviceaccount.com
       ```
     has-init: false
     option-sets:
@@ -976,7 +1066,19 @@ commands:
       - async-operation
       - resource-version
       - export-sink
-      - export-gcs
+    options:
+      - name: service-account-email
+        type: string
+        description: |
+          The email of the customer service account that Temporal Cloud impersonates
+          for writing to GCS (e.g. my-sa@my-project.iam.gserviceaccount.com).
+          The service account ID and GCP project ID are parsed from this email.
+          If omitted, the current value is kept.
+      - name: bucket-name
+        type: string
+        description: |
+          The name of the destination GCS bucket.
+          If omitted, the current value is kept.
   - name: cloud namespace export gcs validate
     summary: Validate a GCS workflow history export sink configuration
     description: |
@@ -987,8 +1089,8 @@ commands:
 
       ```
       temporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \
-        --sa-id my-service-account@my-project.iam.gserviceaccount.com \
-        --bucket-name my-bucket --gcp-project-id my-project --region us-central1
+        --service-account-email my-service-account@my-project.iam.gserviceaccount.com \
+        --bucket-name my-bucket --region us-central1
       ```
     has-init: false
     option-sets:
@@ -996,6 +1098,7 @@ commands:
       - namespace
       - export-sink
       - export-gcs
+      - export-gcs-region
 
   # Namespace codec commands
   - name: cloud namespace codec
@@ -1316,6 +1419,67 @@ commands:
         required: true
         description: |
           The target region to failover to (e.g., aws-us-west-2).
+
+  # Namespace capacity commands
+  - name: cloud namespace capacity
+    summary: Manage namespace capacity
+    description: |
+      Commands for managing the capacity of Temporal Cloud namespaces.
+
+      Capacity controls whether a namespace runs in on-demand mode or
+      provisioned mode (with a fixed TRU allocation).
+    has-init: false
+  - name: cloud namespace capacity get
+    summary: Get namespace capacity information
+    description: |
+      Retrieve capacity information for a Temporal Cloud namespace, including
+      the current mode (on-demand or provisioned), mode options, and recent usage stats.
+
+      Example:
+
+      ```
+      temporal cloud namespace capacity get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace capacity update
+    summary: Update namespace capacity
+    description: |
+      Update the capacity of a Temporal Cloud namespace. Choose either on-demand
+      mode or provisioned mode (with a fixed TRU allocation).
+
+      Example (switch to on-demand):
+
+      ```
+      temporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode on_demand
+      ```
+
+      Example (switch to provisioned with 4 TRUs):
+
+      ```
+      temporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode provisioned --capacity-value 4
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: capacity-mode
+        type: string-enum
+        enum-values: [on_demand, provisioned]
+        required: true
+        description: |
+          Capacity mode for the namespace. Must be either 'on_demand' or 'provisioned'.
+      - name: capacity-value
+        type: float
+        description: |
+          The provisioned capacity in Temporal Resource Units (TRUs). Required and
+          must be greater than 0 when --capacity-mode is 'provisioned'. Ignored
+          when --capacity-mode is 'on_demand'.
 
   # Nexus endpoint commands
   - name: cloud nexus
@@ -1650,6 +1814,10 @@ commands:
         description: |
           Namespace access to grant, in the format 'namespace=permission'.
           Permission must be one of: admin, write, read. Can be repeated.
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple.
   - name: cloud user-group create-google-group
     summary: Create a Google-group-backed user group
     description: |
@@ -1691,6 +1859,10 @@ commands:
         description: |
           Namespace access to grant, in the format 'namespace=permission'.
           Permission must be one of: admin, write, read. Can be repeated.
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple.
   - name: cloud user-group create-scim-group
     summary: Create a SCIM-backed user group
     description: |
@@ -1732,6 +1904,10 @@ commands:
         description: |
           Namespace access to grant, in the format 'namespace=permission'.
           Permission must be one of: admin, write, read. Can be repeated.
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple.
   - name: cloud user-group get
     summary: Retrieve user group details
     description: |
@@ -1807,7 +1983,7 @@ commands:
     description: |
       Update an existing Temporal Cloud user group's access settings.
 
-      Provide at least one of --account-role or --namespace-access.
+      Provide at least one of --account-role, --namespace-access, or --custom-role.
 
       Example:
 
@@ -1825,6 +2001,7 @@ commands:
       - group-id
       - async-operation
       - resource-version
+      - custom-role
     options:
       - name: account-role
         type: string
@@ -1885,6 +2062,26 @@ commands:
         description: |
           The account-level role to assign. Valid values: owner, admin, developer,
           finance-admin, read, metrics-read.
+  - name: cloud user-group set-custom-roles
+    summary: '[Experimental] Set custom role assignments for a user group'
+    description: |
+      Set the custom roles assigned to a Temporal Cloud user group. Replaces
+      the group's current custom role list. Pass no --custom-role flags to
+      remove all custom roles.
+
+      Example:
+
+      ```
+      temporal cloud user-group set-custom-roles --group-id my-group-id \
+        --custom-role role-id-1 --custom-role role-id-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - group-id
+      - async-operation
+      - resource-version
+      - custom-role
   - name: cloud user-group set-namespace-permissions
     summary: Set namespace permissions for a user group
     description: |
@@ -1990,7 +2187,7 @@ commands:
 
   # Custom role commands
   - name: cloud custom-role
-    summary: Manage Temporal Cloud custom roles
+    summary: '[Experimental] Manage Temporal Cloud custom roles'
     description: |
       Commands for managing Temporal Cloud custom roles.
 
@@ -2007,7 +2204,7 @@ commands:
       tags:
         - custom-roles
   - name: cloud custom-role get
-    summary: Retrieve custom role details
+    summary: '[Experimental] Retrieve custom role details'
     description: |
       Retrieve the configuration and status of a Temporal Cloud custom role.
 
@@ -2021,7 +2218,7 @@ commands:
       - client
       - role-id
   - name: cloud custom-role list
-    summary: List Temporal Cloud custom roles
+    summary: '[Experimental] List Temporal Cloud custom roles'
     description: |
       List all Temporal Cloud custom roles accessible with the current
       authentication credentials.
@@ -2044,7 +2241,7 @@ commands:
         description: |
           Token for retrieving the next page of results in a paginated list.
   - name: cloud custom-role create
-    summary: Create a Temporal Cloud custom role
+    summary: '[Experimental] Create a Temporal Cloud custom role'
     description: |
       Create a new Temporal Cloud custom role from a JSON specification.
 
@@ -2074,7 +2271,7 @@ commands:
           Custom role specification in JSON format. Provide inline JSON
           directly, or use '@path/to/file.json' to load from a file.
   - name: cloud custom-role update
-    summary: Update an existing Temporal Cloud custom role
+    summary: '[Experimental] Update an existing Temporal Cloud custom role'
     description: |
       Update an existing Temporal Cloud custom role from a JSON specification.
       Replaces the role's spec with the provided one.
@@ -2098,7 +2295,7 @@ commands:
           Custom role specification in JSON format. Provide inline JSON
           directly, or use '@path/to/file.json' to load from a file.
   - name: cloud custom-role delete
-    summary: Delete a Temporal Cloud custom role
+    summary: '[Experimental] Delete a Temporal Cloud custom role'
     description: |
       Delete a Temporal Cloud custom role. This action is irreversible.
 
@@ -2114,7 +2311,7 @@ commands:
       - async-operation
       - resource-version
   - name: cloud custom-role apply
-    summary: Create or update a custom role from a specification
+    summary: '[Experimental] Create or update a custom role from a specification'
     description: |
       Apply a custom role configuration to Temporal Cloud. Creates a new role
       if no role with the given name exists, or updates the existing one to
@@ -2142,7 +2339,7 @@ commands:
           Custom role specification in JSON format. Provide inline JSON
           directly, or use '@path/to/file.json' to load from a file.
   - name: cloud custom-role edit
-    summary: Interactively edit a custom role configuration
+    summary: '[Experimental] Interactively edit a custom role configuration'
     description: |
       Open a custom role configuration in your default editor for interactive
       modification. After saving and closing the editor, the changes are
@@ -2268,6 +2465,11 @@ commands:
     option-sets:
       - client
       - async-operation
+    options:
+      - name: enable-stable-ips
+        type: bool
+        description: |
+          Connect the namespace via a predictable set of IPs on the public internet.
 
   - name: cloud connectivity private
     summary: Manage private connectivity rules
@@ -2398,6 +2600,28 @@ commands:
         description: |
           The account-level role to assign. Valid values: owner, admin, developer,
           finance-admin, read, metrics-read.
+  - name: cloud user set-custom-roles
+    summary: '[Experimental] Set custom role assignments for a user'
+    description: |
+      Set the custom roles assigned to a Temporal Cloud user. Replaces the
+      user's current custom role list. Pass no --custom-role flags to remove
+      all custom roles.
+
+      Specify the user with either --user-id or --user-email (not both).
+
+      Example:
+
+      ```
+      temporal cloud user set-custom-roles --user-email alice@example.com \
+        --custom-role role-id-1 --custom-role role-id-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - user-identification
+      - custom-role
   - name: cloud user delete
     summary: Delete a Temporal Cloud user
     description: |
@@ -2510,6 +2734,10 @@ commands:
         description: |
           Namespace access to grant, in the format 'namespace=permission'.
           Permission must be one of: admin, write, read. Can be repeated.
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple.
   - name: cloud user list
     summary: List Temporal Cloud users
     description: |
@@ -2641,6 +2869,10 @@ commands:
         description: |
           Namespace access to grant, in the format 'namespace=permission'.
           Permission must be one of: admin, write, read. Can be repeated.
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple.
 
   - name: cloud service-account create-namespace-scoped
     summary: Create a namespace-scoped service account
@@ -2702,6 +2934,7 @@ commands:
       - client
       - async-operation
       - resource-version
+      - custom-role
     options:
       - name: service-account-id
         type: string
@@ -2732,6 +2965,34 @@ commands:
         description: |
           The permission to grant on the scoped namespace. Valid values: admin, write, read.
           Only valid for namespace-scoped service accounts.
+
+  - name: cloud service-account set-custom-roles
+    summary: '[Experimental] Set custom role assignments for a service account'
+    description: |
+      Set the custom roles assigned to a Temporal Cloud service account.
+      Replaces the service account's current custom role list. Pass no
+      --custom-role flags to remove all custom roles.
+
+      Not valid for namespace-scoped service accounts.
+
+      Example:
+
+      ```
+      temporal cloud service-account set-custom-roles --service-account-id my-sa-id \
+        --custom-role role-id-1 --custom-role role-id-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - custom-role
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account.
 
   - name: cloud service-account edit
     summary: Interactively edit a service account
@@ -2973,7 +3234,7 @@ commands:
       Example:
         temporal cloud account audit-log sink kinesis create \
           --name my-sink \
-          --role-name arn:aws:iam::123456789012:role/MyRole \
+          --role-name MyRole \
           --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \
           --region us-east-1
     has-init: false
@@ -2990,7 +3251,7 @@ commands:
         type: string
         required: true
         description: |
-          ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
+          Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
       - name: destination-uri
         type: string
         required: true
@@ -3011,7 +3272,7 @@ commands:
       Example:
         temporal cloud account audit-log sink kinesis update \
           --name my-sink \
-          --role-name arn:aws:iam::123456789012:role/NewRole
+          --role-name NewRole
     has-init: false
     option-sets:
       - client
@@ -3026,7 +3287,7 @@ commands:
       - name: role-name
         type: string
         description: |
-          ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
+          Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
           If omitted, the current value is kept.
       - name: destination-uri
         type: string
@@ -3049,7 +3310,7 @@ commands:
       Example:
         temporal cloud account audit-log sink kinesis validate \
           --name my-sink \
-          --role-name arn:aws:iam::123456789012:role/MyRole \
+          --role-name MyRole \
           --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \
           --region us-east-1
     has-init: false
@@ -3060,7 +3321,7 @@ commands:
         type: string
         required: true
         description: |
-          ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
+          Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
       - name: destination-uri
         type: string
         required: true
@@ -3097,9 +3358,8 @@ commands:
       ```
       temporal cloud account audit-log sink pubsub create \
         --name my-sink \
-        --service-account-id my-sa \
-        --topic-name my-topic \
-        --gcp-project-id my-project
+        --service-account-email my-sa@my-project.iam.gserviceaccount.com \
+        --topic-name my-topic
       ```
     has-init: false
     option-sets:
@@ -3111,22 +3371,19 @@ commands:
         required: true
         description: |
           The name of the audit log sink.
-      - name: service-account-id
+      - name: service-account-email
         type: string
         required: true
         description: |
-          The GCP service account ID that Temporal Cloud impersonates for writing
-          records to the customer's PubSub topic.
+          The email of the GCP service account that Temporal Cloud impersonates for
+          writing records to the customer's PubSub topic
+          (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and
+          GCP project ID are parsed from this email.
       - name: topic-name
         type: string
         required: true
         description: |
           The destination PubSub topic name where audit logs will be sent.
-      - name: gcp-project-id
-        type: string
-        required: true
-        description: |
-          The GCP project ID of the PubSub topic and service account.
 
   - name: cloud account audit-log sink pubsub update
     summary: Update a PubSub audit log sink
@@ -3138,9 +3395,8 @@ commands:
       ```
       temporal cloud account audit-log sink pubsub update \
         --name my-sink \
-        --service-account-id new-sa \
-        --topic-name new-topic \
-        --gcp-project-id new-project
+        --service-account-email new-sa@new-project.iam.gserviceaccount.com \
+        --topic-name new-topic
       ```
     has-init: false
     option-sets:
@@ -3153,19 +3409,17 @@ commands:
         required: true
         description: |
           The name of the audit log sink to update.
-      - name: service-account-id
+      - name: service-account-email
         type: string
         description: |
-          The GCP service account ID that Temporal Cloud impersonates for writing
-          records to the customer's PubSub topic.
+          The email of the GCP service account that Temporal Cloud impersonates for
+          writing records to the customer's PubSub topic
+          (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and
+          GCP project ID are parsed from this email.
       - name: topic-name
         type: string
         description: |
           The destination PubSub topic name where audit logs will be sent.
-      - name: gcp-project-id
-        type: string
-        description: |
-          The GCP project ID of the PubSub topic and service account.
 
   - name: cloud account audit-log sink pubsub validate
     summary: Validate a PubSub audit log sink
@@ -3177,30 +3431,26 @@ commands:
       ```
       temporal cloud account audit-log sink pubsub validate \
         --name my-sink \
-        --service-account-id my-sa \
-        --topic-name my-topic \
-        --gcp-project-id my-project
+        --service-account-email my-sa@my-project.iam.gserviceaccount.com \
+        --topic-name my-topic
       ```
     has-init: false
     option-sets:
       - client
     options:
-      - name: service-account-id
+      - name: service-account-email
         type: string
         required: true
         description: |
-          The GCP service account ID that Temporal Cloud impersonates for writing
-          records to the customer's PubSub topic.
+          The email of the GCP service account that Temporal Cloud impersonates for
+          writing records to the customer's PubSub topic
+          (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and
+          GCP project ID are parsed from this email.
       - name: topic-name
         type: string
         required: true
         description: |
           The destination PubSub topic name where audit logs will be sent.
-      - name: gcp-project-id
-        type: string
-        required: true
-        description: |
-          The GCP project ID of the PubSub topic and service account.
 
   # Account metrics commands
   - name: cloud account metrics
@@ -3693,7 +3943,7 @@ option-sets:
           Override the Temporal Cloud API server address. Used for connecting
           to non-production environments.
         hidden: true
-        default: saas-api.tmprl-test.cloud:443
+        default: saas-api.tmprl.cloud:443
   - name: diff
     options:
       - name: verbose-diff
@@ -3804,6 +4054,13 @@ option-sets:
         required: true
         description: |
           The ID of the custom role.
+  - name: custom-role
+    options:
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple. When provided,
+          replaces the existing custom role list.
   - name: export-sink
     options:
       - name: sink-name
@@ -3813,47 +4070,45 @@ option-sets:
           The name of the export sink.
   - name: export-s3
     options:
-      - name: role-name
+      - name: role-arn
         type: string
         required: true
         description: |
-          The IAM role ARN that Temporal Cloud assumes for writing to S3.
+          The IAM role ARN that Temporal Cloud assumes for writing to S3
+          (e.g. arn:aws:iam::123456789012:role/my-role). The role name and
+          AWS account ID are parsed from this ARN.
       - name: bucket-name
         type: string
         required: true
         description: |
           The name of the destination S3 bucket.
+      - name: kms-arn
+        type: string
+        description: |
+          The AWS KMS key ARN for server-side encryption of exported data. Optional.
+  - name: export-s3-region
+    options:
       - name: region
         type: string
         required: true
         description: |
           The AWS region where the S3 bucket is located.
-      - name: aws-account-id
-        type: string
-        required: true
-        description: |
-          The AWS account ID associated with the bucket and role.
-      - name: kms-arn
-        type: string
-        description: |
-          The AWS KMS key ARN for server-side encryption of exported data. Optional.
   - name: export-gcs
     options:
-      - name: sa-id
+      - name: service-account-email
         type: string
         required: true
         description: |
-          The customer service account ID that Temporal Cloud impersonates for writing to GCS.
+          The email of the customer service account that Temporal Cloud impersonates
+          for writing to GCS (e.g. my-sa@my-project.iam.gserviceaccount.com).
+          The service account ID and GCP project ID are parsed from this email.
       - name: bucket-name
         type: string
         required: true
         description: |
           The name of the destination GCS bucket.
-      - name: gcp-project-id
-        type: string
-        required: true
-        description: |
-          The GCP project ID associated with the bucket and service account.
+  - name: export-gcs-region
+    options:
       - name: region
         type: string
         required: true

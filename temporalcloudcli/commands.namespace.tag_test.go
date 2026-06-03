@@ -1,831 +1,456 @@
 package temporalcloudcli_test
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
+	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/temporalio/cloud-cli/internal/namespace"
+	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
-	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
-	cmdmock "github.com/temporalio/cloud-cli/temporalcloudcli/mock"
 )
 
-func TestCloudNamespaceTagListCommand_Success(t *testing.T) {
-	expectedTags := []namespace.Tag{
-		{Key: "environment", Value: "production"},
-		{Key: "team", Value: "platform"},
-	}
+// --- ListTags ---
 
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockClient.EXPECT().
-		ListTags(mock.Anything, "test-namespace.test-account").
-		Return(expectedTags, nil)
-
-	var buf bytes.Buffer
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-	}
-	var capturedErr error
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceTagListCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.NoError(t, capturedErr)
-
-	var result struct {
-		Tags []namespace.Tag `json:"Tags"`
-	}
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-	assert.Equal(t, expectedTags, result.Tags)
-}
-
-func TestCloudNamespaceTagListCommand_EmptyList(t *testing.T) {
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockClient.EXPECT().
-		ListTags(mock.Anything, "test-namespace.test-account").
-		Return([]namespace.Tag{}, nil)
-
-	var buf bytes.Buffer
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-	}
-	var capturedErr error
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceTagListCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.NoError(t, capturedErr)
-
-	var result struct {
-		Tags []namespace.Tag `json:"Tags"`
-	}
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-	assert.Empty(t, result.Tags)
-}
-
-func TestCloudNamespaceTagListCommand_Error(t *testing.T) {
-	expectedErr := errors.New("API error")
-
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockClient.EXPECT().
-		ListTags(mock.Anything, "test-namespace.test-account").
-		Return(nil, expectedErr)
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceTagListCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Equal(t, expectedErr, capturedErr)
-}
-
-func TestCloudNamespaceTagCreateCommand_Success(t *testing.T) {
-	expectedOp := &operation.AsyncOperation{Id: "test-operation-id"}
-
-	mockClient := &cmdmock.MockNamespaceClient{}
-	mockClient.On(
-		"SetTag",
-		mock.Anything,
-		namespace.SetTagParams{
-			Namespace:        "test-namespace.test-account",
-			Key:              "environment",
-			Value:            "production",
-			AsyncOperationID: "custom-operation-id",
-		},
-	).Return(expectedOp, nil)
-
-	mockClient.On(
-		"SetTag",
-		mock.Anything,
-		namespace.SetTagParams{
-			Namespace:        "test-namespace.test-account",
-			Key:              "environment",
-			Value:            "production",
-			AsyncOperationID: "",
-		},
-	).Return(expectedOp, nil)
-
-	mockPoller := &cmdmock.MockPoller{}
-	mockPoller.On("PollAsyncOperation", mock.Anything, "test-operation-id", "test-namespace.test-account").
-		Return(nil)
-
+func TestListTags(t *testing.T) {
 	tests := []struct {
-		name         string
-		setupCmd     func(*temporalcloudcli.CloudNamespaceTagCreateCommand)
-		assertResult func(*testing.T, bytes.Buffer)
+		name                    string
+		cmd                     temporalcloudcli.CloudNamespaceTagListCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		expectedErr             string
+		expectedJsonOutput      any
 	}{
 		{
-			name: "async",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceTagCreateCommand) {
-				cmd.Namespace = "test-namespace.test-account"
-				cmd.Key = "environment"
-				cmd.Value = "production"
-				cmd.AsyncOperationId = "custom-operation-id"
-				cmd.Async = true
+			name: "Success",
+			cmd:  temporalcloudcli.CloudNamespaceTagListCommand{NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"}},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: "test-namespace.test-account"}, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{
+						Namespace: &namespacev1.Namespace{
+							Namespace: "test-namespace.test-account",
+							Tags: map[string]string{
+								"team":        "platform",
+								"environment": "production",
+							},
+						},
+					}, nil)
 			},
-			assertResult: func(t *testing.T, buf bytes.Buffer) {
-				var result temporalcloudcli.MutationResult
-				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-				assert.Equal(t, temporalcloudcli.MutationResult{
-					AsyncOp: &operation.AsyncOperation{Id: "test-operation-id"},
-					ID:      "test-namespace.test-account",
-				}, result)
+			expectedJsonOutput: struct {
+				Tags []temporalcloudcli.Tag
+			}{
+				Tags: []temporalcloudcli.Tag{
+					{Key: "environment", Value: "production"},
+					{Key: "team", Value: "platform"},
+				},
 			},
 		},
 		{
-			name: "sync",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceTagCreateCommand) {
-				cmd.Namespace = "test-namespace.test-account"
-				cmd.Key = "environment"
-				cmd.Value = "production"
-				cmd.Async = false
+			name: "EmptyList",
+			cmd:  temporalcloudcli.CloudNamespaceTagListCommand{NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"}},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: "test-namespace.test-account"}, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{
+						Namespace: &namespacev1.Namespace{Namespace: "test-namespace.test-account"},
+					}, nil)
 			},
-			assertResult: func(t *testing.T, buf bytes.Buffer) {
-				assert.Empty(t, buf.String())
+			expectedJsonOutput: struct {
+				Tags []temporalcloudcli.Tag
+			}{Tags: []temporalcloudcli.Tag{}},
+		},
+		{
+			name: "GetNamespaceError",
+			cmd:  temporalcloudcli.CloudNamespaceTagListCommand{NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"}},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("API error"))
 			},
+			expectedErr: "API error",
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			cctx := &temporalcloudcli.CommandContext{
-				Context:         context.Background(),
-				Printer:         &printer.Printer{Output: &buf, JSON: true},
-				NamespaceClient: mockClient,
-				Poller:          mockPoller,
-				RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: true},
-			}
-			var capturedErr error
-			cctx.Options.Fail = func(err error) { capturedErr = err }
-
-			parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceTagCreateCommand(cctx, parent)
-			tt.setupCmd(cmd)
-
-			cmd.Command.Run(&cmd.Command, []string{})
-			require.NoError(t, capturedErr)
-			tt.assertResult(t, buf)
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				JSONOutput:              true,
+				ExpectedError:           tt.expectedErr,
+				ExpectedOutputJson:      tt.expectedJsonOutput,
+			})
 		})
 	}
 }
 
-func TestCloudNamespaceTagCreateCommand_APIError(t *testing.T) {
-	expectedErr := errors.New("API error")
+// --- CreateTag ---
 
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockClient.EXPECT().
-		SetTag(mock.Anything, namespace.SetTagParams{
-			Namespace:        "test-namespace.test-account",
-			Key:              "environment",
-			Value:            "production",
-			AsyncOperationID: "",
-		}).
-		Return(nil, expectedErr)
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-		RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: true},
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceTagCreateCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Key = "environment"
-	cmd.Value = "production"
-	cmd.Async = true
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Equal(t, expectedErr, capturedErr)
-}
-
-func TestCloudNamespaceTagCreateCommand_NothingToChange(t *testing.T) {
-	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
-
+func TestCreateTag(t *testing.T) {
 	tests := []struct {
-		name         string
-		idempotent   bool
-		assertResult func(*testing.T, error, bytes.Buffer)
+		name                    string
+		cmd                     temporalcloudcli.CloudNamespaceTagCreateCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
+		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
+		expectedErr             string
 	}{
 		{
-			name:       "idempotent",
-			idempotent: true,
-			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
-				require.NoError(t, capturedErr)
-				var result temporalcloudcli.Result
-				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-				assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, result)
+			name: "Success",
+			cmd: temporalcloudcli.CloudNamespaceTagCreateCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
+				Key:              "environment",
+				Value:            "production",
 			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					UpdateNamespaceTags(mock.Anything, &cloudservice.UpdateNamespaceTagsRequest{
+						Namespace:    "test-namespace.test-account",
+						TagsToUpsert: map[string]string{"environment": "production"},
+					}, mock.Anything).
+					Return(&cloudservice.UpdateNamespaceTagsResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-create"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, ExpectPromptYesMessage: "Create", PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-create"},
 		},
 		{
-			name:       "not idempotent",
-			idempotent: false,
-			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
-				require.Error(t, capturedErr)
-				assert.Equal(t, nothingToChangeErr, capturedErr)
+			name: "AsyncOperationIdOverride",
+			cmd: temporalcloudcli.CloudNamespaceTagCreateCommand{
+				NamespaceOptions:      temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
+				AsyncOperationOptions: temporalcloudcli.AsyncOperationOptions{AsyncOperationId: "custom-op-id"},
+				Key:                   "environment",
+				Value:                 "production",
 			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					UpdateNamespaceTags(mock.Anything, &cloudservice.UpdateNamespaceTagsRequest{
+						Namespace:        "test-namespace.test-account",
+						TagsToUpsert:     map[string]string{"environment": "production"},
+						AsyncOperationId: "custom-op-id",
+					}, mock.Anything).
+					Return(&cloudservice.UpdateNamespaceTagsResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "custom-op-id"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "custom-op-id"},
+		},
+		{
+			name: "PromptDeclined",
+			cmd: temporalcloudcli.CloudNamespaceTagCreateCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
+				Key:              "environment",
+				Value:            "production",
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: false},
+			expectedErr:   "Aborting create.",
+		},
+		{
+			name: "ApiError",
+			cmd: temporalcloudcli.CloudNamespaceTagCreateCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
+				Key:              "environment",
+				Value:            "production",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					UpdateNamespaceTags(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("API error"))
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			expectedErr:   "create operation failed",
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockClient := cmdmock.NewMockNamespaceClient(t)
-			mockClient.EXPECT().
-				SetTag(mock.Anything, namespace.SetTagParams{
-					Namespace:        "test-namespace.test-account",
-					Key:              "environment",
-					Value:            "production",
-					AsyncOperationID: "",
-				}).
-				Return(nil, nothingToChangeErr)
-
-			var buf bytes.Buffer
-			var capturedErr error
-			cctx := &temporalcloudcli.CommandContext{
-				Context:         context.Background(),
-				Printer:         &printer.Printer{Output: &buf, JSON: true},
-				NamespaceClient: mockClient,
-				RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: true},
-			}
-			cctx.Options.Fail = func(err error) { capturedErr = err }
-
-			parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceTagCreateCommand(cctx, parent)
-			cmd.Namespace = "test-namespace.test-account"
-			cmd.Key = "environment"
-			cmd.Value = "production"
-			cmd.Async = true
-			cmd.Idempotent = tt.idempotent
-
-			cmd.Command.Run(&cmd.Command, []string{})
-			tt.assertResult(t, capturedErr, buf)
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
+				AsyncPollerOptions:      tt.asyncPollerOptions,
+				ExpectedError:           tt.expectedErr,
+			})
 		})
 	}
 }
 
-func TestCloudNamespaceTagCreateCommand_PollingError(t *testing.T) {
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockPoller := cmdmock.NewMockPoller(t)
+// --- UpdateTag ---
 
-	expectedOp := &operation.AsyncOperation{Id: "test-operation-id"}
-	mockClient.EXPECT().
-		SetTag(mock.Anything, namespace.SetTagParams{
-			Namespace:        "test-namespace.test-account",
-			Key:              "environment",
-			Value:            "production",
-			AsyncOperationID: "",
-		}).
-		Return(expectedOp, nil)
-
-	pollErr := errors.New("polling failed")
-	mockPoller.EXPECT().
-		PollAsyncOperation(mock.Anything, "test-operation-id", "test-namespace.test-account").
-		Return(pollErr)
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-		Poller:          mockPoller,
-		RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: true},
+func TestUpdateTag(t *testing.T) {
+	existingNamespace := &namespacev1.Namespace{
+		Namespace: "test-namespace.test-account",
+		Tags:      map[string]string{"environment": "production"},
 	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceTagCreateCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Key = "environment"
-	cmd.Value = "production"
-	cmd.Async = false
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Equal(t, pollErr, capturedErr)
-}
-
-func TestCloudNamespaceTagCreateCommand_UserDeclinesPrompt(t *testing.T) {
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: false},
-		NamespaceClient: mockClient,
-		RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: false},
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-	cctx.Options.Stdin = bytes.NewBufferString("n\n")
-
-	parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceTagCreateCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Key = "environment"
-	cmd.Value = "production"
-	cmd.Async = true
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Contains(t, capturedErr.Error(), "Aborting create")
-}
-
-func TestCloudNamespaceTagCreateCommand_JSONOutputWithoutAutoConfirm(t *testing.T) {
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		JSONOutput:      true,
-		NamespaceClient: mockClient,
-		RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: false},
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceTagCreateCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Key = "environment"
-	cmd.Value = "production"
-	cmd.Async = true
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Contains(t, capturedErr.Error(), "must bypass prompts when using JSON output")
-}
-
-func TestCloudNamespaceTagUpdateCommand_Success(t *testing.T) {
-	expectedOp := &operation.AsyncOperation{Id: "test-operation-id"}
-
-	mockClient := &cmdmock.MockNamespaceClient{}
-	mockClient.On(
-		"SetTag",
-		mock.Anything,
-		namespace.SetTagParams{
-			Namespace:        "test-namespace.test-account",
-			Key:              "environment",
-			Value:            "staging",
-			AsyncOperationID: "custom-operation-id",
-		},
-	).Return(expectedOp, nil)
-
-	mockClient.On(
-		"SetTag",
-		mock.Anything,
-		namespace.SetTagParams{
-			Namespace:        "test-namespace.test-account",
-			Key:              "environment",
-			Value:            "staging",
-			AsyncOperationID: "",
-		},
-	).Return(expectedOp, nil)
-
-	mockPoller := &cmdmock.MockPoller{}
-	mockPoller.On("PollAsyncOperation", mock.Anything, "test-operation-id", "test-namespace.test-account").
-		Return(nil)
 
 	tests := []struct {
-		name         string
-		setupCmd     func(*temporalcloudcli.CloudNamespaceTagUpdateCommand)
-		assertResult func(*testing.T, bytes.Buffer)
+		name                    string
+		cmd                     temporalcloudcli.CloudNamespaceTagUpdateCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
+		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
+		expectedErr             string
 	}{
 		{
-			name: "async",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceTagUpdateCommand) {
-				cmd.Namespace = "test-namespace.test-account"
-				cmd.Key = "environment"
-				cmd.Value = "staging"
-				cmd.AsyncOperationId = "custom-operation-id"
-				cmd.Async = true
+			name: "Success",
+			cmd: temporalcloudcli.CloudNamespaceTagUpdateCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
+				Key:              "environment",
+				Value:            "staging",
 			},
-			assertResult: func(t *testing.T, buf bytes.Buffer) {
-				var result temporalcloudcli.MutationResult
-				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-				assert.Equal(t, temporalcloudcli.MutationResult{
-					AsyncOp: &operation.AsyncOperation{Id: "test-operation-id"},
-					ID:      "test-namespace.test-account",
-				}, result)
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: "test-namespace.test-account"}, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+				c.EXPECT().
+					UpdateNamespaceTags(mock.Anything, &cloudservice.UpdateNamespaceTagsRequest{
+						Namespace:    "test-namespace.test-account",
+						TagsToUpsert: map[string]string{"environment": "staging"},
+					}, mock.Anything).
+					Return(&cloudservice.UpdateNamespaceTagsResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-update"},
+					}, nil)
 			},
+			promptOptions: temporalcloudcli.TestPromptOptions{
+				ExpectPrompApply:          true,
+				ExpectPromptApplyExisting: &namespacev1.Namespace{Tags: map[string]string{"environment": "production"}},
+				ExpectPromptApplyModified: &namespacev1.Namespace{Tags: map[string]string{"environment": "staging"}},
+				PromptResult:              true,
+			},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-update"},
 		},
 		{
-			name: "sync",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceTagUpdateCommand) {
-				cmd.Namespace = "test-namespace.test-account"
-				cmd.Key = "environment"
-				cmd.Value = "staging"
-				cmd.Async = false
+			name: "AsyncOperationIdOverride",
+			cmd: temporalcloudcli.CloudNamespaceTagUpdateCommand{
+				NamespaceOptions:      temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
+				AsyncOperationOptions: temporalcloudcli.AsyncOperationOptions{AsyncOperationId: "custom-op-id"},
+				Key:                   "environment",
+				Value:                 "staging",
 			},
-			assertResult: func(t *testing.T, buf bytes.Buffer) {
-				assert.Empty(t, buf.String())
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+				c.EXPECT().
+					UpdateNamespaceTags(mock.Anything, &cloudservice.UpdateNamespaceTagsRequest{
+						Namespace:        "test-namespace.test-account",
+						TagsToUpsert:     map[string]string{"environment": "staging"},
+						AsyncOperationId: "custom-op-id",
+					}, mock.Anything).
+					Return(&cloudservice.UpdateNamespaceTagsResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "custom-op-id"},
+					}, nil)
 			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "custom-op-id"},
+		},
+		{
+			name: "GetNamespaceError",
+			cmd: temporalcloudcli.CloudNamespaceTagUpdateCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
+				Key:              "environment",
+				Value:            "staging",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("namespace not found"))
+			},
+			expectedErr: "namespace not found",
+		},
+		{
+			name: "PromptDeclined",
+			cmd: temporalcloudcli.CloudNamespaceTagUpdateCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
+				Key:              "environment",
+				Value:            "staging",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
+			expectedErr:   "Aborting update.",
+		},
+		{
+			name: "ApiError",
+			cmd: temporalcloudcli.CloudNamespaceTagUpdateCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
+				Key:              "environment",
+				Value:            "staging",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+				c.EXPECT().
+					UpdateNamespaceTags(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("API error"))
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			expectedErr:   "update operation failed",
+		},
+		{
+			name: "NothingToChange",
+			cmd: temporalcloudcli.CloudNamespaceTagUpdateCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
+				Key:              "environment",
+				Value:            "staging",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+				c.EXPECT().
+					UpdateNamespaceTags(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, status.Error(codes.InvalidArgument, "nothing to change"))
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			expectedErr:   "update operation failed",
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			cctx := &temporalcloudcli.CommandContext{
-				Context:         context.Background(),
-				Printer:         &printer.Printer{Output: &buf, JSON: true},
-				NamespaceClient: mockClient,
-				Poller:          mockPoller,
-			}
-			var capturedErr error
-			cctx.Options.Fail = func(err error) { capturedErr = err }
-
-			parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceTagUpdateCommand(cctx, parent)
-			tt.setupCmd(cmd)
-
-			cmd.Command.Run(&cmd.Command, []string{})
-			require.NoError(t, capturedErr)
-			tt.assertResult(t, buf)
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
+				AsyncPollerOptions:      tt.asyncPollerOptions,
+				ExpectedError:           tt.expectedErr,
+			})
 		})
 	}
 }
 
-func TestCloudNamespaceTagUpdateCommand_APIError(t *testing.T) {
-	expectedErr := errors.New("API error")
+// --- DeleteTag ---
 
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockClient.EXPECT().
-		SetTag(mock.Anything, namespace.SetTagParams{
-			Namespace:        "test-namespace.test-account",
-			Key:              "environment",
-			Value:            "staging",
-			AsyncOperationID: "",
-		}).
-		Return(nil, expectedErr)
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceTagUpdateCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Key = "environment"
-	cmd.Value = "staging"
-	cmd.Async = true
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Equal(t, expectedErr, capturedErr)
-}
-
-func TestCloudNamespaceTagUpdateCommand_PollingError(t *testing.T) {
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockPoller := cmdmock.NewMockPoller(t)
-
-	expectedOp := &operation.AsyncOperation{Id: "test-operation-id"}
-	mockClient.EXPECT().
-		SetTag(mock.Anything, namespace.SetTagParams{
-			Namespace:        "test-namespace.test-account",
-			Key:              "environment",
-			Value:            "staging",
-			AsyncOperationID: "",
-		}).
-		Return(expectedOp, nil)
-
-	pollErr := errors.New("polling failed")
-	mockPoller.EXPECT().
-		PollAsyncOperation(mock.Anything, "test-operation-id", "test-namespace.test-account").
-		Return(pollErr)
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-		Poller:          mockPoller,
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceTagUpdateCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Key = "environment"
-	cmd.Value = "staging"
-	cmd.Async = false
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Equal(t, pollErr, capturedErr)
-}
-
-func TestCloudNamespaceTagDeleteCommand_Success(t *testing.T) {
-	expectedOp := &operation.AsyncOperation{Id: "test-operation-id"}
-
-	mockClient := &cmdmock.MockNamespaceClient{}
-	mockClient.On(
-		"DeleteTags",
-		mock.Anything,
-		namespace.DeleteTagsParams{
-			Namespace:        "test-namespace.test-account",
-			Keys:             []string{"environment"},
-			AsyncOperationID: "custom-operation-id",
+func TestDeleteTag(t *testing.T) {
+	existingNamespace := &namespacev1.Namespace{
+		Namespace: "test-namespace.test-account",
+		Tags: map[string]string{
+			"environment": "production",
+			"team":        "platform",
 		},
-	).Return(expectedOp, nil)
-
-	mockClient.On(
-		"DeleteTags",
-		mock.Anything,
-		namespace.DeleteTagsParams{
-			Namespace:        "test-namespace.test-account",
-			Keys:             []string{"environment"},
-			AsyncOperationID: "",
-		},
-	).Return(expectedOp, nil)
-
-	mockPoller := &cmdmock.MockPoller{}
-	mockPoller.On("PollAsyncOperation", mock.Anything, "test-operation-id", "test-namespace.test-account").
-		Return(nil)
+	}
 
 	tests := []struct {
-		name         string
-		setupCmd     func(*temporalcloudcli.CloudNamespaceTagDeleteCommand)
-		assertResult func(*testing.T, bytes.Buffer)
+		name                    string
+		cmd                     temporalcloudcli.CloudNamespaceTagDeleteCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
+		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
+		expectedErr             string
 	}{
 		{
-			name: "async",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceTagDeleteCommand) {
-				cmd.Namespace = "test-namespace.test-account"
-				cmd.Key = "environment"
-				cmd.AsyncOperationId = "custom-operation-id"
-				cmd.Async = true
+			name: "Success",
+			cmd: temporalcloudcli.CloudNamespaceTagDeleteCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
+				Key:              "environment",
 			},
-			assertResult: func(t *testing.T, buf bytes.Buffer) {
-				var result temporalcloudcli.MutationResult
-				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-				assert.Equal(t, temporalcloudcli.MutationResult{
-					AsyncOp: &operation.AsyncOperation{Id: "test-operation-id"},
-					ID:      "test-namespace.test-account",
-				}, result)
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: "test-namespace.test-account"}, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+				c.EXPECT().
+					UpdateNamespaceTags(mock.Anything, &cloudservice.UpdateNamespaceTagsRequest{
+						Namespace:    "test-namespace.test-account",
+						TagsToRemove: []string{"environment"},
+					}, mock.Anything).
+					Return(&cloudservice.UpdateNamespaceTagsResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-delete"},
+					}, nil)
 			},
+			promptOptions: temporalcloudcli.TestPromptOptions{
+				ExpectPrompApply: true,
+				ExpectPromptApplyExisting: &namespacev1.Namespace{Tags: map[string]string{
+					"environment": "production",
+					"team":        "platform",
+				}},
+				ExpectPromptApplyModified: &namespacev1.Namespace{Tags: map[string]string{"team": "platform"}},
+				PromptResult:              true,
+			},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-delete"},
 		},
 		{
-			name: "sync",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceTagDeleteCommand) {
-				cmd.Namespace = "test-namespace.test-account"
-				cmd.Key = "environment"
-				cmd.Async = false
+			name: "AsyncOperationIdOverride",
+			cmd: temporalcloudcli.CloudNamespaceTagDeleteCommand{
+				NamespaceOptions:      temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
+				AsyncOperationOptions: temporalcloudcli.AsyncOperationOptions{AsyncOperationId: "custom-op-id"},
+				Key:                   "environment",
 			},
-			assertResult: func(t *testing.T, buf bytes.Buffer) {
-				assert.Empty(t, buf.String())
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+				c.EXPECT().
+					UpdateNamespaceTags(mock.Anything, &cloudservice.UpdateNamespaceTagsRequest{
+						Namespace:        "test-namespace.test-account",
+						TagsToRemove:     []string{"environment"},
+						AsyncOperationId: "custom-op-id",
+					}, mock.Anything).
+					Return(&cloudservice.UpdateNamespaceTagsResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "custom-op-id"},
+					}, nil)
 			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "custom-op-id"},
+		},
+		{
+			name: "GetNamespaceError",
+			cmd: temporalcloudcli.CloudNamespaceTagDeleteCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
+				Key:              "environment",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("namespace not found"))
+			},
+			expectedErr: "namespace not found",
+		},
+		{
+			name: "PromptDeclined",
+			cmd: temporalcloudcli.CloudNamespaceTagDeleteCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
+				Key:              "environment",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
+			expectedErr:   "Aborting delete.",
+		},
+		{
+			name: "ApiError",
+			cmd: temporalcloudcli.CloudNamespaceTagDeleteCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "test-namespace.test-account"},
+				Key:              "environment",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNamespace}, nil)
+				c.EXPECT().
+					UpdateNamespaceTags(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("API error"))
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			expectedErr:   "delete operation failed",
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			cctx := &temporalcloudcli.CommandContext{
-				Context:         context.Background(),
-				Printer:         &printer.Printer{Output: &buf, JSON: true},
-				NamespaceClient: mockClient,
-				Poller:          mockPoller,
-				RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: true},
-			}
-			var capturedErr error
-			cctx.Options.Fail = func(err error) { capturedErr = err }
-
-			parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceTagDeleteCommand(cctx, parent)
-			tt.setupCmd(cmd)
-
-			cmd.Command.Run(&cmd.Command, []string{})
-			require.NoError(t, capturedErr)
-			tt.assertResult(t, buf)
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
+				AsyncPollerOptions:      tt.asyncPollerOptions,
+				ExpectedError:           tt.expectedErr,
+			})
 		})
 	}
-}
-
-func TestCloudNamespaceTagDeleteCommand_APIError(t *testing.T) {
-	expectedErr := errors.New("API error")
-
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockClient.EXPECT().
-		DeleteTags(mock.Anything, namespace.DeleteTagsParams{
-			Namespace:        "test-namespace.test-account",
-			Keys:             []string{"environment"},
-			AsyncOperationID: "",
-		}).
-		Return(nil, expectedErr)
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-		RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: true},
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceTagDeleteCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Key = "environment"
-	cmd.Async = true
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Equal(t, expectedErr, capturedErr)
-}
-
-func TestCloudNamespaceTagDeleteCommand_NothingToChange(t *testing.T) {
-	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
-
-	tests := []struct {
-		name         string
-		idempotent   bool
-		assertResult func(*testing.T, error, bytes.Buffer)
-	}{
-		{
-			name:       "idempotent",
-			idempotent: true,
-			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
-				require.NoError(t, capturedErr)
-				var result temporalcloudcli.Result
-				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-				assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, result)
-			},
-		},
-		{
-			name:       "not idempotent",
-			idempotent: false,
-			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
-				require.Error(t, capturedErr)
-				assert.Equal(t, nothingToChangeErr, capturedErr)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockClient := cmdmock.NewMockNamespaceClient(t)
-			mockClient.EXPECT().
-				DeleteTags(mock.Anything, namespace.DeleteTagsParams{
-					Namespace:        "test-namespace.test-account",
-					Keys:             []string{"environment"},
-					AsyncOperationID: "",
-				}).
-				Return(nil, nothingToChangeErr)
-
-			var buf bytes.Buffer
-			var capturedErr error
-			cctx := &temporalcloudcli.CommandContext{
-				Context:         context.Background(),
-				Printer:         &printer.Printer{Output: &buf, JSON: true},
-				NamespaceClient: mockClient,
-				RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: true},
-			}
-			cctx.Options.Fail = func(err error) { capturedErr = err }
-
-			parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceTagDeleteCommand(cctx, parent)
-			cmd.Namespace = "test-namespace.test-account"
-			cmd.Key = "environment"
-			cmd.Async = true
-			cmd.Idempotent = tt.idempotent
-
-			cmd.Command.Run(&cmd.Command, []string{})
-			tt.assertResult(t, capturedErr, buf)
-		})
-	}
-}
-
-func TestCloudNamespaceTagDeleteCommand_PollingError(t *testing.T) {
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-	mockPoller := cmdmock.NewMockPoller(t)
-
-	expectedOp := &operation.AsyncOperation{Id: "test-operation-id"}
-	mockClient.EXPECT().
-		DeleteTags(mock.Anything, namespace.DeleteTagsParams{
-			Namespace:        "test-namespace.test-account",
-			Keys:             []string{"environment"},
-			AsyncOperationID: "",
-		}).
-		Return(expectedOp, nil)
-
-	pollErr := errors.New("polling failed")
-	mockPoller.EXPECT().
-		PollAsyncOperation(mock.Anything, "test-operation-id", "test-namespace.test-account").
-		Return(pollErr)
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		NamespaceClient: mockClient,
-		Poller:          mockPoller,
-		RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: true},
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceTagDeleteCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Key = "environment"
-	cmd.Async = false
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Equal(t, pollErr, capturedErr)
-}
-
-func TestCloudNamespaceTagDeleteCommand_UserDeclinesPrompt(t *testing.T) {
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: false},
-		NamespaceClient: mockClient,
-		RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: false},
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-	cctx.Options.Stdin = bytes.NewBufferString("n\n")
-
-	parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceTagDeleteCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Key = "environment"
-	cmd.Async = true
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Contains(t, capturedErr.Error(), "Aborting delete")
-}
-
-func TestCloudNamespaceTagDeleteCommand_JSONOutputWithoutAutoConfirm(t *testing.T) {
-	mockClient := cmdmock.NewMockNamespaceClient(t)
-
-	var buf bytes.Buffer
-	var capturedErr error
-	cctx := &temporalcloudcli.CommandContext{
-		Context:         context.Background(),
-		Printer:         &printer.Printer{Output: &buf, JSON: true},
-		JSONOutput:      true,
-		NamespaceClient: mockClient,
-		RootCommand:     &temporalcloudcli.CloudCommand{AutoConfirm: false},
-	}
-	cctx.Options.Fail = func(err error) { capturedErr = err }
-
-	parent := &temporalcloudcli.CloudNamespaceTagCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceTagDeleteCommand(cctx, parent)
-	cmd.Namespace = "test-namespace.test-account"
-	cmd.Key = "environment"
-	cmd.Async = true
-
-	cmd.Command.Run(&cmd.Command, []string{})
-	require.Error(t, capturedErr)
-	assert.Contains(t, capturedErr.Error(), "must bypass prompts when using JSON output")
 }

@@ -25,7 +25,7 @@ type ClientOptions struct {
 func (v *ClientOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVar(&v.ApiKey, "api-key", "", "API key for authenticating with Temporal Cloud. Can be used instead of interactive login for automation and CI/CD pipelines.")
-	f.StringVar(&v.Server, "server", "saas-api.tmprl-test.cloud:443", "Override the Temporal Cloud API server address. Used for connecting to non-production environments.")
+	f.StringVar(&v.Server, "server", "saas-api.tmprl.cloud:443", "Override the Temporal Cloud API server address. Used for connecting to non-production environments.")
 	_ = f.MarkHidden("server")
 }
 
@@ -149,6 +149,16 @@ func (v *RoleIdOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "role-id")
 }
 
+type CustomRoleOptions struct {
+	CustomRole []string
+	FlagSet    *pflag.FlagSet
+}
+
+func (v *CustomRoleOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringArrayVar(&v.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple. When provided, replaces the existing custom role list.")
+}
+
 type ExportSinkOptions struct {
 	SinkName string
 	FlagSet  *pflag.FlagSet
@@ -161,43 +171,53 @@ func (v *ExportSinkOptions) BuildFlags(f *pflag.FlagSet) {
 }
 
 type ExportS3Options struct {
-	RoleName     string
-	BucketName   string
-	Region       string
-	AwsAccountId string
-	KmsArn       string
-	FlagSet      *pflag.FlagSet
+	RoleArn    string
+	BucketName string
+	KmsArn     string
+	FlagSet    *pflag.FlagSet
 }
 
 func (v *ExportS3Options) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.StringVar(&v.RoleName, "role-name", "", "The IAM role ARN that Temporal Cloud assumes for writing to S3. Required.")
-	_ = cobra.MarkFlagRequired(f, "role-name")
+	f.StringVar(&v.RoleArn, "role-arn", "", "The IAM role ARN that Temporal Cloud assumes for writing to S3 (e.g. arn:aws:iam::123456789012:role/my-role). The role name and AWS account ID are parsed from this ARN. Required.")
+	_ = cobra.MarkFlagRequired(f, "role-arn")
 	f.StringVar(&v.BucketName, "bucket-name", "", "The name of the destination S3 bucket. Required.")
 	_ = cobra.MarkFlagRequired(f, "bucket-name")
-	f.StringVar(&v.Region, "region", "", "The AWS region where the S3 bucket is located. Required.")
-	_ = cobra.MarkFlagRequired(f, "region")
-	f.StringVar(&v.AwsAccountId, "aws-account-id", "", "The AWS account ID associated with the bucket and role. Required.")
-	_ = cobra.MarkFlagRequired(f, "aws-account-id")
 	f.StringVar(&v.KmsArn, "kms-arn", "", "The AWS KMS key ARN for server-side encryption of exported data. Optional.")
 }
 
+type ExportS3RegionOptions struct {
+	Region  string
+	FlagSet *pflag.FlagSet
+}
+
+func (v *ExportS3RegionOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.Region, "region", "", "The AWS region where the S3 bucket is located. Required.")
+	_ = cobra.MarkFlagRequired(f, "region")
+}
+
 type ExportGcsOptions struct {
-	SaId         string
-	BucketName   string
-	GcpProjectId string
-	Region       string
-	FlagSet      *pflag.FlagSet
+	ServiceAccountEmail string
+	BucketName          string
+	FlagSet             *pflag.FlagSet
 }
 
 func (v *ExportGcsOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.StringVar(&v.SaId, "sa-id", "", "The customer service account ID that Temporal Cloud impersonates for writing to GCS. Required.")
-	_ = cobra.MarkFlagRequired(f, "sa-id")
+	f.StringVar(&v.ServiceAccountEmail, "service-account-email", "", "The email of the customer service account that Temporal Cloud impersonates for writing to GCS (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and GCP project ID are parsed from this email. Required.")
+	_ = cobra.MarkFlagRequired(f, "service-account-email")
 	f.StringVar(&v.BucketName, "bucket-name", "", "The name of the destination GCS bucket. Required.")
 	_ = cobra.MarkFlagRequired(f, "bucket-name")
-	f.StringVar(&v.GcpProjectId, "gcp-project-id", "", "The GCP project ID associated with the bucket and service account. Required.")
-	_ = cobra.MarkFlagRequired(f, "gcp-project-id")
+}
+
+type ExportGcsRegionOptions struct {
+	Region  string
+	FlagSet *pflag.FlagSet
+}
+
+func (v *ExportGcsRegionOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
 	f.StringVar(&v.Region, "region", "", "The GCS bucket region. Required.")
 	_ = cobra.MarkFlagRequired(f, "region")
 }
@@ -482,11 +502,11 @@ func NewCloudAccountAuditLogSinkKinesisCreateCommand(cctx *CommandContext, paren
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create a Kinesis audit log sink"
-	s.Command.Long = "Create an account audit log sink that streams audit events to Amazon Kinesis.\n\nTemporal Cloud assumes the specified IAM role to write events to the Kinesis\nstream identified by the destination URI.\n\nExample:\n  temporal cloud account audit-log sink kinesis create \\\n    --name my-sink \\\n    --role-name arn:aws:iam::123456789012:role/MyRole \\\n    --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \\\n    --region us-east-1"
+	s.Command.Long = "Create an account audit log sink that streams audit events to Amazon Kinesis.\n\nTemporal Cloud assumes the specified IAM role to write events to the Kinesis\nstream identified by the destination URI.\n\nExample:\n  temporal cloud account audit-log sink kinesis create \\\n    --name my-sink \\\n    --role-name MyRole \\\n    --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \\\n    --region us-east-1"
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Name of the audit log sink. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Flags().StringVar(&s.RoleName, "role-name", "", "ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. Required.")
+	s.Command.Flags().StringVar(&s.RoleName, "role-name", "", "Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "role-name")
 	s.Command.Flags().StringVar(&s.DestinationUri, "destination-uri", "", "ARN of the Kinesis stream to deliver audit log events to. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "destination-uri")
@@ -520,11 +540,11 @@ func NewCloudAccountAuditLogSinkKinesisUpdateCommand(cctx *CommandContext, paren
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a Kinesis audit log sink"
-	s.Command.Long = "Update an existing Kinesis audit log sink. Only the flags you provide are changed;\nomitted string flags retain their current values.\n\nExample:\n  temporal cloud account audit-log sink kinesis update \\\n    --name my-sink \\\n    --role-name arn:aws:iam::123456789012:role/NewRole"
+	s.Command.Long = "Update an existing Kinesis audit log sink. Only the flags you provide are changed;\nomitted string flags retain their current values.\n\nExample:\n  temporal cloud account audit-log sink kinesis update \\\n    --name my-sink \\\n    --role-name NewRole"
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Name of the audit log sink to update. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Flags().StringVar(&s.RoleName, "role-name", "", "ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.RoleName, "role-name", "", "Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. If omitted, the current value is kept.")
 	s.Command.Flags().StringVar(&s.DestinationUri, "destination-uri", "", "ARN of the Kinesis stream to deliver audit log events to. If omitted, the current value is kept.")
 	s.Command.Flags().StringVar(&s.Region, "region", "", "AWS region where the Kinesis stream is located (e.g. us-east-1). If omitted, the current value is kept.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -553,9 +573,9 @@ func NewCloudAccountAuditLogSinkKinesisValidateCommand(cctx *CommandContext, par
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "validate [flags]"
 	s.Command.Short = "Validate a Kinesis audit log sink configuration"
-	s.Command.Long = "Validate an audit log sink configuration against Amazon Kinesis without creating it.\nUse this to verify that the IAM role and Kinesis stream are correctly configured\nbefore creating or updating the sink.\n\nExample:\n  temporal cloud account audit-log sink kinesis validate \\\n    --name my-sink \\\n    --role-name arn:aws:iam::123456789012:role/MyRole \\\n    --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \\\n    --region us-east-1"
+	s.Command.Long = "Validate an audit log sink configuration against Amazon Kinesis without creating it.\nUse this to verify that the IAM role and Kinesis stream are correctly configured\nbefore creating or updating the sink.\n\nExample:\n  temporal cloud account audit-log sink kinesis validate \\\n    --name my-sink \\\n    --role-name MyRole \\\n    --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \\\n    --region us-east-1"
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.RoleName, "role-name", "", "ARN of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. Required.")
+	s.Command.Flags().StringVar(&s.RoleName, "role-name", "", "Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "role-name")
 	s.Command.Flags().StringVar(&s.DestinationUri, "destination-uri", "", "ARN of the Kinesis stream to deliver audit log events to. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "destination-uri")
@@ -620,10 +640,9 @@ type CloudAccountAuditLogSinkPubsubCreateCommand struct {
 	Command cobra.Command
 	ClientOptions
 	AsyncOperationOptions
-	Name             string
-	ServiceAccountId string
-	TopicName        string
-	GcpProjectId     string
+	Name                string
+	ServiceAccountEmail string
+	TopicName           string
 }
 
 func NewCloudAccountAuditLogSinkPubsubCreateCommand(cctx *CommandContext, parent *CloudAccountAuditLogSinkPubsubCommand) *CloudAccountAuditLogSinkPubsubCreateCommand {
@@ -633,19 +652,17 @@ func NewCloudAccountAuditLogSinkPubsubCreateCommand(cctx *CommandContext, parent
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create a PubSub audit log sink"
 	if hasHighlighting {
-		s.Command.Long = "Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub create \\\n  --name my-sink \\\n  --service-account-id my-sa \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\x1b[0m"
+		s.Command.Long = "Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub create \\\n  --name my-sink \\\n  --service-account-email my-sa@my-project.iam.gserviceaccount.com \\\n  --topic-name my-topic\x1b[0m"
 	} else {
-		s.Command.Long = "Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub create \\\n  --name my-sink \\\n  --service-account-id my-sa \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\n```"
+		s.Command.Long = "Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub create \\\n  --name my-sink \\\n  --service-account-email my-sa@my-project.iam.gserviceaccount.com \\\n  --topic-name my-topic\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the audit log sink. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The GCP service account ID that Temporal Cloud impersonates for writing records to the customer's PubSub topic. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-id")
+	s.Command.Flags().StringVar(&s.ServiceAccountEmail, "service-account-email", "", "The email of the GCP service account that Temporal Cloud impersonates for writing records to the customer's PubSub topic (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and GCP project ID are parsed from this email. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-email")
 	s.Command.Flags().StringVar(&s.TopicName, "topic-name", "", "The destination PubSub topic name where audit logs will be sent. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "topic-name")
-	s.Command.Flags().StringVar(&s.GcpProjectId, "gcp-project-id", "", "The GCP project ID of the PubSub topic and service account. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "gcp-project-id")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -662,10 +679,9 @@ type CloudAccountAuditLogSinkPubsubUpdateCommand struct {
 	ClientOptions
 	ResourceVersionOptions
 	AsyncOperationOptions
-	Name             string
-	ServiceAccountId string
-	TopicName        string
-	GcpProjectId     string
+	Name                string
+	ServiceAccountEmail string
+	TopicName           string
 }
 
 func NewCloudAccountAuditLogSinkPubsubUpdateCommand(cctx *CommandContext, parent *CloudAccountAuditLogSinkPubsubCommand) *CloudAccountAuditLogSinkPubsubUpdateCommand {
@@ -675,16 +691,15 @@ func NewCloudAccountAuditLogSinkPubsubUpdateCommand(cctx *CommandContext, parent
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a PubSub audit log sink"
 	if hasHighlighting {
-		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-id new-sa \\\n  --topic-name new-topic \\\n  --gcp-project-id new-project\x1b[0m"
+		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-email new-sa@new-project.iam.gserviceaccount.com \\\n  --topic-name new-topic\x1b[0m"
 	} else {
-		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-id new-sa \\\n  --topic-name new-topic \\\n  --gcp-project-id new-project\n```"
+		s.Command.Long = "Updates an existing PubSub audit log sink for the account.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub update \\\n  --name my-sink \\\n  --service-account-email new-sa@new-project.iam.gserviceaccount.com \\\n  --topic-name new-topic\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the audit log sink to update. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The GCP service account ID that Temporal Cloud impersonates for writing records to the customer's PubSub topic.")
+	s.Command.Flags().StringVar(&s.ServiceAccountEmail, "service-account-email", "", "The email of the GCP service account that Temporal Cloud impersonates for writing records to the customer's PubSub topic (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and GCP project ID are parsed from this email.")
 	s.Command.Flags().StringVar(&s.TopicName, "topic-name", "", "The destination PubSub topic name where audit logs will be sent.")
-	s.Command.Flags().StringVar(&s.GcpProjectId, "gcp-project-id", "", "The GCP project ID of the PubSub topic and service account.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
@@ -700,9 +715,8 @@ type CloudAccountAuditLogSinkPubsubValidateCommand struct {
 	Parent  *CloudAccountAuditLogSinkPubsubCommand
 	Command cobra.Command
 	ClientOptions
-	ServiceAccountId string
-	TopicName        string
-	GcpProjectId     string
+	ServiceAccountEmail string
+	TopicName           string
 }
 
 func NewCloudAccountAuditLogSinkPubsubValidateCommand(cctx *CommandContext, parent *CloudAccountAuditLogSinkPubsubCommand) *CloudAccountAuditLogSinkPubsubValidateCommand {
@@ -712,17 +726,15 @@ func NewCloudAccountAuditLogSinkPubsubValidateCommand(cctx *CommandContext, pare
 	s.Command.Use = "validate [flags]"
 	s.Command.Short = "Validate a PubSub audit log sink"
 	if hasHighlighting {
-		s.Command.Long = "Validates a PubSub audit log sink specification without creating or modifying any resources.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub validate \\\n  --name my-sink \\\n  --service-account-id my-sa \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\x1b[0m"
+		s.Command.Long = "Validates a PubSub audit log sink specification without creating or modifying any resources.\n\nExample:\n\n\x1b[1mtemporal cloud account audit-log sink pubsub validate \\\n  --name my-sink \\\n  --service-account-email my-sa@my-project.iam.gserviceaccount.com \\\n  --topic-name my-topic\x1b[0m"
 	} else {
-		s.Command.Long = "Validates a PubSub audit log sink specification without creating or modifying any resources.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub validate \\\n  --name my-sink \\\n  --service-account-id my-sa \\\n  --topic-name my-topic \\\n  --gcp-project-id my-project\n```"
+		s.Command.Long = "Validates a PubSub audit log sink specification without creating or modifying any resources.\n\nExample:\n\n```\ntemporal cloud account audit-log sink pubsub validate \\\n  --name my-sink \\\n  --service-account-email my-sa@my-project.iam.gserviceaccount.com \\\n  --topic-name my-topic\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The GCP service account ID that Temporal Cloud impersonates for writing records to the customer's PubSub topic. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-id")
+	s.Command.Flags().StringVar(&s.ServiceAccountEmail, "service-account-email", "", "The email of the GCP service account that Temporal Cloud impersonates for writing records to the customer's PubSub topic (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and GCP project ID are parsed from this email. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-email")
 	s.Command.Flags().StringVar(&s.TopicName, "topic-name", "", "The destination PubSub topic name where audit logs will be sent. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "topic-name")
-	s.Command.Flags().StringVar(&s.GcpProjectId, "gcp-project-id", "", "The GCP project ID of the PubSub topic and service account. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "gcp-project-id")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -1468,6 +1480,7 @@ type CloudConnectivityPublicCreateCommand struct {
 	Command cobra.Command
 	ClientOptions
 	AsyncOperationOptions
+	EnableStableIps bool
 }
 
 func NewCloudConnectivityPublicCreateCommand(cctx *CommandContext, parent *CloudConnectivityPublicCommand) *CloudConnectivityPublicCreateCommand {
@@ -1482,6 +1495,7 @@ func NewCloudConnectivityPublicCreateCommand(cctx *CommandContext, parent *Cloud
 		s.Command.Long = "Create a new public internet connectivity rule.\n\nExample:\n\n```\ntemporal cloud connectivity public create\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.EnableStableIps, "enable-stable-ips", false, "Connect the namespace via a predictable set of IPs on the public internet.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1501,7 +1515,7 @@ func NewCloudCustomRoleCommand(cctx *CommandContext, parent *CloudCommand) *Clou
 	var s CloudCustomRoleCommand
 	s.Parent = parent
 	s.Command.Use = "custom-role"
-	s.Command.Short = "Manage Temporal Cloud custom roles"
+	s.Command.Short = "[Experimental] Manage Temporal Cloud custom roles"
 	s.Command.Long = "Commands for managing Temporal Cloud custom roles.\n\nCustom roles enable fine-grained authorization by binding sets of\npermissions (resource + actions) to a named role that can be assigned\nto users, user groups, and service accounts."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudCustomRoleApplyCommand(cctx, &s).Command)
@@ -1529,7 +1543,7 @@ func NewCloudCustomRoleApplyCommand(cctx *CommandContext, parent *CloudCustomRol
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "apply [flags]"
-	s.Command.Short = "Create or update a custom role from a specification"
+	s.Command.Short = "[Experimental] Create or update a custom role from a specification"
 	if hasHighlighting {
 		s.Command.Long = "Apply a custom role configuration to Temporal Cloud. Creates a new role\nif no role with the given name exists, or updates the existing one to\nmatch the specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role apply --spec @custom-role.json\x1b[0m"
 	} else {
@@ -1563,7 +1577,7 @@ func NewCloudCustomRoleCreateCommand(cctx *CommandContext, parent *CloudCustomRo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "create [flags]"
-	s.Command.Short = "Create a Temporal Cloud custom role"
+	s.Command.Short = "[Experimental] Create a Temporal Cloud custom role"
 	if hasHighlighting {
 		s.Command.Long = "Create a new Temporal Cloud custom role from a JSON specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample with inline JSON:\n\n\x1b[1mtemporal cloud custom-role create --spec '{\"name\":\"reader\",\"description\":\"...\",\"permissions\":[...]}'\x1b[0m\n\nExample with file path:\n\n\x1b[1mtemporal cloud custom-role create --spec @custom-role.json\x1b[0m"
 	} else {
@@ -1596,7 +1610,7 @@ func NewCloudCustomRoleDeleteCommand(cctx *CommandContext, parent *CloudCustomRo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "delete [flags]"
-	s.Command.Short = "Delete a Temporal Cloud custom role"
+	s.Command.Short = "[Experimental] Delete a Temporal Cloud custom role"
 	if hasHighlighting {
 		s.Command.Long = "Delete a Temporal Cloud custom role. This action is irreversible.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role delete --role-id my-role-id\x1b[0m"
 	} else {
@@ -1630,7 +1644,7 @@ func NewCloudCustomRoleEditCommand(cctx *CommandContext, parent *CloudCustomRole
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "edit [flags]"
-	s.Command.Short = "Interactively edit a custom role configuration"
+	s.Command.Short = "[Experimental] Interactively edit a custom role configuration"
 	if hasHighlighting {
 		s.Command.Long = "Open a custom role configuration in your default editor for interactive\nmodification. After saving and closing the editor, the changes are\napplied to Temporal Cloud.\n\nThe editor is determined by the EDITOR environment variable, falling\nback to 'vi' if not set.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role edit --role-id my-role-id\x1b[0m"
 	} else {
@@ -1662,7 +1676,7 @@ func NewCloudCustomRoleGetCommand(cctx *CommandContext, parent *CloudCustomRoleC
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "get [flags]"
-	s.Command.Short = "Retrieve custom role details"
+	s.Command.Short = "[Experimental] Retrieve custom role details"
 	if hasHighlighting {
 		s.Command.Long = "Retrieve the configuration and status of a Temporal Cloud custom role.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role get --role-id my-role-id\x1b[0m"
 	} else {
@@ -1692,7 +1706,7 @@ func NewCloudCustomRoleListCommand(cctx *CommandContext, parent *CloudCustomRole
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "list [flags]"
-	s.Command.Short = "List Temporal Cloud custom roles"
+	s.Command.Short = "[Experimental] List Temporal Cloud custom roles"
 	if hasHighlighting {
 		s.Command.Long = "List all Temporal Cloud custom roles accessible with the current\nauthentication credentials.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role list\x1b[0m"
 	} else {
@@ -1725,7 +1739,7 @@ func NewCloudCustomRoleUpdateCommand(cctx *CommandContext, parent *CloudCustomRo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "update [flags]"
-	s.Command.Short = "Update an existing Temporal Cloud custom role"
+	s.Command.Short = "[Experimental] Update an existing Temporal Cloud custom role"
 	if hasHighlighting {
 		s.Command.Long = "Update an existing Temporal Cloud custom role from a JSON specification.\nReplaces the role's spec with the provided one.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role update --role-id my-role-id --spec @custom-role.json\x1b[0m"
 	} else {
@@ -1768,11 +1782,11 @@ func NewCloudLoginCommand(cctx *CommandContext, parent *CloudCommand) *CloudLogi
 		s.Command.Long = "Authenticate with Temporal Cloud using browser-based OAuth login.\n\nThis command opens your default browser to complete authentication. Once\nlogged in, your credentials are stored locally for subsequent commands.\n\nExample:\n\n```\ntemporal cloud login\n```\n\nFor headless environments, use --disable-pop-up and follow the printed URL."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Domain, "domain", "login.tmprl-test.cloud", "Authentication domain for the OAuth provider.")
+	s.Command.Flags().StringVar(&s.Domain, "domain", "login.tmprl.cloud", "Authentication domain for the OAuth provider.")
 	_ = s.Command.Flags().MarkHidden("domain")
-	s.Command.Flags().StringVar(&s.Audience, "audience", "https://saas-api.tmprl-test.cloud", "OAuth audience parameter for token generation.")
+	s.Command.Flags().StringVar(&s.Audience, "audience", "https://saas-api.tmprl.cloud", "OAuth audience parameter for token generation.")
 	_ = s.Command.Flags().MarkHidden("audience")
-	s.Command.Flags().StringVar(&s.ClientId, "client-id", "XBimMwn90eAnjsiGVbAJ3Hgd9z06jjJB", "OAuth client identifier for authentication.")
+	s.Command.Flags().StringVar(&s.ClientId, "client-id", "Cd2erICRRO9hzuGeoQyqO9iPfiCgCvMZ", "OAuth client identifier for authentication.")
 	_ = s.Command.Flags().MarkHidden("client-id")
 	s.Command.Flags().StringVar(&s.RedirectUrl, "redirect-url", "http://127.0.0.1:56628/callback", "Redirect URL for OAuth authentication flow.")
 	_ = s.Command.Flags().MarkHidden("redirect-url")
@@ -1803,7 +1817,7 @@ func NewCloudLogoutCommand(cctx *CommandContext, parent *CloudCommand) *CloudLog
 		s.Command.Long = "Log out from Temporal Cloud by clearing stored authentication tokens\nand credentials from the local configuration.\n\nExample:\n\n```\ntemporal cloud logout\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Domain, "domain", "login.tmprl-test.cloud", "Authentication domain for the OAuth provider.")
+	s.Command.Flags().StringVar(&s.Domain, "domain", "login.tmprl.cloud", "Authentication domain for the OAuth provider.")
 	_ = s.Command.Flags().MarkHidden("domain")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -1826,9 +1840,11 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.Long = "Commands for creating, updating, and managing Temporal Cloud namespaces.\n\nNamespaces provide isolation for workflows and activities. Each namespace\nhas its own configuration including retention period, region, and access\ncontrols."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudNamespaceApplyCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCapacityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCertCaCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCertFilterCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCodecCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceConnectivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCreateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceEditCommand(cctx, &s).Command)
@@ -1875,6 +1891,91 @@ func NewCloudNamespaceApplyCommand(cctx *CommandContext, parent *CloudNamespaceC
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCapacityCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceCapacityCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceCapacityCommand {
+	var s CloudNamespaceCapacityCommand
+	s.Parent = parent
+	s.Command.Use = "capacity"
+	s.Command.Short = "Manage namespace capacity"
+	s.Command.Long = "Commands for managing the capacity of Temporal Cloud namespaces.\n\nCapacity controls whether a namespace runs in on-demand mode or\nprovisioned mode (with a fixed TRU allocation)."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceCapacityGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCapacityUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceCapacityGetCommand struct {
+	Parent  *CloudNamespaceCapacityCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceCapacityGetCommand(cctx *CommandContext, parent *CloudNamespaceCapacityCommand) *CloudNamespaceCapacityGetCommand {
+	var s CloudNamespaceCapacityGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get namespace capacity information"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve capacity information for a Temporal Cloud namespace, including\nthe current mode (on-demand or provisioned), mode options, and recent usage stats.\n\nExample:\n\n\x1b[1mtemporal cloud namespace capacity get --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve capacity information for a Temporal Cloud namespace, including\nthe current mode (on-demand or provisioned), mode options, and recent usage stats.\n\nExample:\n\n```\ntemporal cloud namespace capacity get --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCapacityUpdateCommand struct {
+	Parent  *CloudNamespaceCapacityCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	CapacityMode  cliext.FlagStringEnum
+	CapacityValue float32
+}
+
+func NewCloudNamespaceCapacityUpdateCommand(cctx *CommandContext, parent *CloudNamespaceCapacityCommand) *CloudNamespaceCapacityUpdateCommand {
+	var s CloudNamespaceCapacityUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update namespace capacity"
+	if hasHighlighting {
+		s.Command.Long = "Update the capacity of a Temporal Cloud namespace. Choose either on-demand\nmode or provisioned mode (with a fixed TRU allocation).\n\nExample (switch to on-demand):\n\n\x1b[1mtemporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode on_demand\x1b[0m\n\nExample (switch to provisioned with 4 TRUs):\n\n\x1b[1mtemporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode provisioned --capacity-value 4\x1b[0m"
+	} else {
+		s.Command.Long = "Update the capacity of a Temporal Cloud namespace. Choose either on-demand\nmode or provisioned mode (with a fixed TRU allocation).\n\nExample (switch to on-demand):\n\n```\ntemporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode on_demand\n```\n\nExample (switch to provisioned with 4 TRUs):\n\n```\ntemporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode provisioned --capacity-value 4\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.CapacityMode = cliext.NewFlagStringEnum([]string{"on_demand", "provisioned"}, "")
+	s.Command.Flags().Var(&s.CapacityMode, "capacity-mode", "Capacity mode for the namespace. Must be either 'on_demand' or 'provisioned'. Accepted values: on_demand, provisioned. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "capacity-mode")
+	s.Command.Flags().Float32Var(&s.CapacityValue, "capacity-value", 0, "The provisioned capacity in Temporal Resource Units (TRUs). Required and must be greater than 0 when --capacity-mode is 'provisioned'. Ignored when --capacity-mode is 'on_demand'.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2241,6 +2342,125 @@ func NewCloudNamespaceCodecSetCommand(cctx *CommandContext, parent *CloudNamespa
 	return &s
 }
 
+type CloudNamespaceConnectivityCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceConnectivityCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceConnectivityCommand {
+	var s CloudNamespaceConnectivityCommand
+	s.Parent = parent
+	s.Command.Use = "connectivity"
+	s.Command.Short = "Manage connectivity rules attached to a namespace"
+	s.Command.Long = "Commands for attaching and detaching connectivity rules on a Temporal Cloud\nnamespace. Use 'cloud connectivity' to manage the rules themselves."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceConnectivityAttachCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceConnectivityDetachCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceConnectivityListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceConnectivityAttachCommand struct {
+	Parent  *CloudNamespaceConnectivityCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ConnectivityRuleId []string
+}
+
+func NewCloudNamespaceConnectivityAttachCommand(cctx *CommandContext, parent *CloudNamespaceConnectivityCommand) *CloudNamespaceConnectivityAttachCommand {
+	var s CloudNamespaceConnectivityAttachCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "attach [flags]"
+	s.Command.Short = "Attach a connectivity rule to a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Attach an existing connectivity rule to a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace connectivity attach \\\n  --namespace my-namespace.my-account \\\n  --connectivity-rule-id <rule-id>\x1b[0m"
+	} else {
+		s.Command.Long = "Attach an existing connectivity rule to a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace connectivity attach \\\n  --namespace my-namespace.my-account \\\n  --connectivity-rule-id <rule-id>\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringArrayVar(&s.ConnectivityRuleId, "connectivity-rule-id", nil, "The ID of a connectivity rule to attach. Repeat to attach multiple. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "connectivity-rule-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceConnectivityDetachCommand struct {
+	Parent  *CloudNamespaceConnectivityCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ConnectivityRuleId []string
+}
+
+func NewCloudNamespaceConnectivityDetachCommand(cctx *CommandContext, parent *CloudNamespaceConnectivityCommand) *CloudNamespaceConnectivityDetachCommand {
+	var s CloudNamespaceConnectivityDetachCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "detach [flags]"
+	s.Command.Short = "Detach a connectivity rule from a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Detach a connectivity rule from a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace connectivity detach \\\n  --namespace my-namespace.my-account \\\n  --connectivity-rule-id <rule-id>\x1b[0m"
+	} else {
+		s.Command.Long = "Detach a connectivity rule from a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace connectivity detach \\\n  --namespace my-namespace.my-account \\\n  --connectivity-rule-id <rule-id>\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringArrayVar(&s.ConnectivityRuleId, "connectivity-rule-id", nil, "The ID of a connectivity rule to detach. Repeat to detach multiple. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "connectivity-rule-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceConnectivityListCommand struct {
+	Parent  *CloudNamespaceConnectivityCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceConnectivityListCommand(cctx *CommandContext, parent *CloudNamespaceConnectivityCommand) *CloudNamespaceConnectivityListCommand {
+	var s CloudNamespaceConnectivityListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List connectivity rules attached to a namespace"
+	if hasHighlighting {
+		s.Command.Long = "List all connectivity rules currently attached to a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace connectivity list --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "List all connectivity rules currently attached to a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace connectivity list --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type CloudNamespaceCreateCommand struct {
 	Parent  *CloudNamespaceCommand
 	Command cobra.Command
@@ -2523,6 +2743,7 @@ type CloudNamespaceExportGcsCreateCommand struct {
 	AsyncOperationOptions
 	ExportSinkOptions
 	ExportGcsOptions
+	ExportGcsRegionOptions
 }
 
 func NewCloudNamespaceExportGcsCreateCommand(cctx *CommandContext, parent *CloudNamespaceExportGcsCommand) *CloudNamespaceExportGcsCreateCommand {
@@ -2532,9 +2753,9 @@ func NewCloudNamespaceExportGcsCreateCommand(cctx *CommandContext, parent *Cloud
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create a GCS workflow history export sink"
 	if hasHighlighting {
-		s.Command.Long = "Create a new GCS workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project --region us-central1\x1b[0m"
+		s.Command.Long = "Create a new GCS workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --region us-central1\x1b[0m"
 	} else {
-		s.Command.Long = "Create a new GCS workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n```\ntemporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project --region us-central1\n```"
+		s.Command.Long = "Create a new GCS workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n```\ntemporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --region us-central1\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -2542,6 +2763,7 @@ func NewCloudNamespaceExportGcsCreateCommand(cctx *CommandContext, parent *Cloud
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
 	s.ExportGcsOptions.BuildFlags(s.Command.Flags())
+	s.ExportGcsRegionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2558,7 +2780,8 @@ type CloudNamespaceExportGcsUpdateCommand struct {
 	AsyncOperationOptions
 	ResourceVersionOptions
 	ExportSinkOptions
-	ExportGcsOptions
+	ServiceAccountEmail string
+	BucketName          string
 }
 
 func NewCloudNamespaceExportGcsUpdateCommand(cctx *CommandContext, parent *CloudNamespaceExportGcsCommand) *CloudNamespaceExportGcsUpdateCommand {
@@ -2568,17 +2791,18 @@ func NewCloudNamespaceExportGcsUpdateCommand(cctx *CommandContext, parent *Cloud
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a GCS workflow history export sink"
 	if hasHighlighting {
-		s.Command.Long = "Update the configuration of an existing GCS workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project --region us-central1\x1b[0m"
+		s.Command.Long = "Update the configuration of an existing GCS workflow history export sink.\nOnly the flags you provide are changed; omitted flags keep their current\nvalues. The enabled/disabled state and region are also preserved.\n\nExample (rotate service account only):\n\n\x1b[1mtemporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-new-service-account@my-project.iam.gserviceaccount.com\x1b[0m"
 	} else {
-		s.Command.Long = "Update the configuration of an existing GCS workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n```\ntemporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project --region us-central1\n```"
+		s.Command.Long = "Update the configuration of an existing GCS workflow history export sink.\nOnly the flags you provide are changed; omitted flags keep their current\nvalues. The enabled/disabled state and region are also preserved.\n\nExample (rotate service account only):\n\n```\ntemporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-new-service-account@my-project.iam.gserviceaccount.com\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ServiceAccountEmail, "service-account-email", "", "The email of the customer service account that Temporal Cloud impersonates for writing to GCS (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and GCP project ID are parsed from this email. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.BucketName, "bucket-name", "", "The name of the destination GCS bucket. If omitted, the current value is kept.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
-	s.ExportGcsOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2594,6 +2818,7 @@ type CloudNamespaceExportGcsValidateCommand struct {
 	NamespaceOptions
 	ExportSinkOptions
 	ExportGcsOptions
+	ExportGcsRegionOptions
 }
 
 func NewCloudNamespaceExportGcsValidateCommand(cctx *CommandContext, parent *CloudNamespaceExportGcsCommand) *CloudNamespaceExportGcsValidateCommand {
@@ -2603,15 +2828,16 @@ func NewCloudNamespaceExportGcsValidateCommand(cctx *CommandContext, parent *Clo
 	s.Command.Use = "validate [flags]"
 	s.Command.Short = "Validate a GCS workflow history export sink configuration"
 	if hasHighlighting {
-		s.Command.Long = "Validate a GCS workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project --region us-central1\x1b[0m"
+		s.Command.Long = "Validate a GCS workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --region us-central1\x1b[0m"
 	} else {
-		s.Command.Long = "Validate a GCS workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n```\ntemporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --sa-id my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --gcp-project-id my-project --region us-central1\n```"
+		s.Command.Long = "Validate a GCS workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n```\ntemporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --service-account-email my-service-account@my-project.iam.gserviceaccount.com \\\n  --bucket-name my-bucket --region us-central1\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
 	s.ExportGcsOptions.BuildFlags(s.Command.Flags())
+	s.ExportGcsRegionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2706,6 +2932,7 @@ type CloudNamespaceExportS3CreateCommand struct {
 	AsyncOperationOptions
 	ExportSinkOptions
 	ExportS3Options
+	ExportS3RegionOptions
 }
 
 func NewCloudNamespaceExportS3CreateCommand(cctx *CommandContext, parent *CloudNamespaceExportS3Command) *CloudNamespaceExportS3CreateCommand {
@@ -2715,9 +2942,9 @@ func NewCloudNamespaceExportS3CreateCommand(cctx *CommandContext, parent *CloudN
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create an S3 workflow history export sink"
 	if hasHighlighting {
-		s.Command.Long = "Create a new S3 workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1 --aws-account-id 123456789012\x1b[0m"
+		s.Command.Long = "Create a new S3 workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1\x1b[0m"
 	} else {
-		s.Command.Long = "Create a new S3 workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n```\ntemporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1 --aws-account-id 123456789012\n```"
+		s.Command.Long = "Create a new S3 workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n```\ntemporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -2725,6 +2952,7 @@ func NewCloudNamespaceExportS3CreateCommand(cctx *CommandContext, parent *CloudN
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
 	s.ExportS3Options.BuildFlags(s.Command.Flags())
+	s.ExportS3RegionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2741,7 +2969,9 @@ type CloudNamespaceExportS3UpdateCommand struct {
 	AsyncOperationOptions
 	ResourceVersionOptions
 	ExportSinkOptions
-	ExportS3Options
+	RoleArn    string
+	BucketName string
+	KmsArn     string
 }
 
 func NewCloudNamespaceExportS3UpdateCommand(cctx *CommandContext, parent *CloudNamespaceExportS3Command) *CloudNamespaceExportS3UpdateCommand {
@@ -2751,17 +2981,19 @@ func NewCloudNamespaceExportS3UpdateCommand(cctx *CommandContext, parent *CloudN
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update an S3 workflow history export sink"
 	if hasHighlighting {
-		s.Command.Long = "Update the configuration of an existing S3 workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket \\\n  --region us-east-1 --aws-account-id 123456789012\x1b[0m"
+		s.Command.Long = "Update the configuration of an existing S3 workflow history export sink.\nOnly the flags you provide are changed; omitted flags keep their current\nvalues. The enabled/disabled state and region are also preserved.\n\nExample (rotate IAM role only):\n\n\x1b[1mtemporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-new-role\x1b[0m"
 	} else {
-		s.Command.Long = "Update the configuration of an existing S3 workflow history export sink.\nThe enabled/disabled state is preserved.\n\nExample:\n\n```\ntemporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-new-role --bucket-name my-bucket \\\n  --region us-east-1 --aws-account-id 123456789012\n```"
+		s.Command.Long = "Update the configuration of an existing S3 workflow history export sink.\nOnly the flags you provide are changed; omitted flags keep their current\nvalues. The enabled/disabled state and region are also preserved.\n\nExample (rotate IAM role only):\n\n```\ntemporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-new-role\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.RoleArn, "role-arn", "", "The IAM role ARN that Temporal Cloud assumes for writing to S3 (e.g. arn:aws:iam::123456789012:role/my-role). The role name and AWS account ID are parsed from this ARN. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.BucketName, "bucket-name", "", "The name of the destination S3 bucket. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.KmsArn, "kms-arn", "", "The AWS KMS key ARN for server-side encryption of exported data. If omitted, the current value is kept.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
-	s.ExportS3Options.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2777,6 +3009,7 @@ type CloudNamespaceExportS3ValidateCommand struct {
 	NamespaceOptions
 	ExportSinkOptions
 	ExportS3Options
+	ExportS3RegionOptions
 }
 
 func NewCloudNamespaceExportS3ValidateCommand(cctx *CommandContext, parent *CloudNamespaceExportS3Command) *CloudNamespaceExportS3ValidateCommand {
@@ -2786,15 +3019,16 @@ func NewCloudNamespaceExportS3ValidateCommand(cctx *CommandContext, parent *Clou
 	s.Command.Use = "validate [flags]"
 	s.Command.Short = "Validate an S3 workflow history export sink configuration"
 	if hasHighlighting {
-		s.Command.Long = "Validate an S3 workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1 --aws-account-id 123456789012\x1b[0m"
+		s.Command.Long = "Validate an S3 workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1\x1b[0m"
 	} else {
-		s.Command.Long = "Validate an S3 workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n```\ntemporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-name arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1 --aws-account-id 123456789012\n```"
+		s.Command.Long = "Validate an S3 workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n```\ntemporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \\\n  --region us-east-1\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
 	s.ExportS3Options.BuildFlags(s.Command.Flags())
+	s.ExportS3RegionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -4010,6 +4244,7 @@ func NewCloudServiceAccountCommand(cctx *CommandContext, parent *CloudCommand) *
 	s.Command.AddCommand(&NewCloudServiceAccountEditCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudServiceAccountGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudServiceAccountListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudServiceAccountSetCustomRolesCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudServiceAccountUpdateCommand(cctx, &s).Command)
 	return &s
 }
@@ -4023,6 +4258,7 @@ type CloudServiceAccountCreateCommand struct {
 	Description     string
 	AccountRole     string
 	NamespaceAccess []string
+	CustomRole      []string
 }
 
 func NewCloudServiceAccountCreateCommand(cctx *CommandContext, parent *CloudServiceAccountCommand) *CloudServiceAccountCreateCommand {
@@ -4042,6 +4278,7 @@ func NewCloudServiceAccountCreateCommand(cctx *CommandContext, parent *CloudServ
 	s.Command.Flags().StringVar(&s.Description, "description", "", "An optional description for the service account.")
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
 	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.Command.Flags().StringArrayVar(&s.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -4223,12 +4460,49 @@ func NewCloudServiceAccountListCommand(cctx *CommandContext, parent *CloudServic
 	return &s
 }
 
+type CloudServiceAccountSetCustomRolesCommand struct {
+	Parent  *CloudServiceAccountCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	CustomRoleOptions
+	ServiceAccountId string
+}
+
+func NewCloudServiceAccountSetCustomRolesCommand(cctx *CommandContext, parent *CloudServiceAccountCommand) *CloudServiceAccountSetCustomRolesCommand {
+	var s CloudServiceAccountSetCustomRolesCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set-custom-roles [flags]"
+	s.Command.Short = "[Experimental] Set custom role assignments for a service account"
+	if hasHighlighting {
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud service account.\nReplaces the service account's current custom role list. Pass no\n--custom-role flags to remove all custom roles.\n\nNot valid for namespace-scoped service accounts.\n\nExample:\n\n\x1b[1mtemporal cloud service-account set-custom-roles --service-account-id my-sa-id \\\n  --custom-role role-id-1 --custom-role role-id-2\x1b[0m"
+	} else {
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud service account.\nReplaces the service account's current custom role list. Pass no\n--custom-role flags to remove all custom roles.\n\nNot valid for namespace-scoped service accounts.\n\nExample:\n\n```\ntemporal cloud service-account set-custom-roles --service-account-id my-sa-id \\\n  --custom-role role-id-1 --custom-role role-id-2\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The ID of the service account. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.CustomRoleOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type CloudServiceAccountUpdateCommand struct {
 	Parent  *CloudServiceAccountCommand
 	Command cobra.Command
 	ClientOptions
 	AsyncOperationOptions
 	ResourceVersionOptions
+	CustomRoleOptions
 	ServiceAccountId    string
 	Name                string
 	Description         string
@@ -4259,6 +4533,7 @@ func NewCloudServiceAccountUpdateCommand(cctx *CommandContext, parent *CloudServ
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.CustomRoleOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -4286,6 +4561,7 @@ func NewCloudUserCommand(cctx *CommandContext, parent *CloudCommand) *CloudUserC
 	s.Command.AddCommand(&NewCloudUserInviteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserSetAccountRoleCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserSetCustomRolesCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserSetNamespacePermissionsCommand(cctx, &s).Command)
 	return &s
 }
@@ -4431,6 +4707,7 @@ type CloudUserInviteCommand struct {
 	Email           string
 	AccountRole     string
 	NamespaceAccess []string
+	CustomRole      []string
 }
 
 func NewCloudUserInviteCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserInviteCommand {
@@ -4449,6 +4726,7 @@ func NewCloudUserInviteCommand(cctx *CommandContext, parent *CloudUserCommand) *
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "email")
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
 	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.Command.Flags().StringArrayVar(&s.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -4530,6 +4808,41 @@ func NewCloudUserSetAccountRoleCommand(cctx *CommandContext, parent *CloudUserCo
 	return &s
 }
 
+type CloudUserSetCustomRolesCommand struct {
+	Parent  *CloudUserCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	UserIdentificationOptions
+	CustomRoleOptions
+}
+
+func NewCloudUserSetCustomRolesCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserSetCustomRolesCommand {
+	var s CloudUserSetCustomRolesCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set-custom-roles [flags]"
+	s.Command.Short = "[Experimental] Set custom role assignments for a user"
+	if hasHighlighting {
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user. Replaces the\nuser's current custom role list. Pass no --custom-role flags to remove\nall custom roles.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n\x1b[1mtemporal cloud user set-custom-roles --user-email alice@example.com \\\n  --custom-role role-id-1 --custom-role role-id-2\x1b[0m"
+	} else {
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user. Replaces the\nuser's current custom role list. Pass no --custom-role flags to remove\nall custom roles.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n```\ntemporal cloud user set-custom-roles --user-email alice@example.com \\\n  --custom-role role-id-1 --custom-role role-id-2\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
+	s.CustomRoleOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type CloudUserSetNamespacePermissionsCommand struct {
 	Parent  *CloudUserCommand
 	Command cobra.Command
@@ -4588,6 +4901,7 @@ func NewCloudUserGroupCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.AddCommand(&NewCloudUserGroupListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserGroupMembersCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserGroupSetAccountRoleCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserGroupSetCustomRolesCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserGroupSetNamespacePermissionsCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserGroupUpdateCommand(cctx, &s).Command)
 	return &s
@@ -4637,6 +4951,7 @@ type CloudUserGroupCreateCloudGroupCommand struct {
 	DisplayName     string
 	AccountRole     string
 	NamespaceAccess []string
+	CustomRole      []string
 }
 
 func NewCloudUserGroupCreateCloudGroupCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupCreateCloudGroupCommand {
@@ -4655,6 +4970,7 @@ func NewCloudUserGroupCreateCloudGroupCommand(cctx *CommandContext, parent *Clou
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "display-name")
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
 	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.Command.Flags().StringArrayVar(&s.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -4674,6 +4990,7 @@ type CloudUserGroupCreateGoogleGroupCommand struct {
 	GoogleGroupEmail string
 	AccountRole      string
 	NamespaceAccess  []string
+	CustomRole       []string
 }
 
 func NewCloudUserGroupCreateGoogleGroupCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupCreateGoogleGroupCommand {
@@ -4694,6 +5011,7 @@ func NewCloudUserGroupCreateGoogleGroupCommand(cctx *CommandContext, parent *Clo
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "google-group-email")
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
 	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.Command.Flags().StringArrayVar(&s.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -4713,6 +5031,7 @@ type CloudUserGroupCreateScimGroupCommand struct {
 	ScimIdpId       string
 	AccountRole     string
 	NamespaceAccess []string
+	CustomRole      []string
 }
 
 func NewCloudUserGroupCreateScimGroupCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupCreateScimGroupCommand {
@@ -4733,6 +5052,7 @@ func NewCloudUserGroupCreateScimGroupCommand(cctx *CommandContext, parent *Cloud
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "scim-idp-id")
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
 	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.Command.Flags().StringArrayVar(&s.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -5032,6 +5352,41 @@ func NewCloudUserGroupSetAccountRoleCommand(cctx *CommandContext, parent *CloudU
 	return &s
 }
 
+type CloudUserGroupSetCustomRolesCommand struct {
+	Parent  *CloudUserGroupCommand
+	Command cobra.Command
+	ClientOptions
+	GroupIdOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	CustomRoleOptions
+}
+
+func NewCloudUserGroupSetCustomRolesCommand(cctx *CommandContext, parent *CloudUserGroupCommand) *CloudUserGroupSetCustomRolesCommand {
+	var s CloudUserGroupSetCustomRolesCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set-custom-roles [flags]"
+	s.Command.Short = "[Experimental] Set custom role assignments for a user group"
+	if hasHighlighting {
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user group. Replaces\nthe group's current custom role list. Pass no --custom-role flags to\nremove all custom roles.\n\nExample:\n\n\x1b[1mtemporal cloud user-group set-custom-roles --group-id my-group-id \\\n  --custom-role role-id-1 --custom-role role-id-2\x1b[0m"
+	} else {
+		s.Command.Long = "Set the custom roles assigned to a Temporal Cloud user group. Replaces\nthe group's current custom role list. Pass no --custom-role flags to\nremove all custom roles.\n\nExample:\n\n```\ntemporal cloud user-group set-custom-roles --group-id my-group-id \\\n  --custom-role role-id-1 --custom-role role-id-2\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.GroupIdOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.CustomRoleOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type CloudUserGroupSetNamespacePermissionsCommand struct {
 	Parent  *CloudUserGroupCommand
 	Command cobra.Command
@@ -5075,6 +5430,7 @@ type CloudUserGroupUpdateCommand struct {
 	GroupIdOptions
 	AsyncOperationOptions
 	ResourceVersionOptions
+	CustomRoleOptions
 	AccountRole     string
 	NamespaceAccess []string
 }
@@ -5086,9 +5442,9 @@ func NewCloudUserGroupUpdateCommand(cctx *CommandContext, parent *CloudUserGroup
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a Temporal Cloud user group"
 	if hasHighlighting {
-		s.Command.Long = "Update an existing Temporal Cloud user group's access settings.\n\nProvide at least one of --account-role or --namespace-access.\n\nExample:\n\n\x1b[1mtemporal cloud user-group update --group-id my-group-id --account-role developer\ntemporal cloud user-group update --group-id my-group-id \\\n  --namespace-access my-namespace.my-account=write\ntemporal cloud user-group update --group-id my-group-id --account-role admin \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\x1b[0m"
+		s.Command.Long = "Update an existing Temporal Cloud user group's access settings.\n\nProvide at least one of --account-role, --namespace-access, or --custom-role.\n\nExample:\n\n\x1b[1mtemporal cloud user-group update --group-id my-group-id --account-role developer\ntemporal cloud user-group update --group-id my-group-id \\\n  --namespace-access my-namespace.my-account=write\ntemporal cloud user-group update --group-id my-group-id --account-role admin \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\x1b[0m"
 	} else {
-		s.Command.Long = "Update an existing Temporal Cloud user group's access settings.\n\nProvide at least one of --account-role or --namespace-access.\n\nExample:\n\n```\ntemporal cloud user-group update --group-id my-group-id --account-role developer\ntemporal cloud user-group update --group-id my-group-id \\\n  --namespace-access my-namespace.my-account=write\ntemporal cloud user-group update --group-id my-group-id --account-role admin \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\n```"
+		s.Command.Long = "Update an existing Temporal Cloud user group's access settings.\n\nProvide at least one of --account-role, --namespace-access, or --custom-role.\n\nExample:\n\n```\ntemporal cloud user-group update --group-id my-group-id --account-role developer\ntemporal cloud user-group update --group-id my-group-id \\\n  --namespace-access my-namespace.my-account=write\ntemporal cloud user-group update --group-id my-group-id --account-role admin \\\n  --namespace-access my-namespace.my-account=write \\\n  --namespace-access other-namespace.my-account=read\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account role to assign to the group. Role must be one of: admin, developer, finance-admin, read.")
@@ -5097,6 +5453,7 @@ func NewCloudUserGroupUpdateCommand(cctx *CommandContext, parent *CloudUserGroup
 	s.GroupIdOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.CustomRoleOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
