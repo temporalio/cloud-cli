@@ -1,8 +1,8 @@
-# Temporal Cloud CLI (Public Preview)
+# Temporal Cloud CLI (Pre-release)
 
 Plugin for the Temporal command-line interface to work with [Temporal Cloud](https://docs.temporal.io/cloud).
 
-> **Public Preview:** This plugin (and the underlying Cloud Ops API) is offered as a Public Preview. While it is production-worthy, it is subject to change. Please reach out to [Temporal Support](https://support.temporal.io/) if you have questions.
+> **Pre-release:** This plugin is offered as a pre-release and is subject to change. Please reach out to [Temporal Support](https://support.temporal.io/) if you have questions.
 
 ## Prerequisites
 
