@@ -1849,6 +1849,7 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.AddCommand(&NewCloudNamespaceDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceEditCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceExportCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceFairnessCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceHaCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceLifecycleCommand(cctx, &s).Command)
@@ -2469,13 +2470,14 @@ type CloudNamespaceCreateCommand struct {
 	CodecServerOptions
 	CaCertificateOptions
 	CertificateFilterOptions
-	Name                   string
-	Region                 []string
-	RetentionDays          int
-	ApiKeyAuthEnabled      bool
-	EnableDeleteProtection bool
-	SearchAttribute        []string
-	ConnectionRuleId       []string
+	Name                    string
+	Region                  []string
+	RetentionDays           int
+	ApiKeyAuthEnabled       bool
+	EnableDeleteProtection  bool
+	EnableTaskQueueFairness bool
+	SearchAttribute         []string
+	ConnectionRuleId        []string
 }
 
 func NewCloudNamespaceCreateCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceCreateCommand {
@@ -2497,6 +2499,7 @@ func NewCloudNamespaceCreateCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Command.Flags().IntVar(&s.RetentionDays, "retention-days", 0, "Number of days to retain closed workflow history. If not specified, the server default applies.")
 	s.Command.Flags().BoolVar(&s.ApiKeyAuthEnabled, "api-key-auth-enabled", false, "Enable API key authentication for the namespace.")
 	s.Command.Flags().BoolVar(&s.EnableDeleteProtection, "enable-delete-protection", false, "Prevent accidental deletion of this namespace.")
+	s.Command.Flags().BoolVar(&s.EnableTaskQueueFairness, "enable-task-queue-fairness", false, "Enable task queue fairness for the namespace.")
 	s.Command.Flags().StringArrayVar(&s.SearchAttribute, "search-attribute", nil, "Custom search attribute as 'name=Type' (e.g. --search-attribute myAttr=Keyword). Valid types: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Repeat to add multiple.")
 	s.Command.Flags().StringArrayVar(&s.ConnectionRuleId, "connection-rule-id", nil, "Private connectivity rule ID. Repeat to specify multiple.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -3029,6 +3032,88 @@ func NewCloudNamespaceExportS3ValidateCommand(cctx *CommandContext, parent *Clou
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
 	s.ExportS3Options.BuildFlags(s.Command.Flags())
 	s.ExportS3RegionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceFairnessCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceFairnessCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceFairnessCommand {
+	var s CloudNamespaceFairnessCommand
+	s.Parent = parent
+	s.Command.Use = "fairness"
+	s.Command.Short = "Manage namespace task queue fairness settings"
+	s.Command.Long = "Commands for managing task queue fairness configuration of Temporal Cloud namespaces."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceFairnessGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceFairnessSetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceFairnessGetCommand struct {
+	Parent  *CloudNamespaceFairnessCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceFairnessGetCommand(cctx *CommandContext, parent *CloudNamespaceFairnessCommand) *CloudNamespaceFairnessGetCommand {
+	var s CloudNamespaceFairnessGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get namespace task queue fairness configuration"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the current task queue fairness configuration for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace fairness get --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the current task queue fairness configuration for a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace fairness get --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceFairnessSetCommand struct {
+	Parent  *CloudNamespaceFairnessCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	EnableTaskQueueFairness bool
+}
+
+func NewCloudNamespaceFairnessSetCommand(cctx *CommandContext, parent *CloudNamespaceFairnessCommand) *CloudNamespaceFairnessSetCommand {
+	var s CloudNamespaceFairnessSetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set [flags]"
+	s.Command.Short = "Set namespace task queue fairness configuration"
+	if hasHighlighting {
+		s.Command.Long = "Set the task queue fairness configuration for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace fairness set --namespace my-namespace.my-account --enable-task-queue-fairness=true\x1b[0m"
+	} else {
+		s.Command.Long = "Set the task queue fairness configuration for a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace fairness set --namespace my-namespace.my-account --enable-task-queue-fairness=true\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.EnableTaskQueueFairness, "enable-task-queue-fairness", false, "Enable or disable task queue fairness for the namespace. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "enable-task-queue-fairness")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

@@ -91,6 +91,7 @@ func TestCreateNamespace_BuildsSpec(t *testing.T) {
 		RetentionDays: 30,
 		ApiKeyAuth:    &namespacev1.ApiKeyAuthSpec{Enabled: true},
 		Lifecycle:     &namespacev1.LifecycleSpec{EnableDeleteProtection: false},
+		Fairness:      &namespacev1.FairnessSpec{TaskQueueFairnessEnabled: true},
 		MtlsAuth: &namespacev1.MtlsAuthSpec{
 			CertificateFilters: []*namespacev1.CertificateFilterSpec{
 				{CommonName: "test.temporal.io"},
@@ -121,10 +122,11 @@ func TestCreateNamespace_BuildsSpec(t *testing.T) {
 
 	var buf bytes.Buffer
 	err := temporalcloudcli.CreateNamespace(context.Background(), temporalcloudcli.CreateNamespaceParams{
-		Name:              "my-namespace",
-		Regions:           []string{"aws-us-east-1"},
-		RetentionDays:     30,
-		ApiKeyAuthEnabled: true,
+		Name:                    "my-namespace",
+		Regions:                 []string{"aws-us-east-1"},
+		RetentionDays:           30,
+		ApiKeyAuthEnabled:       true,
+		EnableTaskQueueFairness: proto.Bool(true),
 		CertificateFilterOptions: temporalcloudcli.CertificateFilterOptions{
 			CertificateFilter: []string{
 				`{"commonName":"test.temporal.io"}`,
@@ -139,6 +141,53 @@ func TestCreateNamespace_BuildsSpec(t *testing.T) {
 		OperationHandler:   mockHandler,
 	})
 	require.NoError(t, err)
+}
+
+// TestCreateNamespace_Fairness verifies the tri-state fairness flag: unset leaves
+// the Fairness sub-spec out entirely, while an explicit true/false populates it.
+func TestCreateNamespace_Fairness(t *testing.T) {
+	tests := []struct {
+		name             string
+		enableFairness   *bool
+		expectedFairness *namespacev1.FairnessSpec
+	}{
+		{name: "Unset", enableFairness: nil, expectedFairness: nil},
+		{name: "ExplicitTrue", enableFairness: proto.Bool(true), expectedFairness: &namespacev1.FairnessSpec{TaskQueueFairnessEnabled: true}},
+		{name: "ExplicitFalse", enableFairness: proto.Bool(false), expectedFairness: &namespacev1.FairnessSpec{TaskQueueFairnessEnabled: false}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expectedSpec := baseNamespaceSpec()
+			expectedSpec.Fairness = tt.expectedFairness
+
+			mockCloud := cloudmock.NewMockCloudServiceClient(t)
+			mockPrompter := cmdmock.NewMockPrompter(t)
+			mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+
+			mockPrompter.EXPECT().
+				PromptApply(&namespacev1.NamespaceSpec{}, specMatcher(expectedSpec), false).
+				Return(nil)
+			mockCloud.EXPECT().
+				CreateNamespace(context.Background(), createReqMatcher(expectedSpec)).
+				Return(defaultCreateResponse, nil)
+			mockHandler.EXPECT().
+				HandleOperation(defaultCreateResponse.AsyncOperation, "my-namespace.my-account").
+				Return(nil)
+
+			var buf bytes.Buffer
+			err := temporalcloudcli.CreateNamespace(context.Background(), temporalcloudcli.CreateNamespaceParams{
+				Name:                    "my-namespace",
+				Regions:                 []string{"aws-us-east-1"},
+				EnableTaskQueueFairness: tt.enableFairness,
+				Cloud:                   mockCloud,
+				Printer:                 &printer.Printer{Output: &buf, JSON: true},
+				Prompter:                mockPrompter,
+				UnmarshalProtoJSON:      noopUnmarshalProtoJSON,
+				OperationHandler:        mockHandler,
+			})
+			require.NoError(t, err)
+		})
+	}
 }
 
 // TestCreateNamespace_Error verifies that an API error is forwarded to HandleCreateErr.
