@@ -14,7 +14,10 @@ import (
 func (c *CloudLoginCommand) run(cctx *CommandContext, _ []string) error {
 	var oauthConfig cliext.OAuthConfig
 	// First load the config to see if we have an existing config
-	loadClientOauthRes, err := cliext.LoadClientOAuth(cliext.LoadClientOAuthOptions{})
+	loadClientOauthRes, err := cliext.LoadClientOAuth(cliext.LoadClientOAuthOptions{
+		ConfigFilePath: c.Parent.ConfigFile,
+		ProfileName:    c.Parent.Profile,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to load profile: %w", err)
 	}
@@ -41,7 +44,9 @@ func (c *CloudLoginCommand) run(cctx *CommandContext, _ []string) error {
 
 	oauthConfig.Token = oauthToken
 	if err := cliext.StoreClientOAuth(cliext.StoreClientOAuthOptions{
-		OAuth: &oauthConfig,
+		ConfigFilePath: c.Parent.ConfigFile,
+		ProfileName:    c.Parent.Profile,
+		OAuth:          &oauthConfig,
 	}); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
@@ -92,7 +97,9 @@ func (c *CloudLogoutCommand) run(cctx *CommandContext, _ []string) error {
 	}
 
 	if err := cliext.StoreClientOAuth(cliext.StoreClientOAuthOptions{
-		OAuth: &cliext.OAuthConfig{},
+		ConfigFilePath: c.Parent.ConfigFile,
+		ProfileName:    c.Parent.Profile,
+		OAuth:          &cliext.OAuthConfig{},
 	}); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
