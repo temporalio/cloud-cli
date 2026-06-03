@@ -9,13 +9,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	connectivityrulev1 "go.temporal.io/cloud-sdk/api/connectivityrule/v1"
+	operation "go.temporal.io/cloud-sdk/api/operation/v1"
+	"google.golang.org/protobuf/proto"
+
 	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 	cmdmock "github.com/temporalio/cloud-cli/temporalcloudcli/mock"
-	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
-	connectivityrulev1 "go.temporal.io/cloud-sdk/api/connectivityrule/v1"
-	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 )
 
 // TestListConnectivityRules_Success verifies that ListConnectivityRules prints the returned rules.
@@ -113,7 +115,7 @@ func TestGetConnectivityRule_Success(t *testing.T) {
 
 	var out connectivityrulev1.ConnectivityRule
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
-	assert.Equal(t, connectivityrulev1.ConnectivityRule{Id: "rule-1"}, out)
+	assert.True(t, proto.Equal(&connectivityrulev1.ConnectivityRule{Id: "rule-1"}, &out))
 }
 
 // TestGetConnectivityRule_Error verifies that an API error propagates.
