@@ -1,6 +1,8 @@
 package temporalcloudcli
 
 import (
+	"errors"
+
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	"google.golang.org/protobuf/proto"
@@ -49,6 +51,14 @@ func (c *CloudNamespaceFairnessSetCommand) run(cctx *CommandContext, _ []string)
 		newSpec.Fairness = &namespacev1.FairnessSpec{}
 	}
 	newSpec.Fairness.TaskQueueFairnessEnabled = c.EnableTaskQueueFairness
+
+	yes, err := cctx.GetPrompter().PromptApply(ns.Spec, newSpec, false)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting set.")
+	}
 
 	rv := ns.ResourceVersion
 	if c.ResourceVersion != "" {
