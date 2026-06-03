@@ -1,0 +1,53 @@
+name: Check Generated Files
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify-generation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: "go.mod"
+          check-latest: true
+          cache: false
+      - name: Add Go bin to PATH
+        run: echo "$HOME/go/bin" >> $GITHUB_PATH
+      - name: Run commands generation command
+        run: make gen 
+      - name: Verify no changes were generated
+        run: |
+          # Check if there are any uncommitted changes in the working directory
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "::notice::Generated files are up to date. No changes detected."
+          else
+            echo "::error::Detected uncommitted changes after running the generation command. Please run the generator and commit the changes."
+            git status
+            git diff
+            exit 1
+          fi
+  build:
+    runs-on: ubuntu-latest
+    needs: verify-generation
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: "go.mod"
+          check-latest: true
+          cache: false
+      - name: Build the cli binary
+        run: make build

@@ -1,0 +1,241 @@
+# Implementing a New Command
+
+Adding a command is a five-step process. Read this top-to-bottom before touching any file.
+
+## Step 1 — Declare the command in `commands.yml`
+
+Every command is declared in `temporalcloudcli/commands.yml`. The `name` field is the full command path. Key fields:
+
+```yaml
+- name: cloud <subcommand>          # full dotted path; determines the cobra tree
+  summary: One-line description
+  description: |
+    Longer description shown in --help.
+    Include a usage example block.
+  has-init: false                   # true only for the root `cloud` command
+  option-sets:
+    - client                        # adds --api-key / --server flags
+  options:
+    - name: my-flag
+      type: string                  # string | bool | int
+      required: true
+      short: f                      # optional single-char shorthand
+      description: |
+        Flag description.
+  docs:                             # optional; used for generated docs site
+    keywords: [...]
+    description-header: ...
+    tags: [...]
+```
+
+**Reusable option-sets** (defined at the bottom of `commands.yml`):
+- `client` — adds `--api-key` and `--server` (hidden); include on every command that calls the API
+- `diff` — adds `--verbose-diff`; include **only** on `apply` and `edit` commands that show a full spec diff before applying. Do NOT include on targeted mutation commands like `set` or `update` — those don't show a diff.
+- `common` — external package options; only on the root `cloud` command
+
+**Read-only commands** do not need `--async-operation-id` or `--resource-version`.
+
+## Step 2 — Regenerate `commands.gen.go`
+
+```bash
+make gen
+```
+
+This clones the `temporalio/cli` repo, builds the `gen-commands` tool, and regenerates `temporalcloudcli/commands.gen.go`. **Never edit `commands.gen.go` by hand.**
+
+The generator derives the Go struct name from the command path:
+- `cloud namespace get` → `CloudNamespaceGetCommand`
+- `cloud whoami` → `CloudWhoamiCommand`
+
+Each generated struct embeds the option-set structs (e.g. `ClientOptions`) and a `cobra.Command`. The generator wires `s.Command.Run` to call `s.run(cctx, args)`, which you implement in Step 3.
+
+## Step 3 — Implement `commands.<name>.go`
+
+Create `temporalcloudcli/commands.<name>.go` and implement the `run` method(s) on the generated command struct(s). Application logic lives directly in `run` — no exported function or params struct needed.
+
+Use `cctx.GetCloudClient(opts)` to acquire the gRPC client. For mutation commands, pass the response and error to `cctx.GetPoller(client, asyncOpts).HandleXxxOperation(ctx, resp, err)`.
+
+**Read command skeleton:**
+```go
+package temporalcloudcli
+
+import (
+    cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+    "github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
+)
+
+func (c *CloudNamespaceFooGetCommand) run(cctx *CommandContext, _ []string) error {
+    client, err := cctx.GetCloudClient(c.ClientOptions)
+    if err != nil {
+        return err
+    }
+    res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
+    if err != nil {
+        return err
+    }
+    return cctx.Printer.PrintResource(res.Namespace, printer.PrintResourceOptions{})
+}
+```
+
+**Mutation command skeleton:**
+```go
+func (c *CloudNamespaceFooSetCommand) run(cctx *CommandContext, _ []string) error {
+    client, err := cctx.GetCloudClient(c.ClientOptions)
+    if err != nil {
+        return err
+    }
+    res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
+    if err != nil {
+        return err
+    }
+    ns := res.Namespace
+    newSpec := proto.Clone(ns.Spec).(*namespacev1.NamespaceSpec)
+    // mutate newSpec...
+
+    rv := ns.ResourceVersion
+    if c.ResourceVersion != "" {
+        rv = c.ResourceVersion
+    }
+    resp, err := client.UpdateNamespace(cctx, &cloudservice.UpdateNamespaceRequest{
+        Namespace:        c.Namespace,
+        Spec:             newSpec,
+        ResourceVersion:  rv,
+        AsyncOperationId: c.AsyncOperationId,
+    })
+    return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+```
+
+Use the correct `Handle*` method for the operation type:
+- `HandleCreateAsyncOperationResponse` — creates
+- `HandleUpdateOperation` — updates
+- `HandleDeleteOperation` — deletes
+
+See `temporalcloudcli/commands.apikey.go` (`CloudApikeyGetCommand`, `CloudApikeyCreateForMeCommand`) for the canonical examples.
+
+**Printer methods:**
+- `PrintStructured(v, opts)` — flat data or raw responses with no clear spec boundary
+- `PrintResource(v, opts)` — use for any get command that returns a resource or sub-resource. Pass a struct with top-level identity fields (e.g. `Namespace string`) and a `Spec` field for the content. In text mode this renders the identity at the top and spec fields indented under `Spec:`; in JSON mode it falls back to `PrintStructured`.
+- `PrintResourceList(list, printOpts, tableOpts)` — slice of resources as a table
+
+**Common helpers in `common.go`:**
+- `loadJSONSpec(spec string)` — loads JSON from inline string or `@file` path
+- `isNotFoundErr(err)` / `isNothingChangedErr(idempotent, err)` — gRPC error helpers
+
+**Editor (for `edit` commands):** use `cctx.GetEditor()` which returns an `editor.Editor`. Call `editor.EditProto(existing)` — it serializes the proto to JSON, opens `$EDITOR`, deserializes the result, and returns `(modified proto.Message, error)`. Overridden in tests via `TestCommandOptions.EditorOptions`.
+
+After creating the file, run `git add temporalcloudcli/commands.<name>.go`.
+
+## Step 4 — Write tests in `commands.<name>_test.go`
+
+See `.aiagent/rules/testing.md` for testing patterns and the integration test template.
+
+After creating the file, run `git add temporalcloudcli/commands.<name>_test.go`.
+
+## Step 5 — Verify
+
+```bash
+make all   # gen + build + test (unit tests only; integration tests need -tags=integration)
+```
+
+---
+
+## Best Practices
+
+### Targeted `set` Commands on Map Fields Are Additive
+
+When a `set` command targets a map field (e.g. namespace permissions), changes must be **merged into the existing map** rather than replacing it wholesale. Provide empty-value syntax to remove an entry (e.g. `namespace=`).
+
+```go
+// Good: merge changes into existing map; empty permission = remove
+func applyNamespaceAccessChanges(existing map[string]*identityv1.NamespaceAccess, changes []string) (map[string]*identityv1.NamespaceAccess, error) {
+    result := make(map[string]*identityv1.NamespaceAccess, len(existing))
+    for k, v := range existing {
+        result[k] = v
+    }
+    for _, a := range changes {
+        ns, perm, _ := strings.Cut(a, "=")
+        if perm == "" {
+            delete(result, ns)
+        } else {
+            result[ns] = &identityv1.NamespaceAccess{Permission: permissionNames[perm]}
+        }
+    }
+    ...
+}
+```
+
+**Validate inputs before any API call** using a dry-run (nil existing map) so format errors are returned immediately without network round-trips:
+
+```go
+// Validate before API calls — applyNamespaceAccessChanges(nil, ...) is safe (range over nil map is a no-op)
+if _, err := applyNamespaceAccessChanges(nil, c.NamespaceAccesses); err != nil {
+    return err
+}
+user, err := resolveUser(...)  // only called after inputs are known-good
+...
+accesses, _ := applyNamespaceAccessChanges(user.Spec.Access.NamespaceAccesses, c.NamespaceAccesses)
+```
+
+### Server-side vs Client-side Responsibility
+
+**Don't implement client-side validation that the server handles:**
+- Duplicate detection (e.g. adding the same cert filter twice) — let the server return an error
+- Complex business rules and constraints — trust the server's validation
+
+**Do implement client-side validation for:**
+- Required fields before making API calls
+- Flag combinations that don't make sense (e.g. both `--file` and `--data` provided)
+- Input format validation (e.g. valid base64, file exists)
+
+### Prefer Standard Library Over Custom Helpers
+
+Use Go standard library functions instead of writing custom helpers.
+
+```go
+// Good: simple loop with slices.ContainsFunc
+var newFilters []*namespacev1.CertificateFilterSpec
+for _, existing := range existingFilters {
+    shouldRemove := slices.ContainsFunc(params.Filters, func(toRemove *namespacev1.CertificateFilterSpec) bool {
+        return certFiltersEqual(existing, toRemove)
+    })
+    if shouldRemove {
+        continue
+    }
+    newFilters = append(newFilters, existing)
+}
+```
+
+### Mutation Commands Must Prompt for Confirmation
+
+All create and delete commands must prompt the user before making changes using `cctx.GetPrompter()`:
+
+```go
+// Simple yes/no (create, delete):
+yes, err := cctx.GetPrompter().PromptYes("Create")
+if err != nil {
+    return err
+}
+if !yes {
+    return errors.New("Aborting create.")
+}
+
+// Apply/edit commands (shows diff before prompting):
+yes, err := cctx.GetPrompter().PromptApply(existing, modified, c.VerboseDiff)
+if err != nil {
+    return err
+}
+if !yes {
+    return nil  // PromptApply already prints "Aborting apply."
+}
+```
+
+Update commands typically don't need prompts (user explicitly provides new values).
+
+### Code Simplicity
+
+Keep code simple and readable over clever abstractions.
+- **Good:** Simple loop with `continue` for filtering
+- **Bad:** Complex `slices.DeleteFunc` with nested logic
+
+If logic is hard to understand at a glance, it's probably too complex.

@@ -1,0 +1,28 @@
+dir: "{{ .InterfaceDir }}/mock"
+filename: mock.go
+pkgname: mock
+packages:
+  github.com/temporalio/cloud-cli/temporalcloudcli:
+    interfaces:
+      Poller:
+      NamespaceClient:
+      AsyncOperationHandler:
+      Prompter:
+  github.com/temporalio/cloud-cli/temporalcloudcli/async:
+    interfaces:
+      Poller:
+  github.com/temporalio/cloud-cli/temporalcloudcli/prompter:
+    interfaces:
+      Prompter:
+  github.com/temporalio/cloud-cli/temporalcloudcli/editor:
+    interfaces:
+      Editor:
+  github.com/temporalio/cloud-cli/internal/namespace:
+    interfaces:
+      CloudService:
+  go.temporal.io/cloud-sdk/api/cloudservice/v1:
+    config:
+      dir: "internal/cloudservice/mock"
+      include-auto-generated: true
+    interfaces:
+      CloudServiceClient:

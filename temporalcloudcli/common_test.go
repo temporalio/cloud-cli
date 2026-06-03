@@ -1,0 +1,289 @@
+package temporalcloudcli_test
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/temporalio/cloud-cli/temporalcloudcli"
+	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
+	cmdmock "github.com/temporalio/cloud-cli/temporalcloudcli/mock"
+	operation "go.temporal.io/cloud-sdk/api/operation/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+func newTestCommandContext(t *testing.T, buf *bytes.Buffer) *temporalcloudcli.CommandContext {
+	t.Helper()
+	return &temporalcloudcli.CommandContext{
+		Context: context.Background(),
+		Printer: &printer.Printer{Output: buf, JSON: true},
+	}
+}
+
+func TestAsyncOperationHandler_Async(t *testing.T) {
+	mockPoller := cmdmock.NewMockPoller(t)
+	var buf bytes.Buffer
+	cctx := newTestCommandContext(t, &buf)
+	cctx.Poller = mockPoller
+
+	handler := temporalcloudcli.NewOperationHandler(cctx, temporalcloudcli.AsyncOperationOptions{Async: true}, temporalcloudcli.ClientOptions{})
+	op := &operation.AsyncOperation{Id: "op-async-123"}
+
+	err := handler.HandleOperation(op, "my-namespace")
+	require.NoError(t, err)
+
+	var out temporalcloudcli.MutationResult
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	assert.Equal(t, temporalcloudcli.MutationResult{AsyncOp: op, ID: "my-namespace"}, out)
+}
+
+func TestAsyncOperationHandler_Sync(t *testing.T) {
+	mockPoller := cmdmock.NewMockPoller(t)
+	var buf bytes.Buffer
+	cctx := newTestCommandContext(t, &buf)
+	cctx.Poller = mockPoller
+
+	handler := temporalcloudcli.NewOperationHandler(cctx, temporalcloudcli.AsyncOperationOptions{Async: false}, temporalcloudcli.ClientOptions{})
+	op := &operation.AsyncOperation{Id: "op-sync-456"}
+
+	mockPoller.EXPECT().PollAsyncOperation(cctx, "op-sync-456", "my-namespace").Return(nil)
+
+	err := handler.HandleOperation(op, "my-namespace")
+	require.NoError(t, err)
+}
+
+func TestAsyncOperationHandler_PollingError(t *testing.T) {
+	pollingErr := errors.New("polling failed")
+	mockPoller := cmdmock.NewMockPoller(t)
+	var buf bytes.Buffer
+	cctx := newTestCommandContext(t, &buf)
+	cctx.Poller = mockPoller
+
+	handler := temporalcloudcli.NewOperationHandler(cctx, temporalcloudcli.AsyncOperationOptions{Async: false}, temporalcloudcli.ClientOptions{})
+	op := &operation.AsyncOperation{Id: "op-poll-789"}
+
+	mockPoller.EXPECT().PollAsyncOperation(cctx, "op-poll-789", "my-namespace").Return(pollingErr)
+
+	err := handler.HandleOperation(op, "my-namespace")
+	require.ErrorIs(t, err, pollingErr)
+}
+
+func TestAsyncOperationHandler_HandleUpdateErr_NothingToChange_Idempotent(t *testing.T) {
+	var buf bytes.Buffer
+	cctx := newTestCommandContext(t, &buf)
+	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
+
+	handler := temporalcloudcli.NewOperationHandler(cctx, temporalcloudcli.AsyncOperationOptions{Idempotent: true}, temporalcloudcli.ClientOptions{})
+
+	err := handler.HandleUpdateErr(nothingToChangeErr)
+	require.NoError(t, err)
+
+	var out temporalcloudcli.Result
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, out)
+}
+
+func TestAsyncOperationHandler_HandleUpdateErr_NothingToChange_NotIdempotent(t *testing.T) {
+	var buf bytes.Buffer
+	cctx := newTestCommandContext(t, &buf)
+	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
+
+	handler := temporalcloudcli.NewOperationHandler(cctx, temporalcloudcli.AsyncOperationOptions{Idempotent: false}, temporalcloudcli.ClientOptions{})
+
+	err := handler.HandleUpdateErr(nothingToChangeErr)
+	require.Error(t, err)
+	assert.Empty(t, buf.String())
+}
+
+func TestAsyncOperationHandler_HandleUpdateErr_OtherError(t *testing.T) {
+	var buf bytes.Buffer
+	cctx := newTestCommandContext(t, &buf)
+	otherErr := errors.New("some other error")
+
+	handler := temporalcloudcli.NewOperationHandler(cctx, temporalcloudcli.AsyncOperationOptions{Idempotent: true}, temporalcloudcli.ClientOptions{})
+
+	err := handler.HandleUpdateErr(otherErr)
+	require.ErrorIs(t, err, otherErr)
+	assert.Empty(t, buf.String())
+}
+
+func TestAsyncOperationHandler_HandleCreateErr_AlreadyExists_Idempotent(t *testing.T) {
+	var buf bytes.Buffer
+	cctx := newTestCommandContext(t, &buf)
+	alreadyExistsErr := status.Error(codes.AlreadyExists, "already exists")
+
+	handler := temporalcloudcli.NewOperationHandler(cctx, temporalcloudcli.AsyncOperationOptions{Idempotent: true}, temporalcloudcli.ClientOptions{})
+
+	err := handler.HandleCreateErr(alreadyExistsErr)
+	require.NoError(t, err)
+
+	var out temporalcloudcli.Result
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, out)
+}
+
+func TestAsyncOperationHandler_HandleCreateErr_AlreadyExists_NotIdempotent(t *testing.T) {
+	var buf bytes.Buffer
+	cctx := newTestCommandContext(t, &buf)
+	alreadyExistsErr := status.Error(codes.AlreadyExists, "already exists")
+
+	handler := temporalcloudcli.NewOperationHandler(cctx, temporalcloudcli.AsyncOperationOptions{Idempotent: false}, temporalcloudcli.ClientOptions{})
+
+	err := handler.HandleCreateErr(alreadyExistsErr)
+	require.ErrorIs(t, err, alreadyExistsErr)
+	assert.Empty(t, buf.String())
+}
+
+func TestAsyncOperationHandler_HandleDeleteErr_NotFound_Idempotent(t *testing.T) {
+	var buf bytes.Buffer
+	cctx := newTestCommandContext(t, &buf)
+	notFoundErr := status.Error(codes.NotFound, "not found")
+
+	handler := temporalcloudcli.NewOperationHandler(cctx, temporalcloudcli.AsyncOperationOptions{Idempotent: true}, temporalcloudcli.ClientOptions{})
+
+	err := handler.HandleDeleteErr(notFoundErr)
+	require.NoError(t, err)
+
+	var out temporalcloudcli.Result
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, out)
+}
+
+func TestAsyncOperationHandler_HandleDeleteErr_NotFound_NotIdempotent(t *testing.T) {
+	var buf bytes.Buffer
+	cctx := newTestCommandContext(t, &buf)
+	notFoundErr := status.Error(codes.NotFound, "not found")
+
+	handler := temporalcloudcli.NewOperationHandler(cctx, temporalcloudcli.AsyncOperationOptions{Idempotent: false}, temporalcloudcli.ClientOptions{})
+
+	err := handler.HandleDeleteErr(notFoundErr)
+	require.ErrorIs(t, err, notFoundErr)
+	assert.Empty(t, buf.String())
+}
+
+func TestParseRoleARN(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		input           string
+		wantRoleName    string
+		wantAccountID   string
+		wantErrContains string
+	}{
+		{
+			name:          "valid",
+			input:         "arn:aws:iam::123456789012:role/my-role",
+			wantRoleName:  "my-role",
+			wantAccountID: "123456789012",
+		},
+		{
+			name:          "valid with path",
+			input:         "arn:aws:iam::123456789012:role/path/to/role",
+			wantRoleName:  "path/to/role",
+			wantAccountID: "123456789012",
+		},
+		{
+			name:            "empty",
+			input:           "",
+			wantErrContains: "invalid role ARN",
+		},
+		{
+			name:            "wrong service",
+			input:           "arn:aws:s3:::my-bucket",
+			wantErrContains: `expected an IAM role ARN, got service "s3"`,
+		},
+		{
+			name:            "missing role/ prefix",
+			input:           "arn:aws:iam::123456789012:user/jane",
+			wantErrContains: `expected resource of the form role/<name>`,
+		},
+		{
+			name:            "empty role name",
+			input:           "arn:aws:iam::123456789012:role/",
+			wantErrContains: `expected resource of the form role/<name>`,
+		},
+		{
+			name:            "not an arn",
+			input:           "not-an-arn",
+			wantErrContains: "invalid role ARN",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			roleName, accountID, err := temporalcloudcli.ParseRoleARN(tt.input)
+			if tt.wantErrContains != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrContains)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantRoleName, roleName)
+			assert.Equal(t, tt.wantAccountID, accountID)
+		})
+	}
+}
+
+func TestParseServiceAccountEmail(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		input           string
+		wantSaID        string
+		wantProjectID   string
+		wantErrContains string
+	}{
+		{
+			name:          "valid",
+			input:         "my-sa@my-project.iam.gserviceaccount.com",
+			wantSaID:      "my-sa",
+			wantProjectID: "my-project",
+		},
+		{
+			name:            "empty",
+			input:           "",
+			wantErrContains: "invalid service account email",
+		},
+		{
+			name:            "missing @",
+			input:           "my-sa.iam.gserviceaccount.com",
+			wantErrContains: "invalid service account email",
+		},
+		{
+			name:            "wrong domain suffix",
+			input:           "my-sa@my-project.example.com",
+			wantErrContains: "invalid service account email",
+		},
+		{
+			name:            "empty local part",
+			input:           "@my-project.iam.gserviceaccount.com",
+			wantErrContains: "invalid service account email",
+		},
+		{
+			name:            "empty project part",
+			input:           "my-sa@.iam.gserviceaccount.com",
+			wantErrContains: "invalid service account email",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			saID, projectID, err := temporalcloudcli.ParseServiceAccountEmail(tt.input)
+			if tt.wantErrContains != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrContains)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantSaID, saID)
+			assert.Equal(t, tt.wantProjectID, projectID)
+		})
+	}
+}

@@ -1,0 +1,4163 @@
+# Temporal Cloud CLI commands
+commands:
+  - name: cloud
+    summary: Temporal Cloud command-line interface
+    description: |
+      The Temporal Cloud CLI provides commands for managing and operating Temporal Cloud resources,
+      including namespaces, users, and account settings.
+
+      Example:
+
+      ```
+      temporal cloud namespace get --namespace my-namespace.my-account
+      ```
+    has-init: true
+    option-sets:
+      - client
+      - common
+    options:
+      - name: config-dir
+        type: string
+        description: |
+          Directory path where CLI configuration files are stored, including
+          authentication tokens and settings.
+      - name: disable-pop-up
+        type: bool
+        description: |
+          Prevent the CLI from opening a browser window during authentication.
+          Useful for headless environments or when using alternative auth methods.
+      - name: auto-confirm
+        type: bool
+        description: |
+          Automatically confirm prompts and actions that require user
+          confirmation. Useful for scripting and automation.
+  - name: cloud login
+    summary: Authenticate with Temporal Cloud
+    description: |
+      Authenticate with Temporal Cloud using browser-based OAuth login.
+
+      This command opens your default browser to complete authentication. Once
+      logged in, your credentials are stored locally for subsequent commands.
+
+      Example:
+
+      ```
+      temporal cloud login
+      ```
+
+      For headless environments, use --disable-pop-up and follow the printed URL.
+    has-init: false
+    docs:
+      keywords:
+        - login
+        - authentication
+        - auth
+      description-header: Login
+      tags:
+        - login
+    options:
+      - name: domain
+        type: string
+        hidden: true
+        description: |
+          Authentication domain for the OAuth provider.
+        default: login.tmprl.cloud
+      - name: audience
+        type: string
+        hidden: true
+        default: https://saas-api.tmprl.cloud
+        description: |
+          OAuth audience parameter for token generation.
+      - name: client-id
+        type: string
+        hidden: true
+        default: Cd2erICRRO9hzuGeoQyqO9iPfiCgCvMZ
+        description: |
+          OAuth client identifier for authentication.
+      - name: redirect-url
+        type: string
+        hidden: true
+        default: http://127.0.0.1:56628/callback
+        description: |
+          Redirect URL for OAuth authentication flow.
+      - name: reset
+        type: bool
+        description: |
+          Clear stored login credentials and configuration, then re-authenticate.
+          Use this if you need to switch accounts or fix authentication issues.
+  - name: cloud whoami
+    summary: Display the current authenticated identity
+    description: |
+      Display information about the currently authenticated identity.
+
+      Shows whether you are authenticated as a user or service account, along
+      with the associated API key if one is in use.
+
+      Example:
+
+      ```
+      temporal cloud whoami
+      ```
+    has-init: false
+    option-sets:
+      - client
+    docs:
+      keywords:
+        - whoami
+        - identity
+        - authentication
+      description-header: Who Am I
+      tags:
+        - authentication
+  - name: cloud logout
+    summary: Clear Temporal Cloud authentication credentials
+    description: |
+      Log out from Temporal Cloud by clearing stored authentication tokens
+      and credentials from the local configuration.
+
+      Example:
+
+      ```
+      temporal cloud logout
+      ```
+    has-init: false
+    docs:
+      keywords:
+        - logout
+        - authentication
+        - auth
+      description-header: Logout
+      tags:
+        - login
+    options:
+      - name: domain
+        type: string
+        hidden: true
+        description: |
+          Authentication domain for the OAuth provider.
+        default: login.tmprl.cloud
+
+  # Namespace commands
+  - name: cloud namespace
+    summary: Manage Temporal Cloud namespaces
+    description: |
+      Commands for creating, updating, and managing Temporal Cloud namespaces.
+
+      Namespaces provide isolation for workflows and activities. Each namespace
+      has its own configuration including retention period, region, and access
+      controls.
+    has-init: false
+    docs:
+      keywords:
+        - namespace
+        - management
+      description-header: Namespace Management Commands
+      tags:
+        - namespaces
+  - name: cloud namespace get
+    summary: Retrieve namespace details
+    description: |
+      Retrieve the configuration and status of a Temporal Cloud namespace.
+
+      Returns details including region, retention period, endpoints, and
+      certificate information.
+
+      Example:
+
+      ```
+      temporal cloud namespace get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+    docs:
+      keywords:
+        - namespace
+        - management
+      description-header: Retrieve a namespace.
+      tags:
+        - namespaces
+    options:
+      - name: namespace
+        required: true
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+      - name: spec
+        type: bool
+        description: |
+          Output only the namespace specification in JSON format, omitting
+          metadata and status information.
+  - name: cloud namespace apply
+    summary: Create or update a namespace from a specification
+    description: |
+      Apply a namespace configuration to Temporal Cloud. Creates a new namespace
+      if it doesn't exist, or updates an existing one to match the specification.
+
+      The specification can be provided as inline JSON or loaded from a file
+      by prefixing the path with '@'.
+
+      Example with inline JSON:
+
+      ```
+      temporal cloud namespace apply --spec '{"name": "namespace-name", "region": "us-west-2", "retention_days": 7}'
+      ```
+
+      Example with file path:
+
+      ```
+      temporal cloud namespace apply --spec @namespace-spec.json
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+    options:
+      - name: spec
+        type: string
+        description: |
+          Namespace configuration in JSON format. Provide inline JSON directly,
+          or use '@path/to/file.json' to load from a file.
+        required: true
+      - name: async-operation-id
+        type: string
+        description: |
+          Custom identifier for tracking this async operation. If not provided,
+          a unique ID is generated automatically.
+      - name: idempotent
+        type: bool
+        description: |
+          Succeed silently if the namespace already matches the specification.
+          Without this flag, the command errors when no changes are needed.
+      - name: async
+        type: bool
+        description: |
+          Return immediately after initiating the operation instead of waiting
+          for completion. Use the returned operation ID to check status later.
+      - name: resource-version
+        type: string
+        short: v
+        description: |
+          Resource version for optimistic concurrency control. If not provided,
+          the current version is fetched automatically.
+  - name: cloud namespace edit
+    summary: Interactively edit a namespace configuration
+    description: |
+      Open a namespace configuration in your default editor for interactive
+      modification. After saving and closing the editor, the changes are
+      applied to Temporal Cloud.
+
+      The editor is determined by the EDITOR environment variable, falling
+      back to 'vi' if not set.
+
+      Example:
+
+      ```
+      temporal cloud namespace edit --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+    options:
+      - name: namespace
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+        required: true
+      - name: async-operation-id
+        type: string
+        description: |
+          Custom identifier for tracking this async operation. If not provided,
+          a unique ID is generated automatically.
+      - name: idempotent
+        type: bool
+        description: |
+          Succeed silently if no changes were made in the editor. Without this
+          flag, the command errors when the configuration is unchanged.
+      - name: async
+        type: bool
+        description: |
+          Return immediately after initiating the operation instead of waiting
+          for completion. Use the returned operation ID to check status later.
+      - name: resource-version
+        type: string
+        short: v
+        description: |
+          Resource version for optimistic concurrency control. If not provided,
+          the current version is fetched automatically.
+  - name: cloud namespace delete
+    summary: Delete a Temporal Cloud namespace
+    description: |
+      Delete a Temporal Cloud namespace and all associated data. This action is
+      irreversible and will permanently remove all workflows, activities, and
+      history within the namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace delete --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: namespace
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+        required: true
+      - name: async-operation-id
+        type: string
+        description: |
+          Custom identifier for tracking this async operation. If not provided,
+          a unique ID is generated automatically.
+      - name: async
+        type: bool
+        description: |
+          Return immediately after initiating the operation instead of waiting
+          for completion. Use the returned operation ID to check status later.
+      - name: idempotent
+        type: bool
+        description: |
+          Succeed silently if the namespace does not exist. Without this flag,
+          the command errors if the namespace is not found.
+      - name: resource-version
+        type: string
+        short: v
+        description: |
+          Resource version for optimistic concurrency control. If not provided,
+          the current version is fetched automatically.
+  - name: cloud namespace list
+    summary: List Temporal Cloud namespaces
+    description: |
+      List all Temporal Cloud namespaces accessible with the current
+      authentication credentials.
+
+      Example:
+
+      ```
+      temporal cloud namespace list
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of namespaces to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
+      - name: name
+        type: string
+        description: |
+          Filter namespaces by the name as defined in the specification of the namespace.
+  - name: cloud namespace create
+    summary: Create a new Temporal Cloud namespace
+    description: |
+      Create a new Temporal Cloud namespace with the specified configuration.
+
+      Options are passed as individual flags. To create or update a namespace
+      using a full JSON specification, use 'namespace apply' instead.
+
+      Example:
+
+      ```
+      temporal cloud namespace create --name my-namespace --region aws-us-east-1 --retention-days 30
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - codec-server
+      - ca-certificate
+      - certificate-filter
+    options:
+      - name: name
+        type: string
+        required: true
+        short: n
+        description: |
+          The name for the new namespace (becomes part of the namespace ID).
+      - name: region
+        type: string[]
+        required: true
+        description: |
+          Cloud region where the namespace will be hosted. Repeat to specify
+          multiple regions for High Availability (e.g. --region aws-us-east-1
+          --region aws-us-west-2).
+      - name: retention-days
+        type: int
+        description: |
+          Number of days to retain closed workflow history. If not specified,
+          the server default applies.
+      - name: api-key-auth-enabled
+        type: bool
+        description: |
+          Enable API key authentication for the namespace.
+      - name: enable-delete-protection
+        type: bool
+        description: |
+          Prevent accidental deletion of this namespace.
+      - name: enable-task-queue-fairness
+        type: bool
+        description: |
+          Enable task queue fairness for the namespace.
+      - name: search-attribute
+        type: string[]
+        description: |
+          Custom search attribute as 'name=Type' (e.g. --search-attribute
+          myAttr=Keyword). Valid types: Text, Keyword, Int, Double, Bool,
+          Datetime, KeywordList. Repeat to add multiple.
+      - name: connection-rule-id
+        type: string[]
+        description: |
+          Private connectivity rule ID. Repeat to specify multiple.
+
+  # Namespace retention commands
+  - name: cloud namespace retention
+    summary: Manage namespace retention settings
+    description: |
+      Commands for managing data retention settings of Temporal Cloud namespaces.
+
+      Retention determines how long closed workflow history data are stored before
+      being automatically deleted.
+    has-init: false
+  - name: cloud namespace retention get
+    summary: Get namespace retention period
+    description: |
+      Retrieve the current data retention period for a Temporal Cloud namespace.
+      The retention period defines how long closed workflow history data are stored.
+
+      Example:
+
+      ```
+      temporal cloud namespace retention get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace retention set
+    summary: Set namespace retention period
+    description: |
+      Set the data retention period for a Temporal Cloud namespace. The
+      retention period defines how long closed workflow history data are stored.
+
+      Example:
+
+      ```
+      temporal cloud namespace retention set --namespace my-namespace.my-account --retention-days 14
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: retention-days
+        type: int
+        description: |
+          New retention period in days for closed workflow history data.
+        required: true
+
+  # Namespace lifecycle commands
+  - name: cloud namespace lifecycle
+    summary: Manage namespace lifecycle settings
+    description: |
+      Commands for managing lifecycle settings of Temporal Cloud namespaces.
+
+      Lifecycle settings control the behavior and protection of namespaces,
+      including delete protection to prevent accidental deletion.
+    has-init: false
+  - name: cloud namespace lifecycle get
+    summary: Get namespace lifecycle configuration
+    description: |
+      Retrieve the current lifecycle configuration for a Temporal Cloud namespace.
+      Lifecycle settings include delete protection status.
+
+      Example:
+
+      ```
+      temporal cloud namespace lifecycle get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: namespace
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+        required: true
+  - name: cloud namespace lifecycle set
+    summary: Set namespace lifecycle configuration
+    description: |
+      Set the lifecycle configuration for a Temporal Cloud namespace.
+      Lifecycle settings include delete protection to prevent accidental deletion.
+
+      Example:
+
+      ```
+      temporal cloud namespace lifecycle set --namespace my-namespace.my-account --enable-delete-protection true
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+    options:
+      - name: namespace
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+        required: true
+      - name: enable-delete-protection
+        type: bool
+        description: |
+          Enable or disable delete protection for the namespace. When enabled,
+          the namespace cannot be deleted until this flag is set to false.
+        required: true
+      - name: async-operation-id
+        type: string
+        description: |
+          Custom identifier for tracking this async operation. If not provided,
+          a unique ID is generated automatically.
+      - name: async
+        type: bool
+        description: |
+          Return immediately after initiating the operation instead of waiting
+          for completion. Use the returned operation ID to check status later.
+      - name: idempotent
+        type: bool
+        description: |
+          Succeed silently if the lifecycle configuration is already set to the
+          specified value. Without this flag, the command errors when no change
+          is needed.
+      - name: resource-version
+        type: string
+        description: |
+          Resource version for optimistic concurrency control. If not provided,
+          the current version is fetched automatically.
+
+  # Namespace fairness commands
+  - name: cloud namespace fairness
+    summary: Manage namespace task queue fairness settings
+    description: |
+      Commands for managing task queue fairness configuration of Temporal Cloud namespaces.
+    has-init: false
+  - name: cloud namespace fairness get
+    summary: Get namespace task queue fairness configuration
+    description: |
+      Retrieve the current task queue fairness configuration for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace fairness get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace fairness set
+    summary: Set namespace task queue fairness configuration
+    description: |
+      Set the task queue fairness configuration for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace fairness set --namespace my-namespace.my-account --enable-task-queue-fairness=true
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: enable-task-queue-fairness
+        type: bool
+        required: true
+        description: |
+          Enable or disable task queue fairness for the namespace.
+
+  # Namespace cert-ca commands
+  - name: cloud namespace cert-ca
+    summary: Manage client CA certificates for namespaces
+    description: |
+      Commands for managing the client CA certificates of Temporal Cloud namespaces.
+    has-init: false
+  - name: cloud namespace cert-ca list
+    summary: List CA certificates for a namespace
+    description: |
+      Retrieve the list of client CA certificates configured for a Temporal Cloud
+      namespace. These certificates are used for client authentication.
+
+      Example:
+
+      ```
+      temporal cloud namespace cert-ca list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace cert-ca create
+    summary: Add CA certificates to a namespace
+    description: |
+      Add client CA certificates to a Temporal Cloud namespace from a PEM file
+      or base64 encoded string. These certificates are used to verify client
+      connections and enable mTLS authentication.
+
+      Specify either --ca-certificate-file or --ca-certificate, but not both.
+
+      Example with file:
+
+      ```
+      temporal cloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem
+      ```
+
+      Example with base64 encoded data:
+
+      ```
+      temporal cloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+      - ca-certificate
+
+  - name: cloud namespace cert-ca delete
+    summary: Delete CA certificates from a namespace
+    description: |
+      Delete client CA certificates from a Temporal Cloud namespace. This operation
+      requires confirmation and will remove the specified certificates from the
+      namespace configuration.
+
+      Specify either --ca-certificate-file or --ca-certificate, but not both.
+
+      Example with file:
+
+      ```
+      temporal cloud namespace cert-ca delete --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem
+      ```
+
+      Example with base64 encoded data:
+
+      ```
+      temporal cloud namespace cert-ca delete --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+      - ca-certificate
+
+  # Namespace cert-filter commands
+  - name: cloud namespace cert-filter
+    summary: Manage certificate filters for namespaces
+    description: |
+      Commands for managing certificate filters for Temporal Cloud namespaces.
+      Certificate filters restrict mTLS connections to client certificates with
+      specific distinguished name properties.
+    has-init: false
+  - name: cloud namespace cert-filter list
+    summary: List certificate filters for a namespace
+    description: |
+      List all certificate filters configured for a Temporal Cloud namespace.
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace cert-filter create
+    summary: Add certificate filters to a namespace
+    description: |
+      Add new certificate filters to a Temporal Cloud namespace. Certificate
+      filters restrict mTLS connections to client certificates whose distinguished
+      name properties match at least one of the filters.
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: common-name
+        type: string
+        description: |
+          The common name (CN) field from the certificate's distinguished name.
+      - name: organization
+        type: string
+        description: |
+          The organization (O) field from the certificate's distinguished name.
+      - name: organizational-unit
+        type: string
+        description: |
+          The organizational unit (OU) field from the certificate's distinguished name.
+      - name: subject-alternative-name
+        type: string
+        description: |
+          The subject alternative name (SAN) from the certificate.
+  - name: cloud namespace cert-filter delete
+    summary: Delete certificate filters from a namespace
+    description: |
+      Delete certificate filters from a Temporal Cloud namespace. Filters are
+      matched by exact field equality.
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: common-name
+        type: string
+        description: |
+          The common name (CN) field from the certificate's distinguished name.
+      - name: organization
+        type: string
+        description: |
+          The organization (O) field from the certificate's distinguished name.
+      - name: organizational-unit
+        type: string
+        description: |
+          The organizational unit (OU) field from the certificate's distinguished name.
+      - name: subject-alternative-name
+        type: string
+        description: |
+          The subject alternative name (SAN) from the certificate.
+
+  # Namespace connectivity commands
+  - name: cloud namespace connectivity
+    summary: Manage connectivity rules attached to a namespace
+    description: |
+      Commands for attaching and detaching connectivity rules on a Temporal Cloud
+      namespace. Use 'cloud connectivity' to manage the rules themselves.
+    has-init: false
+  - name: cloud namespace connectivity list
+    summary: List connectivity rules attached to a namespace
+    description: |
+      List all connectivity rules currently attached to a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace connectivity list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace connectivity attach
+    summary: Attach a connectivity rule to a namespace
+    description: |
+      Attach an existing connectivity rule to a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace connectivity attach \
+        --namespace my-namespace.my-account \
+        --connectivity-rule-id <rule-id>
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: connectivity-rule-id
+        type: string[]
+        description: |
+          The ID of a connectivity rule to attach. Repeat to attach multiple.
+        required: true
+  - name: cloud namespace connectivity detach
+    summary: Detach a connectivity rule from a namespace
+    description: |
+      Detach a connectivity rule from a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace connectivity detach \
+        --namespace my-namespace.my-account \
+        --connectivity-rule-id <rule-id>
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: connectivity-rule-id
+        type: string[]
+        description: |
+          The ID of a connectivity rule to detach. Repeat to detach multiple.
+        required: true
+
+  # Namespace search-attribute commands
+  - name: cloud namespace search-attribute
+    summary: Manage custom search attributes for namespaces
+    description: |
+      Commands for managing custom search attributes for Temporal Cloud namespaces.
+      Search attributes enable filtering and searching workflows by custom fields.
+    has-init: false
+  - name: cloud namespace search-attribute list
+    summary: List custom search attributes for a namespace
+    description: |
+      List all custom search attributes configured for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace search-attribute list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace search-attribute create
+    summary: Create a custom search attribute for a namespace
+    description: |
+      Create a new custom search attribute for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace search-attribute create --namespace my-namespace.my-account --name MyField --type Keyword
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the search attribute to create.
+      - name: type
+        type: string
+        required: true
+        description: |
+          The type of the search attribute. Valid values: Text, Keyword, Int, Double,
+          Bool, Datetime, KeywordList.
+  - name: cloud namespace search-attribute rename
+    summary: Rename a custom search attribute
+    description: |
+      Rename an existing custom search attribute for a Temporal Cloud namespace.
+      This operation preserves all existing data associated with the search attribute.
+
+      Example:
+
+      ```
+      temporal cloud namespace search-attribute rename --namespace my-namespace.my-account --existing-name OldField --new-name NewField
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: existing-name
+        type: string
+        required: true
+        description: |
+          The current name of the search attribute to rename.
+      - name: new-name
+        type: string
+        required: true
+        description: |
+          The new name for the search attribute.
+
+  # Namespace export commands
+  - name: cloud namespace export
+    summary: Manage workflow history export sinks for namespaces
+    description: |
+      Commands for managing workflow history export sinks for Temporal Cloud namespaces.
+
+      Export sinks define destinations (S3 or GCS) to which workflow history is exported.
+    has-init: false
+  - name: cloud namespace export get
+    summary: Get a workflow history export sink
+    description: |
+      Retrieve the configuration and status of a workflow history export sink for a
+      Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace export get --namespace my-namespace.my-account --sink-name my-sink
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - export-sink
+  - name: cloud namespace export list
+    summary: List workflow history export sinks for a namespace
+    description: |
+      List all workflow history export sinks configured for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace export list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace export delete
+    summary: Delete a workflow history export sink
+    description: |
+      Delete a workflow history export sink from a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace export delete --namespace my-namespace.my-account --sink-name my-sink
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+      - export-sink
+  - name: cloud namespace export enable
+    summary: Enable a workflow history export sink
+    description: |
+      Enable a previously disabled workflow history export sink for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace export enable --namespace my-namespace.my-account --sink-name my-sink
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+      - export-sink
+  - name: cloud namespace export disable
+    summary: Disable a workflow history export sink
+    description: |
+      Disable a workflow history export sink for a Temporal Cloud namespace.
+      The sink configuration is preserved and can be re-enabled later.
+
+      Example:
+
+      ```
+      temporal cloud namespace export disable --namespace my-namespace.my-account --sink-name my-sink
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+      - export-sink
+  - name: cloud namespace export s3
+    summary: Manage S3 workflow history export sinks
+    description: |
+      Commands for managing S3 workflow history export sinks for Temporal Cloud namespaces.
+    has-init: false
+  - name: cloud namespace export s3 create
+    summary: Create an S3 workflow history export sink
+    description: |
+      Create a new S3 workflow history export sink for a Temporal Cloud namespace.
+      The sink is created in the enabled state.
+
+      Example:
+
+      ```
+      temporal cloud namespace export s3 create --namespace my-namespace.my-account --sink-name my-sink \
+        --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
+        --region us-east-1
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - export-sink
+      - export-s3
+      - export-s3-region
+  - name: cloud namespace export s3 update
+    summary: Update an S3 workflow history export sink
+    description: |
+      Update the configuration of an existing S3 workflow history export sink.
+      Only the flags you provide are changed; omitted flags keep their current
+      values. The enabled/disabled state and region are also preserved.
+
+      Example (rotate IAM role only):
+
+      ```
+      temporal cloud namespace export s3 update --namespace my-namespace.my-account --sink-name my-sink \
+        --role-arn arn:aws:iam::123456789012:role/my-new-role
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+      - export-sink
+    options:
+      - name: role-arn
+        type: string
+        description: |
+          The IAM role ARN that Temporal Cloud assumes for writing to S3
+          (e.g. arn:aws:iam::123456789012:role/my-role). The role name and
+          AWS account ID are parsed from this ARN.
+          If omitted, the current value is kept.
+      - name: bucket-name
+        type: string
+        description: |
+          The name of the destination S3 bucket.
+          If omitted, the current value is kept.
+      - name: kms-arn
+        type: string
+        description: |
+          The AWS KMS key ARN for server-side encryption of exported data.
+          If omitted, the current value is kept.
+  - name: cloud namespace export s3 validate
+    summary: Validate an S3 workflow history export sink configuration
+    description: |
+      Validate an S3 workflow history export sink configuration without creating or updating it.
+      A successful response means the configuration is valid.
+
+      Example:
+
+      ```
+      temporal cloud namespace export s3 validate --namespace my-namespace.my-account --sink-name my-sink \
+        --role-arn arn:aws:iam::123456789012:role/my-role --bucket-name my-bucket \
+        --region us-east-1
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - export-sink
+      - export-s3
+      - export-s3-region
+  - name: cloud namespace export gcs
+    summary: Manage GCS workflow history export sinks
+    description: |
+      Commands for managing GCS workflow history export sinks for Temporal Cloud namespaces.
+    has-init: false
+  - name: cloud namespace export gcs create
+    summary: Create a GCS workflow history export sink
+    description: |
+      Create a new GCS workflow history export sink for a Temporal Cloud namespace.
+      The sink is created in the enabled state.
+
+      Example:
+
+      ```
+      temporal cloud namespace export gcs create --namespace my-namespace.my-account --sink-name my-sink \
+        --service-account-email my-service-account@my-project.iam.gserviceaccount.com \
+        --bucket-name my-bucket --region us-central1
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - export-sink
+      - export-gcs
+      - export-gcs-region
+  - name: cloud namespace export gcs update
+    summary: Update a GCS workflow history export sink
+    description: |
+      Update the configuration of an existing GCS workflow history export sink.
+      Only the flags you provide are changed; omitted flags keep their current
+      values. The enabled/disabled state and region are also preserved.
+
+      Example (rotate service account only):
+
+      ```
+      temporal cloud namespace export gcs update --namespace my-namespace.my-account --sink-name my-sink \
+        --service-account-email my-new-service-account@my-project.iam.gserviceaccount.com
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+      - export-sink
+    options:
+      - name: service-account-email
+        type: string
+        description: |
+          The email of the customer service account that Temporal Cloud impersonates
+          for writing to GCS (e.g. my-sa@my-project.iam.gserviceaccount.com).
+          The service account ID and GCP project ID are parsed from this email.
+          If omitted, the current value is kept.
+      - name: bucket-name
+        type: string
+        description: |
+          The name of the destination GCS bucket.
+          If omitted, the current value is kept.
+  - name: cloud namespace export gcs validate
+    summary: Validate a GCS workflow history export sink configuration
+    description: |
+      Validate a GCS workflow history export sink configuration without creating or updating it.
+      A successful response means the configuration is valid.
+
+      Example:
+
+      ```
+      temporal cloud namespace export gcs validate --namespace my-namespace.my-account --sink-name my-sink \
+        --service-account-email my-service-account@my-project.iam.gserviceaccount.com \
+        --bucket-name my-bucket --region us-central1
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - export-sink
+      - export-gcs
+      - export-gcs-region
+
+  # Namespace codec commands
+  - name: cloud namespace codec
+    summary: Manage codec server settings for namespaces
+    description: |
+      Commands for managing the codec server configuration of Temporal Cloud namespaces.
+
+      The codec server is used to encode and decode payloads for workflows and activities.
+    has-init: false
+  - name: cloud namespace codec get
+    summary: Get codec server configuration for a namespace
+    description: |
+      Retrieve the current codec server configuration for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace codec get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace codec set
+    summary: Set codec server configuration for a namespace
+    description: |
+      Set the codec server configuration for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace codec set --namespace my-namespace.my-account --endpoint https://my-codec.example.com
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: endpoint
+        type: string
+        required: true
+        description: |
+          The codec server endpoint URL.
+      - name: pass-access-token
+        type: bool
+        description: |
+          Whether to pass the user access token to the codec server endpoint.
+      - name: include-cross-origin-credentials
+        type: bool
+        description: |
+          Whether to include cross-origin credentials in requests to the codec server.
+      - name: custom-error-message-default-message
+        type: string
+        description: |
+          A custom message to display for remote codec server errors.
+      - name: custom-error-message-default-link
+        type: string
+        description: |
+          A link to display alongside the custom error message for remote codec server errors.
+  - name: cloud namespace codec delete
+    summary: Delete codec server configuration from a namespace
+    description: |
+      Delete the codec server configuration from a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace codec delete --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+
+  # Namespace tag commands
+  - name: cloud namespace tag
+    summary: Manage namespace tags
+    description: |
+      Commands for managing tags of Temporal Cloud namespaces.
+
+      Tags are key-value pairs used for organization and categorization of namespaces.
+    has-init: false
+  - name: cloud namespace tag list
+    summary: List tags for a namespace
+    description: |
+      List all tags configured for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace tag list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace tag create
+    summary: Create a tag for a namespace
+    description: |
+      Create a new tag for a Temporal Cloud namespace. Fails if a tag with
+      the specified key already exists.
+
+      Example:
+
+      ```
+      temporal cloud namespace tag create --namespace my-namespace.my-account --key environment --value production
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+    options:
+      - name: key
+        type: string
+        required: true
+        description: |
+          The tag key.
+      - name: value
+        type: string
+        required: true
+        description: |
+          The tag value.
+  - name: cloud namespace tag update
+    summary: Update a tag for a namespace
+    description: |
+      Update the value of an existing tag for a Temporal Cloud namespace.
+      Fails if the specified tag key does not exist.
+
+      Example:
+
+      ```
+      temporal cloud namespace tag update --namespace my-namespace.my-account --key environment --value staging
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+    options:
+      - name: key
+        type: string
+        required: true
+        description: |
+          The tag key to update.
+      - name: value
+        type: string
+        required: true
+        description: |
+          The new value for the tag.
+  - name: cloud namespace tag delete
+    summary: Delete a tag from a namespace
+    description: |
+      Delete a tag from a Temporal Cloud namespace by its key.
+
+      Example:
+
+      ```
+      temporal cloud namespace tag delete --namespace my-namespace.my-account --key environment
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+    options:
+      - name: key
+        type: string
+        required: true
+        description: |
+          The tag key to delete.
+
+  # Namespace HA commands
+  - name: cloud namespace ha
+    summary: Manage High Availability settings for namespaces
+    description: |
+      Commands for managing High Availability (HA) settings of Temporal Cloud namespaces.
+
+      HA settings control active region, managed failover, and replica regions.
+    has-init: false
+  - name: cloud namespace ha get
+    summary: Get High Availability configuration for a namespace
+    description: |
+      Retrieve the current High Availability configuration for a Temporal Cloud namespace.
+      Shows the active region, whether managed failover is enabled, and whether passive poller forwarding is enabled.
+
+      Example:
+
+      ```
+      temporal cloud namespace ha get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace ha update
+    summary: Update High Availability configuration for a namespace
+    description: |
+      Update the High Availability configuration for a Temporal Cloud namespace.
+      Use --auto-failover to enable or disable Temporal-managed automatic failover.
+      Use --passive-poller-forwarding to enable or disable passive poller forwarding.
+
+      Example:
+
+      ```
+      temporal cloud namespace ha update \
+          --namespace my-namespace.my-account \
+          --auto-failover enabled \
+          --passive-poller-forwarding disabled
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: auto-failover
+        type: string-enum
+        description: Enable or disable Temporal-managed automatic failover for the namespace.
+        enum-values:
+          - enabled
+          - disabled
+      - name: passive-poller-forwarding
+        type: string-enum
+        description: Enable or disable passive poller forwarding for the namespace.
+        enum-values:
+          - enabled
+          - disabled
+  - name: cloud namespace ha region
+    summary: Manage replica regions for a namespace
+    description: |
+      Commands for managing replica regions of Temporal Cloud namespaces.
+    has-init: false
+  - name: cloud namespace ha region list
+    summary: List regions for a namespace
+    description: |
+      List all regions and their states for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace ha region list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace ha region add
+    summary: Add a replica region to a namespace
+    description: |
+      Add a replica region to a Temporal Cloud namespace. The region will be added
+      as a passive replica and can later be used for failover.
+
+      Example:
+
+      ```
+      temporal cloud namespace ha region add --namespace my-namespace.my-account --region aws-us-west-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: region
+        type: string
+        required: true
+        description: |
+          The region ID to add as a replica (e.g., aws-us-west-2).
+  - name: cloud namespace ha region delete
+    summary: Remove a replica region from a namespace
+    description: |
+      Remove a replica region from a Temporal Cloud namespace. Note that a 7-day
+      cooldown period applies before the same region can be re-added.
+
+      Example:
+
+      ```
+      temporal cloud namespace ha region delete --namespace my-namespace.my-account --region aws-us-west-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: region
+        type: string
+        required: true
+        description: |
+          The region ID to remove (e.g., aws-us-west-2).
+  - name: cloud namespace ha failover
+    summary: Trigger a failover to a different region
+    description: |
+      Trigger a failover for a Temporal Cloud namespace to a different region.
+      The target region must already be a replica region of the namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace ha failover --namespace my-namespace.my-account --region aws-us-west-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+    options:
+      - name: region
+        type: string
+        required: true
+        description: |
+          The target region to failover to (e.g., aws-us-west-2).
+
+  # Namespace capacity commands
+  - name: cloud namespace capacity
+    summary: Manage namespace capacity
+    description: |
+      Commands for managing the capacity of Temporal Cloud namespaces.
+
+      Capacity controls whether a namespace runs in on-demand mode or
+      provisioned mode (with a fixed TRU allocation).
+    has-init: false
+  - name: cloud namespace capacity get
+    summary: Get namespace capacity information
+    description: |
+      Retrieve capacity information for a Temporal Cloud namespace, including
+      the current mode (on-demand or provisioned), mode options, and recent usage stats.
+
+      Example:
+
+      ```
+      temporal cloud namespace capacity get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace capacity update
+    summary: Update namespace capacity
+    description: |
+      Update the capacity of a Temporal Cloud namespace. Choose either on-demand
+      mode or provisioned mode (with a fixed TRU allocation).
+
+      Example (switch to on-demand):
+
+      ```
+      temporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode on_demand
+      ```
+
+      Example (switch to provisioned with 4 TRUs):
+
+      ```
+      temporal cloud namespace capacity update --namespace my-namespace.my-account --capacity-mode provisioned --capacity-value 4
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: capacity-mode
+        type: string-enum
+        enum-values: [on_demand, provisioned]
+        required: true
+        description: |
+          Capacity mode for the namespace. Must be either 'on_demand' or 'provisioned'.
+      - name: capacity-value
+        type: float
+        description: |
+          The provisioned capacity in Temporal Resource Units (TRUs). Required and
+          must be greater than 0 when --capacity-mode is 'provisioned'. Ignored
+          when --capacity-mode is 'on_demand'.
+
+  # Nexus endpoint commands
+  - name: cloud nexus
+    summary: Manage Temporal Cloud Nexus Operations
+    description: |
+      Commands for managing Nexus Operations in Temporal Cloud.
+    has-init: false
+    docs:
+      keywords:
+        - nexus
+      description-header: Nexus Operations Management Commands
+      tags:
+        - nexus
+
+  - name: cloud nexus endpoint
+    summary: Manage Temporal Cloud Nexus Endpoints
+    description: |
+      Commands for managing Nexus Endpoints in Temporal Cloud.
+    has-init: false
+
+  - name: cloud nexus endpoint list
+    summary: List Nexus Endpoints
+    description: |
+      List Nexus Endpoint configurations on the Cloud Account.
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of endpoints to return per page. If no page size is provided, it will default to 100. A maximum of 1000 endpoints can be fetched at a time.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results. Initial value is empty string.
+
+  - name: cloud nexus endpoint get
+    summary: Get a Nexus Endpoint by name or ID
+    description: |
+      Get a Nexus Endpoint configuration from the Cloud Account.
+      Specify either `--name` or `--id` (exactly one is required).
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: name
+        type: string
+        description: |
+          The name of the Nexus Endpoint to retrieve.
+      - name: id
+        type: string
+        description: |
+          The ID of the Nexus Endpoint to retrieve.
+
+  - name: cloud nexus endpoint create
+    summary: Create a new Nexus Endpoint
+    description: |
+      Create a new Nexus Endpoint on the Cloud Account.
+      An endpoint name is used in workflow code to invoke Nexus operations.
+      The endpoint target is a worker and `--target-namespace` and `--target-task-queue`
+      must both be provided. This will fail if an endpoint with the same name is already registered.
+
+      Example:
+
+      ```
+      temporal cloud nexus endpoint create --name my-endpoint --target-namespace my-ns.my-account --target-task-queue my-tq
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint to create.
+      - name: target-namespace
+        type: string
+        required: true
+        description: |
+          The namespace in which a handler worker will be polling for Nexus tasks.
+      - name: target-task-queue
+        type: string
+        required: true
+        description: |
+          The task queue on which a handler worker will be polling for Nexus tasks.
+      - name: allow-namespace
+        type: string[]
+        description: |
+          A namespace that is allowed to call this endpoint. Can be specified multiple times.
+      - name: description
+        type: string
+        description: |
+          An optional endpoint description in markdown format.
+      - name: description-file
+        type: string
+        description: |
+          Path to a file containing an endpoint description in markdown format.
+          Mutually exclusive with --description.
+
+  - name: cloud nexus endpoint delete
+    summary: Delete a Nexus Endpoint
+    description: |
+      Delete a Nexus Endpoint on the Cloud Account.
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint to delete.
+
+  - name: cloud nexus endpoint update
+    summary: Update an existing Nexus Endpoint
+    description: |
+      Update an existing Nexus Endpoint on the Cloud Account.
+      An endpoint name is used in workflow code to invoke Nexus operations.
+
+      The endpoint is patched leaving any existing fields for which flags are not provided
+      as they were.
+
+      Example:
+
+      ```
+      temporal cloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint to update.
+      - name: target-namespace
+        type: string
+        description: |
+          The namespace in which a handler worker will be polling for Nexus tasks.
+      - name: target-task-queue
+        type: string
+        description: |
+          The task queue on which a handler worker will be polling for Nexus tasks.
+      - name: description
+        type: string
+        description: |
+          An optional endpoint description in markdown format.
+      - name: description-file
+        type: string
+        description: |
+          Path to a file containing an endpoint description in markdown format.
+          Mutually exclusive with --description.
+      - name: unset-description
+        type: bool
+        description: |
+          Unset the endpoint description. Cannot be used with --description or --description-file.
+
+  - name: cloud nexus endpoint allowed-namespace
+    summary: Manage allowed namespaces for a Nexus Endpoint
+    description: |
+      Commands for managing allowed namespaces for Nexus Endpoints.
+    has-init: false
+
+  - name: cloud nexus endpoint allowed-namespace list
+    summary: List allowed namespaces of a Nexus Endpoint
+    description: |
+      List all namespaces that are allowed to call this Nexus Endpoint.
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint.
+
+  - name: cloud nexus endpoint allowed-namespace add
+    summary: Add allowed namespaces to a Nexus Endpoint
+    description: |
+      Add namespaces that are allowed to call this Nexus Endpoint.
+      Namespaces that are already allowed are silently ignored.
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint.
+      - name: namespace
+        type: string[]
+        required: true
+        description: |
+          A namespace to allow. Can be specified multiple times.
+
+  - name: cloud nexus endpoint allowed-namespace set
+    summary: Set allowed namespaces of a Nexus Endpoint
+    description: |
+      Set the full list of namespaces that are allowed to call this Nexus Endpoint,
+      replacing any previously allowed namespaces.
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint.
+      - name: namespace
+        type: string[]
+        required: true
+        description: |
+          A namespace to allow. Can be specified multiple times.
+
+  - name: cloud nexus endpoint allowed-namespace remove
+    summary: Remove allowed namespaces from a Nexus Endpoint
+    description: |
+      Remove namespaces from the list of allowed callers of this Nexus Endpoint.
+      Namespaces that are not currently allowed are silently ignored.
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the Nexus Endpoint.
+      - name: namespace
+        type: string[]
+        required: true
+        description: |
+          A namespace to remove. Can be specified multiple times.
+
+  # User group commands
+  - name: cloud user-group
+    summary: Manage Temporal Cloud user groups
+    description: |
+      Commands for managing Temporal Cloud user groups.
+    has-init: false
+    docs:
+      keywords:
+        - user-group
+        - management
+      description-header: User Group Management Commands
+      tags:
+        - user-groups
+  - name: cloud user-group apply
+    summary: Create or update a user group from a specification
+    description: |
+      Apply a user group configuration to Temporal Cloud. Creates a new user group
+      if no group with the given display name exists, or updates the existing one
+      to match the specification.
+
+      The specification can be provided as inline JSON or loaded from a file
+      by prefixing the path with '@'.
+
+      Example with inline JSON:
+
+      ```
+      temporal cloud user-group apply --spec '{"display_name": "Engineering", "cloud_group": {}, "access": {"account_access": {"role": "developer"}}}'
+      ```
+
+      Example with file path:
+
+      ```
+      temporal cloud user-group apply --spec @user-group-spec.json
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+      - async-operation
+      - resource-version
+    options:
+      - name: spec
+        type: string
+        required: true
+        description: |
+          User group configuration in JSON format. Provide inline JSON directly,
+          or use '@path/to/file.json' to load from a file.
+  - name: cloud user-group create-cloud-group
+    summary: Create a Temporal Cloud-managed user group
+    description: |
+      Create a new Temporal Cloud-managed user group. Members can be managed
+      using the add-member and remove-member commands.
+
+      Account roles: owner, admin, developer, finance-admin, read, metrics-read.
+      Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+
+      Example:
+
+      ```
+      temporal cloud user-group create-cloud-group --display-name "Engineering" \
+        --account-role developer \
+        --namespace-access my-namespace.my-account=write
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: display-name
+        type: string
+        required: true
+        description: |
+          The display name of the user group.
+      - name: account-role
+        type: string
+        description: |
+          The account-level role to assign. Valid values: owner, admin, developer,
+          finance-admin, read, metrics-read.
+      - name: namespace-access
+        type: string[]
+        description: |
+          Namespace access to grant, in the format 'namespace=permission'.
+          Permission must be one of: admin, write, read. Can be repeated.
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple.
+  - name: cloud user-group create-google-group
+    summary: Create a Google-group-backed user group
+    description: |
+      Create a new user group backed by a Google Group. Members are managed
+      via the Google Group itself.
+
+      Account roles: owner, admin, developer, finance-admin, read, metrics-read.
+      Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+
+      Example:
+
+      ```
+      temporal cloud user-group create-google-group --display-name "Platform" \
+        --google-group-email platform@example.com \
+        --account-role developer
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: display-name
+        type: string
+        required: true
+        description: |
+          The display name of the user group.
+      - name: google-group-email
+        type: string
+        required: true
+        description: |
+          The email address of the Google Group.
+      - name: account-role
+        type: string
+        description: |
+          The account-level role to assign. Valid values: owner, admin, developer,
+          finance-admin, read, metrics-read.
+      - name: namespace-access
+        type: string[]
+        description: |
+          Namespace access to grant, in the format 'namespace=permission'.
+          Permission must be one of: admin, write, read. Can be repeated.
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple.
+  - name: cloud user-group create-scim-group
+    summary: Create a SCIM-backed user group
+    description: |
+      Create a new user group backed by a SCIM identity provider group.
+      Members are managed via the upstream identity provider.
+
+      Account roles: owner, admin, developer, finance-admin, read, metrics-read.
+      Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+
+      Example:
+
+      ```
+      temporal cloud user-group create-scim-group --display-name "Security" \
+        --scim-idp-id idp-group-id-123 \
+        --account-role read
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: display-name
+        type: string
+        required: true
+        description: |
+          The display name of the user group.
+      - name: scim-idp-id
+        type: string
+        required: true
+        description: |
+          The identity provider ID for the SCIM group.
+      - name: account-role
+        type: string
+        description: |
+          The account-level role to assign. Valid values: owner, admin, developer,
+          finance-admin, read, metrics-read.
+      - name: namespace-access
+        type: string[]
+        description: |
+          Namespace access to grant, in the format 'namespace=permission'.
+          Permission must be one of: admin, write, read. Can be repeated.
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple.
+  - name: cloud user-group get
+    summary: Retrieve user group details
+    description: |
+      Retrieve the configuration and status of a Temporal Cloud user group.
+
+      Example:
+
+      ```
+      temporal cloud user-group get --group-id my-group-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - group-id
+  - name: cloud user-group list
+    summary: List Temporal Cloud user groups
+    description: |
+      List all Temporal Cloud user groups accessible with the current
+      authentication credentials.
+
+      Example:
+
+      ```
+      temporal cloud user-group list
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of user groups to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
+      - name: namespace
+        type: string
+        description: |
+          Filter user groups by the namespace they have access to.
+      - name: display-name
+        type: string
+        description: |
+          Filter user groups by display name.
+      - name: google-group-email-address
+        type: string
+        description: |
+          Filter user groups by Google group email address.
+      - name: scim-group-idp-id
+        type: string
+        description: |
+          Filter user groups by SCIM group IDP ID.
+
+  - name: cloud user-group delete
+    summary: Delete a Temporal Cloud user group
+    description: |
+      Delete a Temporal Cloud user group. This action is irreversible.
+
+      Example:
+
+      ```
+      temporal cloud user-group delete --group-id my-group-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - group-id
+      - async-operation
+      - resource-version
+  - name: cloud user-group update
+    summary: Update a Temporal Cloud user group
+    description: |
+      Update an existing Temporal Cloud user group's access settings.
+
+      Provide at least one of --account-role, --namespace-access, or --custom-role.
+
+      Example:
+
+      ```
+      temporal cloud user-group update --group-id my-group-id --account-role developer
+      temporal cloud user-group update --group-id my-group-id \
+        --namespace-access my-namespace.my-account=write
+      temporal cloud user-group update --group-id my-group-id --account-role admin \
+        --namespace-access my-namespace.my-account=write \
+        --namespace-access other-namespace.my-account=read
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - group-id
+      - async-operation
+      - resource-version
+      - custom-role
+    options:
+      - name: account-role
+        type: string
+        description: |
+          The account role to assign to the group.
+          Role must be one of: admin, developer, finance-admin, read.
+      - name: namespace-access
+        type: string[]
+        description: |
+          Namespace access change in the format 'namespace=permission'.
+          Permission must be one of: admin, write, read. Can be repeated.
+          Use an empty permission (e.g. 'testns=') to remove access to a namespace.
+          Changes are additive: namespaces not listed are left unchanged.
+  - name: cloud user-group edit
+    summary: Interactively edit a user group configuration
+    description: |
+      Open a user group configuration in your default editor for interactive
+      modification. After saving and closing the editor, the changes are
+      applied to Temporal Cloud.
+
+      The editor is determined by the EDITOR environment variable, falling
+      back to 'vi' if not set.
+
+      Example:
+
+      ```
+      temporal cloud user-group edit --group-id my-group-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+      - group-id
+      - async-operation
+      - resource-version
+  - name: cloud user-group set-account-role
+    summary: Set the account role for a user group
+    description: |
+      Set the account-level role for a Temporal Cloud user group.
+
+      Account roles: owner, admin, developer, finance-admin, read, metrics-read.
+
+      Example:
+
+      ```
+      temporal cloud user-group set-account-role --group-id my-group-id --account-role developer
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - group-id
+      - async-operation
+      - resource-version
+    options:
+      - name: account-role
+        type: string
+        required: true
+        description: |
+          The account-level role to assign. Valid values: owner, admin, developer,
+          finance-admin, read, metrics-read.
+  - name: cloud user-group set-custom-roles
+    summary: '[Experimental] Set custom role assignments for a user group'
+    description: |
+      Set the custom roles assigned to a Temporal Cloud user group. Replaces
+      the group's current custom role list. Pass no --custom-role flags to
+      remove all custom roles.
+
+      Example:
+
+      ```
+      temporal cloud user-group set-custom-roles --group-id my-group-id \
+        --custom-role role-id-1 --custom-role role-id-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - group-id
+      - async-operation
+      - resource-version
+      - custom-role
+  - name: cloud user-group set-namespace-permissions
+    summary: Set namespace permissions for a user group
+    description: |
+      Add, update, or remove namespace-level permissions for a Temporal Cloud user group.
+      Changes are applied additively: namespaces not listed are left unchanged.
+
+      Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+      To remove access to a namespace, pass an empty permission: 'namespace='.
+
+      Example:
+
+      ```
+      temporal cloud user-group set-namespace-permissions --group-id my-group-id \
+        --namespace-access my-namespace.my-account=write \
+        --namespace-access other-namespace.my-account=read
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - group-id
+      - async-operation
+      - resource-version
+    options:
+      - name: namespace-access
+        type: string[]
+        required: true
+        description: |
+          Namespace access change in the format 'namespace=permission'.
+          Permission must be one of: admin, write, read. Can be repeated.
+          Use an empty permission (e.g. 'testns=') to remove access to a namespace.
+          Changes are additive: namespaces not listed are left unchanged.
+
+  # User group member commands
+  - name: cloud user-group members
+    summary: Manage Temporal Cloud user group members
+    description: |
+      Commands for managing members of Temporal Cloud user groups.
+    has-init: false
+
+  - name: cloud user-group members list
+    summary: List members of a Temporal Cloud user group
+    description: |
+      List all members of a Temporal Cloud user group.
+
+      Example:
+
+      ```
+      temporal cloud user-group members list --group-id my-group-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - group-id
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of members to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
+
+  - name: cloud user-group members add
+    summary: Add a member to a Temporal Cloud user group
+    description: |
+      Add a user to a Temporal Cloud user group.
+
+      Specify the user with either --user-id or --user-email (not both).
+
+      Example:
+
+      ```
+      temporal cloud user-group members add --group-id my-group-id --user-id my-user-id
+      temporal cloud user-group members add --group-id my-group-id --user-email alice@example.com
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - group-id
+      - async-operation
+      - user-identification
+
+  - name: cloud user-group members remove
+    summary: Remove a member from a Temporal Cloud user group
+    description: |
+      Remove a user from a Temporal Cloud user group.
+
+      Specify the user with either --user-id or --user-email (not both).
+
+      Example:
+
+      ```
+      temporal cloud user-group members remove --group-id my-group-id --user-id my-user-id
+      temporal cloud user-group members remove --group-id my-group-id --user-email alice@example.com
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - group-id
+      - async-operation
+      - user-identification
+
+  # Custom role commands
+  - name: cloud custom-role
+    summary: '[Experimental] Manage Temporal Cloud custom roles'
+    description: |
+      Commands for managing Temporal Cloud custom roles.
+
+      Custom roles enable fine-grained authorization by binding sets of
+      permissions (resource + actions) to a named role that can be assigned
+      to users, user groups, and service accounts.
+    has-init: false
+    docs:
+      keywords:
+        - custom-role
+        - role
+        - authorization
+      description-header: Custom Role Management Commands
+      tags:
+        - custom-roles
+  - name: cloud custom-role get
+    summary: '[Experimental] Retrieve custom role details'
+    description: |
+      Retrieve the configuration and status of a Temporal Cloud custom role.
+
+      Example:
+
+      ```
+      temporal cloud custom-role get --role-id my-role-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - role-id
+  - name: cloud custom-role list
+    summary: '[Experimental] List Temporal Cloud custom roles'
+    description: |
+      List all Temporal Cloud custom roles accessible with the current
+      authentication credentials.
+
+      Example:
+
+      ```
+      temporal cloud custom-role list
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of custom roles to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
+  - name: cloud custom-role create
+    summary: '[Experimental] Create a Temporal Cloud custom role'
+    description: |
+      Create a new Temporal Cloud custom role from a JSON specification.
+
+      The specification can be provided as inline JSON or loaded from a file
+      by prefixing the path with '@'.
+
+      Example with inline JSON:
+
+      ```
+      temporal cloud custom-role create --spec '{"name":"reader","description":"...","permissions":[...]}'
+      ```
+
+      Example with file path:
+
+      ```
+      temporal cloud custom-role create --spec @custom-role.json
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: spec
+        type: string
+        required: true
+        description: |
+          Custom role specification in JSON format. Provide inline JSON
+          directly, or use '@path/to/file.json' to load from a file.
+  - name: cloud custom-role update
+    summary: '[Experimental] Update an existing Temporal Cloud custom role'
+    description: |
+      Update an existing Temporal Cloud custom role from a JSON specification.
+      Replaces the role's spec with the provided one.
+
+      Example:
+
+      ```
+      temporal cloud custom-role update --role-id my-role-id --spec @custom-role.json
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - role-id
+      - async-operation
+      - resource-version
+    options:
+      - name: spec
+        type: string
+        required: true
+        description: |
+          Custom role specification in JSON format. Provide inline JSON
+          directly, or use '@path/to/file.json' to load from a file.
+  - name: cloud custom-role delete
+    summary: '[Experimental] Delete a Temporal Cloud custom role'
+    description: |
+      Delete a Temporal Cloud custom role. This action is irreversible.
+
+      Example:
+
+      ```
+      temporal cloud custom-role delete --role-id my-role-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - role-id
+      - async-operation
+      - resource-version
+  - name: cloud custom-role apply
+    summary: '[Experimental] Create or update a custom role from a specification'
+    description: |
+      Apply a custom role configuration to Temporal Cloud. Creates a new role
+      if no role with the given name exists, or updates the existing one to
+      match the specification.
+
+      The specification can be provided as inline JSON or loaded from a file
+      by prefixing the path with '@'.
+
+      Example:
+
+      ```
+      temporal cloud custom-role apply --spec @custom-role.json
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+      - async-operation
+      - resource-version
+    options:
+      - name: spec
+        type: string
+        required: true
+        description: |
+          Custom role specification in JSON format. Provide inline JSON
+          directly, or use '@path/to/file.json' to load from a file.
+  - name: cloud custom-role edit
+    summary: '[Experimental] Interactively edit a custom role configuration'
+    description: |
+      Open a custom role configuration in your default editor for interactive
+      modification. After saving and closing the editor, the changes are
+      applied to Temporal Cloud.
+
+      The editor is determined by the EDITOR environment variable, falling
+      back to 'vi' if not set.
+
+      Example:
+
+      ```
+      temporal cloud custom-role edit --role-id my-role-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+      - role-id
+      - async-operation
+      - resource-version
+
+  # Connectivity commands
+  - name: cloud connectivity
+    summary: Manage Temporal Cloud connectivity rules
+    description: |
+      Commands for managing connectivity rules for Temporal Cloud.
+    has-init: false
+    docs:
+      keywords:
+        - connectivity
+        - connectivity-rule
+      description-header: Connectivity Management Commands
+      tags:
+        - connectivity
+
+  - name: cloud connectivity list
+    summary: List connectivity rules
+    description: |
+      List connectivity rules, optionally filtered by namespace.
+
+      Example:
+
+      ```
+      temporal cloud connectivity list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: namespace
+        type: string
+        short: n
+        description: |
+          Filter connectivity rules by namespace (e.g., 'my-namespace.my-account').
+      - name: page-size
+        type: int
+        description: |
+          Number of connectivity rules to return per page.
+      - name: page-token
+        type: string
+        description: |
+          Page token for pagination.
+
+  - name: cloud connectivity get
+    summary: Get details of a connectivity rule
+    description: |
+      Get details of a specific connectivity rule by its ID.
+
+      Example:
+
+      ```
+      temporal cloud connectivity get --id <connectivity-rule-id>
+      ```
+    has-init: false
+    options:
+      - name: id
+        type: string
+        required: true
+        description: |
+          The ID of the connectivity rule.
+    option-sets:
+      - client
+
+  - name: cloud connectivity delete
+    summary: Delete a connectivity rule
+    description: |
+      Delete a connectivity rule by its ID.
+
+      Example:
+
+      ```
+      temporal cloud connectivity delete --id <connectivity-rule-id>
+      ```
+    has-init: false
+    options:
+      - name: id
+        type: string
+        required: true
+        description: |
+          The ID of the connectivity rule.
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+
+  - name: cloud connectivity public
+    summary: Manage public connectivity rules
+    description: |
+      Commands for managing public connectivity rules.
+    has-init: false
+
+  - name: cloud connectivity public create
+    summary: Create a public connectivity rule
+    description: |
+      Create a new public internet connectivity rule.
+
+      Example:
+
+      ```
+      temporal cloud connectivity public create
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: enable-stable-ips
+        type: bool
+        description: |
+          Connect the namespace via a predictable set of IPs on the public internet.
+
+  - name: cloud connectivity private
+    summary: Manage private connectivity rules
+    description: |
+      Commands for managing private connectivity rules.
+    has-init: false
+
+  - name: cloud connectivity private create
+    summary: Create a private connectivity rule
+    description: |
+      Create a new private VPC connectivity rule. Requires --connection-id and --region.
+
+      Example:
+
+      ```
+      temporal cloud connectivity private create --connection-id vpce-12345 --region aws-us-west-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: connection-id
+        type: string
+        required: true
+        description: |
+          The connection ID for private connectivity.
+      - name: region
+        type: string
+        required: true
+        description: |
+          The region for private connectivity.
+      - name: gcp-project-id
+        type: string
+        description: |
+          The GCP project ID (only for GCP private connectivity).
+
+  # User commands
+  - name: cloud user
+    summary: Manage Temporal Cloud users
+    description: |
+      Commands for managing Temporal Cloud users.
+    has-init: false
+    docs:
+      keywords:
+        - user
+        - management
+      description-header: User Management Commands
+      tags:
+        - users
+  - name: cloud user get
+    summary: Retrieve user details
+    description: |
+      Retrieve the configuration and status of a Temporal Cloud user.
+
+      Example:
+
+      ```
+      temporal cloud user get --user-id my-user-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - user-identification
+  - name: cloud user set-namespace-permissions
+    summary: Set namespace permissions for a user
+    description: |
+      Add, update, or remove namespace-level permissions for a Temporal Cloud user.
+      Changes are applied additively: namespaces not listed are left unchanged.
+
+      Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+      To remove access to a namespace, pass an empty permission: 'namespace='.
+
+      Specify the user with either --user-id or --user-email (not both).
+
+      Example:
+
+      ```
+      # Grant write access to my-namespace and read access to other-namespace:
+      temporal cloud user set-namespace-permissions --user-id my-user-id \
+        --namespace-access my-namespace.my-account=write \
+        --namespace-access other-namespace.my-account=read
+
+      # Remove access to a namespace:
+      temporal cloud user set-namespace-permissions --user-id my-user-id \
+        --namespace-access my-namespace.my-account=
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - user-identification
+    options:
+      - name: namespace-access
+        type: string[]
+        required: true
+        description: |
+          Namespace access change in the format 'namespace=permission'.
+          Permission must be one of: admin, write, read. Can be repeated.
+          Use an empty permission (e.g. 'testns=') to remove access to a namespace.
+          Changes are additive: namespaces not listed are left unchanged.
+  - name: cloud user set-account-role
+    summary: Set the account role for a user
+    description: |
+      Set the account-level role for a Temporal Cloud user.
+
+      Account roles: owner, admin, developer, finance-admin, read, metrics-read.
+
+      Specify the user with either --user-id or --user-email (not both).
+
+      Example:
+
+      ```
+      temporal cloud user set-account-role --user-id my-user-id --account-role developer
+      temporal cloud user set-account-role --user-email alice@example.com --account-role admin
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - user-identification
+    options:
+      - name: account-role
+        type: string
+        required: true
+        description: |
+          The account-level role to assign. Valid values: owner, admin, developer,
+          finance-admin, read, metrics-read.
+  - name: cloud user set-custom-roles
+    summary: '[Experimental] Set custom role assignments for a user'
+    description: |
+      Set the custom roles assigned to a Temporal Cloud user. Replaces the
+      user's current custom role list. Pass no --custom-role flags to remove
+      all custom roles.
+
+      Specify the user with either --user-id or --user-email (not both).
+
+      Example:
+
+      ```
+      temporal cloud user set-custom-roles --user-email alice@example.com \
+        --custom-role role-id-1 --custom-role role-id-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - user-identification
+      - custom-role
+  - name: cloud user delete
+    summary: Delete a Temporal Cloud user
+    description: |
+      Delete a Temporal Cloud user. This action is irreversible.
+
+      Specify the user with either --user-id or --user-email (not both).
+
+      Example:
+
+      ```
+      temporal cloud user delete --user-id my-user-id
+      temporal cloud user delete --user-email alice@example.com
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - user-identification
+  - name: cloud user edit
+    summary: Interactively edit a user configuration
+    description: |
+      Open a user configuration in your default editor for interactive
+      modification. After saving and closing the editor, the changes are
+      applied to Temporal Cloud.
+
+      The editor is determined by the EDITOR environment variable, falling
+      back to 'vi' if not set.
+
+      Specify the user with either --user-id or --user-email (not both).
+
+      Example:
+
+      ```
+      temporal cloud user edit --user-id my-user-id
+      temporal cloud user edit --user-email alice@example.com
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+      - async-operation
+      - resource-version
+      - user-identification
+  - name: cloud user apply
+    summary: Create or update a user from a specification
+    description: |
+      Apply a user configuration to Temporal Cloud. Creates a new user invitation
+      if the email does not exist, or updates the existing user to match the specification.
+
+      The specification can be provided as inline JSON or loaded from a file
+      by prefixing the path with '@'.
+
+      Example with inline JSON:
+
+      ```
+      temporal cloud user apply --spec '{"email": "alice@example.com", "access": {"account_access": {"role": "developer"}}}'
+      ```
+
+      Example with file path:
+
+      ```
+      temporal cloud user apply --spec @user-spec.json
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+      - async-operation
+      - resource-version
+    options:
+      - name: spec
+        type: string
+        required: true
+        description: |
+          User configuration in JSON format. Provide inline JSON directly,
+          or use '@path/to/file.json' to load from a file.
+  - name: cloud user invite
+    summary: Invite a user to Temporal Cloud
+    description: |
+      Invite a user to Temporal Cloud by email. Optionally assign an account-level
+      role and namespace-level access permissions.
+
+      Account roles: owner, admin, developer, finance-admin, read, metrics-read.
+      Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+
+      Example:
+
+      ```
+      temporal cloud user invite --email alice@example.com --account-role developer \
+        --namespace-access my-namespace.my-account=write
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: email
+        type: string
+        required: true
+        description: |
+          The email address of the user to invite.
+      - name: account-role
+        type: string
+        description: |
+          The account-level role to assign. Valid values: owner, admin, developer,
+          finance-admin, read, metrics-read.
+      - name: namespace-access
+        type: string[]
+        description: |
+          Namespace access to grant, in the format 'namespace=permission'.
+          Permission must be one of: admin, write, read. Can be repeated.
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple.
+  - name: cloud user list
+    summary: List Temporal Cloud users
+    description: |
+      List all Temporal Cloud users accessible with the current
+      authentication credentials.
+
+      Example:
+
+      ```
+      temporal cloud user list
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of users to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
+      - name: email
+        type: string
+        description: |
+          Filter users by email address.
+      - name: namespace
+        type: string
+        description: |
+          Filter users by the namespace they have access to.
+
+  # Service account commands
+  - name: cloud service-account
+    summary: Manage Temporal Cloud service accounts
+    description: |
+      Commands for managing Temporal Cloud service accounts.
+    has-init: false
+    docs:
+      keywords:
+        - service-account
+        - management
+      description-header: Service Account Management Commands
+      tags:
+        - service-accounts
+
+  - name: cloud service-account list
+    summary: List service accounts
+    description: |
+      List all Temporal Cloud service accounts accessible with the current
+      authentication credentials.
+
+      Example:
+
+      ```
+      temporal cloud service-account list
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of service accounts to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
+
+  - name: cloud service-account delete
+    summary: Delete a service account
+    description: |
+      Delete a Temporal Cloud service account. This action is irreversible.
+
+      Example:
+
+      ```
+      temporal cloud service-account delete --service-account-id my-sa-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account to delete.
+
+  - name: cloud service-account create
+    summary: Create a service account
+    description: |
+      Create a new Temporal Cloud service account with account-level access.
+      Optionally assign an account role and namespace-level permissions.
+
+      Account roles: owner, admin, developer, finance-admin, read, metrics-read.
+      Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+
+      Example:
+
+      ```
+      temporal cloud service-account create --name my-sa --account-role developer \
+        --namespace-access my-namespace.my-account=write
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the service account. Must be unique across all active service accounts.
+      - name: description
+        type: string
+        description: |
+          An optional description for the service account.
+      - name: account-role
+        type: string
+        description: |
+          The account-level role to assign. Valid values: owner, admin, developer,
+          finance-admin, read, metrics-read.
+      - name: namespace-access
+        type: string[]
+        description: |
+          Namespace access to grant, in the format 'namespace=permission'.
+          Permission must be one of: admin, write, read. Can be repeated.
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple.
+
+  - name: cloud service-account create-namespace-scoped
+    summary: Create a namespace-scoped service account
+    description: |
+      Create a new Temporal Cloud service account scoped to a single namespace.
+
+      Example:
+
+      ```
+      temporal cloud service-account create-namespace-scoped --name my-sa \
+        --namespace my-namespace.my-account --namespace-permission write
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the service account. Must be unique across all active service accounts.
+      - name: description
+        type: string
+        description: |
+          An optional description for the service account.
+      - name: namespace
+        type: string
+        required: true
+        description: |
+          The namespace to scope the service account to.
+      - name: namespace-permission
+        type: string
+        required: true
+        description: |
+          The permission to grant on the namespace. Valid values: admin, write, read.
+
+  - name: cloud service-account update
+    summary: Update a service account
+    description: |
+      Update a Temporal Cloud service account. Only flags that are explicitly provided
+      are changed.
+
+      For account-scoped service accounts, use --account-role and/or --namespace-access.
+      For namespace-scoped service accounts, use --namespace-permission.
+
+      Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+      Use 'namespace=' (empty permission) to remove access to a namespace.
+
+      Example:
+
+      ```
+      temporal cloud service-account update --service-account-id my-sa-id --name new-name
+      temporal cloud service-account update --service-account-id my-sa-id --account-role admin
+      temporal cloud service-account update --service-account-id my-sa-id --namespace-permission write
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - custom-role
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account to update.
+      - name: name
+        type: string
+        description: |
+          New name for the service account.
+      - name: description
+        type: string
+        description: |
+          New description for the service account.
+      - name: account-role
+        type: string
+        description: |
+          The account-level role to assign. Valid values: owner, admin, developer,
+          finance-admin, read, metrics-read. Only valid for account-scoped service accounts.
+      - name: namespace-access
+        type: string[]
+        description: |
+          Namespace access to set, in the format 'namespace=permission'. Use 'namespace='
+          to remove access. Permission must be one of: admin, write, read. Can be repeated.
+          Only valid for account-scoped service accounts.
+      - name: namespace-permission
+        type: string
+        description: |
+          The permission to grant on the scoped namespace. Valid values: admin, write, read.
+          Only valid for namespace-scoped service accounts.
+
+  - name: cloud service-account set-custom-roles
+    summary: '[Experimental] Set custom role assignments for a service account'
+    description: |
+      Set the custom roles assigned to a Temporal Cloud service account.
+      Replaces the service account's current custom role list. Pass no
+      --custom-role flags to remove all custom roles.
+
+      Not valid for namespace-scoped service accounts.
+
+      Example:
+
+      ```
+      temporal cloud service-account set-custom-roles --service-account-id my-sa-id \
+        --custom-role role-id-1 --custom-role role-id-2
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - custom-role
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account.
+
+  - name: cloud service-account edit
+    summary: Interactively edit a service account
+    description: |
+      Open a service account configuration in your default editor for interactive
+      modification. After saving and closing the editor, the changes are applied
+      to Temporal Cloud.
+
+      The editor is determined by the EDITOR environment variable, falling
+      back to 'vi' if not set.
+
+      Example:
+
+      ```
+      temporal cloud service-account edit --service-account-id my-sa-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+      - async-operation
+      - resource-version
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account to edit.
+
+  - name: cloud service-account get
+    summary: Get service account details
+    description: |
+      Retrieve the configuration and status of a Temporal Cloud service account.
+
+      Example:
+
+      ```
+      temporal cloud service-account get --service-account-id my-sa-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account to retrieve.
+
+  # Account commands
+  - name: cloud account
+    summary: Manage Temporal Cloud account
+    description: |
+      Manage the Temporal Cloud account.
+    has-init: false
+    docs:
+      keywords:
+        - account
+        - management
+      description-header: Account Management Commands
+      tags:
+        - account
+
+  - name: cloud account audit-log
+    summary: Manage audit logs
+    description: |
+      Commands for working with account audit logs.
+    has-init: false
+    docs:
+      keywords:
+        - audit-log
+        - account
+      description-header: Audit Log Commands
+      tags:
+        - account
+
+  - name: cloud account audit-log list
+    summary: List audit logs
+    description: |
+      Returns a paginated list of audit logs for the account, optionally filtered by time range.
+
+      Example:
+        temporal cloud account audit-log get --page-size 50
+        temporal cloud account audit-log get --start-time 2024-01-01T00:00:00Z --end-time 2024-02-01T00:00:00Z
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of logs to retrieve per page. Cannot exceed 1000. Defaults to 100.
+      - name: page-token
+        type: string
+        description: |
+          Page token from a previous response to retrieve the next page.
+      - name: start-time
+        type: timestamp
+        description: |
+          Filter for logs at or after this UTC time (RFC3339 format, e.g. 2024-01-01T00:00:00Z). Defaults to 30 days ago.
+      - name: end-time
+        type: timestamp
+        description: |
+          Filter for logs before this UTC time (RFC3339 format, e.g. 2024-02-01T00:00:00Z). Defaults to current time.
+
+
+  - name: cloud account audit-log sink
+    summary: Manage audit log sinks
+    description: |
+      Commands for working with account audit log sinks.
+    has-init: false
+    docs:
+      keywords:
+        - audit-log
+        - sink
+        - account
+      description-header: Audit Log Sink Commands
+      tags:
+        - account
+
+  - name: cloud account audit-log sink get
+    summary: Get an audit log sink
+    description: |
+      Returns the details of an audit log sink for the account.
+
+      Example:
+        temporal cloud account audit-log sink get --name my-sink
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the audit log sink to get.
+
+  - name: cloud account audit-log sink list
+    summary: List audit log sinks
+    description: |
+      Returns a paginated list of audit log sinks for the account.
+
+      Example:
+        temporal cloud account audit-log sink list
+        temporal cloud account audit-log sink list --page-size 50
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of sinks to retrieve per page. Cannot exceed 1000. Defaults to 100.
+      - name: page-token
+        type: string
+        description: |
+          Page token from a previous response to retrieve the next page.
+
+  - name: cloud account audit-log sink delete
+    summary: Delete an audit log sink
+    description: |
+      Delete an audit log sink for the account. This action is irreversible.
+
+      Example:
+        temporal cloud account audit-log sink delete --name my-sink
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the audit log sink to delete.
+
+  - name: cloud account audit-log sink enable
+    summary: Enable an audit log sink
+    description: |
+      Enable an audit log sink for the account.
+
+      Example:
+        temporal cloud account audit-log sink enable --name my-sink
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the audit log sink to enable.
+
+  - name: cloud account audit-log sink disable
+    summary: Disable an audit log sink
+    description: |
+      Disable an audit log sink for the account.
+
+      Example:
+        temporal cloud account audit-log sink disable --name my-sink
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the audit log sink to disable.
+
+  - name: cloud account audit-log sink kinesis
+    summary: Manage Kinesis audit log sinks
+    description: |
+      Commands for managing Kinesis-based audit log sinks.
+    has-init: false
+    docs:
+      keywords:
+        - audit-log
+        - sink
+        - kinesis
+        - account
+      description-header: Kinesis Audit Log Sink Commands
+      tags:
+        - account
+
+  - name: cloud account audit-log sink kinesis create
+    summary: Create a Kinesis audit log sink
+    description: |
+      Create an account audit log sink that streams audit events to Amazon Kinesis.
+
+      Temporal Cloud assumes the specified IAM role to write events to the Kinesis
+      stream identified by the destination URI.
+
+      Example:
+        temporal cloud account audit-log sink kinesis create \
+          --name my-sink \
+          --role-name MyRole \
+          --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \
+          --region us-east-1
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          Name of the audit log sink.
+      - name: role-name
+        type: string
+        required: true
+        description: |
+          Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
+      - name: destination-uri
+        type: string
+        required: true
+        description: |
+          ARN of the Kinesis stream to deliver audit log events to.
+      - name: region
+        type: string
+        required: true
+        description: |
+          AWS region where the Kinesis stream is located (e.g. us-east-1).
+
+  - name: cloud account audit-log sink kinesis update
+    summary: Update a Kinesis audit log sink
+    description: |
+      Update an existing Kinesis audit log sink. Only the flags you provide are changed;
+      omitted string flags retain their current values.
+
+      Example:
+        temporal cloud account audit-log sink kinesis update \
+          --name my-sink \
+          --role-name NewRole
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          Name of the audit log sink to update.
+      - name: role-name
+        type: string
+        description: |
+          Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
+          If omitted, the current value is kept.
+      - name: destination-uri
+        type: string
+        description: |
+          ARN of the Kinesis stream to deliver audit log events to.
+          If omitted, the current value is kept.
+      - name: region
+        type: string
+        description: |
+          AWS region where the Kinesis stream is located (e.g. us-east-1).
+          If omitted, the current value is kept.
+
+  - name: cloud account audit-log sink kinesis validate
+    summary: Validate a Kinesis audit log sink configuration
+    description: |
+      Validate an audit log sink configuration against Amazon Kinesis without creating it.
+      Use this to verify that the IAM role and Kinesis stream are correctly configured
+      before creating or updating the sink.
+
+      Example:
+        temporal cloud account audit-log sink kinesis validate \
+          --name my-sink \
+          --role-name MyRole \
+          --destination-uri arn:aws:kinesis:us-east-1:123456789012:stream/MyStream \
+          --region us-east-1
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: role-name
+        type: string
+        required: true
+        description: |
+          Name of the IAM role that Temporal Cloud assumes to write to the Kinesis stream.
+      - name: destination-uri
+        type: string
+        required: true
+        description: |
+          ARN of the Kinesis stream to deliver audit log events to.
+      - name: region
+        type: string
+        required: true
+        description: |
+          AWS region where the Kinesis stream is located (e.g. us-east-1).
+
+  - name: cloud account audit-log sink pubsub
+    summary: Manage PubSub audit log sinks
+    description: |
+      Commands for managing PubSub audit log sinks.
+    has-init: false
+    docs:
+      keywords:
+        - audit-log
+        - sink
+        - pubsub
+        - account
+      description-header: PubSub Audit Log Sink Commands
+      tags:
+        - account
+
+  - name: cloud account audit-log sink pubsub create
+    summary: Create a PubSub audit log sink
+    description: |
+      Creates a new PubSub audit log sink for the account using Google Cloud Pub/Sub.
+
+      Example:
+
+      ```
+      temporal cloud account audit-log sink pubsub create \
+        --name my-sink \
+        --service-account-email my-sa@my-project.iam.gserviceaccount.com \
+        --topic-name my-topic
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the audit log sink.
+      - name: service-account-email
+        type: string
+        required: true
+        description: |
+          The email of the GCP service account that Temporal Cloud impersonates for
+          writing records to the customer's PubSub topic
+          (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and
+          GCP project ID are parsed from this email.
+      - name: topic-name
+        type: string
+        required: true
+        description: |
+          The destination PubSub topic name where audit logs will be sent.
+
+  - name: cloud account audit-log sink pubsub update
+    summary: Update a PubSub audit log sink
+    description: |
+      Updates an existing PubSub audit log sink for the account.
+
+      Example:
+
+      ```
+      temporal cloud account audit-log sink pubsub update \
+        --name my-sink \
+        --service-account-email new-sa@new-project.iam.gserviceaccount.com \
+        --topic-name new-topic
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - resource-version
+      - async-operation
+    options:
+      - name: name
+        type: string
+        required: true
+        description: |
+          The name of the audit log sink to update.
+      - name: service-account-email
+        type: string
+        description: |
+          The email of the GCP service account that Temporal Cloud impersonates for
+          writing records to the customer's PubSub topic
+          (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and
+          GCP project ID are parsed from this email.
+      - name: topic-name
+        type: string
+        description: |
+          The destination PubSub topic name where audit logs will be sent.
+
+  - name: cloud account audit-log sink pubsub validate
+    summary: Validate a PubSub audit log sink
+    description: |
+      Validates a PubSub audit log sink specification without creating or modifying any resources.
+
+      Example:
+
+      ```
+      temporal cloud account audit-log sink pubsub validate \
+        --name my-sink \
+        --service-account-email my-sa@my-project.iam.gserviceaccount.com \
+        --topic-name my-topic
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: service-account-email
+        type: string
+        required: true
+        description: |
+          The email of the GCP service account that Temporal Cloud impersonates for
+          writing records to the customer's PubSub topic
+          (e.g. my-sa@my-project.iam.gserviceaccount.com). The service account ID and
+          GCP project ID are parsed from this email.
+      - name: topic-name
+        type: string
+        required: true
+        description: |
+          The destination PubSub topic name where audit logs will be sent.
+
+  # Account metrics commands
+  - name: cloud account metrics
+    summary: Manage account metrics configuration
+    description: |
+      Commands for managing the Temporal Cloud account metrics configuration.
+    has-init: false
+    docs:
+      keywords:
+        - account
+        - metrics
+      description-header: Account Metrics Commands
+      tags:
+        - account
+
+  - name: cloud account metrics cert-ca
+    summary: Manage CA certificates for metrics endpoint authentication
+    description: |
+      Commands for managing the CA certificates used to authenticate clients
+      accessing the Temporal Cloud account metrics endpoint.
+    has-init: false
+    docs:
+      keywords:
+        - account
+        - metrics
+        - certificate
+      description-header: Account Metrics CA Certificate Commands
+      tags:
+        - account
+
+  - name: cloud account metrics cert-ca create
+    summary: Add a CA certificate for metrics endpoint authentication
+    description: |
+      Add a CA certificate to the list of accepted client CA certificates for
+      the Temporal Cloud account metrics endpoint.
+
+      Example:
+        temporal cloud account metrics cert-ca create --ca-certificate-file /path/to/cert.pem
+        temporal cloud account metrics cert-ca create --ca-certificate <base64-encoded-cert>
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - ca-certificate
+
+  - name: cloud account metrics cert-ca delete
+    summary: Delete a CA certificate from metrics endpoint authentication
+    description: |
+      Remove a CA certificate from the list of accepted client CA certificates for
+      the Temporal Cloud account metrics endpoint.
+
+      Example:
+        temporal cloud account metrics cert-ca delete --ca-certificate-file /path/to/cert.pem
+        temporal cloud account metrics cert-ca delete --ca-certificate <base64-encoded-cert>
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - ca-certificate
+
+  - name: cloud account metrics cert-ca list
+    summary: List CA certificates for metrics endpoint authentication
+    description: |
+      List the CA certificates accepted for authenticating clients accessing
+      the Temporal Cloud account metrics endpoint.
+
+      Example:
+        temporal cloud account metrics cert-ca list
+    has-init: false
+    option-sets:
+      - client
+
+  # API key commands
+  - name: cloud apikey
+    summary: Manage Temporal Cloud API keys
+    description: |
+      Commands for creating, listing, and managing Temporal Cloud API keys.
+
+      API keys authenticate requests to the Temporal Cloud API.
+    has-init: false
+    docs:
+      keywords:
+        - apikey
+        - api-key
+        - management
+      description-header: API Key Management Commands
+      tags:
+        - apikeys
+
+  - name: cloud apikey list
+    summary: List API keys
+    description: |
+      List API keys. Optionally filter by user ID, user email, or service account ID.
+      At most one filter may be specified.
+
+      Example:
+
+      ```
+      temporal cloud apikey list
+      temporal cloud apikey list --user-id my-user-id
+      temporal cloud apikey list --service-account-id my-sa-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: user-id
+        type: string
+        description: |
+          Filter API keys by user ID. Mutually exclusive with --user-email and --service-account-id.
+      - name: user-email
+        type: string
+        description: |
+          Filter API keys by user email. Mutually exclusive with --user-id and --service-account-id.
+      - name: service-account-id
+        type: string
+        description: |
+          Filter API keys by service account ID. Mutually exclusive with --user-id and --user-email.
+      - name: page-size
+        type: int
+        description: |
+          Number of API keys to return per page.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results.
+
+  - name: cloud apikey get
+    summary: Get API key details
+    description: |
+      Retrieve the configuration and status of a Temporal Cloud API key.
+
+      Example:
+
+      ```
+      temporal cloud apikey get --key-id my-key-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: key-id
+        type: string
+        required: true
+        description: |
+          The ID of the API key to retrieve.
+
+  - name: cloud apikey create-for-service-account
+    summary: Create an API key for a service account
+    description: |
+      Create a new API key owned by the specified service account.
+      The token is printed once on creation and cannot be retrieved again.
+
+      Example:
+
+      ```
+      temporal cloud apikey create-for-service-account --service-account-id my-sa-id --display-name "My Key"
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: service-account-id
+        type: string
+        required: true
+        description: |
+          The ID of the service account to create the API key for.
+      - name: display-name
+        type: string
+        required: true
+        description: |
+          A human-readable display name for the API key.
+      - name: description
+        type: string
+        description: |
+          An optional description for the API key.
+      - name: expiry-time
+        type: timestamp
+        description: |
+          Expiry time for the API key in RFC3339 format (e.g. 2025-12-31T00:00:00Z).
+          Mutually exclusive with --expiry-duration.
+      - name: expiry-duration
+        type: duration
+        description: |
+          Expiry duration relative to now (e.g. 30d, 24h, 90m).
+          Supports days (d), hours (h), minutes (m), and seconds (s).
+          Mutually exclusive with --expiry-time.
+
+  - name: cloud apikey create-for-me
+    summary: Create an API key for the current user
+    description: |
+      Create a new API key owned by the currently authenticated user.
+      The token is printed once on creation and cannot be retrieved again.
+
+      Example:
+
+      ```
+      temporal cloud apikey create-for-me --display-name "My Key"
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+    options:
+      - name: display-name
+        type: string
+        required: true
+        description: |
+          A human-readable display name for the API key.
+      - name: description
+        type: string
+        description: |
+          An optional description for the API key.
+      - name: expiry-time
+        type: timestamp
+        description: |
+          Expiry time for the API key in RFC3339 format (e.g. 2025-12-31T00:00:00Z).
+          Mutually exclusive with --expiry-duration.
+      - name: expiry-duration
+        type: duration
+        description: |
+          Expiry duration relative to now (e.g. 30d, 24h, 90m).
+          Supports days (d), hours (h), minutes (m), and seconds (s).
+          Mutually exclusive with --expiry-time.
+
+  - name: cloud apikey delete
+    summary: Delete an API key
+    description: |
+      Delete a Temporal Cloud API key. This action is irreversible.
+
+      Example:
+
+      ```
+      temporal cloud apikey delete --key-id my-key-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: key-id
+        type: string
+        required: true
+        description: |
+          The ID of the API key to delete.
+
+  - name: cloud apikey update
+    summary: Update an API key
+    description: |
+      Update an API key's display name, description, or disabled status.
+      Only flags that are explicitly provided are changed.
+
+      Example:
+
+      ```
+      temporal cloud apikey update --key-id my-key-id --display-name "New Name"
+      temporal cloud apikey update --key-id my-key-id --disabled=true
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: key-id
+        type: string
+        required: true
+        description: |
+          The ID of the API key to update.
+      - name: display-name
+        type: string
+        description: |
+          New display name for the API key.
+      - name: description
+        type: string
+        description: |
+          New description for the API key.
+      - name: disabled
+        type: bool
+        description: |
+          Set to true to disable the API key, or false to enable it.
+
+  - name: cloud apikey edit
+    summary: Interactively edit an API key
+    description: |
+      Open an API key configuration in your default editor for interactive
+      modification. After saving and closing the editor, the changes are
+      applied to Temporal Cloud.
+
+      The editor is determined by the EDITOR environment variable, falling
+      back to 'vi' if not set.
+
+      Example:
+
+      ```
+      temporal cloud apikey edit --key-id my-key-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - diff
+      - async-operation
+      - resource-version
+    options:
+      - name: key-id
+        type: string
+        required: true
+        description: |
+          The ID of the API key to edit.
+
+  - name: cloud apikey disable
+    summary: Disable an API key
+    description: |
+      Disable a Temporal Cloud API key. Disabled keys cannot be used for authentication.
+
+      Example:
+
+      ```
+      temporal cloud apikey disable --key-id my-key-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: key-id
+        type: string
+        required: true
+        description: |
+          The ID of the API key to disable.
+
+  - name: cloud apikey enable
+    summary: Enable an API key
+    description: |
+      Enable a previously disabled Temporal Cloud API key.
+
+      Example:
+
+      ```
+      temporal cloud apikey enable --key-id my-key-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+    options:
+      - name: key-id
+        type: string
+        required: true
+        description: |
+          The ID of the API key to enable.
+
+  - name: cloud async-operation
+    summary: Manage async operations
+    description: |
+      Commands for working with Temporal Cloud async operations.
+    has-init: false
+    docs:
+      keywords:
+        - async-operation
+        - async
+        - operation
+      description-header: Async Operation Commands
+      tags:
+        - async-operations
+
+  - name: cloud async-operation get
+    summary: Get async operation details
+    description: |
+      Retrieve the status and details of a Temporal Cloud async operation.
+
+      Example:
+
+      ```
+      temporal cloud async-operation get --async-operation-id my-op-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: async-operation-id
+        type: string
+        required: true
+        description: |
+          The ID of the async operation to retrieve.
+
+  - name: cloud async-operation await
+    summary: Wait for an async operation to complete
+    description: |
+      Wait for a Temporal Cloud async operation to reach a terminal state.
+      Polls the operation status until it completes, fails, or is cancelled.
+
+      Example:
+
+      ```
+      temporal cloud async-operation await --async-operation-id my-op-id
+      ```
+    has-init: false
+    docs:
+      keywords:
+        - cloud
+        - async-operation
+        - await
+      description-header: Wait for async operation
+      tags:
+        - async-operations
+    option-sets:
+      - client
+    options:
+      - name: async-operation-id
+        type: string
+        required: true
+        description: |
+          The ID of the async operation to wait for.
+      - name: poll-interval
+        type: duration
+        default: 1s
+        description: |
+          Time to wait between status checks when waiting for operation completion.
+          Cannot be greater than 10 minutes.
+          Supports minutes (m) and seconds (s). Default is 1s.
+
+  # Region commands
+  - name: cloud region
+    summary: Manage Temporal Cloud regions
+    description: |
+      Commands for listing Temporal Cloud regions.
+    has-init: false
+    docs:
+      keywords:
+        - region
+        - cloud-provider
+      description-header: Region Commands
+      tags:
+        - region
+
+  - name: cloud region get
+    summary: Get a Temporal Cloud region
+    description: |
+      Get details for a specific Temporal Cloud region.
+
+      Example:
+
+      ```
+      temporal cloud region get --region aws-us-east-1
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: region
+        type: string
+        required: true
+        short: r
+        description: |
+          The ID of the region to get.
+
+  - name: cloud region list
+    summary: List available Temporal Cloud regions
+    description: |
+      List all available Temporal Cloud regions.
+
+      Example:
+
+      ```
+      temporal cloud region list
+      ```
+    has-init: false
+    option-sets:
+      - client
+
+option-sets:
+  - name: client
+    options:
+      - name: api-key
+        type: string
+        implied-env: TEMPORAL_API_KEY
+        description: |
+          API key for authenticating with Temporal Cloud. Can be used instead
+          of interactive login for automation and CI/CD pipelines.
+      - name: server
+        type: string
+        description: |
+          Override the Temporal Cloud API server address. Used for connecting
+          to non-production environments.
+        hidden: true
+        default: saas-api.tmprl.cloud:443
+  - name: diff
+    options:
+      - name: verbose-diff
+        type: bool
+        description: |
+          Show detailed differences between the current and desired namespace
+          configurations when changes are detected.
+  - name: common
+    external-package: github.com/temporalio/cli/cliext
+  - name: namespace
+    options:
+      - name: namespace
+        type: string
+        description: |
+          The fully qualified namespace name in the format 'namespace.account'
+          (e.g., 'my-namespace.my-account').
+        short: n
+        required: true
+  - name: resource-version
+    options:
+      - name: resource-version
+        type: string
+        short: v
+        description: |
+          Resource version for optimistic concurrency control. If not provided,
+          the current version is fetched automatically.
+  - name: async-operation
+    options:
+      - name: idempotent
+        type: bool
+        description: |
+          Succeed silently if the resource already exists or matches the specification.
+          Without this flag, the command errors when no changes are needed.
+      - name: async-operation-id
+        type: string
+        description: |
+          Custom identifier for tracking this async operation. If not provided,
+          a unique ID is generated automatically.
+      - name: async
+        type: bool
+        description: |
+          Return immediately after initiating the operation instead of waiting
+          for completion. Use the returned operation ID to check status later.
+      - name: poll-interval
+        type: duration
+        default: 1s
+        description: |
+          Time to wait between status checks when waiting for operation completion.
+          Cannot be greater than 10 minutes.
+          Supports minutes (m) and seconds (s).
+  - name: user-identification
+    options:
+      - name: user-id
+        type: string
+        description: |
+          The ID of the user. Mutually exclusive with --user-email.
+      - name: user-email
+        type: string
+        description: |
+          The email address of the user. Mutually exclusive with --user-id.
+  - name: codec-server
+    options:
+      - name: codec-endpoint
+        type: string
+        description: |
+          HTTPS codec server endpoint URL.
+      - name: codec-pass-access-token
+        type: bool
+        description: |
+          Pass the user access token to the codec server endpoint.
+      - name: codec-include-cross-origin-credentials
+        type: bool
+        description: |
+          Include cross-origin credentials in codec server requests.
+  - name: ca-certificate
+    options:
+      - name: ca-certificate
+        type: string
+        description: |
+          Base64-encoded CA certificate for mTLS authentication.
+          Mutually exclusive with --ca-certificate-file.
+      - name: ca-certificate-file
+        type: string
+        description: |
+          Path to a CA certificate PEM file for mTLS authentication.
+          Mutually exclusive with --ca-certificate.
+  - name: certificate-filter
+    options:
+      - name: certificate-filter
+        type: string[]
+        description: |
+          Certificate filter as a JSON object (e.g. '{"commonName":"foo"}'). Repeat to add multiple.
+      - name: certificate-filter-file
+        type: string
+        description: |
+          Path to a JSON file containing a certificate filter object.
+  - name: group-id
+    options:
+      - name: group-id
+        type: string
+        required: true
+        description: |
+          The ID of the user group.
+  - name: role-id
+    options:
+      - name: role-id
+        type: string
+        required: true
+        description: |
+          The ID of the custom role.
+  - name: custom-role
+    options:
+      - name: custom-role
+        type: string[]
+        description: |
+          Custom role ID to assign. Repeat to assign multiple. When provided,
+          replaces the existing custom role list.
+  - name: export-sink
+    options:
+      - name: sink-name
+        type: string
+        required: true
+        description: |
+          The name of the export sink.
+  - name: export-s3
+    options:
+      - name: role-arn
+        type: string
+        required: true
+        description: |
+          The IAM role ARN that Temporal Cloud assumes for writing to S3
+          (e.g. arn:aws:iam::123456789012:role/my-role). The role name and
+          AWS account ID are parsed from this ARN.
+      - name: bucket-name
+        type: string
+        required: true
+        description: |
+          The name of the destination S3 bucket.
+      - name: kms-arn
+        type: string
+        description: |
+          The AWS KMS key ARN for server-side encryption of exported data. Optional.
+  - name: export-s3-region
+    options:
+      - name: region
+        type: string
+        required: true
+        description: |
+          The AWS region where the S3 bucket is located.
+  - name: export-gcs
+    options:
+      - name: service-account-email
+        type: string
+        required: true
+        description: |
+          The email of the customer service account that Temporal Cloud impersonates
+          for writing to GCS (e.g. my-sa@my-project.iam.gserviceaccount.com).
+          The service account ID and GCP project ID are parsed from this email.
+      - name: bucket-name
+        type: string
+        required: true
+        description: |
+          The name of the destination GCS bucket.
+  - name: export-gcs-region
+    options:
+      - name: region
+        type: string
+        required: true
+        description: |
+          The GCS bucket region.

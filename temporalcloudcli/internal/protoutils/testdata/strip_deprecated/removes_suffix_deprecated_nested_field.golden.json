@@ -1,0 +1,16 @@
+{
+    "asyncOperationId": "",
+    "createdTime": null,
+    "id": "key-1",
+    "lastModifiedTime": null,
+    "resourceVersion": "",
+    "spec": {
+        "description": "",
+        "disabled": false,
+        "displayName": "my-key",
+        "expiryTime": null,
+        "ownerId": "",
+        "ownerType": "OWNER_TYPE_UNSPECIFIED"
+    },
+    "state": "RESOURCE_STATE_UNSPECIFIED"
+}
