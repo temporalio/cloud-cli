@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   test:
-    name: Unit + Integration (mise)
+    name: Unit + Integration
     runs-on: ubuntu-latest
 
     env:
@@ -29,11 +29,6 @@ jobs:
           go-version-file: "go.mod"
           check-latest: true
           cache: false
-
-      - name: Setup mise
-        uses: jdx/mise-action@v2
-        with:
-          install: true
 
       - name: Validate required environment variables and secrets
         shell: bash
@@ -60,8 +55,8 @@ jobs:
 
       - name: Run unit tests
         run: |
-          mise run test
+          make test
 
       - name: Run integration tests
         run: |
-          mise run integration
+          make test-integration

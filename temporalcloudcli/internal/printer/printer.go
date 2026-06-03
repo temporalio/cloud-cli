@@ -14,7 +14,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/kylelemons/godebug/diff"
-	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/tw"
+	"github.com/olekukonko/tablewriter/pkg/twwidth"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/temporalproto"
 	"google.golang.org/protobuf/proto"
@@ -127,13 +128,13 @@ type StructuredOptions struct {
 	NonJSONExtraIndent int
 }
 
-type Align int
+type Align tw.Align
 
 const (
-	AlignDefault Align = tablewriter.ALIGN_DEFAULT
-	AlignCenter        = tablewriter.ALIGN_CENTER
-	AlignRight         = tablewriter.ALIGN_RIGHT
-	AlignLeft          = tablewriter.ALIGN_LEFT
+	AlignDefault = Align(tw.AlignDefault)
+	AlignCenter  = Align(tw.AlignCenter)
+	AlignRight   = Align(tw.AlignRight)
+	AlignLeft    = Align(tw.AlignLeft)
 )
 
 type TableOptions struct {
@@ -315,10 +316,10 @@ func (p *Printer) calculateUnsetColWidths(cols []*col, rows []map[string]colVal)
 			continue
 		}
 		// Must be at least the name length
-		col.width = tablewriter.DisplayWidth(col.name)
+		col.width = twwidth.Width(col.name)
 		// Now check every col val
 		for _, row := range rows {
-			if colLen := tablewriter.DisplayWidth(row[col.name].text); colLen > col.width {
+			if colLen := twwidth.Width(row[col.name].text); colLen > col.width {
 				col.width = colLen
 			}
 		}
@@ -361,7 +362,7 @@ func (p *Printer) printHeader(cols []*col) {
 		for i := 0; i < col.indentAmount; i++ {
 			p.writeStr(NonJSONIndent)
 		}
-		p.writeStr(tablewriter.Pad(colorer("%v", col.name), " ", col.width))
+		p.writeStr(tw.PadCenter(colorer("%v", col.name), " ", col.width))
 	}
 	p.writeStr("\n")
 }
@@ -385,11 +386,11 @@ func (p *Printer) printRow(cols []*col, row map[string]colVal) {
 func (p *Printer) printCol(col *col, data string) {
 	switch col.align {
 	case AlignCenter:
-		data = tablewriter.Pad(data, " ", col.width)
+		data = tw.PadCenter(data, " ", col.width)
 	case AlignRight:
-		data = tablewriter.PadLeft(data, " ", col.width)
+		data = tw.PadLeft(data, " ", col.width)
 	default:
-		data = tablewriter.PadRight(data, " ", col.width)
+		data = tw.PadRight(data, " ", col.width)
 	}
 	p.writeStr(data)
 }

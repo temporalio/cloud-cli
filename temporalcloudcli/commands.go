@@ -481,6 +481,11 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 func (c *CloudCommand) initCommand(cctx *CommandContext) {
 	c.Command.Version = VersionString()
 
+	// Disable cobra's auto-injected `completion` subcommand: it needs further
+	// updates to generate working shell completions for extension subcommands
+	// invoked via the parent `temporal` CLI.
+	c.Command.CompletionOptions.DisableDefaultCmd = true
+
 	// Set custom usage template with proper flag wrapping
 	c.Command.SetUsageTemplate(getUsageTemplate())
 
