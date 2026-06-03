@@ -13,7 +13,7 @@ Plugin for the Temporal command-line interface to work with [Temporal Cloud](htt
 
 ### Install via Homebrew
 
-    brew install temporalio/prerelease/cloud-cli
+    brew install temporalio/prerelease/temporal-cloud
 
 ### Install via download
 
