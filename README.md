@@ -25,7 +25,7 @@ Plugin for the Temporal command-line interface to work with [Temporal Cloud](htt
 
 1. Install [Go](https://go.dev/doc/install) (check [go.mod](./go.mod) for the version).
 2. Clone this repository.
-3. From the cloned directory, run `make build` (or `go build ./cmd/temporal-cloud`).
+3. From the cloned directory, run `make build`.
 
 The executable will be at `temporal-cloud` (`temporal-cloud.exe` for Windows). Add it to your `PATH` so the `temporal` CLI can discover it.
 
