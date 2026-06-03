@@ -97,6 +97,7 @@ func TestNamespaceFairnessSet(t *testing.T) {
 		name                    string
 		cmd                     temporalcloudcli.CloudNamespaceFairnessSetCommand
 		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
 		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
 		expectedErr             string
 	}{
@@ -120,6 +121,7 @@ func TestNamespaceFairnessSet(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-enable"},
 					}, nil)
 			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-enable"},
 		},
 		{
@@ -142,6 +144,7 @@ func TestNamespaceFairnessSet(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-disable"},
 					}, nil)
 			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-disable"},
 		},
 		{
@@ -163,6 +166,7 @@ func TestNamespaceFairnessSet(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-rv"},
 					}, nil)
 			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-rv"},
 		},
 		{
@@ -184,6 +188,7 @@ func TestNamespaceFairnessSet(t *testing.T) {
 						AsyncOperation: &operation.AsyncOperation{Id: "op-custom"},
 					}, nil)
 			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-custom"},
 		},
 		{
@@ -213,13 +218,29 @@ func TestNamespaceFairnessSet(t *testing.T) {
 					UpdateNamespace(mock.Anything, mock.Anything, mock.Anything).
 					Return(nil, errors.New("update failed"))
 			},
-			expectedErr: "update failed",
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			expectedErr:   "update failed",
+		},
+		{
+			name: "PromptDeclined",
+			cmd: temporalcloudcli.CloudNamespaceFairnessSetCommand{
+				NamespaceOptions:        temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
+				EnableTaskQueueFairness: true,
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNS(nil)}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
+			expectedErr:   "Aborting set.",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
 				AsyncPollerOptions:      tt.asyncPollerOptions,
 				JSONOutput:              true,
 				ExpectedError:           tt.expectedErr,
