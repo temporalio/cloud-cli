@@ -1528,6 +1528,98 @@ commands:
           must be greater than 0 when --capacity-mode is 'provisioned'. Ignored
           when --capacity-mode is 'on_demand'.
 
+  # Namespace access commands (who has access to a namespace)
+  - name: cloud namespace user
+    summary: Inspect users with access to a namespace
+    description: |
+      Commands for inspecting the users that have access to a Temporal Cloud
+      namespace.
+    has-init: false
+  - name: cloud namespace user list
+    summary: List users with access to a namespace
+    description: |
+      List the users that have access to a Temporal Cloud namespace, including
+      both directly-assigned and inherited access.
+
+      Example:
+
+      ```
+      temporal cloud namespace user list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of users to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
+  - name: cloud namespace service-account
+    summary: Inspect service accounts with access to a namespace
+    description: |
+      Commands for inspecting the service accounts that have access to a
+      Temporal Cloud namespace.
+    has-init: false
+  - name: cloud namespace service-account list
+    summary: List service accounts with access to a namespace
+    description: |
+      List the service accounts that have access to a Temporal Cloud namespace,
+      including both directly-assigned and inherited access.
+
+      Example:
+
+      ```
+      temporal cloud namespace service-account list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of service accounts to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
+  - name: cloud namespace user-group
+    summary: Inspect user groups with access to a namespace
+    description: |
+      Commands for inspecting the user groups that have access to a Temporal
+      Cloud namespace.
+    has-init: false
+  - name: cloud namespace user-group list
+    summary: List user groups with access to a namespace
+    description: |
+      List the user groups that have access to a Temporal Cloud namespace,
+      including both directly-assigned and inherited access.
+
+      Example:
+
+      ```
+      temporal cloud namespace user-group list --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+    options:
+      - name: page-size
+        type: int
+        description: |
+          Number of user groups to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
+
   # Nexus endpoint commands
   - name: cloud nexus
     summary: Manage Temporal Cloud Nexus Operations

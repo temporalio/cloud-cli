@@ -4023,6 +4023,89 @@ func (_c *MockCloudServiceClient_GetServiceAccount_Call) RunAndReturn(run func(c
 	return _c
 }
 
+// GetServiceAccountNamespaceAssignments provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) GetServiceAccountNamespaceAssignments(ctx context.Context, in *cloudservice.GetServiceAccountNamespaceAssignmentsRequest, opts ...grpc.CallOption) (*cloudservice.GetServiceAccountNamespaceAssignmentsResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetServiceAccountNamespaceAssignments")
+	}
+
+	var r0 *cloudservice.GetServiceAccountNamespaceAssignmentsResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetServiceAccountNamespaceAssignmentsRequest, ...grpc.CallOption) (*cloudservice.GetServiceAccountNamespaceAssignmentsResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetServiceAccountNamespaceAssignmentsRequest, ...grpc.CallOption) *cloudservice.GetServiceAccountNamespaceAssignmentsResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.GetServiceAccountNamespaceAssignmentsResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.GetServiceAccountNamespaceAssignmentsRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetServiceAccountNamespaceAssignments'
+type MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call struct {
+	*mock.Call
+}
+
+// GetServiceAccountNamespaceAssignments is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.GetServiceAccountNamespaceAssignmentsRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) GetServiceAccountNamespaceAssignments(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call {
+	return &MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call{Call: _e.mock.On("GetServiceAccountNamespaceAssignments",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call) Run(run func(ctx context.Context, in *cloudservice.GetServiceAccountNamespaceAssignmentsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.GetServiceAccountNamespaceAssignmentsRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.GetServiceAccountNamespaceAssignmentsRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call) Return(getServiceAccountNamespaceAssignmentsResponse *cloudservice.GetServiceAccountNamespaceAssignmentsResponse, err error) *MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call {
+	_c.Call.Return(getServiceAccountNamespaceAssignmentsResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetServiceAccountNamespaceAssignmentsRequest, opts ...grpc.CallOption) (*cloudservice.GetServiceAccountNamespaceAssignmentsResponse, error)) *MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetServiceAccounts provides a mock function for the type MockCloudServiceClient
 func (_mock *MockCloudServiceClient) GetServiceAccounts(ctx context.Context, in *cloudservice.GetServiceAccountsRequest, opts ...grpc.CallOption) (*cloudservice.GetServiceAccountsResponse, error) {
 	var tmpRet mock.Arguments
@@ -4438,6 +4521,89 @@ func (_c *MockCloudServiceClient_GetUserGroupMembers_Call) RunAndReturn(run func
 	return _c
 }
 
+// GetUserGroupNamespaceAssignments provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) GetUserGroupNamespaceAssignments(ctx context.Context, in *cloudservice.GetUserGroupNamespaceAssignmentsRequest, opts ...grpc.CallOption) (*cloudservice.GetUserGroupNamespaceAssignmentsResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUserGroupNamespaceAssignments")
+	}
+
+	var r0 *cloudservice.GetUserGroupNamespaceAssignmentsResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetUserGroupNamespaceAssignmentsRequest, ...grpc.CallOption) (*cloudservice.GetUserGroupNamespaceAssignmentsResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetUserGroupNamespaceAssignmentsRequest, ...grpc.CallOption) *cloudservice.GetUserGroupNamespaceAssignmentsResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.GetUserGroupNamespaceAssignmentsResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.GetUserGroupNamespaceAssignmentsRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUserGroupNamespaceAssignments'
+type MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call struct {
+	*mock.Call
+}
+
+// GetUserGroupNamespaceAssignments is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.GetUserGroupNamespaceAssignmentsRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) GetUserGroupNamespaceAssignments(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call {
+	return &MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call{Call: _e.mock.On("GetUserGroupNamespaceAssignments",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call) Run(run func(ctx context.Context, in *cloudservice.GetUserGroupNamespaceAssignmentsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.GetUserGroupNamespaceAssignmentsRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.GetUserGroupNamespaceAssignmentsRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call) Return(getUserGroupNamespaceAssignmentsResponse *cloudservice.GetUserGroupNamespaceAssignmentsResponse, err error) *MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call {
+	_c.Call.Return(getUserGroupNamespaceAssignmentsResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetUserGroupNamespaceAssignmentsRequest, opts ...grpc.CallOption) (*cloudservice.GetUserGroupNamespaceAssignmentsResponse, error)) *MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetUserGroups provides a mock function for the type MockCloudServiceClient
 func (_mock *MockCloudServiceClient) GetUserGroups(ctx context.Context, in *cloudservice.GetUserGroupsRequest, opts ...grpc.CallOption) (*cloudservice.GetUserGroupsResponse, error) {
 	var tmpRet mock.Arguments
@@ -4517,6 +4683,89 @@ func (_c *MockCloudServiceClient_GetUserGroups_Call) Return(getUserGroupsRespons
 }
 
 func (_c *MockCloudServiceClient_GetUserGroups_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetUserGroupsRequest, opts ...grpc.CallOption) (*cloudservice.GetUserGroupsResponse, error)) *MockCloudServiceClient_GetUserGroups_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetUserNamespaceAssignments provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) GetUserNamespaceAssignments(ctx context.Context, in *cloudservice.GetUserNamespaceAssignmentsRequest, opts ...grpc.CallOption) (*cloudservice.GetUserNamespaceAssignmentsResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUserNamespaceAssignments")
+	}
+
+	var r0 *cloudservice.GetUserNamespaceAssignmentsResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetUserNamespaceAssignmentsRequest, ...grpc.CallOption) (*cloudservice.GetUserNamespaceAssignmentsResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetUserNamespaceAssignmentsRequest, ...grpc.CallOption) *cloudservice.GetUserNamespaceAssignmentsResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.GetUserNamespaceAssignmentsResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.GetUserNamespaceAssignmentsRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_GetUserNamespaceAssignments_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUserNamespaceAssignments'
+type MockCloudServiceClient_GetUserNamespaceAssignments_Call struct {
+	*mock.Call
+}
+
+// GetUserNamespaceAssignments is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.GetUserNamespaceAssignmentsRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) GetUserNamespaceAssignments(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetUserNamespaceAssignments_Call {
+	return &MockCloudServiceClient_GetUserNamespaceAssignments_Call{Call: _e.mock.On("GetUserNamespaceAssignments",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_GetUserNamespaceAssignments_Call) Run(run func(ctx context.Context, in *cloudservice.GetUserNamespaceAssignmentsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetUserNamespaceAssignments_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.GetUserNamespaceAssignmentsRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.GetUserNamespaceAssignmentsRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetUserNamespaceAssignments_Call) Return(getUserNamespaceAssignmentsResponse *cloudservice.GetUserNamespaceAssignmentsResponse, err error) *MockCloudServiceClient_GetUserNamespaceAssignments_Call {
+	_c.Call.Return(getUserNamespaceAssignmentsResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetUserNamespaceAssignments_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetUserNamespaceAssignmentsRequest, opts ...grpc.CallOption) (*cloudservice.GetUserNamespaceAssignmentsResponse, error)) *MockCloudServiceClient_GetUserNamespaceAssignments_Call {
 	_c.Call.Return(run)
 	return _c
 }
