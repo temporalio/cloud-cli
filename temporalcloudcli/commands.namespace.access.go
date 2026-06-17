@@ -9,8 +9,7 @@ import (
 
 // AIDEV-NOTE: These commands wrap the read-only Get*NamespaceAssignments RPCs
 // added in cloud-sdk-go v0.14.x. They list the identities (users, service
-// accounts, user groups) that have access to a namespace, including access
-// inherited through account/project roles (InheritedAccess).
+// accounts, user groups) that have explicit access to a namespace.
 
 func (c *CloudNamespaceUserListCommand) run(cctx *CommandContext, _ []string) error {
 	client, err := cctx.GetCloudClient(c.ClientOptions)
@@ -34,8 +33,7 @@ func (c *CloudNamespaceUserListCommand) run(cctx *CommandContext, _ []string) er
 			NextPageToken: res.NextPageToken,
 		},
 		printer.PrintResourceOptions{
-			Fields:     []string{"Id", "InheritedAccess"},
-			SpecFields: []string{"Email", "NamespaceAccess"},
+			Fields: []string{"Id", "Email", "NamespaceAccess"},
 		},
 		printer.TableOptions{},
 	)
@@ -63,8 +61,7 @@ func (c *CloudNamespaceServiceAccountListCommand) run(cctx *CommandContext, _ []
 			NextPageToken:   res.NextPageToken,
 		},
 		printer.PrintResourceOptions{
-			Fields:     []string{"Id", "InheritedAccess"},
-			SpecFields: []string{"Name", "NamespaceAccess"},
+			Fields: []string{"Id", "Email", "NamespaceAccess"},
 		},
 		printer.TableOptions{},
 	)
@@ -92,8 +89,7 @@ func (c *CloudNamespaceUserGroupListCommand) run(cctx *CommandContext, _ []strin
 			NextPageToken: res.NextPageToken,
 		},
 		printer.PrintResourceOptions{
-			Fields:     []string{"Id", "InheritedAccess"},
-			SpecFields: []string{"DisplayName", "NamespaceAccess"},
+			Fields: []string{"Id", "Email", "NamespaceAccess"},
 		},
 		printer.TableOptions{},
 	)
