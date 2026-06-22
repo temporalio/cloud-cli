@@ -93,6 +93,7 @@ func TestCreateNamespace_BuildsSpec(t *testing.T) {
 		Lifecycle:     &namespacev1.LifecycleSpec{EnableDeleteProtection: false},
 		Fairness:      &namespacev1.FairnessSpec{TaskQueueFairnessEnabled: true},
 		MtlsAuth: &namespacev1.MtlsAuthSpec{
+			Enabled: true,
 			CertificateFilters: []*namespacev1.CertificateFilterSpec{
 				{CommonName: "test.temporal.io"},
 				{SubjectAlternativeName: "*.temporal.io"},

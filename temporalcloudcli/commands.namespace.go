@@ -396,12 +396,13 @@ func CreateNamespace(ctx context.Context, params CreateNamespaceParams) error {
 	}
 
 	if len(certBytes) > 0 {
-		spec.MtlsAuth = &namespacev1.MtlsAuthSpec{AcceptedClientCa: certBytes}
+		spec.MtlsAuth = &namespacev1.MtlsAuthSpec{AcceptedClientCa: certBytes, Enabled: true}
 	}
 	if len(certFilters) > 0 {
 		if spec.MtlsAuth == nil {
 			spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
 		}
+		spec.MtlsAuth.Enabled = true
 		spec.MtlsAuth.CertificateFilters = certFilters
 	}
 	if params.CodecEndpoint != "" {
