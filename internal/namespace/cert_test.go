@@ -67,6 +67,7 @@ func TestAddCACerts_Success(t *testing.T) {
 				AsyncOperationId: "test-async-op",
 				Spec: &namespacev1.NamespaceSpec{
 					MtlsAuth: &namespacev1.MtlsAuthSpec{
+						Enabled:          true,
 						AcceptedClientCa: expectedCertBundle,
 					},
 				},
@@ -123,6 +124,7 @@ func TestAddCACerts_DuplicateCertificate(t *testing.T) {
 				ResourceVersion: "v1",
 				Spec: &namespacev1.NamespaceSpec{
 					MtlsAuth: &namespacev1.MtlsAuthSpec{
+						Enabled:          true,
 						AcceptedClientCa: existingCertPEM,
 					},
 				},
@@ -246,6 +248,7 @@ func TestAddCACerts_CustomResourceVersion(t *testing.T) {
 				ResourceVersion: "custom-version",
 				Spec: &namespacev1.NamespaceSpec{
 					MtlsAuth: &namespacev1.MtlsAuthSpec{
+						Enabled:          true,
 						AcceptedClientCa: expectedCertBundle,
 					},
 				},

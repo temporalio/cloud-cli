@@ -56,7 +56,7 @@ func (c *Client) AddCACerts(ctx context.Context, params AddCACertsParams) (*oper
 	spec := ns.GetSpec()
 	// Ensure MtlsAuth is initialized before accessing its fields
 	if spec.MtlsAuth == nil {
-		spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
+		spec.MtlsAuth = &namespacev1.MtlsAuthSpec{Enabled: true}
 	}
 	spec.MtlsAuth.AcceptedClientCa = bundleBytes
 
@@ -110,7 +110,7 @@ func (c *Client) DeleteCACerts(ctx context.Context, params DeleteCACertsParams) 
 	} else {
 		// Ensure MtlsAuth is initialized before accessing its fields
 		if spec.MtlsAuth == nil {
-			spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
+			spec.MtlsAuth = &namespacev1.MtlsAuthSpec{Enabled: true}
 		}
 		spec.MtlsAuth.AcceptedClientCa = bundleBytes
 	}
