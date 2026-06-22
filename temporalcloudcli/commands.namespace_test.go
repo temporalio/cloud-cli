@@ -4,10 +4,19 @@
 package temporalcloudcli_test
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
+	"math/big"
 	"strings"
+	"testing"
+	"time"
 
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
 	"go.temporal.io/api/temporalproto"
@@ -31,11 +40,36 @@ func (s *SharedServerSuite) TestBasicNamespaceOperations() {
 	s.cleanupNamespaces()
 }
 
+// generateTestCACertBase64 generates a self-signed CA certificate and returns it as a base64-encoded PEM string.
+func generateTestCACertBase64(t *testing.T) string {
+	t.Helper()
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+	template := x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "test.temporal.io"},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(time.Hour),
+		KeyUsage:              x509.KeyUsageCertSign,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
+	if err != nil {
+		t.Fatalf("failed to create certificate: %v", err)
+	}
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	return base64.StdEncoding.EncodeToString(certPEM)
+}
+
 func (s *SharedServerSuite) TestNamespaceCreate() {
 	s.cleanupNamespaces()
 	defer s.cleanupNamespaces()
 
 	namespaceName := s.generateRandomNamespaceName()
+	caCertBase64 := generateTestCACertBase64(s.Suite.T())
 
 	res := s.Execute(
 		"namespace",
@@ -45,6 +79,7 @@ func (s *SharedServerSuite) TestNamespaceCreate() {
 		"--name", namespaceName,
 		"--region", "aws-ca-central-1",
 		"--retention-days", "30",
+		"--ca-certificate", caCertBase64,
 		"--search-attribute", "MyText=Text",
 		"--search-attribute", "MyKeyword=Keyword",
 		"--certificate-filter", `{"commonName":"test.temporal.io","organization":"Temporal"}`,
@@ -82,6 +117,8 @@ func (s *SharedServerSuite) TestNamespaceCreate() {
 	s.Suite.Equal(namespace.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_KEYWORD, gotSpec.SearchAttributes["MyKeyword"])
 
 	s.Suite.Require().NotNil(gotSpec.MtlsAuth)
+	s.Suite.True(gotSpec.MtlsAuth.Enabled)
+	s.Suite.NotEmpty(gotSpec.MtlsAuth.AcceptedClientCa)
 	s.Suite.Require().Len(gotSpec.MtlsAuth.CertificateFilters, 2)
 	s.Suite.Equal("test.temporal.io", gotSpec.MtlsAuth.CertificateFilters[0].CommonName)
 	s.Suite.Equal("Temporal", gotSpec.MtlsAuth.CertificateFilters[0].Organization)
