@@ -77,8 +77,6 @@ func (s *SharedServerSuite) TestNamespaceCreate() {
 	s.Suite.Equal(namespaceName, gotSpec.Name)
 	s.Suite.Equal("aws-ca-central-1", getNsRes.Namespace.ActiveRegion)
 	s.Suite.Equal(int32(30), gotSpec.RetentionDays)
-	s.Suite.Require().NotNil(gotSpec.ApiKeyAuth)
-	s.Suite.True(gotSpec.ApiKeyAuth.Enabled)
 
 	s.Suite.Equal(namespace.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_TEXT, gotSpec.SearchAttributes["MyText"])
 	s.Suite.Equal(namespace.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_KEYWORD, gotSpec.SearchAttributes["MyKeyword"])
@@ -158,6 +156,8 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 	s.Suite.Equal(namespaceSpec.Regions[0], readNamespace.ActiveRegion)
 	s.Suite.Equal(namespaceSpec.SearchAttributes, readNamespace.Spec.SearchAttributes)
 	s.Suite.Equal(namespaceSpec.RetentionDays, readNamespace.Spec.RetentionDays)
+	s.Suite.Require().NotNil(readNamespace.Spec.ApiKeyAuth)
+	s.Suite.Equal(namespaceSpec.ApiKeyAuth.Enabled, readNamespace.Spec.ApiKeyAuth.Enabled)
 
 	// get the namespace via listing
 	res = s.Execute(
