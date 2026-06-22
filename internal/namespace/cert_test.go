@@ -40,6 +40,7 @@ func TestAddCACerts_Success(t *testing.T) {
 		ResourceVersion: "v1",
 		Spec: &namespacev1.NamespaceSpec{
 			MtlsAuth: &namespacev1.MtlsAuthSpec{
+				Enabled:          true,
 				AcceptedClientCa: existingCertPEM,
 			},
 		},
