@@ -44,7 +44,7 @@ func (c *Client) AddCertFilters(ctx context.Context, params AddCertFiltersParams
 	spec := ns.GetSpec()
 	// Ensure MtlsAuth is initialized
 	if spec.MtlsAuth == nil {
-		spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
+		spec.MtlsAuth = &namespacev1.MtlsAuthSpec{Enabled: true}
 	}
 
 	existingFilters := spec.MtlsAuth.GetCertificateFilters()
@@ -101,7 +101,7 @@ func (c *Client) DeleteCertFilters(ctx context.Context, params DeleteCertFilters
 
 	// Update the spec with the new filter list
 	if spec.MtlsAuth == nil {
-		spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
+		spec.MtlsAuth = &namespacev1.MtlsAuthSpec{Enabled: true}
 	}
 	spec.MtlsAuth.CertificateFilters = newFilters
 
