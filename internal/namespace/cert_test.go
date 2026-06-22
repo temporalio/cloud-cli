@@ -106,6 +106,7 @@ func TestAddCACerts_DuplicateCertificate(t *testing.T) {
 		Spec: &namespacev1.NamespaceSpec{
 			MtlsAuth: &namespacev1.MtlsAuthSpec{
 				AcceptedClientCa: existingCertPEM,
+				Enabled:          true,
 			},
 		},
 	}
@@ -224,6 +225,7 @@ func TestAddCACerts_CustomResourceVersion(t *testing.T) {
 		Spec: &namespacev1.NamespaceSpec{
 			MtlsAuth: &namespacev1.MtlsAuthSpec{
 				AcceptedClientCa: existingCertPEM,
+				Enabled:          true,
 			},
 		},
 	}
