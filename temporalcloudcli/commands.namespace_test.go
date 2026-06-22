@@ -45,7 +45,6 @@ func (s *SharedServerSuite) TestNamespaceCreate() {
 		"--name", namespaceName,
 		"--region", "aws-ca-central-1",
 		"--retention-days", "30",
-		"--api-key-auth-enabled",
 		"--search-attribute", "MyText=Text",
 		"--search-attribute", "MyKeyword=Keyword",
 		"--certificate-filter", `{"commonName":"test.temporal.io","organization":"Temporal"}`,
