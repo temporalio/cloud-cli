@@ -333,6 +333,29 @@ func TestDeleteNexusEndpoint(t *testing.T) {
 			pollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-del"},
 		},
 		{
+			name: "SuccessDeleteEndpointById",
+			cmd:  temporalcloudcli.CloudNexusEndpointDeleteCommand{Id: "ep-123"},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNexusEndpoint(mock.Anything, &cloudservice.GetNexusEndpointRequest{
+						EndpointId: "ep-123",
+					}, mock.Anything).
+					Return(&cloudservice.GetNexusEndpointResponse{
+						Endpoint: testEndpoint,
+					}, nil)
+				c.EXPECT().
+					DeleteNexusEndpoint(mock.Anything, &cloudservice.DeleteNexusEndpointRequest{
+						EndpointId:      testEndpoint.Id,
+						ResourceVersion: "v1",
+					}, mock.Anything).
+					Return(&cloudservice.DeleteNexusEndpointResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-del"},
+					}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			pollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-del"},
+		},
+		{
 			name: "NotFound",
 			cmd:  temporalcloudcli.CloudNexusEndpointDeleteCommand{Name: "missing"},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -430,6 +453,21 @@ func TestDeleteNexusEndpoint(t *testing.T) {
 	}
 }
 
+func TestDeleteNexusEndpoint_NeitherNameNorId(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNexusEndpointDeleteCommand{}, temporalcloudcli.TestCommandOptions{
+		ExpectedError: "either --name or --id is required",
+	})
+}
+
+func TestDeleteNexusEndpoint_BothNameAndId(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNexusEndpointDeleteCommand{
+		Name: "my-endpoint",
+		Id:   "ep-123",
+	}, temporalcloudcli.TestCommandOptions{
+		ExpectedError: "--name and --id are mutually exclusive",
+	})
+}
+
 // --- UpdateNexusEndpoint ---
 
 // TestUpdateNexusEndpoint uses table-driven tests for the update nexus endpoint command.
@@ -484,6 +522,35 @@ func TestUpdateNexusEndpoint(t *testing.T) {
 						return req.EndpointId == "ep-123" &&
 							req.Spec.TargetSpec.GetWorkerTargetSpec().NamespaceId == "new-ns" &&
 							req.Spec.TargetSpec.GetWorkerTargetSpec().TaskQueue == "my-task-queue" &&
+							req.ResourceVersion == "v1"
+					}), mock.Anything).
+					Return(&cloudservice.UpdateNexusEndpointResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-upd"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
+		},
+		{
+			name: "TargetNamespaceById",
+			setupCmd: func(cmd *temporalcloudcli.CloudNexusEndpointUpdateCommand) {
+				cmd.Name = ""
+				cmd.Id = "ep-123"
+				cmd.Command.Flags().StringVar(&cmd.TargetNamespace, "target-namespace", "", "")
+				require.NoError(t, cmd.Command.Flags().Set("target-namespace", "new-ns"))
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNexusEndpoint(mock.Anything, &cloudservice.GetNexusEndpointRequest{
+						EndpointId: "ep-123",
+					}, mock.Anything).
+					Return(&cloudservice.GetNexusEndpointResponse{
+						Endpoint: existingEndpoint,
+					}, nil)
+				c.EXPECT().
+					UpdateNexusEndpoint(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNexusEndpointRequest) bool {
+						return req.EndpointId == "ep-123" &&
+							req.Spec.TargetSpec.GetWorkerTargetSpec().NamespaceId == "new-ns" &&
 							req.ResourceVersion == "v1"
 					}), mock.Anything).
 					Return(&cloudservice.UpdateNexusEndpointResponse{
@@ -672,6 +739,21 @@ func TestUpdateNexusEndpoint(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestUpdateNexusEndpoint_NeitherNameNorId(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNexusEndpointUpdateCommand{}, temporalcloudcli.TestCommandOptions{
+		ExpectedError: "either --name or --id is required",
+	})
+}
+
+func TestUpdateNexusEndpoint_BothNameAndId(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudNexusEndpointUpdateCommand{
+		Name: "my-endpoint",
+		Id:   "ep-123",
+	}, temporalcloudcli.TestCommandOptions{
+		ExpectedError: "--name and --id are mutually exclusive",
+	})
 }
 
 // --- Allowed Namespace Commands ---
