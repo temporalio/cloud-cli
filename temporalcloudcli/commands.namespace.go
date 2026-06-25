@@ -313,6 +313,7 @@ type (
 		Regions                            []string
 		RetentionDays                      int32
 		ApiKeyAuthEnabled                  bool
+		MtlsAuthEnabled                    bool
 		EnableDeleteProtection             bool
 		EnableTaskQueueFairness            *bool
 		AsyncOperationID                   string
@@ -385,6 +386,7 @@ func CreateNamespace(ctx context.Context, params CreateNamespaceParams) error {
 		Regions:             params.Regions,
 		RetentionDays:       params.RetentionDays,
 		ApiKeyAuth:          &namespacev1.ApiKeyAuthSpec{Enabled: params.ApiKeyAuthEnabled},
+		MtlsAuth:            &namespacev1.MtlsAuthSpec{Enabled: params.MtlsAuthEnabled},
 		Lifecycle:           &namespacev1.LifecycleSpec{EnableDeleteProtection: params.EnableDeleteProtection},
 		ConnectivityRuleIds: params.ConnectionRuleIDs,
 	}
@@ -396,12 +398,9 @@ func CreateNamespace(ctx context.Context, params CreateNamespaceParams) error {
 	}
 
 	if len(certBytes) > 0 {
-		spec.MtlsAuth = &namespacev1.MtlsAuthSpec{AcceptedClientCa: certBytes}
+		spec.MtlsAuth.AcceptedClientCa = certBytes
 	}
 	if len(certFilters) > 0 {
-		if spec.MtlsAuth == nil {
-			spec.MtlsAuth = &namespacev1.MtlsAuthSpec{}
-		}
 		spec.MtlsAuth.CertificateFilters = certFilters
 	}
 	if params.CodecEndpoint != "" {
@@ -447,6 +446,7 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		Regions:                            c.Region,
 		RetentionDays:                      int32(c.RetentionDays),
 		ApiKeyAuthEnabled:                  c.ApiKeyAuthEnabled,
+		MtlsAuthEnabled:                    c.MtlsAuthEnabled,
 		EnableDeleteProtection:             c.EnableDeleteProtection,
 		EnableTaskQueueFairness:            enableTaskQueueFairness,
 		AsyncOperationID:                   c.AsyncOperationId,

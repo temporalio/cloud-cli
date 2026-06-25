@@ -36,6 +36,7 @@ func baseNamespaceSpec() *namespacev1.NamespaceSpec {
 		Name:       "my-namespace",
 		Regions:    []string{"aws-us-east-1"},
 		ApiKeyAuth: &namespacev1.ApiKeyAuthSpec{Enabled: false},
+		MtlsAuth:   &namespacev1.MtlsAuthSpec{Enabled: false},
 		Lifecycle:  &namespacev1.LifecycleSpec{EnableDeleteProtection: false},
 	}
 }
@@ -93,6 +94,7 @@ func TestCreateNamespace_BuildsSpec(t *testing.T) {
 		Lifecycle:     &namespacev1.LifecycleSpec{EnableDeleteProtection: false},
 		Fairness:      &namespacev1.FairnessSpec{TaskQueueFairnessEnabled: true},
 		MtlsAuth: &namespacev1.MtlsAuthSpec{
+			Enabled: true,
 			CertificateFilters: []*namespacev1.CertificateFilterSpec{
 				{CommonName: "test.temporal.io"},
 				{SubjectAlternativeName: "*.temporal.io"},
@@ -126,6 +128,7 @@ func TestCreateNamespace_BuildsSpec(t *testing.T) {
 		Regions:                 []string{"aws-us-east-1"},
 		RetentionDays:           30,
 		ApiKeyAuthEnabled:       true,
+		MtlsAuthEnabled:         true,
 		EnableTaskQueueFairness: proto.Bool(true),
 		CertificateFilterOptions: temporalcloudcli.CertificateFilterOptions{
 			CertificateFilter: []string{
@@ -184,6 +187,51 @@ func TestCreateNamespace_Fairness(t *testing.T) {
 				Prompter:                mockPrompter,
 				UnmarshalProtoJSON:      noopUnmarshalProtoJSON,
 				OperationHandler:        mockHandler,
+			})
+			require.NoError(t, err)
+		})
+	}
+}
+
+// TestCreateNamespace_MtlsAuthEnabled verifies the mtls-auth-enabled flag wires Enabled into MtlsAuthSpec.
+func TestCreateNamespace_MtlsAuthEnabled(t *testing.T) {
+	tests := []struct {
+		name             string
+		mtlsAuthEnabled  bool
+		expectedMtlsAuth *namespacev1.MtlsAuthSpec
+	}{
+		{name: "Disabled", mtlsAuthEnabled: false, expectedMtlsAuth: &namespacev1.MtlsAuthSpec{Enabled: false}},
+		{name: "Enabled", mtlsAuthEnabled: true, expectedMtlsAuth: &namespacev1.MtlsAuthSpec{Enabled: true}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expectedSpec := baseNamespaceSpec()
+			expectedSpec.MtlsAuth = tt.expectedMtlsAuth
+
+			mockCloud := cloudmock.NewMockCloudServiceClient(t)
+			mockPrompter := cmdmock.NewMockPrompter(t)
+			mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+
+			mockPrompter.EXPECT().
+				PromptApply(&namespacev1.NamespaceSpec{}, specMatcher(expectedSpec), false).
+				Return(nil)
+			mockCloud.EXPECT().
+				CreateNamespace(context.Background(), createReqMatcher(expectedSpec)).
+				Return(defaultCreateResponse, nil)
+			mockHandler.EXPECT().
+				HandleOperation(defaultCreateResponse.AsyncOperation, "my-namespace.my-account").
+				Return(nil)
+
+			var buf bytes.Buffer
+			err := temporalcloudcli.CreateNamespace(context.Background(), temporalcloudcli.CreateNamespaceParams{
+				Name:               "my-namespace",
+				Regions:            []string{"aws-us-east-1"},
+				MtlsAuthEnabled:    tt.mtlsAuthEnabled,
+				Cloud:              mockCloud,
+				Printer:            &printer.Printer{Output: &buf, JSON: true},
+				Prompter:           mockPrompter,
+				UnmarshalProtoJSON: noopUnmarshalProtoJSON,
+				OperationHandler:   mockHandler,
 			})
 			require.NoError(t, err)
 		})

@@ -404,6 +404,10 @@ commands:
         type: bool
         description: |
           Enable API key authentication for the namespace.
+      - name: mtls-auth-enabled
+        type: bool
+        description: |
+          Enable mTLS authentication for the namespace.
       - name: enable-delete-protection
         type: bool
         description: |
@@ -596,13 +600,99 @@ commands:
         description: |
           Enable or disable task queue fairness for the namespace.
 
-  # Namespace cert-ca commands
-  - name: cloud namespace cert-ca
+  # Namespace mtls commands
+  - name: cloud namespace mtls
+    summary: Manage namespace mTLS authentication settings
+    description: |
+      Commands for managing mTLS authentication configuration of Temporal Cloud namespaces.
+    has-init: false
+  - name: cloud namespace mtls get
+    summary: Get namespace mTLS authentication configuration
+    description: |
+      Retrieve the current mTLS authentication configuration for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace mtls get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace mtls set
+    summary: Set namespace mTLS authentication configuration
+    description: |
+      Enable or disable mTLS authentication for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace mtls set --namespace my-namespace.my-account --mtls-auth-enabled=true
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: mtls-auth-enabled
+        type: bool
+        required: true
+        description: |
+          Enable or disable mTLS authentication for the namespace.
+
+  # Namespace api-key auth commands
+  - name: cloud namespace api-key
+    summary: Manage namespace API key authentication settings
+    description: |
+      Commands for managing API key authentication configuration of Temporal Cloud namespaces.
+    has-init: false
+  - name: cloud namespace api-key get
+    summary: Get namespace API key authentication configuration
+    description: |
+      Retrieve the current API key authentication configuration for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace api-key get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace api-key set
+    summary: Set namespace API key authentication configuration
+    description: |
+      Enable or disable API key authentication for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace api-key set --namespace my-namespace.my-account --api-key-auth-enabled=true
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: api-key-auth-enabled
+        type: bool
+        required: true
+        description: |
+          Enable or disable API key authentication for the namespace.
+
+  # Namespace mtls cert-ca commands
+  - name: cloud namespace mtls cert-ca
     summary: Manage client CA certificates for namespaces
     description: |
       Commands for managing the client CA certificates of Temporal Cloud namespaces.
     has-init: false
-  - name: cloud namespace cert-ca list
+  - name: cloud namespace mtls cert-ca list
     summary: List CA certificates for a namespace
     description: |
       Retrieve the list of client CA certificates configured for a Temporal Cloud
@@ -611,13 +701,13 @@ commands:
       Example:
 
       ```
-      temporal cloud namespace cert-ca list --namespace my-namespace.my-account
+      temporal cloud namespace mtls cert-ca list --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
       - client
       - namespace
-  - name: cloud namespace cert-ca create
+  - name: cloud namespace mtls cert-ca create
     summary: Add CA certificates to a namespace
     description: |
       Add client CA certificates to a Temporal Cloud namespace from a PEM file
@@ -629,13 +719,13 @@ commands:
       Example with file:
 
       ```
-      temporal cloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem
+      temporal cloud namespace mtls cert-ca create --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem
       ```
 
       Example with base64 encoded data:
 
       ```
-      temporal cloud namespace cert-ca create --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>
+      temporal cloud namespace mtls cert-ca create --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>
       ```
     has-init: false
     option-sets:
@@ -645,7 +735,7 @@ commands:
       - resource-version
       - ca-certificate
 
-  - name: cloud namespace cert-ca delete
+  - name: cloud namespace mtls cert-ca delete
     summary: Delete CA certificates from a namespace
     description: |
       Delete client CA certificates from a Temporal Cloud namespace. This operation
@@ -657,13 +747,13 @@ commands:
       Example with file:
 
       ```
-      temporal cloud namespace cert-ca delete --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem
+      temporal cloud namespace mtls cert-ca delete --namespace my-namespace.my-account --ca-certificate-file ca-cert.pem
       ```
 
       Example with base64 encoded data:
 
       ```
-      temporal cloud namespace cert-ca delete --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>
+      temporal cloud namespace mtls cert-ca delete --namespace my-namespace.my-account --ca-certificate <base64-encoded-cert>
       ```
     has-init: false
     option-sets:
@@ -674,14 +764,14 @@ commands:
       - ca-certificate
 
   # Namespace cert-filter commands
-  - name: cloud namespace cert-filter
+  - name: cloud namespace mtls cert-filter
     summary: Manage certificate filters for namespaces
     description: |
       Commands for managing certificate filters for Temporal Cloud namespaces.
       Certificate filters restrict mTLS connections to client certificates with
       specific distinguished name properties.
     has-init: false
-  - name: cloud namespace cert-filter list
+  - name: cloud namespace mtls cert-filter list
     summary: List certificate filters for a namespace
     description: |
       List all certificate filters configured for a Temporal Cloud namespace.
@@ -689,7 +779,7 @@ commands:
     option-sets:
       - client
       - namespace
-  - name: cloud namespace cert-filter create
+  - name: cloud namespace mtls cert-filter create
     summary: Add certificate filters to a namespace
     description: |
       Add new certificate filters to a Temporal Cloud namespace. Certificate
@@ -717,7 +807,7 @@ commands:
         type: string
         description: |
           The subject alternative name (SAN) from the certificate.
-  - name: cloud namespace cert-filter delete
+  - name: cloud namespace mtls cert-filter delete
     summary: Delete certificate filters from a namespace
     description: |
       Delete certificate filters from a Temporal Cloud namespace. Filters are

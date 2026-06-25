@@ -48,8 +48,8 @@ func TestCloudNamespaceCertFilterListCommand_Success(t *testing.T) {
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertFilterListCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterListCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 
 	cmd.Command.Run(&cmd.Command, []string{})
@@ -67,7 +67,7 @@ func TestCloudNamespaceCertFilterListCommand_Success(t *testing.T) {
 	assert.Equal(t, expected, result)
 }
 
-func TestCloudNamespaceCertFilterListCommand_EmptyList(t *testing.T) {
+func TestCloudNamespaceMtlsCertFilterListCommand_EmptyList(t *testing.T) {
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 	mockClient.EXPECT().
 		ListCertFilters(mock.Anything, "test-namespace.test-account").
@@ -85,8 +85,8 @@ func TestCloudNamespaceCertFilterListCommand_EmptyList(t *testing.T) {
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertFilterListCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterListCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 
 	cmd.Command.Run(&cmd.Command, []string{})
@@ -100,7 +100,7 @@ func TestCloudNamespaceCertFilterListCommand_EmptyList(t *testing.T) {
 	assert.Empty(t, result.CertificateFilters)
 }
 
-func TestCloudNamespaceCertFilterListCommand_ListError(t *testing.T) {
+func TestCloudNamespaceMtlsCertFilterListCommand_ListError(t *testing.T) {
 	expectedErr := errors.New("failed to list filters")
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
@@ -119,8 +119,8 @@ func TestCloudNamespaceCertFilterListCommand_ListError(t *testing.T) {
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertFilterListCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterListCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 
 	cmd.Command.Run(&cmd.Command, []string{})
@@ -128,7 +128,7 @@ func TestCloudNamespaceCertFilterListCommand_ListError(t *testing.T) {
 	assert.Equal(t, expectedErr, capturedErr)
 }
 
-func TestCloudNamespaceCertFilterCreateCommand_Success(t *testing.T) {
+func TestCloudNamespaceMtlsCertFilterCreateCommand_Success(t *testing.T) {
 	expectedOp := &operation.AsyncOperation{
 		Id: "test-operation-id",
 	}
@@ -172,12 +172,12 @@ func TestCloudNamespaceCertFilterCreateCommand_Success(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		setupCmd     func(*temporalcloudcli.CloudNamespaceCertFilterCreateCommand)
+		setupCmd     func(*temporalcloudcli.CloudNamespaceMtlsCertFilterCreateCommand)
 		assertResult func(*testing.T, bytes.Buffer)
 	}{
 		{
 			name: "async",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertFilterCreateCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertFilterCreateCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CommonName = "test.temporal.io"
 				cmd.Organization = "Temporal"
@@ -200,7 +200,7 @@ func TestCloudNamespaceCertFilterCreateCommand_Success(t *testing.T) {
 		},
 		{
 			name: "sync",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertFilterCreateCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertFilterCreateCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CommonName = "test.temporal.io"
 				cmd.Organization = "Temporal"
@@ -230,8 +230,8 @@ func TestCloudNamespaceCertFilterCreateCommand_Success(t *testing.T) {
 				capturedErr = err
 			}
 
-			parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceCertFilterCreateCommand(cctx, parent)
+			parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterCreateCommand(cctx, parent)
 			tt.setupCmd(cmd)
 
 			cmd.Command.Run(&cmd.Command, []string{})
@@ -242,15 +242,15 @@ func TestCloudNamespaceCertFilterCreateCommand_Success(t *testing.T) {
 	}
 }
 
-func TestCloudNamespaceCertFilterCreateCommand_InvalidInput(t *testing.T) {
+func TestCloudNamespaceMtlsCertFilterCreateCommand_InvalidInput(t *testing.T) {
 	tests := []struct {
 		name        string
-		setupCmd    func(*temporalcloudcli.CloudNamespaceCertFilterCreateCommand)
+		setupCmd    func(*temporalcloudcli.CloudNamespaceMtlsCertFilterCreateCommand)
 		assertError func(*testing.T, error)
 	}{
 		{
 			name: "no fields provided",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertFilterCreateCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertFilterCreateCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.Async = true
 			},
@@ -278,8 +278,8 @@ func TestCloudNamespaceCertFilterCreateCommand_InvalidInput(t *testing.T) {
 				capturedErr = err
 			}
 
-			parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceCertFilterCreateCommand(cctx, parent)
+			parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterCreateCommand(cctx, parent)
 			tt.setupCmd(cmd)
 
 			cmd.Command.Run(&cmd.Command, []string{})
@@ -290,7 +290,7 @@ func TestCloudNamespaceCertFilterCreateCommand_InvalidInput(t *testing.T) {
 	}
 }
 
-func TestCloudNamespaceCertFilterCreateCommand_AddCertFiltersError(t *testing.T) {
+func TestCloudNamespaceMtlsCertFilterCreateCommand_AddCertFiltersError(t *testing.T) {
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
 	expectedErr := errors.New("failed to add filters")
@@ -324,8 +324,8 @@ func TestCloudNamespaceCertFilterCreateCommand_AddCertFiltersError(t *testing.T)
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertFilterCreateCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterCreateCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CommonName = "test.temporal.io"
 	cmd.Async = true
@@ -406,8 +406,8 @@ func TestCloudNamespaceCertFilterCreateCommand_NothingToChange(t *testing.T) {
 				capturedErr = err
 			}
 
-			parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceCertFilterCreateCommand(cctx, parent)
+			parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterCreateCommand(cctx, parent)
 			cmd.Namespace = "test-namespace.test-account"
 			cmd.CommonName = "test.temporal.io"
 			cmd.Async = true
@@ -420,7 +420,7 @@ func TestCloudNamespaceCertFilterCreateCommand_NothingToChange(t *testing.T) {
 	}
 }
 
-func TestCloudNamespaceCertFilterCreateCommand_IdempotentWithOtherError(t *testing.T) {
+func TestCloudNamespaceMtlsCertFilterCreateCommand_IdempotentWithOtherError(t *testing.T) {
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
 	otherErr := status.Error(codes.PermissionDenied, "permission denied")
@@ -454,8 +454,8 @@ func TestCloudNamespaceCertFilterCreateCommand_IdempotentWithOtherError(t *testi
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertFilterCreateCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterCreateCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CommonName = "test.temporal.io"
 	cmd.Async = true
@@ -466,7 +466,7 @@ func TestCloudNamespaceCertFilterCreateCommand_IdempotentWithOtherError(t *testi
 	assert.Equal(t, otherErr, capturedErr)
 }
 
-func TestCloudNamespaceCertFilterCreateCommand_PollingError(t *testing.T) {
+func TestCloudNamespaceMtlsCertFilterCreateCommand_PollingError(t *testing.T) {
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 	mockPoller := cmdmock.NewMockPoller(t)
 
@@ -510,8 +510,8 @@ func TestCloudNamespaceCertFilterCreateCommand_PollingError(t *testing.T) {
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertFilterCreateCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterCreateCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CommonName = "test.temporal.io"
 	cmd.Async = false
@@ -521,7 +521,7 @@ func TestCloudNamespaceCertFilterCreateCommand_PollingError(t *testing.T) {
 	assert.Equal(t, pollErr, capturedErr)
 }
 
-func TestCloudNamespaceCertFilterCreateCommand_UserDeclinesPrompt(t *testing.T) {
+func TestCloudNamespaceMtlsCertFilterCreateCommand_UserDeclinesPrompt(t *testing.T) {
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
 	var buf bytes.Buffer
@@ -540,8 +540,8 @@ func TestCloudNamespaceCertFilterCreateCommand_UserDeclinesPrompt(t *testing.T) 
 	// Simulate user declining the prompt by providing "n" as input
 	cctx.Options.Stdin = bytes.NewBufferString("n\n")
 
-	parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertFilterCreateCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterCreateCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CommonName = "test.temporal.io"
 	cmd.Async = true
@@ -551,7 +551,7 @@ func TestCloudNamespaceCertFilterCreateCommand_UserDeclinesPrompt(t *testing.T) 
 	assert.Contains(t, capturedErr.Error(), "Aborting create")
 }
 
-func TestCloudNamespaceCertFilterCreateCommand_JSONOutputWithoutAutoConfirm(t *testing.T) {
+func TestCloudNamespaceMtlsCertFilterCreateCommand_JSONOutputWithoutAutoConfirm(t *testing.T) {
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
 	var buf bytes.Buffer
@@ -569,8 +569,8 @@ func TestCloudNamespaceCertFilterCreateCommand_JSONOutputWithoutAutoConfirm(t *t
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertFilterCreateCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterCreateCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CommonName = "test.temporal.io"
 	cmd.Async = true
@@ -580,7 +580,7 @@ func TestCloudNamespaceCertFilterCreateCommand_JSONOutputWithoutAutoConfirm(t *t
 	assert.Contains(t, capturedErr.Error(), "must bypass prompts when using JSON output")
 }
 
-func TestCloudNamespaceCertFilterDeleteCommand_Success(t *testing.T) {
+func TestCloudNamespaceMtlsCertFilterDeleteCommand_Success(t *testing.T) {
 	expectedOp := &operation.AsyncOperation{
 		Id: "test-operation-id",
 	}
@@ -624,12 +624,12 @@ func TestCloudNamespaceCertFilterDeleteCommand_Success(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		setupCmd     func(*temporalcloudcli.CloudNamespaceCertFilterDeleteCommand)
+		setupCmd     func(*temporalcloudcli.CloudNamespaceMtlsCertFilterDeleteCommand)
 		assertResult func(*testing.T, bytes.Buffer)
 	}{
 		{
 			name: "async",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertFilterDeleteCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertFilterDeleteCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CommonName = "test.temporal.io"
 				cmd.Organization = "Temporal"
@@ -652,7 +652,7 @@ func TestCloudNamespaceCertFilterDeleteCommand_Success(t *testing.T) {
 		},
 		{
 			name: "sync",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertFilterDeleteCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertFilterDeleteCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CommonName = "test.temporal.io"
 				cmd.Organization = "Temporal"
@@ -682,8 +682,8 @@ func TestCloudNamespaceCertFilterDeleteCommand_Success(t *testing.T) {
 				capturedErr = err
 			}
 
-			parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceCertFilterDeleteCommand(cctx, parent)
+			parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterDeleteCommand(cctx, parent)
 			tt.setupCmd(cmd)
 
 			cmd.Command.Run(&cmd.Command, []string{})
@@ -694,15 +694,15 @@ func TestCloudNamespaceCertFilterDeleteCommand_Success(t *testing.T) {
 	}
 }
 
-func TestCloudNamespaceCertFilterDeleteCommand_InvalidInput(t *testing.T) {
+func TestCloudNamespaceMtlsCertFilterDeleteCommand_InvalidInput(t *testing.T) {
 	tests := []struct {
 		name        string
-		setupCmd    func(*temporalcloudcli.CloudNamespaceCertFilterDeleteCommand)
+		setupCmd    func(*temporalcloudcli.CloudNamespaceMtlsCertFilterDeleteCommand)
 		assertError func(*testing.T, error)
 	}{
 		{
 			name: "no fields provided",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertFilterDeleteCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertFilterDeleteCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.Async = true
 			},
@@ -730,8 +730,8 @@ func TestCloudNamespaceCertFilterDeleteCommand_InvalidInput(t *testing.T) {
 				capturedErr = err
 			}
 
-			parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceCertFilterDeleteCommand(cctx, parent)
+			parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterDeleteCommand(cctx, parent)
 			tt.setupCmd(cmd)
 
 			cmd.Command.Run(&cmd.Command, []string{})
@@ -742,7 +742,7 @@ func TestCloudNamespaceCertFilterDeleteCommand_InvalidInput(t *testing.T) {
 	}
 }
 
-func TestCloudNamespaceCertFilterDeleteCommand_DeleteCertFiltersError(t *testing.T) {
+func TestCloudNamespaceMtlsCertFilterDeleteCommand_DeleteCertFiltersError(t *testing.T) {
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
 	expectedErr := errors.New("failed to remove filters")
@@ -776,8 +776,8 @@ func TestCloudNamespaceCertFilterDeleteCommand_DeleteCertFiltersError(t *testing
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertFilterDeleteCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterDeleteCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CommonName = "test.temporal.io"
 	cmd.Async = true
@@ -788,7 +788,7 @@ func TestCloudNamespaceCertFilterDeleteCommand_DeleteCertFiltersError(t *testing
 	assert.Equal(t, expectedErr, capturedErr)
 }
 
-func TestCloudNamespaceCertFilterDeleteCommand_NothingToChange(t *testing.T) {
+func TestCloudNamespaceMtlsCertFilterDeleteCommand_NothingToChange(t *testing.T) {
 	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
 
 	tests := []struct {
@@ -858,8 +858,8 @@ func TestCloudNamespaceCertFilterDeleteCommand_NothingToChange(t *testing.T) {
 				capturedErr = err
 			}
 
-			parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceCertFilterDeleteCommand(cctx, parent)
+			parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterDeleteCommand(cctx, parent)
 			cmd.Namespace = "test-namespace.test-account"
 			cmd.CommonName = "test.temporal.io"
 			cmd.Async = true
@@ -872,7 +872,7 @@ func TestCloudNamespaceCertFilterDeleteCommand_NothingToChange(t *testing.T) {
 	}
 }
 
-func TestCloudNamespaceCertFilterDeleteCommand_IdempotentWithOtherError(t *testing.T) {
+func TestCloudNamespaceMtlsCertFilterDeleteCommand_IdempotentWithOtherError(t *testing.T) {
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
 	otherErr := status.Error(codes.PermissionDenied, "permission denied")
@@ -906,8 +906,8 @@ func TestCloudNamespaceCertFilterDeleteCommand_IdempotentWithOtherError(t *testi
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertFilterDeleteCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterDeleteCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CommonName = "test.temporal.io"
 	cmd.Async = true
@@ -962,8 +962,8 @@ func TestCloudNamespaceCertFilterDeleteCommand_PollingError(t *testing.T) {
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertFilterDeleteCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterDeleteCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CommonName = "test.temporal.io"
 	cmd.Async = false
@@ -973,7 +973,7 @@ func TestCloudNamespaceCertFilterDeleteCommand_PollingError(t *testing.T) {
 	assert.Equal(t, pollErr, capturedErr)
 }
 
-func TestCloudNamespaceCertFilterDeleteCommand_UserDeclinesPrompt(t *testing.T) {
+func TestCloudNamespaceMtlsCertFilterDeleteCommand_UserDeclinesPrompt(t *testing.T) {
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
 	var buf bytes.Buffer
@@ -992,8 +992,8 @@ func TestCloudNamespaceCertFilterDeleteCommand_UserDeclinesPrompt(t *testing.T) 
 	// Simulate user declining the prompt by providing "n" as input
 	cctx.Options.Stdin = bytes.NewBufferString("n\n")
 
-	parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertFilterDeleteCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterDeleteCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CommonName = "test.temporal.io"
 	cmd.Async = true
@@ -1003,7 +1003,7 @@ func TestCloudNamespaceCertFilterDeleteCommand_UserDeclinesPrompt(t *testing.T) 
 	assert.Contains(t, capturedErr.Error(), "Aborting delete")
 }
 
-func TestCloudNamespaceCertFilterDeleteCommand_JSONOutputWithoutAutoConfirm(t *testing.T) {
+func TestCloudNamespaceMtlsCertFilterDeleteCommand_JSONOutputWithoutAutoConfirm(t *testing.T) {
 	mockClient := cmdmock.NewMockNamespaceClient(t)
 
 	var buf bytes.Buffer
@@ -1021,8 +1021,8 @@ func TestCloudNamespaceCertFilterDeleteCommand_JSONOutputWithoutAutoConfirm(t *t
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertFilterCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertFilterDeleteCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertFilterCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertFilterDeleteCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CommonName = "test.temporal.io"
 	cmd.Async = true
