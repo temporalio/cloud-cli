@@ -9,7 +9,7 @@ import (
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
-func (c *CloudNamespaceCertFilterCreateCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudNamespaceMtlsCertFilterCreateCommand) run(cctx *CommandContext, _ []string) error {
 	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
 	if err != nil {
 		return err
@@ -38,7 +38,7 @@ func (c *CloudNamespaceCertFilterCreateCommand) run(cctx *CommandContext, _ []st
 	})
 }
 
-func (c *CloudNamespaceCertFilterListCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudNamespaceMtlsCertFilterListCommand) run(cctx *CommandContext, _ []string) error {
 	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func (c *CloudNamespaceCertFilterListCommand) run(cctx *CommandContext, _ []stri
 	)
 }
 
-func (c *CloudNamespaceCertFilterDeleteCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudNamespaceMtlsCertFilterDeleteCommand) run(cctx *CommandContext, _ []string) error {
 	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
 	if err != nil {
 		return err

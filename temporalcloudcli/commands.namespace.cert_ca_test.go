@@ -66,12 +66,12 @@ func TestCloudNamespaceCertCaCreateCommand_Success(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		setupCmd     func(*temporalcloudcli.CloudNamespaceCertCaCreateCommand)
+		setupCmd     func(*temporalcloudcli.CloudNamespaceMtlsCertCaCreateCommand)
 		assertResult func(*testing.T, bytes.Buffer)
 	}{
 		{
 			name: "async with file",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaCreateCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaCreateCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificateFile = certPath
 				cmd.ResourceVersion = "test-version"
@@ -93,7 +93,7 @@ func TestCloudNamespaceCertCaCreateCommand_Success(t *testing.T) {
 		},
 		{
 			name: "sync with file",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaCreateCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaCreateCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificateFile = certPath
 				cmd.Async = false
@@ -104,7 +104,7 @@ func TestCloudNamespaceCertCaCreateCommand_Success(t *testing.T) {
 		},
 		{
 			name: "async with base64",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaCreateCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaCreateCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificate = base64Cert
 				cmd.ResourceVersion = "test-version"
@@ -126,7 +126,7 @@ func TestCloudNamespaceCertCaCreateCommand_Success(t *testing.T) {
 		},
 		{
 			name: "sync with base64",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaCreateCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaCreateCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificate = base64Cert
 				cmd.Async = false
@@ -152,8 +152,8 @@ func TestCloudNamespaceCertCaCreateCommand_Success(t *testing.T) {
 				capturedErr = err
 			}
 
-			parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceCertCaCreateCommand(cctx, parent)
+			parent := &temporalcloudcli.CloudNamespaceMtlsCertCaCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceMtlsCertCaCreateCommand(cctx, parent)
 			tt.setupCmd(cmd)
 
 			cmd.Command.Run(&cmd.Command, []string{})
@@ -164,15 +164,15 @@ func TestCloudNamespaceCertCaCreateCommand_Success(t *testing.T) {
 	}
 }
 
-func TestCloudNamespaceCertCaCreateCommand_InvalidInput(t *testing.T) {
+func TestCloudNamespaceMtlsCertCaCreateCommand_InvalidInput(t *testing.T) {
 	tests := []struct {
 		name        string
-		setupCmd    func(*temporalcloudcli.CloudNamespaceCertCaCreateCommand)
+		setupCmd    func(*temporalcloudcli.CloudNamespaceMtlsCertCaCreateCommand)
 		assertError func(*testing.T, error)
 	}{
 		{
 			name: "file not found",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaCreateCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaCreateCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificateFile = "testdata/nonexistent-cert.pem"
 				cmd.Async = true
@@ -183,7 +183,7 @@ func TestCloudNamespaceCertCaCreateCommand_InvalidInput(t *testing.T) {
 		},
 		{
 			name: "invalid certificate",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaCreateCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaCreateCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificateFile = "testdata/invalid-cert.pem"
 				cmd.Async = true
@@ -194,7 +194,7 @@ func TestCloudNamespaceCertCaCreateCommand_InvalidInput(t *testing.T) {
 		},
 		{
 			name: "both flags provided",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaCreateCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaCreateCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificateFile = "testdata/cert.pem"
 				cmd.CaCertificate = "base64data"
@@ -206,7 +206,7 @@ func TestCloudNamespaceCertCaCreateCommand_InvalidInput(t *testing.T) {
 		},
 		{
 			name: "neither flag provided",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaCreateCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaCreateCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.Async = true
 			},
@@ -216,7 +216,7 @@ func TestCloudNamespaceCertCaCreateCommand_InvalidInput(t *testing.T) {
 		},
 		{
 			name: "invalid base64",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaCreateCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaCreateCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificate = "invalid!!!base64"
 				cmd.Async = true
@@ -242,8 +242,8 @@ func TestCloudNamespaceCertCaCreateCommand_InvalidInput(t *testing.T) {
 				capturedErr = err
 			}
 
-			parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceCertCaCreateCommand(cctx, parent)
+			parent := &temporalcloudcli.CloudNamespaceMtlsCertCaCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceMtlsCertCaCreateCommand(cctx, parent)
 			tt.setupCmd(cmd)
 
 			cmd.Command.Run(&cmd.Command, []string{})
@@ -254,7 +254,7 @@ func TestCloudNamespaceCertCaCreateCommand_InvalidInput(t *testing.T) {
 	}
 }
 
-func TestCloudNamespaceCertCaCreateCommand_AddCACertsError(t *testing.T) {
+func TestCloudNamespaceMtlsCertCaCreateCommand_AddCACertsError(t *testing.T) {
 	parsedCerts, certPath, _ := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
@@ -283,8 +283,8 @@ func TestCloudNamespaceCertCaCreateCommand_AddCACertsError(t *testing.T) {
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertCaCreateCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertCaCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertCaCreateCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CaCertificateFile = certPath
 	cmd.Async = true
@@ -295,7 +295,7 @@ func TestCloudNamespaceCertCaCreateCommand_AddCACertsError(t *testing.T) {
 	assert.Equal(t, expectedErr, capturedErr)
 }
 
-func TestCloudNamespaceCertCaCreateCommand_NothingToChange(t *testing.T) {
+func TestCloudNamespaceMtlsCertCaCreateCommand_NothingToChange(t *testing.T) {
 	parsedCerts, certPath, _ := setupTestCertFile(t)
 
 	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
@@ -355,8 +355,8 @@ func TestCloudNamespaceCertCaCreateCommand_NothingToChange(t *testing.T) {
 				capturedErr = err
 			}
 
-			parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceCertCaCreateCommand(cctx, parent)
+			parent := &temporalcloudcli.CloudNamespaceMtlsCertCaCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceMtlsCertCaCreateCommand(cctx, parent)
 			cmd.Namespace = "test-namespace.test-account"
 			cmd.CaCertificateFile = certPath
 			cmd.Async = true
@@ -369,7 +369,7 @@ func TestCloudNamespaceCertCaCreateCommand_NothingToChange(t *testing.T) {
 	}
 }
 
-func TestCloudNamespaceCertCaCreateCommand_IdempotentWithOtherError(t *testing.T) {
+func TestCloudNamespaceMtlsCertCaCreateCommand_IdempotentWithOtherError(t *testing.T) {
 	parsedCerts, certPath, _ := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
@@ -398,8 +398,8 @@ func TestCloudNamespaceCertCaCreateCommand_IdempotentWithOtherError(t *testing.T
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertCaCreateCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertCaCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertCaCreateCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CaCertificateFile = certPath
 	cmd.Async = true
@@ -410,7 +410,7 @@ func TestCloudNamespaceCertCaCreateCommand_IdempotentWithOtherError(t *testing.T
 	assert.Equal(t, otherErr, capturedErr)
 }
 
-func TestCloudNamespaceCertCaCreateCommand_PollingError(t *testing.T) {
+func TestCloudNamespaceMtlsCertCaCreateCommand_PollingError(t *testing.T) {
 	parsedCerts, certPath, _ := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
@@ -449,8 +449,8 @@ func TestCloudNamespaceCertCaCreateCommand_PollingError(t *testing.T) {
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertCaCreateCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertCaCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertCaCreateCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CaCertificateFile = certPath
 	cmd.Async = false
@@ -523,7 +523,7 @@ func setupTestCertFile(t *testing.T) ([]cert.CACert, string, []byte) {
 	return parsedCerts, certPath, certData
 }
 
-func TestCloudNamespaceCertCaDeleteCommand_Success(t *testing.T) {
+func TestCloudNamespaceMtlsCertCaDeleteCommand_Success(t *testing.T) {
 	parsedCerts, certPath, certData := setupTestCertFile(t)
 	base64Cert := base64.StdEncoding.EncodeToString(certData)
 
@@ -560,12 +560,12 @@ func TestCloudNamespaceCertCaDeleteCommand_Success(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		setupCmd     func(*temporalcloudcli.CloudNamespaceCertCaDeleteCommand)
+		setupCmd     func(*temporalcloudcli.CloudNamespaceMtlsCertCaDeleteCommand)
 		assertResult func(*testing.T, bytes.Buffer)
 	}{
 		{
 			name: "async with file",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaDeleteCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificateFile = certPath
 				cmd.ResourceVersion = "test-version"
@@ -587,7 +587,7 @@ func TestCloudNamespaceCertCaDeleteCommand_Success(t *testing.T) {
 		},
 		{
 			name: "sync with file",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaDeleteCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificateFile = certPath
 				cmd.Async = false
@@ -598,7 +598,7 @@ func TestCloudNamespaceCertCaDeleteCommand_Success(t *testing.T) {
 		},
 		{
 			name: "async with base64",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaDeleteCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificate = base64Cert
 				cmd.ResourceVersion = "test-version"
@@ -620,7 +620,7 @@ func TestCloudNamespaceCertCaDeleteCommand_Success(t *testing.T) {
 		},
 		{
 			name: "sync with base64",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaDeleteCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificate = base64Cert
 				cmd.Async = false
@@ -649,8 +649,8 @@ func TestCloudNamespaceCertCaDeleteCommand_Success(t *testing.T) {
 				capturedErr = err
 			}
 
-			parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+			parent := &temporalcloudcli.CloudNamespaceMtlsCertCaCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceMtlsCertCaDeleteCommand(cctx, parent)
 			tt.setupCmd(cmd)
 
 			cmd.Command.Run(&cmd.Command, []string{})
@@ -664,12 +664,12 @@ func TestCloudNamespaceCertCaDeleteCommand_Success(t *testing.T) {
 func TestCloudNamespaceCertCaDeleteCommand_InvalidInput(t *testing.T) {
 	tests := []struct {
 		name        string
-		setupCmd    func(*temporalcloudcli.CloudNamespaceCertCaDeleteCommand)
+		setupCmd    func(*temporalcloudcli.CloudNamespaceMtlsCertCaDeleteCommand)
 		assertError func(*testing.T, error)
 	}{
 		{
 			name: "file not found",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaDeleteCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificateFile = "testdata/nonexistent-cert.pem"
 				cmd.Async = true
@@ -680,7 +680,7 @@ func TestCloudNamespaceCertCaDeleteCommand_InvalidInput(t *testing.T) {
 		},
 		{
 			name: "both flags provided",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaDeleteCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificateFile = "testdata/cert.pem"
 				cmd.CaCertificate = "base64data"
@@ -692,7 +692,7 @@ func TestCloudNamespaceCertCaDeleteCommand_InvalidInput(t *testing.T) {
 		},
 		{
 			name: "neither flag provided",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaDeleteCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.Async = true
 			},
@@ -702,7 +702,7 @@ func TestCloudNamespaceCertCaDeleteCommand_InvalidInput(t *testing.T) {
 		},
 		{
 			name: "invalid base64",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaDeleteCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificate = "invalid!!!base64"
 				cmd.Async = true
@@ -713,7 +713,7 @@ func TestCloudNamespaceCertCaDeleteCommand_InvalidInput(t *testing.T) {
 		},
 		{
 			name: "invalid certificate",
-			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceCertCaDeleteCommand) {
+			setupCmd: func(cmd *temporalcloudcli.CloudNamespaceMtlsCertCaDeleteCommand) {
 				cmd.Namespace = "test-namespace.test-account"
 				cmd.CaCertificateFile = "testdata/invalid-cert.pem"
 				cmd.Async = true
@@ -742,8 +742,8 @@ func TestCloudNamespaceCertCaDeleteCommand_InvalidInput(t *testing.T) {
 				capturedErr = err
 			}
 
-			parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+			parent := &temporalcloudcli.CloudNamespaceMtlsCertCaCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceMtlsCertCaDeleteCommand(cctx, parent)
 			tt.setupCmd(cmd)
 
 			cmd.Command.Run(&cmd.Command, []string{})
@@ -754,7 +754,7 @@ func TestCloudNamespaceCertCaDeleteCommand_InvalidInput(t *testing.T) {
 	}
 }
 
-func TestCloudNamespaceCertCaDeleteCommand_DeleteCACertsError(t *testing.T) {
+func TestCloudNamespaceMtlsCertCaDeleteCommand_DeleteCACertsError(t *testing.T) {
 	parsedCerts, certPath, _ := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
@@ -786,8 +786,8 @@ func TestCloudNamespaceCertCaDeleteCommand_DeleteCACertsError(t *testing.T) {
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertCaCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertCaDeleteCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CaCertificateFile = certPath
 	cmd.Async = true
@@ -798,7 +798,7 @@ func TestCloudNamespaceCertCaDeleteCommand_DeleteCACertsError(t *testing.T) {
 	assert.Equal(t, expectedErr, capturedErr)
 }
 
-func TestCloudNamespaceCertCaDeleteCommand_NothingToChange(t *testing.T) {
+func TestCloudNamespaceMtlsCertCaDeleteCommand_NothingToChange(t *testing.T) {
 	parsedCerts, certPath, _ := setupTestCertFile(t)
 
 	nothingToChangeErr := status.Error(codes.InvalidArgument, "nothing to change")
@@ -861,8 +861,8 @@ func TestCloudNamespaceCertCaDeleteCommand_NothingToChange(t *testing.T) {
 				capturedErr = err
 			}
 
-			parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-			cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+			parent := &temporalcloudcli.CloudNamespaceMtlsCertCaCommand{}
+			cmd := temporalcloudcli.NewCloudNamespaceMtlsCertCaDeleteCommand(cctx, parent)
 			cmd.Namespace = "test-namespace.test-account"
 			cmd.CaCertificateFile = certPath
 			cmd.Async = true
@@ -875,7 +875,7 @@ func TestCloudNamespaceCertCaDeleteCommand_NothingToChange(t *testing.T) {
 	}
 }
 
-func TestCloudNamespaceCertCaDeleteCommand_IdempotentWithOtherError(t *testing.T) {
+func TestCloudNamespaceMtlsCertCaDeleteCommand_IdempotentWithOtherError(t *testing.T) {
 	parsedCerts, certPath, _ := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
@@ -907,8 +907,8 @@ func TestCloudNamespaceCertCaDeleteCommand_IdempotentWithOtherError(t *testing.T
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertCaCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertCaDeleteCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CaCertificateFile = certPath
 	cmd.Async = true
@@ -919,7 +919,7 @@ func TestCloudNamespaceCertCaDeleteCommand_IdempotentWithOtherError(t *testing.T
 	assert.Equal(t, otherErr, capturedErr)
 }
 
-func TestCloudNamespaceCertCaDeleteCommand_PollingError(t *testing.T) {
+func TestCloudNamespaceMtlsCertCaDeleteCommand_PollingError(t *testing.T) {
 	parsedCerts, certPath, _ := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
@@ -961,8 +961,8 @@ func TestCloudNamespaceCertCaDeleteCommand_PollingError(t *testing.T) {
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertCaCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertCaDeleteCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CaCertificateFile = certPath
 	cmd.Async = false
@@ -972,7 +972,7 @@ func TestCloudNamespaceCertCaDeleteCommand_PollingError(t *testing.T) {
 	assert.Equal(t, pollErr, capturedErr)
 }
 
-func TestCloudNamespaceCertCaDeleteCommand_UserDeclinesPrompt(t *testing.T) {
+func TestCloudNamespaceMtlsCertCaDeleteCommand_UserDeclinesPrompt(t *testing.T) {
 	_, certPath, _ := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
@@ -993,8 +993,8 @@ func TestCloudNamespaceCertCaDeleteCommand_UserDeclinesPrompt(t *testing.T) {
 	// Simulate user declining the prompt by providing "n" as input
 	cctx.Options.Stdin = bytes.NewBufferString("n\n")
 
-	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertCaCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertCaDeleteCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CaCertificateFile = certPath
 	cmd.Async = true
@@ -1004,7 +1004,7 @@ func TestCloudNamespaceCertCaDeleteCommand_UserDeclinesPrompt(t *testing.T) {
 	assert.Contains(t, capturedErr.Error(), "Aborting delete")
 }
 
-func TestCloudNamespaceCertCaDeleteCommand_JSONOutputWithoutAutoConfirm(t *testing.T) {
+func TestCloudNamespaceMtlsCertCaDeleteCommand_JSONOutputWithoutAutoConfirm(t *testing.T) {
 	_, certPath, _ := setupTestCertFile(t)
 
 	mockClient := cmdmock.NewMockNamespaceClient(t)
@@ -1024,8 +1024,8 @@ func TestCloudNamespaceCertCaDeleteCommand_JSONOutputWithoutAutoConfirm(t *testi
 		capturedErr = err
 	}
 
-	parent := &temporalcloudcli.CloudNamespaceCertCaCommand{}
-	cmd := temporalcloudcli.NewCloudNamespaceCertCaDeleteCommand(cctx, parent)
+	parent := &temporalcloudcli.CloudNamespaceMtlsCertCaCommand{}
+	cmd := temporalcloudcli.NewCloudNamespaceMtlsCertCaDeleteCommand(cctx, parent)
 	cmd.Namespace = "test-namespace.test-account"
 	cmd.CaCertificateFile = certPath
 	cmd.Async = true
