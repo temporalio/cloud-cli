@@ -1630,9 +1630,10 @@ commands:
           Mutually exclusive with --description.
 
   - name: cloud nexus endpoint delete
-    summary: Delete a Nexus Endpoint
+    summary: Delete a Nexus Endpoint by name or ID
     description: |
       Delete a Nexus Endpoint on the Cloud Account.
+      Specify either `--name` or `--id` (exactly one is required).
     has-init: false
     option-sets:
       - client
@@ -1641,15 +1642,19 @@ commands:
     options:
       - name: name
         type: string
-        required: true
         description: |
           The name of the Nexus Endpoint to delete.
+      - name: id
+        type: string
+        description: |
+          The ID of the Nexus Endpoint to delete.
 
   - name: cloud nexus endpoint update
-    summary: Update an existing Nexus Endpoint
+    summary: Update an existing Nexus Endpoint by name or ID
     description: |
       Update an existing Nexus Endpoint on the Cloud Account.
       An endpoint name is used in workflow code to invoke Nexus operations.
+      Specify either `--name` or `--id` to identify the endpoint (exactly one is required).
 
       The endpoint is patched leaving any existing fields for which flags are not provided
       as they were.
@@ -1667,9 +1672,12 @@ commands:
     options:
       - name: name
         type: string
-        required: true
         description: |
           The name of the Nexus Endpoint to update.
+      - name: id
+        type: string
+        description: |
+          The ID of the Nexus Endpoint to update.
       - name: target-namespace
         type: string
         description: |
