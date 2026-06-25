@@ -1872,8 +1872,75 @@ func NewCloudNamespaceApiKeyCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Command.Short = "Manage namespace API key authentication settings"
 	s.Command.Long = "Commands for managing API key authentication configuration of Temporal Cloud namespaces."
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceApiKeyDisableCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceApiKeyEnableCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceApiKeyGetCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewCloudNamespaceApiKeySetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceApiKeyDisableCommand struct {
+	Parent  *CloudNamespaceApiKeyCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+}
+
+func NewCloudNamespaceApiKeyDisableCommand(cctx *CommandContext, parent *CloudNamespaceApiKeyCommand) *CloudNamespaceApiKeyDisableCommand {
+	var s CloudNamespaceApiKeyDisableCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "disable [flags]"
+	s.Command.Short = "Disable API key authentication for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Disable API key authentication for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace api-key disable --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Disable API key authentication for a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace api-key disable --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceApiKeyEnableCommand struct {
+	Parent  *CloudNamespaceApiKeyCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+}
+
+func NewCloudNamespaceApiKeyEnableCommand(cctx *CommandContext, parent *CloudNamespaceApiKeyCommand) *CloudNamespaceApiKeyEnableCommand {
+	var s CloudNamespaceApiKeyEnableCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "enable [flags]"
+	s.Command.Short = "Enable API key authentication for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Enable API key authentication for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace api-key enable --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Enable API key authentication for a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace api-key enable --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
@@ -1898,42 +1965,6 @@ func NewCloudNamespaceApiKeyGetCommand(cctx *CommandContext, parent *CloudNamesp
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type CloudNamespaceApiKeySetCommand struct {
-	Parent  *CloudNamespaceApiKeyCommand
-	Command cobra.Command
-	ClientOptions
-	NamespaceOptions
-	AsyncOperationOptions
-	ResourceVersionOptions
-	ApiKeyAuthEnabled bool
-}
-
-func NewCloudNamespaceApiKeySetCommand(cctx *CommandContext, parent *CloudNamespaceApiKeyCommand) *CloudNamespaceApiKeySetCommand {
-	var s CloudNamespaceApiKeySetCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "set [flags]"
-	s.Command.Short = "Set namespace API key authentication configuration"
-	if hasHighlighting {
-		s.Command.Long = "Enable or disable API key authentication for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace api-key set --namespace my-namespace.my-account --api-key-auth-enabled=true\x1b[0m"
-	} else {
-		s.Command.Long = "Enable or disable API key authentication for a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace api-key set --namespace my-namespace.my-account --api-key-auth-enabled=true\n```"
-	}
-	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().BoolVar(&s.ApiKeyAuthEnabled, "api-key-auth-enabled", false, "Enable or disable API key authentication for the namespace. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "api-key-auth-enabled")
-	s.ClientOptions.BuildFlags(s.Command.Flags())
-	s.NamespaceOptions.BuildFlags(s.Command.Flags())
-	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
-	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3381,8 +3412,9 @@ func NewCloudNamespaceMtlsCommand(cctx *CommandContext, parent *CloudNamespaceCo
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudNamespaceMtlsCertCaCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceMtlsCertFilterCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceMtlsDisableCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceMtlsEnableCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceMtlsGetCommand(cctx, &s).Command)
-	s.Command.AddCommand(&NewCloudNamespaceMtlsSetCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -3620,6 +3652,72 @@ func NewCloudNamespaceMtlsCertFilterListCommand(cctx *CommandContext, parent *Cl
 	return &s
 }
 
+type CloudNamespaceMtlsDisableCommand struct {
+	Parent  *CloudNamespaceMtlsCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+}
+
+func NewCloudNamespaceMtlsDisableCommand(cctx *CommandContext, parent *CloudNamespaceMtlsCommand) *CloudNamespaceMtlsDisableCommand {
+	var s CloudNamespaceMtlsDisableCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "disable [flags]"
+	s.Command.Short = "Disable mTLS authentication for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Disable mTLS authentication for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace mtls disable --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Disable mTLS authentication for a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace mtls disable --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceMtlsEnableCommand struct {
+	Parent  *CloudNamespaceMtlsCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+}
+
+func NewCloudNamespaceMtlsEnableCommand(cctx *CommandContext, parent *CloudNamespaceMtlsCommand) *CloudNamespaceMtlsEnableCommand {
+	var s CloudNamespaceMtlsEnableCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "enable [flags]"
+	s.Command.Short = "Enable mTLS authentication for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Enable mTLS authentication for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace mtls enable --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Enable mTLS authentication for a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace mtls enable --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type CloudNamespaceMtlsGetCommand struct {
 	Parent  *CloudNamespaceMtlsCommand
 	Command cobra.Command
@@ -3641,42 +3739,6 @@ func NewCloudNamespaceMtlsGetCommand(cctx *CommandContext, parent *CloudNamespac
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
-	}
-	return &s
-}
-
-type CloudNamespaceMtlsSetCommand struct {
-	Parent  *CloudNamespaceMtlsCommand
-	Command cobra.Command
-	ClientOptions
-	NamespaceOptions
-	AsyncOperationOptions
-	ResourceVersionOptions
-	MtlsAuthEnabled bool
-}
-
-func NewCloudNamespaceMtlsSetCommand(cctx *CommandContext, parent *CloudNamespaceMtlsCommand) *CloudNamespaceMtlsSetCommand {
-	var s CloudNamespaceMtlsSetCommand
-	s.Parent = parent
-	s.Command.DisableFlagsInUseLine = true
-	s.Command.Use = "set [flags]"
-	s.Command.Short = "Set namespace mTLS authentication configuration"
-	if hasHighlighting {
-		s.Command.Long = "Enable or disable mTLS authentication for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace mtls set --namespace my-namespace.my-account --mtls-auth-enabled=true\x1b[0m"
-	} else {
-		s.Command.Long = "Enable or disable mTLS authentication for a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace mtls set --namespace my-namespace.my-account --mtls-auth-enabled=true\n```"
-	}
-	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().BoolVar(&s.MtlsAuthEnabled, "mtls-auth-enabled", false, "Enable or disable mTLS authentication for the namespace. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "mtls-auth-enabled")
-	s.ClientOptions.BuildFlags(s.Command.Flags())
-	s.NamespaceOptions.BuildFlags(s.Command.Flags())
-	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
-	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

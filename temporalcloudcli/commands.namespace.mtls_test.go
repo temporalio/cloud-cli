@@ -97,7 +97,7 @@ func TestNamespaceMtlsGet(t *testing.T) {
 	}
 }
 
-func TestNamespaceMtlsSet(t *testing.T) {
+func TestNamespaceMtlsEnable(t *testing.T) {
 	existingNS := func(mtlsAuth *namespacev1.MtlsAuthSpec) *namespacev1.Namespace {
 		return &namespacev1.Namespace{
 			Namespace:       "my-ns.my-acct",
@@ -113,7 +113,7 @@ func TestNamespaceMtlsSet(t *testing.T) {
 
 	tests := []struct {
 		name                    string
-		cmd                     temporalcloudcli.CloudNamespaceMtlsSetCommand
+		cmd                     temporalcloudcli.CloudNamespaceMtlsEnableCommand
 		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
 		promptOptions           temporalcloudcli.TestPromptOptions
 		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
@@ -121,10 +121,7 @@ func TestNamespaceMtlsSet(t *testing.T) {
 	}{
 		{
 			name: "EnableFromNil",
-			cmd: temporalcloudcli.CloudNamespaceMtlsSetCommand{
-				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-				MtlsAuthEnabled:  true,
-			},
+			cmd:  temporalcloudcli.CloudNamespaceMtlsEnableCommand{NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"}},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
 					GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: "my-ns.my-acct"}, mock.Anything).
@@ -143,33 +140,9 @@ func TestNamespaceMtlsSet(t *testing.T) {
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-enable"},
 		},
 		{
-			name: "DisableFromEnabled",
-			cmd: temporalcloudcli.CloudNamespaceMtlsSetCommand{
-				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-				MtlsAuthEnabled:  false,
-			},
-			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-				c.EXPECT().
-					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
-					Return(&cloudservice.GetNamespaceResponse{
-						Namespace: existingNS(&namespacev1.MtlsAuthSpec{Enabled: true}),
-					}, nil)
-				c.EXPECT().
-					UpdateNamespace(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
-						return proto.Equal(req.Spec.MtlsAuth, &namespacev1.MtlsAuthSpec{Enabled: false})
-					}), mock.Anything).
-					Return(&cloudservice.UpdateNamespaceResponse{
-						AsyncOperation: &operation.AsyncOperation{Id: "op-disable"},
-					}, nil)
-			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
-			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-disable"},
-		},
-		{
 			name: "ResourceVersionOverride",
-			cmd: temporalcloudcli.CloudNamespaceMtlsSetCommand{
+			cmd: temporalcloudcli.CloudNamespaceMtlsEnableCommand{
 				NamespaceOptions:       temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-				MtlsAuthEnabled:        true,
 				ResourceVersionOptions: temporalcloudcli.ResourceVersionOptions{ResourceVersion: "rv-user"},
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -188,33 +161,8 @@ func TestNamespaceMtlsSet(t *testing.T) {
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-rv"},
 		},
 		{
-			name: "AsyncOperationIdOverride",
-			cmd: temporalcloudcli.CloudNamespaceMtlsSetCommand{
-				NamespaceOptions:      temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-				MtlsAuthEnabled:       true,
-				AsyncOperationOptions: temporalcloudcli.AsyncOperationOptions{AsyncOperationId: "op-custom"},
-			},
-			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-				c.EXPECT().
-					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
-					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNS(nil)}, nil)
-				c.EXPECT().
-					UpdateNamespace(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
-						return req.AsyncOperationId == "op-custom"
-					}), mock.Anything).
-					Return(&cloudservice.UpdateNamespaceResponse{
-						AsyncOperation: &operation.AsyncOperation{Id: "op-custom"},
-					}, nil)
-			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
-			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-custom"},
-		},
-		{
 			name: "GetNamespaceError",
-			cmd: temporalcloudcli.CloudNamespaceMtlsSetCommand{
-				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-				MtlsAuthEnabled:  true,
-			},
+			cmd:  temporalcloudcli.CloudNamespaceMtlsEnableCommand{NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"}},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
 					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
@@ -223,35 +171,80 @@ func TestNamespaceMtlsSet(t *testing.T) {
 			expectedErr: "namespace not found",
 		},
 		{
-			name: "UpdateNamespaceError",
-			cmd: temporalcloudcli.CloudNamespaceMtlsSetCommand{
-				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-				MtlsAuthEnabled:  true,
-			},
-			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-				c.EXPECT().
-					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
-					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNS(nil)}, nil)
-				c.EXPECT().
-					UpdateNamespace(mock.Anything, mock.Anything, mock.Anything).
-					Return(nil, errors.New("update failed"))
-			},
-			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
-			expectedErr:   "update failed",
-		},
-		{
 			name: "PromptDeclined",
-			cmd: temporalcloudcli.CloudNamespaceMtlsSetCommand{
-				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-				MtlsAuthEnabled:  true,
-			},
+			cmd:  temporalcloudcli.CloudNamespaceMtlsEnableCommand{NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"}},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
 					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
 					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNS(nil)}, nil)
 			},
 			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
-			expectedErr:   "Aborting set.",
+			expectedErr:   "Aborting.",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
+				AsyncPollerOptions:      tt.asyncPollerOptions,
+				JSONOutput:              true,
+				ExpectedError:           tt.expectedErr,
+			})
+		})
+	}
+}
+
+func TestNamespaceMtlsDisable(t *testing.T) {
+	existingNS := &namespacev1.Namespace{
+		Namespace:       "my-ns.my-acct",
+		ResourceVersion: "rv-fetched",
+		Spec: &namespacev1.NamespaceSpec{
+			Name:     "my-ns",
+			Regions:  []string{"aws-us-east-1"},
+			MtlsAuth: &namespacev1.MtlsAuthSpec{Enabled: true},
+		},
+	}
+
+	tests := []struct {
+		name                    string
+		cmd                     temporalcloudcli.CloudNamespaceMtlsDisableCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
+		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
+		expectedErr             string
+	}{
+		{
+			name: "DisableFromEnabled",
+			cmd:  temporalcloudcli.CloudNamespaceMtlsDisableCommand{NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"}},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNS}, nil)
+				c.EXPECT().
+					UpdateNamespace(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
+						return proto.Equal(req.Spec.MtlsAuth, &namespacev1.MtlsAuthSpec{Enabled: false})
+					}), mock.Anything).
+					Return(&cloudservice.UpdateNamespaceResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-disable"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-disable"},
+		},
+		{
+			name: "UpdateNamespaceError",
+			cmd:  temporalcloudcli.CloudNamespaceMtlsDisableCommand{NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"}},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: existingNS}, nil)
+				c.EXPECT().
+					UpdateNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("update failed"))
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			expectedErr:   "update failed",
 		},
 	}
 	for _, tt := range tests {

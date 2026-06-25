@@ -35,12 +35,20 @@ func (c *CloudNamespaceApiKeyGetCommand) run(cctx *CommandContext, _ []string) e
 	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
 }
 
-func (c *CloudNamespaceApiKeySetCommand) run(cctx *CommandContext, _ []string) error {
-	client, err := cctx.GetCloudClient(c.ClientOptions)
+func (c *CloudNamespaceApiKeyEnableCommand) run(cctx *CommandContext, _ []string) error {
+	return setApiKeyAuthEnabled(cctx, c.ClientOptions, c.NamespaceOptions, c.ResourceVersionOptions, c.AsyncOperationOptions, true)
+}
+
+func (c *CloudNamespaceApiKeyDisableCommand) run(cctx *CommandContext, _ []string) error {
+	return setApiKeyAuthEnabled(cctx, c.ClientOptions, c.NamespaceOptions, c.ResourceVersionOptions, c.AsyncOperationOptions, false)
+}
+
+func setApiKeyAuthEnabled(cctx *CommandContext, clientOpts ClientOptions, nsOpts NamespaceOptions, rvOpts ResourceVersionOptions, asyncOpts AsyncOperationOptions, enabled bool) error {
+	client, err := cctx.GetCloudClient(clientOpts)
 	if err != nil {
 		return err
 	}
-	res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: c.Namespace})
+	res, err := client.GetNamespace(cctx, &cloudservice.GetNamespaceRequest{Namespace: nsOpts.Namespace})
 	if err != nil {
 		return err
 	}
@@ -50,25 +58,25 @@ func (c *CloudNamespaceApiKeySetCommand) run(cctx *CommandContext, _ []string) e
 	if newSpec.ApiKeyAuth == nil {
 		newSpec.ApiKeyAuth = &namespacev1.ApiKeyAuthSpec{}
 	}
-	newSpec.ApiKeyAuth.Enabled = c.ApiKeyAuthEnabled
+	newSpec.ApiKeyAuth.Enabled = enabled
 
 	yes, err := cctx.GetPrompter().PromptApply(ns.Spec, newSpec, false)
 	if err != nil {
 		return err
 	}
 	if !yes {
-		return errors.New("Aborting set.")
+		return errors.New("Aborting.")
 	}
 
 	rv := ns.ResourceVersion
-	if c.ResourceVersion != "" {
-		rv = c.ResourceVersion
+	if rvOpts.ResourceVersion != "" {
+		rv = rvOpts.ResourceVersion
 	}
 	resp, err := client.UpdateNamespace(cctx, &cloudservice.UpdateNamespaceRequest{
-		Namespace:        c.Namespace,
+		Namespace:        nsOpts.Namespace,
 		Spec:             newSpec,
 		ResourceVersion:  rv,
-		AsyncOperationId: c.AsyncOperationId,
+		AsyncOperationId: asyncOpts.AsyncOperationId,
 	})
-	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+	return cctx.GetPoller(client, asyncOpts).HandleUpdateOperation(cctx, resp, err)
 }

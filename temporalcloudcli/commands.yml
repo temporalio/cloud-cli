@@ -620,15 +620,15 @@ commands:
     option-sets:
       - client
       - namespace
-  - name: cloud namespace mtls set
-    summary: Set namespace mTLS authentication configuration
+  - name: cloud namespace mtls enable
+    summary: Enable mTLS authentication for a namespace
     description: |
-      Enable or disable mTLS authentication for a Temporal Cloud namespace.
+      Enable mTLS authentication for a Temporal Cloud namespace.
 
       Example:
 
       ```
-      temporal cloud namespace mtls set --namespace my-namespace.my-account --mtls-auth-enabled=true
+      temporal cloud namespace mtls enable --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
@@ -636,12 +636,22 @@ commands:
       - namespace
       - async-operation
       - resource-version
-    options:
-      - name: mtls-auth-enabled
-        type: bool
-        required: true
-        description: |
-          Enable or disable mTLS authentication for the namespace.
+  - name: cloud namespace mtls disable
+    summary: Disable mTLS authentication for a namespace
+    description: |
+      Disable mTLS authentication for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace mtls disable --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
 
   # Namespace api-key auth commands
   - name: cloud namespace api-key
@@ -663,15 +673,15 @@ commands:
     option-sets:
       - client
       - namespace
-  - name: cloud namespace api-key set
-    summary: Set namespace API key authentication configuration
+  - name: cloud namespace api-key enable
+    summary: Enable API key authentication for a namespace
     description: |
-      Enable or disable API key authentication for a Temporal Cloud namespace.
+      Enable API key authentication for a Temporal Cloud namespace.
 
       Example:
 
       ```
-      temporal cloud namespace api-key set --namespace my-namespace.my-account --api-key-auth-enabled=true
+      temporal cloud namespace api-key enable --namespace my-namespace.my-account
       ```
     has-init: false
     option-sets:
@@ -679,12 +689,22 @@ commands:
       - namespace
       - async-operation
       - resource-version
-    options:
-      - name: api-key-auth-enabled
-        type: bool
-        required: true
-        description: |
-          Enable or disable API key authentication for the namespace.
+  - name: cloud namespace api-key disable
+    summary: Disable API key authentication for a namespace
+    description: |
+      Disable API key authentication for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace api-key disable --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
 
   # Namespace mtls cert-ca commands
   - name: cloud namespace mtls cert-ca
