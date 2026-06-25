@@ -4342,6 +4342,7 @@ type CloudNexusEndpointDeleteCommand struct {
 	AsyncOperationOptions
 	ResourceVersionOptions
 	Name string
+	Id   string
 }
 
 func NewCloudNexusEndpointDeleteCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointDeleteCommand {
@@ -4349,11 +4350,15 @@ func NewCloudNexusEndpointDeleteCommand(cctx *CommandContext, parent *CloudNexus
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "delete [flags]"
-	s.Command.Short = "Delete a Nexus Endpoint"
-	s.Command.Long = "Delete a Nexus Endpoint on the Cloud Account."
+	s.Command.Short = "Delete a Nexus Endpoint by name or ID"
+	if hasHighlighting {
+		s.Command.Long = "Delete a Nexus Endpoint on the Cloud Account.\nSpecify either \x1b[1m--name\x1b[0m or \x1b[1m--id\x1b[0m (exactly one is required)."
+	} else {
+		s.Command.Long = "Delete a Nexus Endpoint on the Cloud Account.\nSpecify either `--name` or `--id` (exactly one is required)."
+	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to delete. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to delete.")
+	s.Command.Flags().StringVar(&s.Id, "id", "", "The ID of the Nexus Endpoint to delete.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
@@ -4430,6 +4435,7 @@ type CloudNexusEndpointUpdateCommand struct {
 	AsyncOperationOptions
 	ResourceVersionOptions
 	Name             string
+	Id               string
 	TargetNamespace  string
 	TargetTaskQueue  string
 	Description      string
@@ -4442,15 +4448,15 @@ func NewCloudNexusEndpointUpdateCommand(cctx *CommandContext, parent *CloudNexus
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "update [flags]"
-	s.Command.Short = "Update an existing Nexus Endpoint"
+	s.Command.Short = "Update an existing Nexus Endpoint by name or ID"
 	if hasHighlighting {
-		s.Command.Long = "Update an existing Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\n\nThe endpoint is patched leaving any existing fields for which flags are not provided\nas they were.\n\nExample:\n\n\x1b[1mtemporal cloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq\x1b[0m"
+		s.Command.Long = "Update an existing Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\nSpecify either \x1b[1m--name\x1b[0m or \x1b[1m--id\x1b[0m to identify the endpoint (exactly one is required).\n\nThe endpoint is patched leaving any existing fields for which flags are not provided\nas they were.\n\nExample:\n\n\x1b[1mtemporal cloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq\x1b[0m"
 	} else {
-		s.Command.Long = "Update an existing Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\n\nThe endpoint is patched leaving any existing fields for which flags are not provided\nas they were.\n\nExample:\n\n```\ntemporal cloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq\n```"
+		s.Command.Long = "Update an existing Nexus Endpoint on the Cloud Account.\nAn endpoint name is used in workflow code to invoke Nexus operations.\nSpecify either `--name` or `--id` to identify the endpoint (exactly one is required).\n\nThe endpoint is patched leaving any existing fields for which flags are not provided\nas they were.\n\nExample:\n\n```\ntemporal cloud nexus endpoint update --name my-endpoint --target-namespace new-ns.my-account --target-task-queue new-tq\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to update. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to update.")
+	s.Command.Flags().StringVar(&s.Id, "id", "", "The ID of the Nexus Endpoint to update.")
 	s.Command.Flags().StringVar(&s.TargetNamespace, "target-namespace", "", "The namespace in which a handler worker will be polling for Nexus tasks.")
 	s.Command.Flags().StringVar(&s.TargetTaskQueue, "target-task-queue", "", "The task queue on which a handler worker will be polling for Nexus tasks.")
 	s.Command.Flags().StringVar(&s.Description, "description", "", "An optional endpoint description in markdown format.")
