@@ -74,32 +74,14 @@ func (c *CloudNexusEndpointListCommand) run(cctx *CommandContext, _ []string) er
 }
 
 func (c *CloudNexusEndpointGetCommand) run(cctx *CommandContext, _ []string) error {
-	if c.Name == "" && c.Id == "" {
-		return errors.New("either --name or --id is required")
-	}
-	if c.Name != "" && c.Id != "" {
-		return errors.New("--name and --id are mutually exclusive")
-	}
-
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	var endpoint *nexusv1.Endpoint
-	if c.Id != "" {
-		res, err := client.GetNexusEndpoint(cctx, &cloudservice.GetNexusEndpointRequest{
-			EndpointId: c.Id,
-		})
-		if err != nil {
-			return err
-		}
-		endpoint = res.Endpoint
-	} else {
-		endpoint, err = getNexusEndpointByName(cctx, client, c.Name)
-		if err != nil {
-			return err
-		}
+	endpoint, err := resolveNexusEndpoint(cctx, client, c.Name, c.Id)
+	if err != nil {
+		return err
 	}
 
 	return cctx.Printer.PrintResource(endpoint, printer.PrintResourceOptions{})
@@ -160,7 +142,7 @@ func (c *CloudNexusEndpointDeleteCommand) run(cctx *CommandContext, _ []string) 
 		return err
 	}
 
-	endpoint, err := getNexusEndpointByName(cctx, client, c.Name)
+	endpoint, err := resolveNexusEndpoint(cctx, client, c.Name, c.Id)
 	if err != nil {
 		return err
 	}
@@ -200,7 +182,7 @@ func (c *CloudNexusEndpointUpdateCommand) run(cctx *CommandContext, _ []string) 
 		return err
 	}
 
-	endpoint, err := getNexusEndpointByName(cctx, client, c.Name)
+	endpoint, err := resolveNexusEndpoint(cctx, client, c.Name, c.Id)
 	if err != nil {
 		return err
 	}
@@ -238,6 +220,30 @@ func (c *CloudNexusEndpointUpdateCommand) run(cctx *CommandContext, _ []string) 
 		AsyncOperationId: c.AsyncOperationId,
 	})
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
+// resolveNexusEndpoint looks up a Nexus Endpoint by name or ID. Exactly one of name/id must be set.
+func resolveNexusEndpoint(
+	cctx *CommandContext,
+	client cloudservice.CloudServiceClient,
+	name, id string,
+) (*nexusv1.Endpoint, error) {
+	if name == "" && id == "" {
+		return nil, errors.New("either --name or --id is required")
+	}
+	if name != "" && id != "" {
+		return nil, errors.New("--name and --id are mutually exclusive")
+	}
+	if id != "" {
+		res, err := client.GetNexusEndpoint(cctx, &cloudservice.GetNexusEndpointRequest{
+			EndpointId: id,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return res.Endpoint, nil
+	}
+	return getNexusEndpointByName(cctx, client, name)
 }
 
 // getNexusEndpointByName looks up a Nexus Endpoint by name using the list RPC with a name filter.

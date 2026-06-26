@@ -11,7 +11,7 @@ import (
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
-func (c *CloudNamespaceCertCaCreateCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudNamespaceMtlsCertCaCreateCommand) run(cctx *CommandContext, _ []string) error {
 	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func (c *CloudNamespaceCertCaCreateCommand) run(cctx *CommandContext, _ []string
 	})
 }
 
-func (c *CloudNamespaceCertCaListCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudNamespaceMtlsCertCaListCommand) run(cctx *CommandContext, _ []string) error {
 	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func (c *CloudNamespaceCertCaListCommand) run(cctx *CommandContext, _ []string) 
 	return cctx.Printer.PrintStructured(certs, printer.StructuredOptions{})
 }
 
-func (c *CloudNamespaceCertCaDeleteCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudNamespaceMtlsCertCaDeleteCommand) run(cctx *CommandContext, _ []string) error {
 	namespaceClient, err := getNamespaceClient(cctx, c.ClientOptions)
 	if err != nil {
 		return err
