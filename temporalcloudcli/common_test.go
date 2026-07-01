@@ -417,3 +417,54 @@ func TestParseServiceAccountEmail(t *testing.T) {
 		})
 	}
 }
+
+func TestFriendlyError(t *testing.T) {
+	originalErr := fmt.Errorf("details")
+	err := temporalcloudcli.NewFriendlyError("a simple error", originalErr)
+	formattedErr := temporalcloudcli.NewFriendlyErrorf("An error with %v inline", originalErr)
+
+	t.Run("FriendlyErrorFormatting", func(t *testing.T) {
+		assert.Equal(t, "a simple error", err.FriendlyError())
+		assert.Equal(t, "An error with details inline", formattedErr.FriendlyError())
+	})
+
+	t.Run("ErrorFormatting", func(t *testing.T) {
+		assert.Equal(t, "a simple error: details", err.Error())
+		assert.Equal(t, "An error with details inline", formattedErr.Error())
+	})
+
+	t.Run("IsOriginalError", func(t *testing.T) {
+		assert.ErrorIs(t, err, originalErr)
+		assert.ErrorIs(t, formattedErr, originalErr)
+	})
+}
+
+func TestErrorGrafting(t *testing.T) {
+	originalErr := fmt.Errorf("some complex error message")
+	friendlyErr := temporalcloudcli.NewFriendlyError("busted", originalErr)
+	gRPCErr := status.Errorf(codes.Internal, "something bad happened: %v", friendlyErr)
+	graftedErr := temporalcloudcli.GraftErrors(gRPCErr, friendlyErr)
+
+	t.Run("DoesNotModifyErrorMessage", func(t *testing.T) {
+		assert.Equal(t, gRPCErr.Error(), graftedErr.Error())
+		assert.NotRegexp(t, "busted.*busted", graftedErr.Error(), "should not duplicate the message in the grafted error")
+	})
+
+	t.Run("LooksLikeGRPCError", func(t *testing.T) {
+		assert.Equal(t, codes.Internal, status.Code(graftedErr))
+		s, ok := status.FromError(graftedErr)
+		assert.True(t, ok)
+		assert.Equal(t, codes.Internal, s.Code())
+	})
+
+	t.Run("IsBothErrors", func(t *testing.T) {
+		assert.ErrorIs(t, graftedErr, gRPCErr)
+		assert.ErrorIs(t, graftedErr, friendlyErr)
+	})
+
+	t.Run("AsKnownErrorType", func(t *testing.T) {
+		var target temporalcloudcli.FriendlyError
+		assert.ErrorAs(t, graftedErr, &target)
+		assert.Equal(t, friendlyErr.FriendlyError(), target.FriendlyError())
+	})
+}

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -185,6 +186,7 @@ func (cctx *CommandContext) BuildCloudClient(clientOpts ClientOptions) (*cloudcl
 
 	opts.GRPCDialOptions = []grpc.DialOption{
 		grpc.WithChainUnaryInterceptor(
+			grabOriginalErrorInterceptor,
 			ClearDeprecatedFieldsInterceptor,
 		),
 	}
@@ -194,6 +196,28 @@ func (cctx *CommandContext) BuildCloudClient(clientOpts ClientOptions) (*cloudcl
 		return nil, err
 	}
 	return cloudClient, nil
+}
+
+// grabOriginalErrorInterceptor is a gRPC unary client interceptor that adds
+// a "slot" for error storage to the context passed to invoker. If an error occurs
+// and a downstream function has stored an error in errSlot, the two will be grafted
+// together. This allows for upstream error handling to perform checks with errors.Is
+// or errors.As, since grpc itself doesn't wrap errors.
+func grabOriginalErrorInterceptor(
+	ctx context.Context,
+	method string,
+	req, reply any,
+	cc *grpc.ClientConn,
+	invoker grpc.UnaryInvoker,
+	opts ...grpc.CallOption,
+) error {
+	slot := &errSlot{}
+	ctx = context.WithValue(ctx, errSlotKey{}, slot)
+	err := invoker(ctx, method, req, reply, cc, opts...)
+	// if err != nil {
+	return GraftErrors(err, slot.err)
+	// }
+	// return nil
 }
 
 // clearDeprecatedFieldsInterceptor is a gRPC unary client interceptor that strips
@@ -244,10 +268,23 @@ func (c *CommandContext) preprocessOptions() error {
 			if c.Err() != nil {
 				err = fmt.Errorf("program interrupted")
 			}
+
 			if c.Logger != nil {
 				c.Logger.Error(err.Error())
-			} else {
-				fmt.Fprintln(os.Stderr, err)
+			}
+
+			// FriendlyErrors are intended for presentation directly to the user without requiring the full error context
+			// If we got one, we can print it and exit
+			if friendlyError, ok := errors.AsType[FriendlyError](err); ok {
+				fmt.Fprintln(c.Options.Stderr, friendlyError.FriendlyError())
+				os.Exit(1)
+			}
+
+			// We weren't able to obtain a simple message to print, so we make sure the full error context gets sent
+			// *somewhere*. If we don't have a logger or it's not sending messages anywhere (the default noop logger),
+			// then we print the full error to stderr to ensure we don't just fail silently.
+			if c.Logger == nil || !c.Logger.Enabled(nil, slog.LevelError) {
+				fmt.Fprintln(c.Options.Stderr, err)
 			}
 			os.Exit(1)
 		}
