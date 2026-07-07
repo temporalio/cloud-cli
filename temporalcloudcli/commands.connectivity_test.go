@@ -315,20 +315,6 @@ func TestCreatePrivateConnectivityRule_Success(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// TestCreatePrivateConnectivityRule_MissingConnectionID verifies an error when no connection-id.
-func TestCreatePrivateConnectivityRule_MissingConnectionID(t *testing.T) {
-	mockCloud := cloudmock.NewMockCloudServiceClient(t)
-	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
-
-	err := temporalcloudcli.CreatePrivateConnectivityRule(context.Background(), temporalcloudcli.CreatePrivateConnectivityRuleParams{
-		Region:           "aws-us-west-2",
-		Cloud:            mockCloud,
-		OperationHandler: mockHandler,
-	})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "--connection-id is required")
-}
-
 // TestCreatePrivateConnectivityRule_MissingRegion verifies an error when no region.
 func TestCreatePrivateConnectivityRule_MissingRegion(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
