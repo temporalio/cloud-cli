@@ -2645,12 +2645,20 @@ commands:
   - name: cloud connectivity private create
     summary: Create a private connectivity rule
     description: |
-      Create a new private VPC connectivity rule. Requires --connection-id and --region.
+      Create a new private connectivity rule for AWS, GCP, or Azure.
 
-      Example:
+      For AWS, provide --connection-id (VPC endpoint ID) and --region.
+      For GCP, provide --connection-id (PSC connection ID), --gcp-project-id, and --region.
+      For Azure, provide --azure-pe-resource-id (ARM resource ID) and --region.
+
+      Examples:
 
       ```
       temporal cloud connectivity private create --connection-id vpce-12345 --region aws-us-west-2
+
+      temporal cloud connectivity private create \
+        --azure-pe-resource-id /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Network/privateEndpoints/{name} \
+        --region azure-eastus
       ```
     has-init: false
     option-sets:
@@ -2659,9 +2667,8 @@ commands:
     options:
       - name: connection-id
         type: string
-        required: true
         description: |
-          The connection ID for private connectivity.
+          The connection ID for private connectivity (AWS VPC endpoint ID or GCP PSC connection ID).
       - name: region
         type: string
         required: true
@@ -2671,6 +2678,11 @@ commands:
         type: string
         description: |
           The GCP project ID (only for GCP private connectivity).
+      - name: azure-pe-resource-id
+        type: string
+        description: |
+          The ARM resource ID of the Azure Private Endpoint (only for Azure private connectivity).
+          Example: /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Network/privateEndpoints/{name}.
 
   # User commands
   - name: cloud user

@@ -343,6 +343,46 @@ func TestCreatePrivateConnectivityRule_MissingRegion(t *testing.T) {
 	assert.Contains(t, err.Error(), "--region is required")
 }
 
+// TestCreatePrivateConnectivityRule_Azure_Success verifies that an Azure rule is created with the PE resource ID.
+func TestCreatePrivateConnectivityRule_Azure_Success(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+
+	azurePeResourceID := "/subscriptions/sub-123/resourceGroups/rg-1/providers/Microsoft.Network/privateEndpoints/pe-1"
+	op := &operation.AsyncOperation{Id: "op-azure"}
+	expectedSpec := &connectivityrulev1.ConnectivityRuleSpec{
+		ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PrivateRule{
+			PrivateRule: &connectivityrulev1.PrivateConnectivityRule{
+				Region:            "azure-eastus",
+				AzurePeResourceId: azurePeResourceID,
+			},
+		},
+	}
+	mockPrompter.EXPECT().
+		PromptApply(&connectivityrulev1.ConnectivityRuleSpec{}, expectedSpec, false).
+		Return(nil)
+	mockCloud.EXPECT().
+		CreateConnectivityRule(context.Background(), &cloudservice.CreateConnectivityRuleRequest{
+			Spec: expectedSpec,
+		}).
+		Return(&cloudservice.CreateConnectivityRuleResponse{
+			ConnectivityRuleId: "rule-azure",
+			AsyncOperation:     op,
+		}, nil)
+
+	mockHandler.EXPECT().HandleOperation(op, "rule-azure").Return(nil)
+
+	err := temporalcloudcli.CreatePrivateConnectivityRule(context.Background(), temporalcloudcli.CreatePrivateConnectivityRuleParams{
+		AzurePeResourceID: azurePeResourceID,
+		Region:            "azure-eastus",
+		Cloud:             mockCloud,
+		Prompter:          mockPrompter,
+		OperationHandler:  mockHandler,
+	})
+	require.NoError(t, err)
+}
+
 // TestDeleteConnectivityRule_Success verifies that the rule is fetched, diff shown, then deleted.
 func TestDeleteConnectivityRule_Success(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
