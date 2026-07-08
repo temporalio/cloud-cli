@@ -4,5 +4,6 @@
         "ns1": {
             "permission": "PERMISSION_READ"
         }
-    }
+    },
+    "projectAccesses": {}
 }
