@@ -9,12 +9,12 @@ import (
 // run calls GetCurrentIdentity and prints the authenticated principal (User or
 // ServiceAccount) along with the associated API key, if any.
 func (c *CloudWhoamiCommand) run(cctx *CommandContext, _ []string) error {
-	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	cloudClient, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
 	}
 
-	res, err := cloudClient.CloudService().GetCurrentIdentity(cctx.Context, &cloudservice.GetCurrentIdentityRequest{})
+	res, err := cloudClient.GetCurrentIdentity(cctx.Context, &cloudservice.GetCurrentIdentityRequest{})
 	if err != nil {
 		return err
 	}

@@ -19,6 +19,76 @@ import (
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
+// A FriendlyError is an error intended for presentation directly to users
+type FriendlyError struct {
+	reason      string
+	cause       error
+	embedsCause bool
+}
+
+func (err FriendlyError) Error() string {
+	if err.cause != nil && !err.embedsCause {
+		return fmt.Sprintf("%s: %v", err.reason, err.cause)
+	} else {
+		return err.reason
+	}
+}
+
+func (err FriendlyError) Unwrap() error {
+	return err.cause
+}
+
+func (err FriendlyError) FriendlyError() string {
+	return err.reason
+}
+
+// NewFriendlyError returns an error that preserves the given reason for later presentation
+// as a user-facing error message, available via FriendlyError(). Full context is available
+// via Error() and Unwrap()
+func NewFriendlyError(reason string, cause error) FriendlyError {
+	return FriendlyError{reason, cause, false}
+}
+
+func NewFriendlyErrorf(format string, args ...any) FriendlyError {
+	reason := fmt.Sprintf(format, args...)
+	var cause error
+	for _, arg := range args {
+		if err, ok := arg.(error); ok {
+			cause = err
+			break
+		}
+	}
+	embedsCause := cause != nil
+	return FriendlyError{reason, cause, embedsCause}
+}
+
+type GraftedError struct {
+	primary error
+	grafted error
+}
+
+func (err GraftedError) Error() string {
+	return err.primary.Error()
+}
+
+func (err GraftedError) Unwrap() []error {
+	// including primary as well preserves compatibility with things like status.Code
+	return []error{err.primary, err.grafted}
+}
+
+// GraftErrors encapsulates err and wraps toWrap, as if err had wrapped toWrap originally.
+// This is primarily useful when an external library does not wrap errors itself, but the
+// original error is available via other means
+func GraftErrors(err error, toWrap error) error {
+	if err == nil {
+		return toWrap
+	}
+	if toWrap == nil {
+		return err
+	}
+	return GraftedError{err, toWrap}
+}
+
 func isNothingChangedErr(idempotent bool, e error) bool {
 	// If we are not idempotent, we should error on nothing to change
 	if !idempotent {

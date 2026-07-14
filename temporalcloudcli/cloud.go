@@ -74,6 +74,21 @@ func (b *CloudOptionsBuilder) Build(ctx context.Context) (*CloudOptions, error) 
 	return cloudOpts, nil
 }
 
+type (
+	errSlot    struct{ err error }
+	errSlotKey struct{}
+)
+
+// errorContext will add err to the errSlot on ctx if it has one before returning v and err
+func errorContext[T any](ctx context.Context, v T, err error) (T, error) {
+	if ctx != nil {
+		if slot, ok := ctx.Value(errSlotKey{}).(*errSlot); ok {
+			slot.err = err
+		}
+	}
+	return v, err
+}
+
 func (c *CloudOptions) GetAPIKey(ctx context.Context) (string, error) {
 	loadClientOauthRes, err := cliext.LoadClientOAuth(cliext.LoadClientOAuthOptions{
 		ConfigFilePath: c.ConfigFile,
@@ -81,20 +96,20 @@ func (c *CloudOptions) GetAPIKey(ctx context.Context) (string, error) {
 		EnvLookup:      envconfig.EnvLookupOS,
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to load login configuration: %w, please run `temporal cloud login --reset`", err)
+		return errorContext(ctx, "", NewFriendlyError("failed to load login configuration, please run `temporal cloud login --reset`", err))
 	}
 
 	// check if we have had a valid token in the past
 	if loadClientOauthRes.OAuth == nil || loadClientOauthRes.OAuth.ClientConfig == nil {
-		return "", fmt.Errorf("no login session found, please run `temporal cloud login`")
+		return errorContext(ctx, "", NewFriendlyError("no login session found, please run `temporal cloud login`", nil))
 	}
 
 	token, refreshed, err := GetToken(ctx, loadClientOauthRes.OAuth.ClientConfig, loadClientOauthRes.OAuth.Token)
 	if err != nil {
 		if errors.Is(err, ErrLoginRequired) {
-			return "", fmt.Errorf("login session expired, please run `temporal cloud login`: %w", err)
+			return errorContext(ctx, "", NewFriendlyError("login session expired, please run `temporal cloud login`", err))
 		}
-		return "", fmt.Errorf("failed to get access token: %w", err)
+		return errorContext(ctx, "", NewFriendlyErrorf("failed to get access token: %v", err))
 	}
 	if refreshed {
 		loadClientOauthRes.OAuth.Token = token
@@ -104,7 +119,7 @@ func (c *CloudOptions) GetAPIKey(ctx context.Context) (string, error) {
 			ProfileName:    c.Profile,
 			EnvLookup:      envconfig.EnvLookupOS,
 		}); err != nil {
-			return "", fmt.Errorf("failed to write config file: %w", err)
+			return errorContext(ctx, "", NewFriendlyErrorf("failed to write config file: %v", err))
 		}
 	}
 	return token.AccessToken, nil
