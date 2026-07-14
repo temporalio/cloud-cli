@@ -1857,7 +1857,10 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.AddCommand(&NewCloudNamespaceMtlsCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceRetentionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceSearchAttributeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceServiceAccountCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceTagCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceUserCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceUserGroupCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -3955,6 +3958,55 @@ func NewCloudNamespaceSearchAttributeRenameCommand(cctx *CommandContext, parent 
 	return &s
 }
 
+type CloudNamespaceServiceAccountCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceServiceAccountCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceServiceAccountCommand {
+	var s CloudNamespaceServiceAccountCommand
+	s.Parent = parent
+	s.Command.Use = "service-account"
+	s.Command.Short = "Inspect service accounts with access to a namespace"
+	s.Command.Long = "Commands for inspecting the service accounts that have access to a\nTemporal Cloud namespace."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceServiceAccountListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceServiceAccountListCommand struct {
+	Parent  *CloudNamespaceServiceAccountCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	PageSize  int
+	PageToken string
+}
+
+func NewCloudNamespaceServiceAccountListCommand(cctx *CommandContext, parent *CloudNamespaceServiceAccountCommand) *CloudNamespaceServiceAccountListCommand {
+	var s CloudNamespaceServiceAccountListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List service accounts with access to a namespace"
+	if hasHighlighting {
+		s.Command.Long = "List the service accounts that have access to a Temporal Cloud namespace,\nincluding both directly-assigned and inherited access.\n\nExample:\n\n\x1b[1mtemporal cloud namespace service-account list --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "List the service accounts that have access to a Temporal Cloud namespace,\nincluding both directly-assigned and inherited access.\n\nExample:\n\n```\ntemporal cloud namespace service-account list --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of service accounts to return per page. Use for paginated results.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results in a paginated list.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type CloudNamespaceTagCommand struct {
 	Parent  *CloudNamespaceCommand
 	Command cobra.Command
@@ -4103,6 +4155,104 @@ func NewCloudNamespaceTagUpdateCommand(cctx *CommandContext, parent *CloudNamesp
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceUserCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceUserCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceUserCommand {
+	var s CloudNamespaceUserCommand
+	s.Parent = parent
+	s.Command.Use = "user"
+	s.Command.Short = "Inspect users with access to a namespace"
+	s.Command.Long = "Commands for inspecting the users that have access to a Temporal Cloud\nnamespace."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceUserListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceUserListCommand struct {
+	Parent  *CloudNamespaceUserCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	PageSize  int
+	PageToken string
+}
+
+func NewCloudNamespaceUserListCommand(cctx *CommandContext, parent *CloudNamespaceUserCommand) *CloudNamespaceUserListCommand {
+	var s CloudNamespaceUserListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List users with access to a namespace"
+	if hasHighlighting {
+		s.Command.Long = "List the users that have access to a Temporal Cloud namespace, including\nboth directly-assigned and inherited access.\n\nExample:\n\n\x1b[1mtemporal cloud namespace user list --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "List the users that have access to a Temporal Cloud namespace, including\nboth directly-assigned and inherited access.\n\nExample:\n\n```\ntemporal cloud namespace user list --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of users to return per page. Use for paginated results.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results in a paginated list.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceUserGroupCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceUserGroupCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceUserGroupCommand {
+	var s CloudNamespaceUserGroupCommand
+	s.Parent = parent
+	s.Command.Use = "user-group"
+	s.Command.Short = "Inspect user groups with access to a namespace"
+	s.Command.Long = "Commands for inspecting the user groups that have access to a Temporal\nCloud namespace."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceUserGroupListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceUserGroupListCommand struct {
+	Parent  *CloudNamespaceUserGroupCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	PageSize  int
+	PageToken string
+}
+
+func NewCloudNamespaceUserGroupListCommand(cctx *CommandContext, parent *CloudNamespaceUserGroupCommand) *CloudNamespaceUserGroupListCommand {
+	var s CloudNamespaceUserGroupListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List user groups with access to a namespace"
+	if hasHighlighting {
+		s.Command.Long = "List the user groups that have access to a Temporal Cloud namespace,\nincluding both directly-assigned and inherited access.\n\nExample:\n\n\x1b[1mtemporal cloud namespace user-group list --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "List the user groups that have access to a Temporal Cloud namespace,\nincluding both directly-assigned and inherited access.\n\nExample:\n\n```\ntemporal cloud namespace user-group list --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of user groups to return per page. Use for paginated results.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results in a paginated list.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
