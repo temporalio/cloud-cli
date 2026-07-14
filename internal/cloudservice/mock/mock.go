@@ -869,6 +869,89 @@ func (_c *MockCloudServiceClient_CreateNexusEndpoint_Call) RunAndReturn(run func
 	return _c
 }
 
+// CreateProject provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) CreateProject(ctx context.Context, in *cloudservice.CreateProjectRequest, opts ...grpc.CallOption) (*cloudservice.CreateProjectResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateProject")
+	}
+
+	var r0 *cloudservice.CreateProjectResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.CreateProjectRequest, ...grpc.CallOption) (*cloudservice.CreateProjectResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.CreateProjectRequest, ...grpc.CallOption) *cloudservice.CreateProjectResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.CreateProjectResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.CreateProjectRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_CreateProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateProject'
+type MockCloudServiceClient_CreateProject_Call struct {
+	*mock.Call
+}
+
+// CreateProject is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.CreateProjectRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) CreateProject(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_CreateProject_Call {
+	return &MockCloudServiceClient_CreateProject_Call{Call: _e.mock.On("CreateProject",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_CreateProject_Call) Run(run func(ctx context.Context, in *cloudservice.CreateProjectRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_CreateProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.CreateProjectRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.CreateProjectRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_CreateProject_Call) Return(createProjectResponse *cloudservice.CreateProjectResponse, err error) *MockCloudServiceClient_CreateProject_Call {
+	_c.Call.Return(createProjectResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_CreateProject_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.CreateProjectRequest, opts ...grpc.CallOption) (*cloudservice.CreateProjectResponse, error)) *MockCloudServiceClient_CreateProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateServiceAccount provides a mock function for the type MockCloudServiceClient
 func (_mock *MockCloudServiceClient) CreateServiceAccount(ctx context.Context, in *cloudservice.CreateServiceAccountRequest, opts ...grpc.CallOption) (*cloudservice.CreateServiceAccountResponse, error) {
 	var tmpRet mock.Arguments
@@ -1778,6 +1861,89 @@ func (_c *MockCloudServiceClient_DeleteNexusEndpoint_Call) Return(deleteNexusEnd
 }
 
 func (_c *MockCloudServiceClient_DeleteNexusEndpoint_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.DeleteNexusEndpointRequest, opts ...grpc.CallOption) (*cloudservice.DeleteNexusEndpointResponse, error)) *MockCloudServiceClient_DeleteNexusEndpoint_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteProject provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) DeleteProject(ctx context.Context, in *cloudservice.DeleteProjectRequest, opts ...grpc.CallOption) (*cloudservice.DeleteProjectResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteProject")
+	}
+
+	var r0 *cloudservice.DeleteProjectResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.DeleteProjectRequest, ...grpc.CallOption) (*cloudservice.DeleteProjectResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.DeleteProjectRequest, ...grpc.CallOption) *cloudservice.DeleteProjectResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.DeleteProjectResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.DeleteProjectRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_DeleteProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteProject'
+type MockCloudServiceClient_DeleteProject_Call struct {
+	*mock.Call
+}
+
+// DeleteProject is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.DeleteProjectRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) DeleteProject(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_DeleteProject_Call {
+	return &MockCloudServiceClient_DeleteProject_Call{Call: _e.mock.On("DeleteProject",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_DeleteProject_Call) Run(run func(ctx context.Context, in *cloudservice.DeleteProjectRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_DeleteProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.DeleteProjectRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.DeleteProjectRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_DeleteProject_Call) Return(deleteProjectResponse *cloudservice.DeleteProjectResponse, err error) *MockCloudServiceClient_DeleteProject_Call {
+	_c.Call.Return(deleteProjectResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_DeleteProject_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.DeleteProjectRequest, opts ...grpc.CallOption) (*cloudservice.DeleteProjectResponse, error)) *MockCloudServiceClient_DeleteProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -3774,6 +3940,255 @@ func (_c *MockCloudServiceClient_GetNexusEndpoints_Call) RunAndReturn(run func(c
 	return _c
 }
 
+// GetProject provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) GetProject(ctx context.Context, in *cloudservice.GetProjectRequest, opts ...grpc.CallOption) (*cloudservice.GetProjectResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetProject")
+	}
+
+	var r0 *cloudservice.GetProjectResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetProjectRequest, ...grpc.CallOption) (*cloudservice.GetProjectResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetProjectRequest, ...grpc.CallOption) *cloudservice.GetProjectResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.GetProjectResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.GetProjectRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_GetProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetProject'
+type MockCloudServiceClient_GetProject_Call struct {
+	*mock.Call
+}
+
+// GetProject is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.GetProjectRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) GetProject(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetProject_Call {
+	return &MockCloudServiceClient_GetProject_Call{Call: _e.mock.On("GetProject",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_GetProject_Call) Run(run func(ctx context.Context, in *cloudservice.GetProjectRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.GetProjectRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.GetProjectRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetProject_Call) Return(getProjectResponse *cloudservice.GetProjectResponse, err error) *MockCloudServiceClient_GetProject_Call {
+	_c.Call.Return(getProjectResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetProject_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetProjectRequest, opts ...grpc.CallOption) (*cloudservice.GetProjectResponse, error)) *MockCloudServiceClient_GetProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetProjectScopedServiceAccounts provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) GetProjectScopedServiceAccounts(ctx context.Context, in *cloudservice.GetProjectScopedServiceAccountsRequest, opts ...grpc.CallOption) (*cloudservice.GetProjectScopedServiceAccountsResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetProjectScopedServiceAccounts")
+	}
+
+	var r0 *cloudservice.GetProjectScopedServiceAccountsResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetProjectScopedServiceAccountsRequest, ...grpc.CallOption) (*cloudservice.GetProjectScopedServiceAccountsResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetProjectScopedServiceAccountsRequest, ...grpc.CallOption) *cloudservice.GetProjectScopedServiceAccountsResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.GetProjectScopedServiceAccountsResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.GetProjectScopedServiceAccountsRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_GetProjectScopedServiceAccounts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetProjectScopedServiceAccounts'
+type MockCloudServiceClient_GetProjectScopedServiceAccounts_Call struct {
+	*mock.Call
+}
+
+// GetProjectScopedServiceAccounts is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.GetProjectScopedServiceAccountsRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) GetProjectScopedServiceAccounts(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetProjectScopedServiceAccounts_Call {
+	return &MockCloudServiceClient_GetProjectScopedServiceAccounts_Call{Call: _e.mock.On("GetProjectScopedServiceAccounts",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_GetProjectScopedServiceAccounts_Call) Run(run func(ctx context.Context, in *cloudservice.GetProjectScopedServiceAccountsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetProjectScopedServiceAccounts_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.GetProjectScopedServiceAccountsRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.GetProjectScopedServiceAccountsRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetProjectScopedServiceAccounts_Call) Return(getProjectScopedServiceAccountsResponse *cloudservice.GetProjectScopedServiceAccountsResponse, err error) *MockCloudServiceClient_GetProjectScopedServiceAccounts_Call {
+	_c.Call.Return(getProjectScopedServiceAccountsResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetProjectScopedServiceAccounts_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetProjectScopedServiceAccountsRequest, opts ...grpc.CallOption) (*cloudservice.GetProjectScopedServiceAccountsResponse, error)) *MockCloudServiceClient_GetProjectScopedServiceAccounts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetProjects provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) GetProjects(ctx context.Context, in *cloudservice.GetProjectsRequest, opts ...grpc.CallOption) (*cloudservice.GetProjectsResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetProjects")
+	}
+
+	var r0 *cloudservice.GetProjectsResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetProjectsRequest, ...grpc.CallOption) (*cloudservice.GetProjectsResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetProjectsRequest, ...grpc.CallOption) *cloudservice.GetProjectsResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.GetProjectsResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.GetProjectsRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_GetProjects_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetProjects'
+type MockCloudServiceClient_GetProjects_Call struct {
+	*mock.Call
+}
+
+// GetProjects is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.GetProjectsRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) GetProjects(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetProjects_Call {
+	return &MockCloudServiceClient_GetProjects_Call{Call: _e.mock.On("GetProjects",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_GetProjects_Call) Run(run func(ctx context.Context, in *cloudservice.GetProjectsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetProjects_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.GetProjectsRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.GetProjectsRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetProjects_Call) Return(getProjectsResponse *cloudservice.GetProjectsResponse, err error) *MockCloudServiceClient_GetProjects_Call {
+	_c.Call.Return(getProjectsResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetProjects_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetProjectsRequest, opts ...grpc.CallOption) (*cloudservice.GetProjectsResponse, error)) *MockCloudServiceClient_GetProjects_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetRegion provides a mock function for the type MockCloudServiceClient
 func (_mock *MockCloudServiceClient) GetRegion(ctx context.Context, in *cloudservice.GetRegionRequest, opts ...grpc.CallOption) (*cloudservice.GetRegionResponse, error) {
 	var tmpRet mock.Arguments
@@ -4102,6 +4517,89 @@ func (_c *MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call) Ret
 }
 
 func (_c *MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetServiceAccountNamespaceAssignmentsRequest, opts ...grpc.CallOption) (*cloudservice.GetServiceAccountNamespaceAssignmentsResponse, error)) *MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetServiceAccountProjectAssignments provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) GetServiceAccountProjectAssignments(ctx context.Context, in *cloudservice.GetServiceAccountProjectAssignmentsRequest, opts ...grpc.CallOption) (*cloudservice.GetServiceAccountProjectAssignmentsResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetServiceAccountProjectAssignments")
+	}
+
+	var r0 *cloudservice.GetServiceAccountProjectAssignmentsResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetServiceAccountProjectAssignmentsRequest, ...grpc.CallOption) (*cloudservice.GetServiceAccountProjectAssignmentsResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetServiceAccountProjectAssignmentsRequest, ...grpc.CallOption) *cloudservice.GetServiceAccountProjectAssignmentsResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.GetServiceAccountProjectAssignmentsResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.GetServiceAccountProjectAssignmentsRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_GetServiceAccountProjectAssignments_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetServiceAccountProjectAssignments'
+type MockCloudServiceClient_GetServiceAccountProjectAssignments_Call struct {
+	*mock.Call
+}
+
+// GetServiceAccountProjectAssignments is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.GetServiceAccountProjectAssignmentsRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) GetServiceAccountProjectAssignments(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetServiceAccountProjectAssignments_Call {
+	return &MockCloudServiceClient_GetServiceAccountProjectAssignments_Call{Call: _e.mock.On("GetServiceAccountProjectAssignments",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_GetServiceAccountProjectAssignments_Call) Run(run func(ctx context.Context, in *cloudservice.GetServiceAccountProjectAssignmentsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetServiceAccountProjectAssignments_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.GetServiceAccountProjectAssignmentsRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.GetServiceAccountProjectAssignmentsRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetServiceAccountProjectAssignments_Call) Return(getServiceAccountProjectAssignmentsResponse *cloudservice.GetServiceAccountProjectAssignmentsResponse, err error) *MockCloudServiceClient_GetServiceAccountProjectAssignments_Call {
+	_c.Call.Return(getServiceAccountProjectAssignmentsResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetServiceAccountProjectAssignments_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetServiceAccountProjectAssignmentsRequest, opts ...grpc.CallOption) (*cloudservice.GetServiceAccountProjectAssignmentsResponse, error)) *MockCloudServiceClient_GetServiceAccountProjectAssignments_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -4604,6 +5102,89 @@ func (_c *MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call) RunAndRe
 	return _c
 }
 
+// GetUserGroupProjectAssignments provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) GetUserGroupProjectAssignments(ctx context.Context, in *cloudservice.GetUserGroupProjectAssignmentsRequest, opts ...grpc.CallOption) (*cloudservice.GetUserGroupProjectAssignmentsResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUserGroupProjectAssignments")
+	}
+
+	var r0 *cloudservice.GetUserGroupProjectAssignmentsResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetUserGroupProjectAssignmentsRequest, ...grpc.CallOption) (*cloudservice.GetUserGroupProjectAssignmentsResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetUserGroupProjectAssignmentsRequest, ...grpc.CallOption) *cloudservice.GetUserGroupProjectAssignmentsResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.GetUserGroupProjectAssignmentsResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.GetUserGroupProjectAssignmentsRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_GetUserGroupProjectAssignments_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUserGroupProjectAssignments'
+type MockCloudServiceClient_GetUserGroupProjectAssignments_Call struct {
+	*mock.Call
+}
+
+// GetUserGroupProjectAssignments is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.GetUserGroupProjectAssignmentsRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) GetUserGroupProjectAssignments(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetUserGroupProjectAssignments_Call {
+	return &MockCloudServiceClient_GetUserGroupProjectAssignments_Call{Call: _e.mock.On("GetUserGroupProjectAssignments",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_GetUserGroupProjectAssignments_Call) Run(run func(ctx context.Context, in *cloudservice.GetUserGroupProjectAssignmentsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetUserGroupProjectAssignments_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.GetUserGroupProjectAssignmentsRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.GetUserGroupProjectAssignmentsRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetUserGroupProjectAssignments_Call) Return(getUserGroupProjectAssignmentsResponse *cloudservice.GetUserGroupProjectAssignmentsResponse, err error) *MockCloudServiceClient_GetUserGroupProjectAssignments_Call {
+	_c.Call.Return(getUserGroupProjectAssignmentsResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetUserGroupProjectAssignments_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetUserGroupProjectAssignmentsRequest, opts ...grpc.CallOption) (*cloudservice.GetUserGroupProjectAssignmentsResponse, error)) *MockCloudServiceClient_GetUserGroupProjectAssignments_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetUserGroups provides a mock function for the type MockCloudServiceClient
 func (_mock *MockCloudServiceClient) GetUserGroups(ctx context.Context, in *cloudservice.GetUserGroupsRequest, opts ...grpc.CallOption) (*cloudservice.GetUserGroupsResponse, error) {
 	var tmpRet mock.Arguments
@@ -4766,6 +5347,89 @@ func (_c *MockCloudServiceClient_GetUserNamespaceAssignments_Call) Return(getUse
 }
 
 func (_c *MockCloudServiceClient_GetUserNamespaceAssignments_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetUserNamespaceAssignmentsRequest, opts ...grpc.CallOption) (*cloudservice.GetUserNamespaceAssignmentsResponse, error)) *MockCloudServiceClient_GetUserNamespaceAssignments_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetUserProjectAssignments provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) GetUserProjectAssignments(ctx context.Context, in *cloudservice.GetUserProjectAssignmentsRequest, opts ...grpc.CallOption) (*cloudservice.GetUserProjectAssignmentsResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUserProjectAssignments")
+	}
+
+	var r0 *cloudservice.GetUserProjectAssignmentsResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetUserProjectAssignmentsRequest, ...grpc.CallOption) (*cloudservice.GetUserProjectAssignmentsResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetUserProjectAssignmentsRequest, ...grpc.CallOption) *cloudservice.GetUserProjectAssignmentsResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.GetUserProjectAssignmentsResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.GetUserProjectAssignmentsRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_GetUserProjectAssignments_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUserProjectAssignments'
+type MockCloudServiceClient_GetUserProjectAssignments_Call struct {
+	*mock.Call
+}
+
+// GetUserProjectAssignments is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.GetUserProjectAssignmentsRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) GetUserProjectAssignments(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetUserProjectAssignments_Call {
+	return &MockCloudServiceClient_GetUserProjectAssignments_Call{Call: _e.mock.On("GetUserProjectAssignments",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_GetUserProjectAssignments_Call) Run(run func(ctx context.Context, in *cloudservice.GetUserProjectAssignmentsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetUserProjectAssignments_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.GetUserProjectAssignmentsRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.GetUserProjectAssignmentsRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetUserProjectAssignments_Call) Return(getUserProjectAssignmentsResponse *cloudservice.GetUserProjectAssignmentsResponse, err error) *MockCloudServiceClient_GetUserProjectAssignments_Call {
+	_c.Call.Return(getUserProjectAssignmentsResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetUserProjectAssignments_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetUserProjectAssignmentsRequest, opts ...grpc.CallOption) (*cloudservice.GetUserProjectAssignmentsResponse, error)) *MockCloudServiceClient_GetUserProjectAssignments_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -5102,6 +5766,89 @@ func (_c *MockCloudServiceClient_SetServiceAccountNamespaceAccess_Call) RunAndRe
 	return _c
 }
 
+// SetServiceAccountProjectAccess provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) SetServiceAccountProjectAccess(ctx context.Context, in *cloudservice.SetServiceAccountProjectAccessRequest, opts ...grpc.CallOption) (*cloudservice.SetServiceAccountProjectAccessResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetServiceAccountProjectAccess")
+	}
+
+	var r0 *cloudservice.SetServiceAccountProjectAccessResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.SetServiceAccountProjectAccessRequest, ...grpc.CallOption) (*cloudservice.SetServiceAccountProjectAccessResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.SetServiceAccountProjectAccessRequest, ...grpc.CallOption) *cloudservice.SetServiceAccountProjectAccessResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.SetServiceAccountProjectAccessResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.SetServiceAccountProjectAccessRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_SetServiceAccountProjectAccess_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetServiceAccountProjectAccess'
+type MockCloudServiceClient_SetServiceAccountProjectAccess_Call struct {
+	*mock.Call
+}
+
+// SetServiceAccountProjectAccess is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.SetServiceAccountProjectAccessRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) SetServiceAccountProjectAccess(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_SetServiceAccountProjectAccess_Call {
+	return &MockCloudServiceClient_SetServiceAccountProjectAccess_Call{Call: _e.mock.On("SetServiceAccountProjectAccess",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_SetServiceAccountProjectAccess_Call) Run(run func(ctx context.Context, in *cloudservice.SetServiceAccountProjectAccessRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_SetServiceAccountProjectAccess_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.SetServiceAccountProjectAccessRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.SetServiceAccountProjectAccessRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_SetServiceAccountProjectAccess_Call) Return(setServiceAccountProjectAccessResponse *cloudservice.SetServiceAccountProjectAccessResponse, err error) *MockCloudServiceClient_SetServiceAccountProjectAccess_Call {
+	_c.Call.Return(setServiceAccountProjectAccessResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_SetServiceAccountProjectAccess_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.SetServiceAccountProjectAccessRequest, opts ...grpc.CallOption) (*cloudservice.SetServiceAccountProjectAccessResponse, error)) *MockCloudServiceClient_SetServiceAccountProjectAccess_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetUserGroupNamespaceAccess provides a mock function for the type MockCloudServiceClient
 func (_mock *MockCloudServiceClient) SetUserGroupNamespaceAccess(ctx context.Context, in *cloudservice.SetUserGroupNamespaceAccessRequest, opts ...grpc.CallOption) (*cloudservice.SetUserGroupNamespaceAccessResponse, error) {
 	var tmpRet mock.Arguments
@@ -5185,6 +5932,89 @@ func (_c *MockCloudServiceClient_SetUserGroupNamespaceAccess_Call) RunAndReturn(
 	return _c
 }
 
+// SetUserGroupProjectAccess provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) SetUserGroupProjectAccess(ctx context.Context, in *cloudservice.SetUserGroupProjectAccessRequest, opts ...grpc.CallOption) (*cloudservice.SetUserGroupProjectAccessResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetUserGroupProjectAccess")
+	}
+
+	var r0 *cloudservice.SetUserGroupProjectAccessResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.SetUserGroupProjectAccessRequest, ...grpc.CallOption) (*cloudservice.SetUserGroupProjectAccessResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.SetUserGroupProjectAccessRequest, ...grpc.CallOption) *cloudservice.SetUserGroupProjectAccessResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.SetUserGroupProjectAccessResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.SetUserGroupProjectAccessRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_SetUserGroupProjectAccess_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetUserGroupProjectAccess'
+type MockCloudServiceClient_SetUserGroupProjectAccess_Call struct {
+	*mock.Call
+}
+
+// SetUserGroupProjectAccess is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.SetUserGroupProjectAccessRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) SetUserGroupProjectAccess(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_SetUserGroupProjectAccess_Call {
+	return &MockCloudServiceClient_SetUserGroupProjectAccess_Call{Call: _e.mock.On("SetUserGroupProjectAccess",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_SetUserGroupProjectAccess_Call) Run(run func(ctx context.Context, in *cloudservice.SetUserGroupProjectAccessRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_SetUserGroupProjectAccess_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.SetUserGroupProjectAccessRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.SetUserGroupProjectAccessRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_SetUserGroupProjectAccess_Call) Return(setUserGroupProjectAccessResponse *cloudservice.SetUserGroupProjectAccessResponse, err error) *MockCloudServiceClient_SetUserGroupProjectAccess_Call {
+	_c.Call.Return(setUserGroupProjectAccessResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_SetUserGroupProjectAccess_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.SetUserGroupProjectAccessRequest, opts ...grpc.CallOption) (*cloudservice.SetUserGroupProjectAccessResponse, error)) *MockCloudServiceClient_SetUserGroupProjectAccess_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetUserNamespaceAccess provides a mock function for the type MockCloudServiceClient
 func (_mock *MockCloudServiceClient) SetUserNamespaceAccess(ctx context.Context, in *cloudservice.SetUserNamespaceAccessRequest, opts ...grpc.CallOption) (*cloudservice.SetUserNamespaceAccessResponse, error) {
 	var tmpRet mock.Arguments
@@ -5264,6 +6094,89 @@ func (_c *MockCloudServiceClient_SetUserNamespaceAccess_Call) Return(setUserName
 }
 
 func (_c *MockCloudServiceClient_SetUserNamespaceAccess_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.SetUserNamespaceAccessRequest, opts ...grpc.CallOption) (*cloudservice.SetUserNamespaceAccessResponse, error)) *MockCloudServiceClient_SetUserNamespaceAccess_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetUserProjectAccess provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) SetUserProjectAccess(ctx context.Context, in *cloudservice.SetUserProjectAccessRequest, opts ...grpc.CallOption) (*cloudservice.SetUserProjectAccessResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetUserProjectAccess")
+	}
+
+	var r0 *cloudservice.SetUserProjectAccessResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.SetUserProjectAccessRequest, ...grpc.CallOption) (*cloudservice.SetUserProjectAccessResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.SetUserProjectAccessRequest, ...grpc.CallOption) *cloudservice.SetUserProjectAccessResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.SetUserProjectAccessResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.SetUserProjectAccessRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_SetUserProjectAccess_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetUserProjectAccess'
+type MockCloudServiceClient_SetUserProjectAccess_Call struct {
+	*mock.Call
+}
+
+// SetUserProjectAccess is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.SetUserProjectAccessRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) SetUserProjectAccess(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_SetUserProjectAccess_Call {
+	return &MockCloudServiceClient_SetUserProjectAccess_Call{Call: _e.mock.On("SetUserProjectAccess",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_SetUserProjectAccess_Call) Run(run func(ctx context.Context, in *cloudservice.SetUserProjectAccessRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_SetUserProjectAccess_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.SetUserProjectAccessRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.SetUserProjectAccessRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_SetUserProjectAccess_Call) Return(setUserProjectAccessResponse *cloudservice.SetUserProjectAccessResponse, err error) *MockCloudServiceClient_SetUserProjectAccess_Call {
+	_c.Call.Return(setUserProjectAccessResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_SetUserProjectAccess_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.SetUserProjectAccessRequest, opts ...grpc.CallOption) (*cloudservice.SetUserProjectAccessResponse, error)) *MockCloudServiceClient_SetUserProjectAccess_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -5928,6 +6841,89 @@ func (_c *MockCloudServiceClient_UpdateNexusEndpoint_Call) Return(updateNexusEnd
 }
 
 func (_c *MockCloudServiceClient_UpdateNexusEndpoint_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.UpdateNexusEndpointRequest, opts ...grpc.CallOption) (*cloudservice.UpdateNexusEndpointResponse, error)) *MockCloudServiceClient_UpdateNexusEndpoint_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateProject provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) UpdateProject(ctx context.Context, in *cloudservice.UpdateProjectRequest, opts ...grpc.CallOption) (*cloudservice.UpdateProjectResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateProject")
+	}
+
+	var r0 *cloudservice.UpdateProjectResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.UpdateProjectRequest, ...grpc.CallOption) (*cloudservice.UpdateProjectResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.UpdateProjectRequest, ...grpc.CallOption) *cloudservice.UpdateProjectResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.UpdateProjectResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.UpdateProjectRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_UpdateProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateProject'
+type MockCloudServiceClient_UpdateProject_Call struct {
+	*mock.Call
+}
+
+// UpdateProject is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.UpdateProjectRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) UpdateProject(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_UpdateProject_Call {
+	return &MockCloudServiceClient_UpdateProject_Call{Call: _e.mock.On("UpdateProject",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_UpdateProject_Call) Run(run func(ctx context.Context, in *cloudservice.UpdateProjectRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_UpdateProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.UpdateProjectRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.UpdateProjectRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_UpdateProject_Call) Return(updateProjectResponse *cloudservice.UpdateProjectResponse, err error) *MockCloudServiceClient_UpdateProject_Call {
+	_c.Call.Return(updateProjectResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_UpdateProject_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.UpdateProjectRequest, opts ...grpc.CallOption) (*cloudservice.UpdateProjectResponse, error)) *MockCloudServiceClient_UpdateProject_Call {
 	_c.Call.Return(run)
 	return _c
 }

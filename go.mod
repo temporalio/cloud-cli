@@ -1,6 +1,6 @@
 module github.com/temporalio/cloud-cli
 
-go 1.26.3
+go 1.26.4
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.11
@@ -14,7 +14,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/cli/cliext v0.0.0-20260602200703-8bb57b77ad55
 	go.temporal.io/api v1.62.13
-	go.temporal.io/cloud-sdk v0.14.1-0.20260616191445-e6c2bafd1bf5
+	go.temporal.io/cloud-sdk v0.15.0
 	go.temporal.io/sdk v1.44.1
 	go.temporal.io/sdk/contrib/envconfig v1.0.0
 	golang.org/x/oauth2 v0.36.0

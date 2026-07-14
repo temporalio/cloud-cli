@@ -1427,9 +1427,10 @@ type CloudConnectivityPrivateCreateCommand struct {
 	Command cobra.Command
 	ClientOptions
 	AsyncOperationOptions
-	ConnectionId string
-	Region       string
-	GcpProjectId string
+	ConnectionId      string
+	Region            string
+	GcpProjectId      string
+	AzurePeResourceId string
 }
 
 func NewCloudConnectivityPrivateCreateCommand(cctx *CommandContext, parent *CloudConnectivityPrivateCommand) *CloudConnectivityPrivateCreateCommand {
@@ -1439,16 +1440,16 @@ func NewCloudConnectivityPrivateCreateCommand(cctx *CommandContext, parent *Clou
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create a private connectivity rule"
 	if hasHighlighting {
-		s.Command.Long = "Create a new private VPC connectivity rule. Requires --connection-id and --region.\n\nExample:\n\n\x1b[1mtemporal cloud connectivity private create --connection-id vpce-12345 --region aws-us-west-2\x1b[0m"
+		s.Command.Long = "Create a new private connectivity rule for AWS, GCP, or Azure.\n\nFor AWS, provide --connection-id (VPC endpoint ID) and --region.\nFor GCP, provide --connection-id (PSC connection ID), --gcp-project-id, and --region.\nFor Azure, provide --azure-pe-resource-id (ARM resource ID) and --region.\n\nExamples:\n\n\x1b[1mtemporal cloud connectivity private create --connection-id vpce-12345 --region aws-us-west-2\n\ntemporal cloud connectivity private create \\\n  --azure-pe-resource-id /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Network/privateEndpoints/{name} \\\n  --region azure-eastus\x1b[0m"
 	} else {
-		s.Command.Long = "Create a new private VPC connectivity rule. Requires --connection-id and --region.\n\nExample:\n\n```\ntemporal cloud connectivity private create --connection-id vpce-12345 --region aws-us-west-2\n```"
+		s.Command.Long = "Create a new private connectivity rule for AWS, GCP, or Azure.\n\nFor AWS, provide --connection-id (VPC endpoint ID) and --region.\nFor GCP, provide --connection-id (PSC connection ID), --gcp-project-id, and --region.\nFor Azure, provide --azure-pe-resource-id (ARM resource ID) and --region.\n\nExamples:\n\n```\ntemporal cloud connectivity private create --connection-id vpce-12345 --region aws-us-west-2\n\ntemporal cloud connectivity private create \\\n  --azure-pe-resource-id /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Network/privateEndpoints/{name} \\\n  --region azure-eastus\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.ConnectionId, "connection-id", "", "The connection ID for private connectivity. Required.")
-	_ = cobra.MarkFlagRequired(s.Command.Flags(), "connection-id")
+	s.Command.Flags().StringVar(&s.ConnectionId, "connection-id", "", "The connection ID for private connectivity (AWS VPC endpoint ID or GCP PSC connection ID).")
 	s.Command.Flags().StringVar(&s.Region, "region", "", "The region for private connectivity. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "region")
 	s.Command.Flags().StringVar(&s.GcpProjectId, "gcp-project-id", "", "The GCP project ID (only for GCP private connectivity).")
+	s.Command.Flags().StringVar(&s.AzurePeResourceId, "azure-pe-resource-id", "", "The ARM resource ID of the Azure Private Endpoint (only for Azure private connectivity). Example: /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Network/privateEndpoints/{name}.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {

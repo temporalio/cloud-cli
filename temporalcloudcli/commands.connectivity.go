@@ -37,10 +37,11 @@ type (
 	}
 
 	CreatePrivateConnectivityRuleParams struct {
-		ConnectionID     string
-		Region           string
-		GCPProjectID     string
-		AsyncOperationID string
+		ConnectionID      string
+		Region            string
+		GCPProjectID      string
+		AzurePeResourceID string
+		AsyncOperationID  string
 
 		Cloud            cloudservice.CloudServiceClient
 		Prompter         Prompter
@@ -123,9 +124,6 @@ func CreatePublicConnectivityRule(ctx context.Context, params CreatePublicConnec
 
 // CreatePrivateConnectivityRule creates a new private VPC connectivity rule.
 func CreatePrivateConnectivityRule(ctx context.Context, params CreatePrivateConnectivityRuleParams) error {
-	if params.ConnectionID == "" {
-		return errors.New("--connection-id is required for private connectivity")
-	}
 	if params.Region == "" {
 		return errors.New("--region is required for private connectivity")
 	}
@@ -133,9 +131,10 @@ func CreatePrivateConnectivityRule(ctx context.Context, params CreatePrivateConn
 	spec := &connectivityrulev1.ConnectivityRuleSpec{
 		ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PrivateRule{
 			PrivateRule: &connectivityrulev1.PrivateConnectivityRule{
-				ConnectionId: params.ConnectionID,
-				GcpProjectId: params.GCPProjectID,
-				Region:       params.Region,
+				ConnectionId:      params.ConnectionID,
+				GcpProjectId:      params.GCPProjectID,
+				Region:            params.Region,
+				AzurePeResourceId: params.AzurePeResourceID,
 			},
 		},
 	}
@@ -230,13 +229,14 @@ func (c *CloudConnectivityPrivateCreateCommand) run(cctx *CommandContext, _ []st
 		return err
 	}
 	return CreatePrivateConnectivityRule(cctx.Context, CreatePrivateConnectivityRuleParams{
-		ConnectionID:     c.ConnectionId,
-		Region:           c.Region,
-		GCPProjectID:     c.GcpProjectId,
-		AsyncOperationID: c.AsyncOperationId,
-		Cloud:            cloudClient.CloudService(),
-		Prompter:         newPrompter(cctx),
-		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
+		ConnectionID:      c.ConnectionId,
+		Region:            c.Region,
+		GCPProjectID:      c.GcpProjectId,
+		AzurePeResourceID: c.AzurePeResourceId,
+		AsyncOperationID:  c.AsyncOperationId,
+		Cloud:             cloudClient.CloudService(),
+		Prompter:          newPrompter(cctx),
+		OperationHandler:  NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
 	})
 }
 
