@@ -33,7 +33,7 @@ func (c *CloudNamespaceUserListCommand) run(cctx *CommandContext, _ []string) er
 			NextPageToken: res.NextPageToken,
 		},
 		printer.PrintResourceOptions{
-			Fields: []string{"Id", "Email", "NamespaceAccess"},
+			Fields: []string{"Id", "Email", "NamespaceAccess", "InheritedAccess"},
 		},
 		printer.TableOptions{},
 	)
@@ -61,7 +61,7 @@ func (c *CloudNamespaceServiceAccountListCommand) run(cctx *CommandContext, _ []
 			NextPageToken:   res.NextPageToken,
 		},
 		printer.PrintResourceOptions{
-			Fields: []string{"Id", "Email", "NamespaceAccess"},
+			Fields: []string{"Id", "Name", "NamespaceAccess", "InheritedAccess"},
 		},
 		printer.TableOptions{},
 	)
@@ -89,7 +89,7 @@ func (c *CloudNamespaceUserGroupListCommand) run(cctx *CommandContext, _ []strin
 			NextPageToken: res.NextPageToken,
 		},
 		printer.PrintResourceOptions{
-			Fields: []string{"Id", "Email", "NamespaceAccess"},
+			Fields: []string{"Id", "DisplayName", "NamespaceAccess", "InheritedAccess"},
 		},
 		printer.TableOptions{},
 	)
