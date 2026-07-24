@@ -42,6 +42,32 @@ temporal cloud whoami    # confirm the authenticated identity
 
 Alternatively, pass an API key directly to any command with `--api-key`.
 
+### Run Workflow commands against Temporal Cloud
+
+The `temporal cloud` commands manage Temporal Cloud resources. To operate
+Workflow Executions in a Cloud Namespace, use the regular `temporal workflow`
+commands with the same CLI profile and the Cloud Namespace endpoint.
+
+```sh
+temporal cloud login --profile prod
+
+temporal workflow list \
+  --profile prod \
+  --address <namespace>.<account>.tmprl.cloud:7233 \
+  --namespace <namespace>.<account>
+
+temporal workflow start \
+  --profile prod \
+  --address <namespace>.<account>.tmprl.cloud:7233 \
+  --namespace <namespace>.<account> \
+  --task-queue <task-queue> \
+  --type <workflow-type> \
+  --workflow-id <workflow-id>
+```
+
+Make sure a compatible Worker is polling the target Task Queue before starting
+a Workflow.
+
 ### Examples
 
 ```sh
