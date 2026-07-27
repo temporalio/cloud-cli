@@ -222,6 +222,40 @@ func (v *ExportGcsRegionOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "region")
 }
 
+type ExportAzureOptions struct {
+	TenantId       string
+	SubscriptionId string
+	ResourceGroup  string
+	StorageAccount string
+	ContainerName  string
+	FlagSet        *pflag.FlagSet
+}
+
+func (v *ExportAzureOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.TenantId, "tenant-id", "", "The Azure tenant ID where the storage account exists and where Temporal's app registration is consented/granted access. Required.")
+	_ = cobra.MarkFlagRequired(f, "tenant-id")
+	f.StringVar(&v.SubscriptionId, "subscription-id", "", "The Azure subscription ID that contains the storage account. Required.")
+	_ = cobra.MarkFlagRequired(f, "subscription-id")
+	f.StringVar(&v.ResourceGroup, "resource-group", "", "The Azure resource group that contains the storage account. Required.")
+	_ = cobra.MarkFlagRequired(f, "resource-group")
+	f.StringVar(&v.StorageAccount, "storage-account", "", "The name of the destination Azure storage account where Temporal will send data. Required.")
+	_ = cobra.MarkFlagRequired(f, "storage-account")
+	f.StringVar(&v.ContainerName, "container-name", "", "The name of the destination Azure Blob container where Temporal will send data. Required.")
+	_ = cobra.MarkFlagRequired(f, "container-name")
+}
+
+type ExportAzureRegionOptions struct {
+	Region  string
+	FlagSet *pflag.FlagSet
+}
+
+func (v *ExportAzureRegionOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.Region, "region", "", "The region where the Azure storage account is located. Required.")
+	_ = cobra.MarkFlagRequired(f, "region")
+}
+
 type CloudCommand struct {
 	Command cobra.Command
 	ClientOptions
@@ -2488,8 +2522,9 @@ func NewCloudNamespaceExportCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Parent = parent
 	s.Command.Use = "export"
 	s.Command.Short = "Manage workflow history export sinks for namespaces"
-	s.Command.Long = "Commands for managing workflow history export sinks for Temporal Cloud namespaces.\n\nExport sinks define destinations (S3 or GCS) to which workflow history is exported."
+	s.Command.Long = "Commands for managing workflow history export sinks for Temporal Cloud namespaces.\n\nExport sinks define destinations (S3, GCS, or Azure Blob) to which workflow history is exported."
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceExportAzureCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceExportDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceExportDisableCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceExportEnableCommand(cctx, &s).Command)
@@ -2497,6 +2532,141 @@ func NewCloudNamespaceExportCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Command.AddCommand(&NewCloudNamespaceExportGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceExportListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceExportS3Command(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceExportAzureCommand struct {
+	Parent  *CloudNamespaceExportCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceExportAzureCommand(cctx *CommandContext, parent *CloudNamespaceExportCommand) *CloudNamespaceExportAzureCommand {
+	var s CloudNamespaceExportAzureCommand
+	s.Parent = parent
+	s.Command.Use = "azure"
+	s.Command.Short = "Manage Azure Blob workflow history export sinks"
+	s.Command.Long = "Commands for managing Azure Blob workflow history export sinks for Temporal Cloud namespaces."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceExportAzureCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceExportAzureUpdateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceExportAzureValidateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceExportAzureCreateCommand struct {
+	Parent  *CloudNamespaceExportAzureCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ExportSinkOptions
+	ExportAzureOptions
+	ExportAzureRegionOptions
+}
+
+func NewCloudNamespaceExportAzureCreateCommand(cctx *CommandContext, parent *CloudNamespaceExportAzureCommand) *CloudNamespaceExportAzureCreateCommand {
+	var s CloudNamespaceExportAzureCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create an Azure Blob workflow history export sink"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Azure Blob workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export azure create --namespace my-namespace.my-account --sink-name my-sink \\\n  --tenant-id 11111111-1111-1111-1111-111111111111 \\\n  --subscription-id 22222222-2222-2222-2222-222222222222 \\\n  --resource-group my-resource-group --storage-account my-storage-account \\\n  --container-name my-container --region eastus\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new Azure Blob workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n```\ntemporal cloud namespace export azure create --namespace my-namespace.my-account --sink-name my-sink \\\n  --tenant-id 11111111-1111-1111-1111-111111111111 \\\n  --subscription-id 22222222-2222-2222-2222-222222222222 \\\n  --resource-group my-resource-group --storage-account my-storage-account \\\n  --container-name my-container --region eastus\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
+	s.ExportAzureOptions.BuildFlags(s.Command.Flags())
+	s.ExportAzureRegionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceExportAzureUpdateCommand struct {
+	Parent  *CloudNamespaceExportAzureCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ExportSinkOptions
+	TenantId       string
+	SubscriptionId string
+	ResourceGroup  string
+	StorageAccount string
+	ContainerName  string
+}
+
+func NewCloudNamespaceExportAzureUpdateCommand(cctx *CommandContext, parent *CloudNamespaceExportAzureCommand) *CloudNamespaceExportAzureUpdateCommand {
+	var s CloudNamespaceExportAzureUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update an Azure Blob workflow history export sink"
+	if hasHighlighting {
+		s.Command.Long = "Update the configuration of an existing Azure Blob workflow history export sink.\nOnly the flags you provide are changed; omitted flags keep their current\nvalues. The enabled/disabled state and region are also preserved.\n\nExample (rotate storage account only):\n\n\x1b[1mtemporal cloud namespace export azure update --namespace my-namespace.my-account --sink-name my-sink \\\n  --storage-account my-new-storage-account\x1b[0m"
+	} else {
+		s.Command.Long = "Update the configuration of an existing Azure Blob workflow history export sink.\nOnly the flags you provide are changed; omitted flags keep their current\nvalues. The enabled/disabled state and region are also preserved.\n\nExample (rotate storage account only):\n\n```\ntemporal cloud namespace export azure update --namespace my-namespace.my-account --sink-name my-sink \\\n  --storage-account my-new-storage-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.TenantId, "tenant-id", "", "The Azure tenant ID where the storage account exists and where Temporal's app registration is consented/granted access. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.SubscriptionId, "subscription-id", "", "The Azure subscription ID that contains the storage account. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.ResourceGroup, "resource-group", "", "The Azure resource group that contains the storage account. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.StorageAccount, "storage-account", "", "The name of the destination Azure storage account where Temporal will send data. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.ContainerName, "container-name", "", "The name of the destination Azure Blob container where Temporal will send data. If omitted, the current value is kept.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceExportAzureValidateCommand struct {
+	Parent  *CloudNamespaceExportAzureCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	ExportSinkOptions
+	ExportAzureOptions
+	ExportAzureRegionOptions
+}
+
+func NewCloudNamespaceExportAzureValidateCommand(cctx *CommandContext, parent *CloudNamespaceExportAzureCommand) *CloudNamespaceExportAzureValidateCommand {
+	var s CloudNamespaceExportAzureValidateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "validate [flags]"
+	s.Command.Short = "Validate an Azure Blob workflow history export sink configuration"
+	if hasHighlighting {
+		s.Command.Long = "Validate an Azure Blob workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export azure validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --tenant-id 11111111-1111-1111-1111-111111111111 \\\n  --subscription-id 22222222-2222-2222-2222-222222222222 \\\n  --resource-group my-resource-group --storage-account my-storage-account \\\n  --container-name my-container --region eastus\x1b[0m"
+	} else {
+		s.Command.Long = "Validate an Azure Blob workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n```\ntemporal cloud namespace export azure validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --tenant-id 11111111-1111-1111-1111-111111111111 \\\n  --subscription-id 22222222-2222-2222-2222-222222222222 \\\n  --resource-group my-resource-group --storage-account my-storage-account \\\n  --container-name my-container --region eastus\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
+	s.ExportAzureOptions.BuildFlags(s.Command.Flags())
+	s.ExportAzureRegionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
