@@ -844,7 +844,7 @@ func (c *CloudNamespaceExportGcsValidateCommand) run(cctx *CommandContext, _ []s
 	})
 }
 
-func (c *CloudNamespaceExportAzureCreateCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudNamespaceExportAzureBlobCreateCommand) run(cctx *CommandContext, _ []string) error {
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -865,7 +865,7 @@ func (c *CloudNamespaceExportAzureCreateCommand) run(cctx *CommandContext, _ []s
 	})
 }
 
-func (c *CloudNamespaceExportAzureUpdateCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudNamespaceExportAzureBlobUpdateCommand) run(cctx *CommandContext, _ []string) error {
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -886,7 +886,7 @@ func (c *CloudNamespaceExportAzureUpdateCommand) run(cctx *CommandContext, _ []s
 	})
 }
 
-func (c *CloudNamespaceExportAzureValidateCommand) run(cctx *CommandContext, _ []string) error {
+func (c *CloudNamespaceExportAzureBlobValidateCommand) run(cctx *CommandContext, _ []string) error {
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
