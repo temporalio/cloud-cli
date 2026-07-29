@@ -51,6 +51,12 @@ func createReqMatcher(expected *namespacev1.NamespaceSpec) interface{} {
 	})
 }
 
+func createReqMatcherWithProject(expected *namespacev1.NamespaceSpec, projectID string) interface{} {
+	return mock.MatchedBy(func(req *cloudservice.CreateNamespaceRequest) bool {
+		return proto.Equal(req.Spec, expected) && req.ProjectId == projectID
+	})
+}
+
 // TestCreateNamespace_Success verifies that CreateNamespace calls HandleOperation with the API response.
 func TestCreateNamespace_Success(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
@@ -75,6 +81,39 @@ func TestCreateNamespace_Success(t *testing.T) {
 	err := temporalcloudcli.CreateNamespace(context.Background(), temporalcloudcli.CreateNamespaceParams{
 		Name:               "my-namespace",
 		Regions:            []string{"aws-us-east-1"},
+		Cloud:              mockCloud,
+		Printer:            &printer.Printer{Output: &buf, JSON: true},
+		Prompter:           mockPrompter,
+		UnmarshalProtoJSON: noopUnmarshalProtoJSON,
+		OperationHandler:   mockHandler,
+	})
+	require.NoError(t, err)
+}
+
+func TestCreateNamespace_ProjectID(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+
+	spec := baseNamespaceSpec()
+
+	mockPrompter.EXPECT().
+		PromptApply(&namespacev1.NamespaceSpec{}, specMatcher(spec), false).
+		Return(nil)
+
+	mockCloud.EXPECT().
+		CreateNamespace(context.Background(), createReqMatcherWithProject(spec, "project-123")).
+		Return(defaultCreateResponse, nil)
+
+	mockHandler.EXPECT().
+		HandleOperation(defaultCreateResponse.AsyncOperation, "my-namespace.my-account").
+		Return(nil)
+
+	var buf bytes.Buffer
+	err := temporalcloudcli.CreateNamespace(context.Background(), temporalcloudcli.CreateNamespaceParams{
+		Name:               "my-namespace",
+		Regions:            []string{"aws-us-east-1"},
+		ProjectID:          "project-123",
 		Cloud:              mockCloud,
 		Printer:            &printer.Printer{Output: &buf, JSON: true},
 		Prompter:           mockPrompter,
