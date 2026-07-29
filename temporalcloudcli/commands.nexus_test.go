@@ -55,6 +55,24 @@ func TestGetNexusEndpoint(t *testing.T) {
 			expectedJsonOutput: testEndpoint,
 		},
 		{
+			name: "SuccessByNameWithProject",
+			cmd: temporalcloudcli.CloudNexusEndpointGetCommand{
+				Name:      "my-endpoint",
+				ProjectId: "project-123",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNexusEndpoints(mock.Anything, &cloudservice.GetNexusEndpointsRequest{
+						Name:      "my-endpoint",
+						ProjectId: "project-123",
+					}, mock.Anything).
+					Return(&cloudservice.GetNexusEndpointsResponse{
+						Endpoints: []*nexusv1.Endpoint{testEndpoint},
+					}, nil)
+			},
+			expectedJsonOutput: testEndpoint,
+		},
+		{
 			name: "SuccessById",
 			cmd:  temporalcloudcli.CloudNexusEndpointGetCommand{Id: "ep-123"},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -181,6 +199,27 @@ func TestListNexusEndpoints(t *testing.T) {
 			},
 		},
 		{
+			name: "WithProjectID",
+			cmd: temporalcloudcli.CloudNexusEndpointListCommand{
+				ProjectId: "project-123",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNexusEndpoints(mock.Anything, &cloudservice.GetNexusEndpointsRequest{
+						ProjectId: "project-123",
+					}, mock.Anything).
+					Return(&cloudservice.GetNexusEndpointsResponse{
+						Endpoints: []*nexusv1.Endpoint{testEndpoint},
+					}, nil)
+			},
+			expectedJsonOutput: struct {
+				Endpoints     []*nexusv1.Endpoint
+				NextPageToken string
+			}{
+				Endpoints: []*nexusv1.Endpoint{testEndpoint},
+			},
+		},
+		{
 			name: "APIError",
 			cmd:  temporalcloudcli.CloudNexusEndpointListCommand{},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -219,6 +258,7 @@ func TestCreateNexusEndpoint(t *testing.T) {
 			name: "Success",
 			cmd: temporalcloudcli.CloudNexusEndpointCreateCommand{
 				Name:            "my-endpoint",
+				ProjectId:       "project-123",
 				TargetNamespace: "ns-123",
 				TargetTaskQueue: "my-tq",
 				AllowNamespace:  []string{"caller-ns"},
@@ -230,7 +270,8 @@ func TestCreateNexusEndpoint(t *testing.T) {
 							req.Spec.TargetSpec.GetWorkerTargetSpec().NamespaceId == "ns-123" &&
 							req.Spec.TargetSpec.GetWorkerTargetSpec().TaskQueue == "my-tq" &&
 							len(req.Spec.PolicySpecs) == 1 &&
-							req.Spec.PolicySpecs[0].GetAllowedCloudNamespacePolicySpec().NamespaceId == "caller-ns"
+							req.Spec.PolicySpecs[0].GetAllowedCloudNamespacePolicySpec().NamespaceId == "caller-ns" &&
+							req.ProjectId == "project-123"
 					}), mock.Anything).
 					Return(&cloudservice.CreateNexusEndpointResponse{
 						EndpointId:     "ep-new",
@@ -316,6 +357,33 @@ func TestDeleteNexusEndpoint(t *testing.T) {
 				c.EXPECT().
 					GetNexusEndpoints(mock.Anything, &cloudservice.GetNexusEndpointsRequest{
 						Name: "my-endpoint",
+					}, mock.Anything).
+					Return(&cloudservice.GetNexusEndpointsResponse{
+						Endpoints: []*nexusv1.Endpoint{testEndpoint},
+					}, nil)
+				c.EXPECT().
+					DeleteNexusEndpoint(mock.Anything, &cloudservice.DeleteNexusEndpointRequest{
+						EndpointId:      testEndpoint.Id,
+						ResourceVersion: "v1",
+					}, mock.Anything).
+					Return(&cloudservice.DeleteNexusEndpointResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-del"},
+					}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			pollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-del"},
+		},
+		{
+			name: "SuccessDeleteEndpointWithProject",
+			cmd: temporalcloudcli.CloudNexusEndpointDeleteCommand{
+				Name:      "my-endpoint",
+				ProjectId: "project-123",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNexusEndpoints(mock.Anything, &cloudservice.GetNexusEndpointsRequest{
+						Name:      "my-endpoint",
+						ProjectId: "project-123",
 					}, mock.Anything).
 					Return(&cloudservice.GetNexusEndpointsResponse{
 						Endpoints: []*nexusv1.Endpoint{testEndpoint},
@@ -500,6 +568,16 @@ func TestUpdateNexusEndpoint(t *testing.T) {
 				Endpoints: []*nexusv1.Endpoint{existingEndpoint},
 			}, nil)
 	}
+	getEndpointInProjectExpectation := func(c *cloudmock.MockCloudServiceClient) {
+		c.EXPECT().
+			GetNexusEndpoints(mock.Anything, &cloudservice.GetNexusEndpointsRequest{
+				Name:      "my-endpoint",
+				ProjectId: "project-123",
+			}, mock.Anything).
+			Return(&cloudservice.GetNexusEndpointsResponse{
+				Endpoints: []*nexusv1.Endpoint{existingEndpoint},
+			}, nil)
+	}
 
 	tests := []struct {
 		name                    string
@@ -522,6 +600,28 @@ func TestUpdateNexusEndpoint(t *testing.T) {
 						return req.EndpointId == "ep-123" &&
 							req.Spec.TargetSpec.GetWorkerTargetSpec().NamespaceId == "new-ns" &&
 							req.Spec.TargetSpec.GetWorkerTargetSpec().TaskQueue == "my-task-queue" &&
+							req.ResourceVersion == "v1"
+					}), mock.Anything).
+					Return(&cloudservice.UpdateNexusEndpointResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-upd"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
+		},
+		{
+			name: "TargetNamespaceWithProject",
+			setupCmd: func(cmd *temporalcloudcli.CloudNexusEndpointUpdateCommand) {
+				cmd.ProjectId = "project-123"
+				cmd.Command.Flags().StringVar(&cmd.TargetNamespace, "target-namespace", "", "")
+				require.NoError(t, cmd.Command.Flags().Set("target-namespace", "new-ns"))
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				getEndpointInProjectExpectation(c)
+				c.EXPECT().
+					UpdateNexusEndpoint(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNexusEndpointRequest) bool {
+						return req.EndpointId == "ep-123" &&
+							req.Spec.TargetSpec.GetWorkerTargetSpec().NamespaceId == "new-ns" &&
 							req.ResourceVersion == "v1"
 					}), mock.Anything).
 					Return(&cloudservice.UpdateNexusEndpointResponse{
@@ -804,6 +904,17 @@ func expectGetEndpointWithPolicies(c *cloudmock.MockCloudServiceClient) {
 		}, nil)
 }
 
+func expectGetEndpointWithPoliciesInProject(c *cloudmock.MockCloudServiceClient) {
+	c.EXPECT().
+		GetNexusEndpoints(mock.Anything, &cloudservice.GetNexusEndpointsRequest{
+			Name:      "my-endpoint",
+			ProjectId: "project-123",
+		}, mock.Anything).
+		Return(&cloudservice.GetNexusEndpointsResponse{
+			Endpoints: []*nexusv1.Endpoint{newTestEndpointWithPolicies()},
+		}, nil)
+}
+
 func TestListNexusEndpointAllowedNamespaces(t *testing.T) {
 	tests := []struct {
 		name                    string
@@ -817,6 +928,21 @@ func TestListNexusEndpointAllowedNamespaces(t *testing.T) {
 			cmd:  temporalcloudcli.CloudNexusEndpointAllowedNamespaceListCommand{Name: "my-endpoint"},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				expectGetEndpointWithPolicies(c)
+			},
+			expectedJsonOutput: struct {
+				Namespaces []string
+			}{
+				Namespaces: []string{"caller-ns-1", "caller-ns-2"},
+			},
+		},
+		{
+			name: "SuccessWithProject",
+			cmd: temporalcloudcli.CloudNexusEndpointAllowedNamespaceListCommand{
+				Name:      "my-endpoint",
+				ProjectId: "project-123",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				expectGetEndpointWithPoliciesInProject(c)
 			},
 			expectedJsonOutput: struct {
 				Namespaces []string
@@ -900,6 +1026,28 @@ func TestAddNexusEndpointAllowedNamespace(t *testing.T) {
 							len(req.Spec.PolicySpecs) == 3 &&
 							req.Spec.PolicySpecs[2].GetAllowedCloudNamespacePolicySpec().NamespaceId == "new-ns" &&
 							req.ResourceVersion == "v1"
+					}), mock.Anything).
+					Return(&cloudservice.UpdateNexusEndpointResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-add"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-add"},
+		},
+		{
+			name: "SuccessWithProject",
+			cmd: temporalcloudcli.CloudNexusEndpointAllowedNamespaceAddCommand{
+				Name:      "my-endpoint",
+				ProjectId: "project-123",
+				Namespace: []string{"new-ns"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				expectGetEndpointWithPoliciesInProject(c)
+				c.EXPECT().
+					UpdateNexusEndpoint(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNexusEndpointRequest) bool {
+						return req.EndpointId == "ep-123" &&
+							len(req.Spec.PolicySpecs) == 3 &&
+							req.Spec.PolicySpecs[2].GetAllowedCloudNamespacePolicySpec().NamespaceId == "new-ns"
 					}), mock.Anything).
 					Return(&cloudservice.UpdateNexusEndpointResponse{
 						AsyncOperation: &operation.AsyncOperation{Id: "op-add"},
@@ -1026,6 +1174,29 @@ func TestSetNexusEndpointAllowedNamespace(t *testing.T) {
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-set"},
 		},
 		{
+			name: "SuccessWithProject",
+			cmd: temporalcloudcli.CloudNexusEndpointAllowedNamespaceSetCommand{
+				Name:      "my-endpoint",
+				ProjectId: "project-123",
+				Namespace: []string{"new-ns-1", "new-ns-2"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				expectGetEndpointWithPoliciesInProject(c)
+				c.EXPECT().
+					UpdateNexusEndpoint(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNexusEndpointRequest) bool {
+						return req.EndpointId == "ep-123" &&
+							len(req.Spec.PolicySpecs) == 2 &&
+							req.Spec.PolicySpecs[0].GetAllowedCloudNamespacePolicySpec().NamespaceId == "new-ns-1" &&
+							req.Spec.PolicySpecs[1].GetAllowedCloudNamespacePolicySpec().NamespaceId == "new-ns-2"
+					}), mock.Anything).
+					Return(&cloudservice.UpdateNexusEndpointResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-set"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-set"},
+		},
+		{
 			name: "UserDeclines",
 			cmd: temporalcloudcli.CloudNexusEndpointAllowedNamespaceSetCommand{
 				Name:      "my-endpoint",
@@ -1121,6 +1292,28 @@ func TestRemoveNexusEndpointAllowedNamespace(t *testing.T) {
 							len(req.Spec.PolicySpecs) == 1 &&
 							req.Spec.PolicySpecs[0].GetAllowedCloudNamespacePolicySpec().NamespaceId == "caller-ns-2" &&
 							req.ResourceVersion == "v1"
+					}), mock.Anything).
+					Return(&cloudservice.UpdateNexusEndpointResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-rm"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-rm"},
+		},
+		{
+			name: "SuccessWithProject",
+			cmd: temporalcloudcli.CloudNexusEndpointAllowedNamespaceRemoveCommand{
+				Name:      "my-endpoint",
+				ProjectId: "project-123",
+				Namespace: []string{"caller-ns-1"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				expectGetEndpointWithPoliciesInProject(c)
+				c.EXPECT().
+					UpdateNexusEndpoint(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNexusEndpointRequest) bool {
+						return req.EndpointId == "ep-123" &&
+							len(req.Spec.PolicySpecs) == 1 &&
+							req.Spec.PolicySpecs[0].GetAllowedCloudNamespacePolicySpec().NamespaceId == "caller-ns-2"
 					}), mock.Anything).
 					Return(&cloudservice.UpdateNexusEndpointResponse{
 						AsyncOperation: &operation.AsyncOperation{Id: "op-rm"},

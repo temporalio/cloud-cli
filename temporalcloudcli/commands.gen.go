@@ -4501,6 +4501,7 @@ type CloudNexusEndpointAllowedNamespaceAddCommand struct {
 	AsyncOperationOptions
 	ResourceVersionOptions
 	Name      string
+	ProjectId string
 	Namespace []string
 }
 
@@ -4514,6 +4515,7 @@ func NewCloudNexusEndpointAllowedNamespaceAddCommand(cctx *CommandContext, paren
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to search for the Nexus Endpoint in.")
 	s.Command.Flags().StringArrayVar(&s.Namespace, "namespace", nil, "A namespace to allow. Can be specified multiple times. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -4531,7 +4533,8 @@ type CloudNexusEndpointAllowedNamespaceListCommand struct {
 	Parent  *CloudNexusEndpointAllowedNamespaceCommand
 	Command cobra.Command
 	ClientOptions
-	Name string
+	Name      string
+	ProjectId string
 }
 
 func NewCloudNexusEndpointAllowedNamespaceListCommand(cctx *CommandContext, parent *CloudNexusEndpointAllowedNamespaceCommand) *CloudNexusEndpointAllowedNamespaceListCommand {
@@ -4544,6 +4547,7 @@ func NewCloudNexusEndpointAllowedNamespaceListCommand(cctx *CommandContext, pare
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to search for the Nexus Endpoint in.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -4560,6 +4564,7 @@ type CloudNexusEndpointAllowedNamespaceRemoveCommand struct {
 	AsyncOperationOptions
 	ResourceVersionOptions
 	Name      string
+	ProjectId string
 	Namespace []string
 }
 
@@ -4573,6 +4578,7 @@ func NewCloudNexusEndpointAllowedNamespaceRemoveCommand(cctx *CommandContext, pa
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to search for the Nexus Endpoint in.")
 	s.Command.Flags().StringArrayVar(&s.Namespace, "namespace", nil, "A namespace to remove. Can be specified multiple times. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -4593,6 +4599,7 @@ type CloudNexusEndpointAllowedNamespaceSetCommand struct {
 	AsyncOperationOptions
 	ResourceVersionOptions
 	Name      string
+	ProjectId string
 	Namespace []string
 }
 
@@ -4606,6 +4613,7 @@ func NewCloudNexusEndpointAllowedNamespaceSetCommand(cctx *CommandContext, paren
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to search for the Nexus Endpoint in.")
 	s.Command.Flags().StringArrayVar(&s.Namespace, "namespace", nil, "A namespace to allow. Can be specified multiple times. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -4625,6 +4633,7 @@ type CloudNexusEndpointCreateCommand struct {
 	ClientOptions
 	AsyncOperationOptions
 	Name            string
+	ProjectId       string
 	TargetNamespace string
 	TargetTaskQueue string
 	AllowNamespace  []string
@@ -4646,6 +4655,7 @@ func NewCloudNexusEndpointCreateCommand(cctx *CommandContext, parent *CloudNexus
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to create. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to create the Nexus Endpoint in.")
 	s.Command.Flags().StringVar(&s.TargetNamespace, "target-namespace", "", "The namespace in which a handler worker will be polling for Nexus tasks. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "target-namespace")
 	s.Command.Flags().StringVar(&s.TargetTaskQueue, "target-task-queue", "", "The task queue on which a handler worker will be polling for Nexus tasks. Required.")
@@ -4669,8 +4679,9 @@ type CloudNexusEndpointDeleteCommand struct {
 	ClientOptions
 	AsyncOperationOptions
 	ResourceVersionOptions
-	Name string
-	Id   string
+	Name      string
+	Id        string
+	ProjectId string
 }
 
 func NewCloudNexusEndpointDeleteCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointDeleteCommand {
@@ -4687,6 +4698,7 @@ func NewCloudNexusEndpointDeleteCommand(cctx *CommandContext, parent *CloudNexus
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to delete.")
 	s.Command.Flags().StringVar(&s.Id, "id", "", "The ID of the Nexus Endpoint to delete.")
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to search when deleting a Nexus Endpoint by name.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
@@ -4702,8 +4714,9 @@ type CloudNexusEndpointGetCommand struct {
 	Parent  *CloudNexusEndpointCommand
 	Command cobra.Command
 	ClientOptions
-	Name string
-	Id   string
+	Name      string
+	Id        string
+	ProjectId string
 }
 
 func NewCloudNexusEndpointGetCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointGetCommand {
@@ -4720,6 +4733,7 @@ func NewCloudNexusEndpointGetCommand(cctx *CommandContext, parent *CloudNexusEnd
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to retrieve.")
 	s.Command.Flags().StringVar(&s.Id, "id", "", "The ID of the Nexus Endpoint to retrieve.")
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to search when retrieving a Nexus Endpoint by name.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -4733,6 +4747,7 @@ type CloudNexusEndpointListCommand struct {
 	Parent  *CloudNexusEndpointCommand
 	Command cobra.Command
 	ClientOptions
+	ProjectId string
 	PageSize  int
 	PageToken string
 }
@@ -4745,6 +4760,7 @@ func NewCloudNexusEndpointListCommand(cctx *CommandContext, parent *CloudNexusEn
 	s.Command.Short = "List Nexus Endpoints"
 	s.Command.Long = "List Nexus Endpoint configurations on the Cloud Account."
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to list Nexus Endpoints from.")
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of endpoints to return per page. If no page size is provided, it will default to 100. A maximum of 1000 endpoints can be fetched at a time.")
 	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results. Initial value is empty string.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -4764,6 +4780,7 @@ type CloudNexusEndpointUpdateCommand struct {
 	ResourceVersionOptions
 	Name             string
 	Id               string
+	ProjectId        string
 	TargetNamespace  string
 	TargetTaskQueue  string
 	Description      string
@@ -4785,6 +4802,7 @@ func NewCloudNexusEndpointUpdateCommand(cctx *CommandContext, parent *CloudNexus
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to update.")
 	s.Command.Flags().StringVar(&s.Id, "id", "", "The ID of the Nexus Endpoint to update.")
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to search when updating a Nexus Endpoint by name.")
 	s.Command.Flags().StringVar(&s.TargetNamespace, "target-namespace", "", "The namespace in which a handler worker will be polling for Nexus tasks.")
 	s.Command.Flags().StringVar(&s.TargetTaskQueue, "target-task-queue", "", "The task queue on which a handler worker will be polling for Nexus tasks.")
 	s.Command.Flags().StringVar(&s.Description, "description", "", "An optional endpoint description in markdown format.")

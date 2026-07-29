@@ -52,6 +52,7 @@ func (c *CloudNexusEndpointListCommand) run(cctx *CommandContext, _ []string) er
 	res, err := client.GetNexusEndpoints(cctx, &cloudservice.GetNexusEndpointsRequest{
 		PageSize:  int32(c.PageSize),
 		PageToken: c.PageToken,
+		ProjectId: c.ProjectId,
 	})
 	if err != nil {
 		return err
@@ -66,7 +67,7 @@ func (c *CloudNexusEndpointListCommand) run(cctx *CommandContext, _ []string) er
 			NextPageToken: res.NextPageToken,
 		},
 		printer.PrintResourceOptions{
-			Fields:     []string{"Id", "State"},
+			Fields:     []string{"Id", "ProjectId", "State"},
 			SpecFields: []string{"Name", "Description"},
 		},
 		printer.TableOptions{},
@@ -79,7 +80,7 @@ func (c *CloudNexusEndpointGetCommand) run(cctx *CommandContext, _ []string) err
 		return err
 	}
 
-	endpoint, err := resolveNexusEndpoint(cctx, client, c.Name, c.Id)
+	endpoint, err := resolveNexusEndpoint(cctx, client, c.Name, c.Id, c.ProjectId)
 	if err != nil {
 		return err
 	}
@@ -132,6 +133,7 @@ func (c *CloudNexusEndpointCreateCommand) run(cctx *CommandContext, _ []string) 
 			PolicySpecs: policySpecs,
 		},
 		AsyncOperationId: c.AsyncOperationId,
+		ProjectId:        c.ProjectId,
 	})
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleCreateAsyncOperationResponse(cctx, resp, err)
 }
@@ -142,7 +144,7 @@ func (c *CloudNexusEndpointDeleteCommand) run(cctx *CommandContext, _ []string) 
 		return err
 	}
 
-	endpoint, err := resolveNexusEndpoint(cctx, client, c.Name, c.Id)
+	endpoint, err := resolveNexusEndpoint(cctx, client, c.Name, c.Id, c.ProjectId)
 	if err != nil {
 		return err
 	}
@@ -182,7 +184,7 @@ func (c *CloudNexusEndpointUpdateCommand) run(cctx *CommandContext, _ []string) 
 		return err
 	}
 
-	endpoint, err := resolveNexusEndpoint(cctx, client, c.Name, c.Id)
+	endpoint, err := resolveNexusEndpoint(cctx, client, c.Name, c.Id, c.ProjectId)
 	if err != nil {
 		return err
 	}
@@ -226,7 +228,7 @@ func (c *CloudNexusEndpointUpdateCommand) run(cctx *CommandContext, _ []string) 
 func resolveNexusEndpoint(
 	cctx *CommandContext,
 	client cloudservice.CloudServiceClient,
-	name, id string,
+	name, id, projectID string,
 ) (*nexusv1.Endpoint, error) {
 	if name == "" && id == "" {
 		return nil, errors.New("either --name or --id is required")
@@ -243,17 +245,18 @@ func resolveNexusEndpoint(
 		}
 		return res.Endpoint, nil
 	}
-	return getNexusEndpointByName(cctx, client, name)
+	return getNexusEndpointByName(cctx, client, name, projectID)
 }
 
 // getNexusEndpointByName looks up a Nexus Endpoint by name using the list RPC with a name filter.
 func getNexusEndpointByName(
 	cctx *CommandContext,
 	client cloudservice.CloudServiceClient,
-	name string,
+	name, projectID string,
 ) (*nexusv1.Endpoint, error) {
 	res, err := client.GetNexusEndpoints(cctx, &cloudservice.GetNexusEndpointsRequest{
-		Name: name,
+		Name:      name,
+		ProjectId: projectID,
 	})
 	if err != nil {
 		return nil, err
@@ -270,7 +273,7 @@ func (c *CloudNexusEndpointAllowedNamespaceListCommand) run(cctx *CommandContext
 		return err
 	}
 
-	endpoint, err := getNexusEndpointByName(cctx, client, c.Name)
+	endpoint, err := getNexusEndpointByName(cctx, client, c.Name, c.ProjectId)
 	if err != nil {
 		return err
 	}
@@ -295,7 +298,7 @@ func (c *CloudNexusEndpointAllowedNamespaceAddCommand) run(cctx *CommandContext,
 		return err
 	}
 
-	endpoint, err := getNexusEndpointByName(cctx, client, c.Name)
+	endpoint, err := getNexusEndpointByName(cctx, client, c.Name, c.ProjectId)
 	if err != nil {
 		return err
 	}
@@ -353,7 +356,7 @@ func (c *CloudNexusEndpointAllowedNamespaceSetCommand) run(cctx *CommandContext,
 		return err
 	}
 
-	endpoint, err := getNexusEndpointByName(cctx, client, c.Name)
+	endpoint, err := getNexusEndpointByName(cctx, client, c.Name, c.ProjectId)
 	if err != nil {
 		return err
 	}
@@ -397,7 +400,7 @@ func (c *CloudNexusEndpointAllowedNamespaceRemoveCommand) run(cctx *CommandConte
 		return err
 	}
 
-	endpoint, err := getNexusEndpointByName(cctx, client, c.Name)
+	endpoint, err := getNexusEndpointByName(cctx, client, c.Name, c.ProjectId)
 	if err != nil {
 		return err
 	}
