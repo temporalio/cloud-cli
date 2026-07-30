@@ -266,6 +266,28 @@ func TestProjectApply_UpdateBySpecDisplayName(t *testing.T) {
 	})
 }
 
+func TestProjectApply_DuplicateDisplayName(t *testing.T) {
+	cmd := &temporalcloudcli.CloudProjectApplyCommand{
+		Spec: `{"display_name":"Engineering","description":"Updated workloads"}`,
+	}
+
+	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetProjects(mock.Anything, &cloudservice.GetProjectsRequest{
+					PageSize: 1000,
+				}, mock.Anything).
+				Return(&cloudservice.GetProjectsResponse{
+					Projects: []*projectv1.Project{
+						testProject("project-a"),
+						testProject("project-b"),
+					},
+				}, nil)
+		},
+		ExpectedError: `multiple projects found with display name "Engineering"`,
+	})
+}
+
 func TestProjectApply_InvalidSpec(t *testing.T) {
 	cmd := &temporalcloudcli.CloudProjectApplyCommand{Spec: `{`}
 

@@ -296,6 +296,9 @@ func getProjectByName(ctx context.Context, client cloudservice.CloudServiceClien
 	if len(projects) == 0 {
 		return nil, nil
 	}
+	if len(projects) > 1 {
+		return nil, fmt.Errorf("multiple projects found with display name %q", projectName)
+	}
 	return projects[0], nil
 }
 
