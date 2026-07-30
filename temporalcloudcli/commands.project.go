@@ -289,30 +289,7 @@ func resolveProject(
 }
 
 func getProjectByName(ctx context.Context, client cloudservice.CloudServiceClient, projectName string) (*projectv1.Project, error) {
-	projects, err := getProjectsByNames(ctx, client, []string{projectName})
-	if err != nil {
-		return nil, err
-	}
-	if len(projects) == 0 {
-		return nil, nil
-	}
-	if len(projects) > 1 {
-		return nil, fmt.Errorf("multiple projects found with display name %q", projectName)
-	}
-	return projects[0], nil
-}
-
-func getProjectsByNames(
-	ctx context.Context,
-	client cloudservice.CloudServiceClient,
-	projectNames []string,
-) ([]*projectv1.Project, error) {
-	names := make(map[string]struct{}, len(projectNames))
-	for _, projectName := range projectNames {
-		names[projectName] = struct{}{}
-	}
-
-	var projects []*projectv1.Project
+	var match *projectv1.Project
 	var pageToken string
 	for {
 		res, err := client.GetProjects(ctx, &cloudservice.GetProjectsRequest{
@@ -324,14 +301,18 @@ func getProjectsByNames(
 		}
 
 		for _, project := range res.Projects {
-			if _, ok := names[project.GetSpec().GetDisplayName()]; ok {
-				projects = append(projects, project)
+			if project.GetSpec().GetDisplayName() != projectName {
+				continue
 			}
+			if match != nil {
+				return nil, fmt.Errorf("multiple projects found with display name %q", projectName)
+			}
+			match = project
 		}
 
 		pageToken = res.GetNextPageToken()
 		if pageToken == "" {
-			return projects, nil
+			return match, nil
 		}
 	}
 }
