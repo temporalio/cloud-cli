@@ -124,10 +124,11 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 		return err
 	}
 	client := newNamespaceClient(withCloudClient(cloudClient))
+	projectID := c.ProjectId
 
 	// Step 4: Retrieve existing namespace
 	var found bool
-	existing, err := client.getNamespaceByName(cctx.Context, spec.Name, c.ProjectId)
+	existing, err := client.getNamespaceByName(cctx.Context, spec.Name, projectID)
 	if err != nil && !isNotFoundErr(err) {
 		return err
 	} else if err == nil {
@@ -178,7 +179,7 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 		res, err := client.createNamespace(cctx.Context, createNamespaceParams{
 			spec:             spec,
 			asyncOperationID: c.AsyncOperationId,
-			projectID:        c.ProjectId,
+			projectID:        projectID,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create namespace: %w", err)
@@ -282,12 +283,13 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 	}
 
 	client := newNamespaceClient(withCloudClient(cloudClient))
+	projectID := c.ProjectId
 
 	namespaces, nextPageToken, err := client.getNamespaces(cctx.Context, getNamespacesParams{
 		pageSize:  int32(c.PageSize),
 		pageToken: c.PageToken,
 		name:      c.Name,
-		projectID: c.ProjectId,
+		projectID: projectID,
 	})
 	if err != nil {
 		return err
@@ -444,6 +446,7 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 	if c.Command.Flags().Changed("enable-task-queue-fairness") {
 		enableTaskQueueFairness = &c.EnableTaskQueueFairness
 	}
+	projectID := c.ProjectId
 
 	return CreateNamespace(cctx.Context, CreateNamespaceParams{
 		Name:                               c.Name,
@@ -461,7 +464,7 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		CodecPassAccessToken:               c.CodecPassAccessToken,
 		CodecIncludeCrossOriginCredentials: c.CodecIncludeCrossOriginCredentials,
 		ConnectionRuleIDs:                  c.ConnectionRuleId,
-		ProjectID:                          c.ProjectId,
+		ProjectID:                          projectID,
 		Cloud:                              cloudClient.CloudService(),
 		Printer:                            cctx.Printer,
 		Prompter:                           newPrompter(cctx),
