@@ -143,6 +143,52 @@ type (
 		Cloud   cloudservice.CloudServiceClient
 		Printer *printer.Printer
 	}
+
+	CreateAzureBlobExportSinkParams struct {
+		Namespace        string
+		SinkName         string
+		TenantID         string
+		SubscriptionID   string
+		ResourceGroup    string
+		StorageAccount   string
+		ContainerName    string
+		Region           string
+		AsyncOperationID string
+
+		Cloud            cloudservice.CloudServiceClient
+		Prompter         Prompter
+		OperationHandler AsyncOperationHandler
+	}
+
+	UpdateAzureBlobExportSinkParams struct {
+		Namespace        string
+		SinkName         string
+		TenantID         string
+		SubscriptionID   string
+		ResourceGroup    string
+		StorageAccount   string
+		ContainerName    string
+		ResourceVersion  string
+		AsyncOperationID string
+
+		Cloud            cloudservice.CloudServiceClient
+		Prompter         Prompter
+		OperationHandler AsyncOperationHandler
+	}
+
+	ValidateAzureBlobExportSinkParams struct {
+		Namespace      string
+		SinkName       string
+		TenantID       string
+		SubscriptionID string
+		ResourceGroup  string
+		StorageAccount string
+		ContainerName  string
+		Region         string
+
+		Cloud   cloudservice.CloudServiceClient
+		Printer *printer.Printer
+	}
 )
 
 func GetExportSink(ctx context.Context, params GetExportSinkParams) error {
@@ -476,6 +522,110 @@ func ValidateGCSExportSink(ctx context.Context, params ValidateGCSExportSinkPara
 	)
 }
 
+func CreateAzureBlobExportSink(ctx context.Context, params CreateAzureBlobExportSinkParams) error {
+	spec := &namespacev1.ExportSinkSpec{
+		Name:    params.SinkName,
+		Enabled: true,
+		AzureBlob: &sinkv1.AzureBlobSpec{
+			TenantId:       params.TenantID,
+			SubscriptionId: params.SubscriptionID,
+			ResourceGroup:  params.ResourceGroup,
+			StorageAccount: params.StorageAccount,
+			ContainerName:  params.ContainerName,
+			Region:         params.Region,
+		},
+	}
+	if err := params.Prompter.PromptApply(&namespacev1.ExportSinkSpec{}, spec, false); err != nil {
+		return err
+	}
+	createSink := wrapCreateOperation(
+		params.Cloud.CreateNamespaceExportSink,
+		params.OperationHandler,
+		func(_ *cloudservice.CreateNamespaceExportSinkResponse) string { return params.SinkName },
+	)
+	return createSink(ctx, &cloudservice.CreateNamespaceExportSinkRequest{
+		Namespace:        params.Namespace,
+		Spec:             spec,
+		AsyncOperationId: params.AsyncOperationID,
+	})
+}
+
+func UpdateAzureBlobExportSink(ctx context.Context, params UpdateAzureBlobExportSinkParams) error {
+	sinkRes, err := params.Cloud.GetNamespaceExportSink(ctx, &cloudservice.GetNamespaceExportSinkRequest{
+		Namespace: params.Namespace,
+		Name:      params.SinkName,
+	})
+	if err != nil {
+		return err
+	}
+	sink := sinkRes.Sink
+
+	rv := sink.ResourceVersion
+	if params.ResourceVersion != "" {
+		rv = params.ResourceVersion
+	}
+
+	oldSpec := sink.Spec
+	newAzureBlob := proto.Clone(oldSpec.GetAzureBlob()).(*sinkv1.AzureBlobSpec)
+	if params.TenantID != "" {
+		newAzureBlob.TenantId = params.TenantID
+	}
+	if params.SubscriptionID != "" {
+		newAzureBlob.SubscriptionId = params.SubscriptionID
+	}
+	if params.ResourceGroup != "" {
+		newAzureBlob.ResourceGroup = params.ResourceGroup
+	}
+	if params.StorageAccount != "" {
+		newAzureBlob.StorageAccount = params.StorageAccount
+	}
+	if params.ContainerName != "" {
+		newAzureBlob.ContainerName = params.ContainerName
+	}
+	newSpec := &namespacev1.ExportSinkSpec{
+		Name:      params.SinkName,
+		Enabled:   oldSpec.GetEnabled(),
+		AzureBlob: newAzureBlob,
+	}
+
+	if err := params.Prompter.PromptApply(oldSpec, newSpec, false); err != nil {
+		return err
+	}
+
+	updateSink := wrapUpdateOperation(params.Cloud.UpdateNamespaceExportSink, params.OperationHandler, params.SinkName)
+	return updateSink(ctx, &cloudservice.UpdateNamespaceExportSinkRequest{
+		Namespace:        params.Namespace,
+		Spec:             newSpec,
+		ResourceVersion:  rv,
+		AsyncOperationId: params.AsyncOperationID,
+	})
+}
+
+func ValidateAzureBlobExportSink(ctx context.Context, params ValidateAzureBlobExportSinkParams) error {
+	spec := &namespacev1.ExportSinkSpec{
+		Name: params.SinkName,
+		AzureBlob: &sinkv1.AzureBlobSpec{
+			TenantId:       params.TenantID,
+			SubscriptionId: params.SubscriptionID,
+			ResourceGroup:  params.ResourceGroup,
+			StorageAccount: params.StorageAccount,
+			ContainerName:  params.ContainerName,
+			Region:         params.Region,
+		},
+	}
+	_, err := params.Cloud.ValidateNamespaceExportSink(ctx, &cloudservice.ValidateNamespaceExportSinkRequest{
+		Namespace: params.Namespace,
+		Spec:      spec,
+	})
+	if err != nil {
+		return err
+	}
+	return params.Printer.PrintStructured(
+		struct{ Status string }{Status: fmt.Sprintf("Export sink %q configuration is valid.", params.SinkName)},
+		printer.StructuredOptions{},
+	)
+}
+
 func (c *CloudNamespaceExportGetCommand) run(cctx *CommandContext, _ []string) error {
 	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
 	if err != nil {
@@ -691,5 +841,66 @@ func (c *CloudNamespaceExportGcsValidateCommand) run(cctx *CommandContext, _ []s
 		Region:       c.Region,
 		Cloud:        cloudClient.CloudService(),
 		Printer:      cctx.Printer,
+	})
+}
+
+func (c *CloudNamespaceExportAzureBlobCreateCommand) run(cctx *CommandContext, _ []string) error {
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	return CreateAzureBlobExportSink(cctx.Context, CreateAzureBlobExportSinkParams{
+		Namespace:        c.Namespace,
+		SinkName:         c.SinkName,
+		TenantID:         c.TenantId,
+		SubscriptionID:   c.SubscriptionId,
+		ResourceGroup:    c.ResourceGroup,
+		StorageAccount:   c.StorageAccount,
+		ContainerName:    c.ContainerName,
+		Region:           c.Region,
+		AsyncOperationID: c.AsyncOperationId,
+		Cloud:            cloudClient.CloudService(),
+		Prompter:         newPrompter(cctx),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
+	})
+}
+
+func (c *CloudNamespaceExportAzureBlobUpdateCommand) run(cctx *CommandContext, _ []string) error {
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	return UpdateAzureBlobExportSink(cctx.Context, UpdateAzureBlobExportSinkParams{
+		Namespace:        c.Namespace,
+		SinkName:         c.SinkName,
+		TenantID:         c.TenantId,
+		SubscriptionID:   c.SubscriptionId,
+		ResourceGroup:    c.ResourceGroup,
+		StorageAccount:   c.StorageAccount,
+		ContainerName:    c.ContainerName,
+		ResourceVersion:  c.ResourceVersion,
+		AsyncOperationID: c.AsyncOperationId,
+		Cloud:            cloudClient.CloudService(),
+		Prompter:         newPrompter(cctx),
+		OperationHandler: NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
+	})
+}
+
+func (c *CloudNamespaceExportAzureBlobValidateCommand) run(cctx *CommandContext, _ []string) error {
+	cloudClient, err := cctx.BuildCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	return ValidateAzureBlobExportSink(cctx.Context, ValidateAzureBlobExportSinkParams{
+		Namespace:      c.Namespace,
+		SinkName:       c.SinkName,
+		TenantID:       c.TenantId,
+		SubscriptionID: c.SubscriptionId,
+		ResourceGroup:  c.ResourceGroup,
+		StorageAccount: c.StorageAccount,
+		ContainerName:  c.ContainerName,
+		Region:         c.Region,
+		Cloud:          cloudClient.CloudService(),
+		Printer:        cctx.Printer,
 	})
 }

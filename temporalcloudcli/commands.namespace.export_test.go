@@ -38,6 +38,18 @@ func testGCSSpec() *sinkv1.GCSSpec {
 	}
 }
 
+// testAzureBlobSpec returns a sample Azure Blob spec for use in tests.
+func testAzureBlobSpec() *sinkv1.AzureBlobSpec {
+	return &sinkv1.AzureBlobSpec{
+		TenantId:       "my-tenant",
+		SubscriptionId: "my-subscription",
+		ResourceGroup:  "my-resource-group",
+		StorageAccount: "my-storage-account",
+		ContainerName:  "my-container",
+		Region:         "eastus",
+	}
+}
+
 // testExportSink returns a sample ExportSink with an S3 spec for use in tests.
 func testExportSink(enabled bool) *namespacev1.ExportSink {
 	return &namespacev1.ExportSink{
@@ -520,14 +532,14 @@ func TestCreateS3ExportSink_Success(t *testing.T) {
 		Return(nil)
 
 	err := temporalcloudcli.CreateS3ExportSink(context.Background(), temporalcloudcli.CreateS3ExportSinkParams{
-		Namespace:    "my-namespace",
-		SinkName:     "my-sink",
-		RoleName:     "my-role",
-		BucketName:   "my-bucket",
-		Region:       "us-east-1",
-		AwsAccountID: "123456789012",
-		Cloud:        mockCloud,
-		Prompter:     mockPrompter,
+		Namespace:        "my-namespace",
+		SinkName:         "my-sink",
+		RoleName:         "my-role",
+		BucketName:       "my-bucket",
+		Region:           "us-east-1",
+		AwsAccountID:     "123456789012",
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
 		OperationHandler: mockHandler,
 	})
 	require.NoError(t, err)
@@ -1206,6 +1218,381 @@ func TestValidateGCSExportSink_Error(t *testing.T) {
 		Region:       "us-central1",
 		Cloud:        mockCloud,
 		Printer:      newTestPrinter(&buf),
+	})
+	require.ErrorIs(t, err, apiErr)
+}
+
+// --- CreateAzureBlobExportSink ---
+
+func TestCreateAzureBlobExportSink_Success(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+
+	expectedSpec := &namespacev1.ExportSinkSpec{
+		Name:      "my-sink",
+		Enabled:   true,
+		AzureBlob: testAzureBlobSpec(),
+	}
+	mockPrompter.EXPECT().
+		PromptApply(&namespacev1.ExportSinkSpec{}, expectedSpec, false).
+		Return(nil)
+
+	op := &operation.AsyncOperation{Id: "op-123"}
+	mockCloud.EXPECT().
+		CreateNamespaceExportSink(context.Background(), &cloudservice.CreateNamespaceExportSinkRequest{
+			Namespace: "my-namespace",
+			Spec:      expectedSpec,
+		}).
+		Return(&cloudservice.CreateNamespaceExportSinkResponse{AsyncOperation: op}, nil)
+
+	mockHandler.EXPECT().
+		HandleOperation(op, "my-sink").
+		Return(nil)
+
+	err := temporalcloudcli.CreateAzureBlobExportSink(context.Background(), temporalcloudcli.CreateAzureBlobExportSinkParams{
+		Namespace:        "my-namespace",
+		SinkName:         "my-sink",
+		TenantID:         "my-tenant",
+		SubscriptionID:   "my-subscription",
+		ResourceGroup:    "my-resource-group",
+		StorageAccount:   "my-storage-account",
+		ContainerName:    "my-container",
+		Region:           "eastus",
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
+		OperationHandler: mockHandler,
+	})
+	require.NoError(t, err)
+}
+
+func TestCreateAzureBlobExportSink_PromptDeclined(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	promptErr := errors.New("Aborting apply.")
+
+	expectedSpec := &namespacev1.ExportSinkSpec{
+		Name:      "my-sink",
+		Enabled:   true,
+		AzureBlob: testAzureBlobSpec(),
+	}
+	mockPrompter.EXPECT().
+		PromptApply(&namespacev1.ExportSinkSpec{}, expectedSpec, false).
+		Return(promptErr)
+
+	err := temporalcloudcli.CreateAzureBlobExportSink(context.Background(), temporalcloudcli.CreateAzureBlobExportSinkParams{
+		Namespace:        "my-namespace",
+		SinkName:         "my-sink",
+		TenantID:         "my-tenant",
+		SubscriptionID:   "my-subscription",
+		ResourceGroup:    "my-resource-group",
+		StorageAccount:   "my-storage-account",
+		ContainerName:    "my-container",
+		Region:           "eastus",
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
+		OperationHandler: mockHandler,
+	})
+	require.ErrorIs(t, err, promptErr)
+}
+
+func TestCreateAzureBlobExportSink_CreateError(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	createErr := errors.New("create error")
+
+	expectedSpec := &namespacev1.ExportSinkSpec{
+		Name:      "my-sink",
+		Enabled:   true,
+		AzureBlob: testAzureBlobSpec(),
+	}
+	mockPrompter.EXPECT().
+		PromptApply(&namespacev1.ExportSinkSpec{}, expectedSpec, false).
+		Return(nil)
+
+	mockCloud.EXPECT().
+		CreateNamespaceExportSink(context.Background(), &cloudservice.CreateNamespaceExportSinkRequest{
+			Namespace: "my-namespace",
+			Spec:      expectedSpec,
+		}).
+		Return(nil, createErr)
+
+	mockHandler.EXPECT().
+		HandleCreateErr(createErr).
+		Return(createErr)
+
+	err := temporalcloudcli.CreateAzureBlobExportSink(context.Background(), temporalcloudcli.CreateAzureBlobExportSinkParams{
+		Namespace:        "my-namespace",
+		SinkName:         "my-sink",
+		TenantID:         "my-tenant",
+		SubscriptionID:   "my-subscription",
+		ResourceGroup:    "my-resource-group",
+		StorageAccount:   "my-storage-account",
+		ContainerName:    "my-container",
+		Region:           "eastus",
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
+		OperationHandler: mockHandler,
+	})
+	require.ErrorIs(t, err, createErr)
+}
+
+// --- UpdateAzureBlobExportSink ---
+
+func TestUpdateAzureBlobExportSink_Success(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+
+	existingSink := &namespacev1.ExportSink{
+		ResourceVersion: "rv-1",
+		Spec: &namespacev1.ExportSinkSpec{
+			Name:      "my-sink",
+			Enabled:   true,
+			AzureBlob: testAzureBlobSpec(),
+		},
+	}
+	mockCloud.EXPECT().
+		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
+			Namespace: "my-namespace",
+			Name:      "my-sink",
+		}).
+		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: existingSink}, nil)
+
+	newSpec := &namespacev1.ExportSinkSpec{
+		Name:    "my-sink",
+		Enabled: true,
+		AzureBlob: &sinkv1.AzureBlobSpec{
+			TenantId:       "new-tenant",
+			SubscriptionId: "my-subscription",
+			ResourceGroup:  "my-resource-group",
+			StorageAccount: "my-storage-account",
+			ContainerName:  "my-container",
+			Region:         "eastus",
+		},
+	}
+	mockPrompter.EXPECT().
+		PromptApply(existingSink.Spec, newSpec, false).
+		Return(nil)
+
+	op := &operation.AsyncOperation{Id: "op-123"}
+	mockCloud.EXPECT().
+		UpdateNamespaceExportSink(context.Background(), &cloudservice.UpdateNamespaceExportSinkRequest{
+			Namespace:       "my-namespace",
+			Spec:            newSpec,
+			ResourceVersion: "rv-1",
+		}).
+		Return(&cloudservice.UpdateNamespaceExportSinkResponse{AsyncOperation: op}, nil)
+
+	mockHandler.EXPECT().
+		HandleOperation(op, "my-sink").
+		Return(nil)
+
+	err := temporalcloudcli.UpdateAzureBlobExportSink(context.Background(), temporalcloudcli.UpdateAzureBlobExportSinkParams{
+		Namespace:        "my-namespace",
+		SinkName:         "my-sink",
+		TenantID:         "new-tenant",
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
+		OperationHandler: mockHandler,
+	})
+	require.NoError(t, err)
+}
+
+func TestUpdateAzureBlobExportSink_PromptDeclined(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	promptErr := errors.New("Aborting apply.")
+
+	existingSink := &namespacev1.ExportSink{
+		ResourceVersion: "rv-1",
+		Spec: &namespacev1.ExportSinkSpec{
+			Name:      "my-sink",
+			Enabled:   true,
+			AzureBlob: testAzureBlobSpec(),
+		},
+	}
+	mockCloud.EXPECT().
+		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
+			Namespace: "my-namespace",
+			Name:      "my-sink",
+		}).
+		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: existingSink}, nil)
+
+	newSpec := &namespacev1.ExportSinkSpec{
+		Name:    "my-sink",
+		Enabled: true,
+		AzureBlob: &sinkv1.AzureBlobSpec{
+			TenantId:       "new-tenant",
+			SubscriptionId: "my-subscription",
+			ResourceGroup:  "my-resource-group",
+			StorageAccount: "my-storage-account",
+			ContainerName:  "my-container",
+			Region:         "eastus",
+		},
+	}
+	mockPrompter.EXPECT().
+		PromptApply(existingSink.Spec, newSpec, false).
+		Return(promptErr)
+
+	err := temporalcloudcli.UpdateAzureBlobExportSink(context.Background(), temporalcloudcli.UpdateAzureBlobExportSinkParams{
+		Namespace:        "my-namespace",
+		SinkName:         "my-sink",
+		TenantID:         "new-tenant",
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
+		OperationHandler: mockHandler,
+	})
+	require.ErrorIs(t, err, promptErr)
+}
+
+func TestUpdateAzureBlobExportSink_GetSinkError(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	apiErr := errors.New("api error")
+
+	mockCloud.EXPECT().
+		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
+			Namespace: "my-namespace",
+			Name:      "my-sink",
+		}).
+		Return(nil, apiErr)
+
+	err := temporalcloudcli.UpdateAzureBlobExportSink(context.Background(), temporalcloudcli.UpdateAzureBlobExportSinkParams{
+		Namespace:        "my-namespace",
+		SinkName:         "my-sink",
+		TenantID:         "my-tenant",
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
+		OperationHandler: mockHandler,
+	})
+	require.ErrorIs(t, err, apiErr)
+}
+
+func TestUpdateAzureBlobExportSink_PartialUpdate(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+
+	existingSink := &namespacev1.ExportSink{
+		ResourceVersion: "rv-1",
+		Spec: &namespacev1.ExportSinkSpec{
+			Name:      "my-sink",
+			Enabled:   true,
+			AzureBlob: testAzureBlobSpec(),
+		},
+	}
+	mockCloud.EXPECT().
+		GetNamespaceExportSink(context.Background(), &cloudservice.GetNamespaceExportSinkRequest{
+			Namespace: "my-namespace",
+			Name:      "my-sink",
+		}).
+		Return(&cloudservice.GetNamespaceExportSinkResponse{Sink: existingSink}, nil)
+
+	// Only the storage account and container name change; the rest must be preserved.
+	expectedNewSpec := &namespacev1.ExportSinkSpec{
+		Name:    "my-sink",
+		Enabled: true,
+		AzureBlob: &sinkv1.AzureBlobSpec{
+			TenantId:       "my-tenant",
+			SubscriptionId: "my-subscription",
+			ResourceGroup:  "my-resource-group",
+			StorageAccount: "new-storage-account",
+			ContainerName:  "new-container",
+			Region:         "eastus",
+		},
+	}
+	mockPrompter.EXPECT().
+		PromptApply(existingSink.Spec, expectedNewSpec, false).
+		Return(nil)
+
+	op := &operation.AsyncOperation{Id: "op-partial-azure"}
+	mockCloud.EXPECT().
+		UpdateNamespaceExportSink(context.Background(), &cloudservice.UpdateNamespaceExportSinkRequest{
+			Namespace:       "my-namespace",
+			Spec:            expectedNewSpec,
+			ResourceVersion: "rv-1",
+		}).
+		Return(&cloudservice.UpdateNamespaceExportSinkResponse{AsyncOperation: op}, nil)
+
+	mockHandler.EXPECT().
+		HandleOperation(op, "my-sink").
+		Return(nil)
+
+	err := temporalcloudcli.UpdateAzureBlobExportSink(context.Background(), temporalcloudcli.UpdateAzureBlobExportSinkParams{
+		Namespace:        "my-namespace",
+		SinkName:         "my-sink",
+		StorageAccount:   "new-storage-account",
+		ContainerName:    "new-container",
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
+		OperationHandler: mockHandler,
+	})
+	require.NoError(t, err)
+}
+
+// --- ValidateAzureBlobExportSink ---
+
+func TestValidateAzureBlobExportSink_Success(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+
+	mockCloud.EXPECT().
+		ValidateNamespaceExportSink(context.Background(), &cloudservice.ValidateNamespaceExportSinkRequest{
+			Namespace: "my-namespace",
+			Spec: &namespacev1.ExportSinkSpec{
+				Name:      "my-sink",
+				AzureBlob: testAzureBlobSpec(),
+			},
+		}).
+		Return(&cloudservice.ValidateNamespaceExportSinkResponse{}, nil)
+
+	var buf bytes.Buffer
+	err := temporalcloudcli.ValidateAzureBlobExportSink(context.Background(), temporalcloudcli.ValidateAzureBlobExportSinkParams{
+		Namespace:      "my-namespace",
+		SinkName:       "my-sink",
+		TenantID:       "my-tenant",
+		SubscriptionID: "my-subscription",
+		ResourceGroup:  "my-resource-group",
+		StorageAccount: "my-storage-account",
+		ContainerName:  "my-container",
+		Region:         "eastus",
+		Cloud:          mockCloud,
+		Printer:        newTestPrinter(&buf),
+	})
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "my-sink")
+}
+
+func TestValidateAzureBlobExportSink_Error(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	apiErr := errors.New("invalid config")
+
+	mockCloud.EXPECT().
+		ValidateNamespaceExportSink(context.Background(), &cloudservice.ValidateNamespaceExportSinkRequest{
+			Namespace: "my-namespace",
+			Spec: &namespacev1.ExportSinkSpec{
+				Name:      "my-sink",
+				AzureBlob: testAzureBlobSpec(),
+			},
+		}).
+		Return(nil, apiErr)
+
+	var buf bytes.Buffer
+	err := temporalcloudcli.ValidateAzureBlobExportSink(context.Background(), temporalcloudcli.ValidateAzureBlobExportSinkParams{
+		Namespace:      "my-namespace",
+		SinkName:       "my-sink",
+		TenantID:       "my-tenant",
+		SubscriptionID: "my-subscription",
+		ResourceGroup:  "my-resource-group",
+		StorageAccount: "my-storage-account",
+		ContainerName:  "my-container",
+		Region:         "eastus",
+		Cloud:          mockCloud,
+		Printer:        newTestPrinter(&buf),
 	})
 	require.ErrorIs(t, err, apiErr)
 }

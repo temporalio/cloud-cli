@@ -222,6 +222,40 @@ func (v *ExportGcsRegionOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "region")
 }
 
+type ExportAzureBlobOptions struct {
+	TenantId       string
+	SubscriptionId string
+	ResourceGroup  string
+	StorageAccount string
+	ContainerName  string
+	FlagSet        *pflag.FlagSet
+}
+
+func (v *ExportAzureBlobOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.TenantId, "tenant-id", "", "The Azure tenant ID where the storage account exists and where Temporal's app registration is consented/granted access. Required.")
+	_ = cobra.MarkFlagRequired(f, "tenant-id")
+	f.StringVar(&v.SubscriptionId, "subscription-id", "", "The Azure subscription ID that contains the storage account. Required.")
+	_ = cobra.MarkFlagRequired(f, "subscription-id")
+	f.StringVar(&v.ResourceGroup, "resource-group", "", "The Azure resource group that contains the storage account. Required.")
+	_ = cobra.MarkFlagRequired(f, "resource-group")
+	f.StringVar(&v.StorageAccount, "storage-account", "", "The name of the destination Azure storage account where Temporal will send data. Required.")
+	_ = cobra.MarkFlagRequired(f, "storage-account")
+	f.StringVar(&v.ContainerName, "container-name", "", "The name of the destination Azure Blob container where Temporal will send data. Required.")
+	_ = cobra.MarkFlagRequired(f, "container-name")
+}
+
+type ExportAzureBlobRegionOptions struct {
+	Region  string
+	FlagSet *pflag.FlagSet
+}
+
+func (v *ExportAzureBlobRegionOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.Region, "region", "", "The region where the Azure storage account is located. Required.")
+	_ = cobra.MarkFlagRequired(f, "region")
+}
+
 type CloudCommand struct {
 	Command cobra.Command
 	ClientOptions
@@ -250,6 +284,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.Command.AddCommand(&NewCloudLogoutCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNexusCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudProjectCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudRegionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudServiceAccountCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserCommand(cctx, &s).Command)
@@ -2488,8 +2523,9 @@ func NewCloudNamespaceExportCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Parent = parent
 	s.Command.Use = "export"
 	s.Command.Short = "Manage workflow history export sinks for namespaces"
-	s.Command.Long = "Commands for managing workflow history export sinks for Temporal Cloud namespaces.\n\nExport sinks define destinations (S3 or GCS) to which workflow history is exported."
+	s.Command.Long = "Commands for managing workflow history export sinks for Temporal Cloud namespaces.\n\nExport sinks define destinations (S3, GCS, or Azure Blob) to which workflow history is exported."
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceExportAzureBlobCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceExportDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceExportDisableCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceExportEnableCommand(cctx, &s).Command)
@@ -2497,6 +2533,141 @@ func NewCloudNamespaceExportCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Command.AddCommand(&NewCloudNamespaceExportGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceExportListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceExportS3Command(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceExportAzureBlobCommand struct {
+	Parent  *CloudNamespaceExportCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceExportAzureBlobCommand(cctx *CommandContext, parent *CloudNamespaceExportCommand) *CloudNamespaceExportAzureBlobCommand {
+	var s CloudNamespaceExportAzureBlobCommand
+	s.Parent = parent
+	s.Command.Use = "azure-blob"
+	s.Command.Short = "Manage Azure Blob workflow history export sinks"
+	s.Command.Long = "Commands for managing Azure Blob workflow history export sinks for Temporal Cloud namespaces."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceExportAzureBlobCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceExportAzureBlobUpdateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceExportAzureBlobValidateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceExportAzureBlobCreateCommand struct {
+	Parent  *CloudNamespaceExportAzureBlobCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ExportSinkOptions
+	ExportAzureBlobOptions
+	ExportAzureBlobRegionOptions
+}
+
+func NewCloudNamespaceExportAzureBlobCreateCommand(cctx *CommandContext, parent *CloudNamespaceExportAzureBlobCommand) *CloudNamespaceExportAzureBlobCreateCommand {
+	var s CloudNamespaceExportAzureBlobCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create an Azure Blob workflow history export sink"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Azure Blob workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export azure-blob create --namespace my-namespace.my-account --sink-name my-sink \\\n  --tenant-id 11111111-1111-1111-1111-111111111111 \\\n  --subscription-id 22222222-2222-2222-2222-222222222222 \\\n  --resource-group my-resource-group --storage-account my-storage-account \\\n  --container-name my-container --region eastus\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new Azure Blob workflow history export sink for a Temporal Cloud namespace.\nThe sink is created in the enabled state.\n\nExample:\n\n```\ntemporal cloud namespace export azure-blob create --namespace my-namespace.my-account --sink-name my-sink \\\n  --tenant-id 11111111-1111-1111-1111-111111111111 \\\n  --subscription-id 22222222-2222-2222-2222-222222222222 \\\n  --resource-group my-resource-group --storage-account my-storage-account \\\n  --container-name my-container --region eastus\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
+	s.ExportAzureBlobOptions.BuildFlags(s.Command.Flags())
+	s.ExportAzureBlobRegionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceExportAzureBlobUpdateCommand struct {
+	Parent  *CloudNamespaceExportAzureBlobCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ExportSinkOptions
+	TenantId       string
+	SubscriptionId string
+	ResourceGroup  string
+	StorageAccount string
+	ContainerName  string
+}
+
+func NewCloudNamespaceExportAzureBlobUpdateCommand(cctx *CommandContext, parent *CloudNamespaceExportAzureBlobCommand) *CloudNamespaceExportAzureBlobUpdateCommand {
+	var s CloudNamespaceExportAzureBlobUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update an Azure Blob workflow history export sink"
+	if hasHighlighting {
+		s.Command.Long = "Update the configuration of an existing Azure Blob workflow history export sink.\nOnly the flags you provide are changed; omitted flags keep their current\nvalues. The enabled/disabled state and region are also preserved.\n\nExample (rotate storage account only):\n\n\x1b[1mtemporal cloud namespace export azure-blob update --namespace my-namespace.my-account --sink-name my-sink \\\n  --storage-account my-new-storage-account\x1b[0m"
+	} else {
+		s.Command.Long = "Update the configuration of an existing Azure Blob workflow history export sink.\nOnly the flags you provide are changed; omitted flags keep their current\nvalues. The enabled/disabled state and region are also preserved.\n\nExample (rotate storage account only):\n\n```\ntemporal cloud namespace export azure-blob update --namespace my-namespace.my-account --sink-name my-sink \\\n  --storage-account my-new-storage-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.TenantId, "tenant-id", "", "The Azure tenant ID where the storage account exists and where Temporal's app registration is consented/granted access. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.SubscriptionId, "subscription-id", "", "The Azure subscription ID that contains the storage account. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.ResourceGroup, "resource-group", "", "The Azure resource group that contains the storage account. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.StorageAccount, "storage-account", "", "The name of the destination Azure storage account where Temporal will send data. If omitted, the current value is kept.")
+	s.Command.Flags().StringVar(&s.ContainerName, "container-name", "", "The name of the destination Azure Blob container where Temporal will send data. If omitted, the current value is kept.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceExportAzureBlobValidateCommand struct {
+	Parent  *CloudNamespaceExportAzureBlobCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	ExportSinkOptions
+	ExportAzureBlobOptions
+	ExportAzureBlobRegionOptions
+}
+
+func NewCloudNamespaceExportAzureBlobValidateCommand(cctx *CommandContext, parent *CloudNamespaceExportAzureBlobCommand) *CloudNamespaceExportAzureBlobValidateCommand {
+	var s CloudNamespaceExportAzureBlobValidateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "validate [flags]"
+	s.Command.Short = "Validate an Azure Blob workflow history export sink configuration"
+	if hasHighlighting {
+		s.Command.Long = "Validate an Azure Blob workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n\x1b[1mtemporal cloud namespace export azure-blob validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --tenant-id 11111111-1111-1111-1111-111111111111 \\\n  --subscription-id 22222222-2222-2222-2222-222222222222 \\\n  --resource-group my-resource-group --storage-account my-storage-account \\\n  --container-name my-container --region eastus\x1b[0m"
+	} else {
+		s.Command.Long = "Validate an Azure Blob workflow history export sink configuration without creating or updating it.\nA successful response means the configuration is valid.\n\nExample:\n\n```\ntemporal cloud namespace export azure-blob validate --namespace my-namespace.my-account --sink-name my-sink \\\n  --tenant-id 11111111-1111-1111-1111-111111111111 \\\n  --subscription-id 22222222-2222-2222-2222-222222222222 \\\n  --resource-group my-resource-group --storage-account my-storage-account \\\n  --container-name my-container --region eastus\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
+	s.ExportAzureBlobOptions.BuildFlags(s.Command.Flags())
+	s.ExportAzureBlobRegionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
@@ -4613,6 +4784,275 @@ func NewCloudNexusEndpointUpdateCommand(cctx *CommandContext, parent *CloudNexus
 	s.Command.Flags().StringVar(&s.Description, "description", "", "An optional endpoint description in markdown format.")
 	s.Command.Flags().StringVar(&s.DescriptionFile, "description-file", "", "Path to a file containing an endpoint description in markdown format. Mutually exclusive with --description.")
 	s.Command.Flags().BoolVar(&s.UnsetDescription, "unset-description", false, "Unset the endpoint description. Cannot be used with --description or --description-file.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudProjectCommand struct {
+	Parent  *CloudCommand
+	Command cobra.Command
+}
+
+func NewCloudProjectCommand(cctx *CommandContext, parent *CloudCommand) *CloudProjectCommand {
+	var s CloudProjectCommand
+	s.Parent = parent
+	s.Command.Use = "project"
+	s.Command.Short = "Manage Temporal Cloud projects"
+	s.Command.Long = "Commands for managing Temporal Cloud projects.\n\nProjects provide an account-level grouping for Temporal Cloud resources."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudProjectApplyCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudProjectCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudProjectDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudProjectEditCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudProjectGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudProjectListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudProjectUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudProjectApplyCommand struct {
+	Parent  *CloudProjectCommand
+	Command cobra.Command
+	ClientOptions
+	DiffOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ProjectId string
+	Spec      string
+}
+
+func NewCloudProjectApplyCommand(cctx *CommandContext, parent *CloudProjectCommand) *CloudProjectApplyCommand {
+	var s CloudProjectApplyCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "apply [flags]"
+	s.Command.Short = "Create or update a project from a specification"
+	if hasHighlighting {
+		s.Command.Long = "Apply a project configuration to Temporal Cloud. If --project-id is\nprovided, the existing project is updated. Otherwise, a new project is\ncreated because project IDs are generated by the server.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample:\n\n\x1b[1mtemporal cloud project apply --spec '{\"display_name\": \"Engineering\", \"description\": \"Engineering workloads\"}'\x1b[0m"
+	} else {
+		s.Command.Long = "Apply a project configuration to Temporal Cloud. If --project-id is\nprovided, the existing project is updated. Otherwise, a new project is\ncreated because project IDs are generated by the server.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample:\n\n```\ntemporal cloud project apply --spec '{\"display_name\": \"Engineering\", \"description\": \"Engineering workloads\"}'\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to update. Omit to create a new project.")
+	s.Command.Flags().StringVar(&s.Spec, "spec", "", "Project configuration in JSON format. Provide inline JSON directly, or use '@path/to/file.json' to load from a file. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "spec")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudProjectCreateCommand struct {
+	Parent  *CloudProjectCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	DisplayName            string
+	Description            string
+	EnableDeleteProtection bool
+}
+
+func NewCloudProjectCreateCommand(cctx *CommandContext, parent *CloudProjectCommand) *CloudProjectCreateCommand {
+	var s CloudProjectCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a project"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Temporal Cloud project.\n\nExample:\n\n\x1b[1mtemporal cloud project create --display-name \"Engineering\" --description \"Engineering workloads\"\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new Temporal Cloud project.\n\nExample:\n\n```\ntemporal cloud project create --display-name \"Engineering\" --description \"Engineering workloads\"\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.DisplayName, "display-name", "", "The display name of the project. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "display-name")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "A description of the project.")
+	s.Command.Flags().BoolVar(&s.EnableDeleteProtection, "enable-delete-protection", false, "Prevent the project from being deleted while enabled.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudProjectDeleteCommand struct {
+	Parent  *CloudProjectCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ProjectId string
+}
+
+func NewCloudProjectDeleteCommand(cctx *CommandContext, parent *CloudProjectCommand) *CloudProjectDeleteCommand {
+	var s CloudProjectDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a project"
+	if hasHighlighting {
+		s.Command.Long = "Delete a Temporal Cloud project.\n\nExample:\n\n\x1b[1mtemporal cloud project delete --project-id my-project-id\x1b[0m"
+	} else {
+		s.Command.Long = "Delete a Temporal Cloud project.\n\nExample:\n\n```\ntemporal cloud project delete --project-id my-project-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "project-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudProjectEditCommand struct {
+	Parent  *CloudProjectCommand
+	Command cobra.Command
+	ClientOptions
+	DiffOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ProjectId string
+}
+
+func NewCloudProjectEditCommand(cctx *CommandContext, parent *CloudProjectCommand) *CloudProjectEditCommand {
+	var s CloudProjectEditCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "edit [flags]"
+	s.Command.Short = "Interactively edit a project"
+	if hasHighlighting {
+		s.Command.Long = "Open an existing project specification in your default editor and apply\nthe edited configuration.\n\nExample:\n\n\x1b[1mtemporal cloud project edit --project-id my-project-id\x1b[0m"
+	} else {
+		s.Command.Long = "Open an existing project specification in your default editor and apply\nthe edited configuration.\n\nExample:\n\n```\ntemporal cloud project edit --project-id my-project-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "project-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudProjectGetCommand struct {
+	Parent  *CloudProjectCommand
+	Command cobra.Command
+	ClientOptions
+	ProjectId string
+}
+
+func NewCloudProjectGetCommand(cctx *CommandContext, parent *CloudProjectCommand) *CloudProjectGetCommand {
+	var s CloudProjectGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Retrieve project details"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the configuration and status of a Temporal Cloud project.\n\nExample:\n\n\x1b[1mtemporal cloud project get --project-id my-project-id\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the configuration and status of a Temporal Cloud project.\n\nExample:\n\n```\ntemporal cloud project get --project-id my-project-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "project-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudProjectListCommand struct {
+	Parent  *CloudProjectCommand
+	Command cobra.Command
+	ClientOptions
+	ProjectId []string
+	PageSize  int
+	PageToken string
+}
+
+func NewCloudProjectListCommand(cctx *CommandContext, parent *CloudProjectCommand) *CloudProjectListCommand {
+	var s CloudProjectListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List projects"
+	if hasHighlighting {
+		s.Command.Long = "List Temporal Cloud projects in the current account.\n\nExample:\n\n\x1b[1mtemporal cloud project list --page-size 50\x1b[0m"
+	} else {
+		s.Command.Long = "List Temporal Cloud projects in the current account.\n\nExample:\n\n```\ntemporal cloud project list --page-size 50\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringArrayVar(&s.ProjectId, "project-id", nil, "Filter by project ID. Can be specified multiple times.")
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 100, "Maximum number of projects to return.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudProjectUpdateCommand struct {
+	Parent  *CloudProjectCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ProjectId              string
+	DisplayName            string
+	Description            string
+	EnableDeleteProtection bool
+}
+
+func NewCloudProjectUpdateCommand(cctx *CommandContext, parent *CloudProjectCommand) *CloudProjectUpdateCommand {
+	var s CloudProjectUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update a project"
+	if hasHighlighting {
+		s.Command.Long = "Update an existing Temporal Cloud project. Only explicitly provided flags\nare changed.\n\nExample:\n\n\x1b[1mtemporal cloud project update --project-id my-project-id --display-name \"Platform\"\x1b[0m"
+	} else {
+		s.Command.Long = "Update an existing Temporal Cloud project. Only explicitly provided flags\nare changed.\n\nExample:\n\n```\ntemporal cloud project update --project-id my-project-id --display-name \"Platform\"\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "project-id")
+	s.Command.Flags().StringVar(&s.DisplayName, "display-name", "", "The display name of the project.")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "A description of the project.")
+	s.Command.Flags().BoolVar(&s.EnableDeleteProtection, "enable-delete-protection", false, "Prevent the project from being deleted while enabled.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
