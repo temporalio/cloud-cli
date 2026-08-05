@@ -53,6 +53,7 @@ type getNamespacesParams struct {
 	pageSize  int32
 	pageToken string
 	name      string // optional, if set, will filter by name
+	projectID string
 }
 
 func (c *namespaceClient) getNamespaces(ctx context.Context, params getNamespacesParams) ([]*namespace.Namespace, string, error) {
@@ -60,6 +61,7 @@ func (c *namespaceClient) getNamespaces(ctx context.Context, params getNamespace
 		PageSize:  params.pageSize,
 		PageToken: params.pageToken,
 		Name:      params.name,
+		ProjectId: params.projectID,
 	})
 	if err != nil {
 		return nil, "", err
@@ -98,6 +100,7 @@ type createNamespaceParams struct {
 	spec *namespace.NamespaceSpec
 
 	asyncOperationID string
+	projectID        string
 }
 
 type createNamespaceResponse struct {
@@ -109,6 +112,7 @@ func (c *namespaceClient) createNamespace(ctx context.Context, params createName
 	res, err := c.client.CloudService().CreateNamespace(ctx, &cloudservice.CreateNamespaceRequest{
 		AsyncOperationId: params.asyncOperationID,
 		Spec:             params.spec,
+		ProjectId:        params.projectID,
 	})
 	if err != nil {
 		return createNamespaceResponse{}, err
@@ -157,8 +161,8 @@ func (c *namespaceClient) deleteNamespace(ctx context.Context, params deleteName
 	return res.AsyncOperation, nil
 }
 
-func (c *namespaceClient) getNamespaceByName(ctx context.Context, name string) (*namespace.Namespace, error) {
-	namespaces, err := c.listNamespacesWithName(ctx, name, true)
+func (c *namespaceClient) getNamespaceByName(ctx context.Context, name string, projectID string) (*namespace.Namespace, error) {
+	namespaces, err := c.listNamespacesWithName(ctx, name, projectID, true)
 	if err != nil {
 		return nil, err
 	} else if len(namespaces) > 1 {
@@ -169,13 +173,14 @@ func (c *namespaceClient) getNamespaceByName(ctx context.Context, name string) (
 	return namespaces[0], nil
 }
 
-func (c *namespaceClient) listNamespacesWithName(ctx context.Context, name string, shortCircuit bool) ([]*namespace.Namespace, error) {
+func (c *namespaceClient) listNamespacesWithName(ctx context.Context, name string, projectID string, shortCircuit bool) ([]*namespace.Namespace, error) {
 	namespaces := []*namespace.Namespace{}
 	pageToken := ""
 	for {
 		res, err := c.client.CloudService().GetNamespaces(ctx, &cloudservice.GetNamespacesRequest{
 			Name:      name,
 			PageToken: pageToken,
+			ProjectId: projectID,
 		})
 		if err != nil {
 			return nil, err

@@ -124,10 +124,11 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 		return err
 	}
 	client := newNamespaceClient(withCloudClient(cloudClient))
+	projectID := c.ProjectId
 
 	// Step 4: Retrieve existing namespace
 	var found bool
-	existing, err := client.getNamespaceByName(cctx.Context, spec.Name)
+	existing, err := client.getNamespaceByName(cctx.Context, spec.Name, projectID)
 	if err != nil && !isNotFoundErr(err) {
 		return err
 	} else if err == nil {
@@ -178,6 +179,7 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 		res, err := client.createNamespace(cctx.Context, createNamespaceParams{
 			spec:             spec,
 			asyncOperationID: c.AsyncOperationId,
+			projectID:        projectID,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create namespace: %w", err)
@@ -281,11 +283,13 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 	}
 
 	client := newNamespaceClient(withCloudClient(cloudClient))
+	projectID := c.ProjectId
 
 	namespaces, nextPageToken, err := client.getNamespaces(cctx.Context, getNamespacesParams{
 		pageSize:  int32(c.PageSize),
 		pageToken: c.PageToken,
 		name:      c.Name,
+		projectID: projectID,
 	})
 	if err != nil {
 		return err
@@ -300,7 +304,7 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 			NextPageToken: nextPageToken,
 		},
 		printer.PrintResourceOptions{
-			Fields:     []string{"Namespace", "State", "CreatedTime"},
+			Fields:     []string{"Namespace", "ProjectId", "State", "CreatedTime"},
 			SpecFields: []string{"Regions"},
 		},
 		printer.TableOptions{},
@@ -324,6 +328,7 @@ type (
 		CodecPassAccessToken               bool
 		CodecIncludeCrossOriginCredentials bool
 		ConnectionRuleIDs                  []string
+		ProjectID                          string
 
 		Cloud              cloudservice.CloudServiceClient
 		Printer            *printer.Printer
@@ -425,6 +430,7 @@ func CreateNamespace(ctx context.Context, params CreateNamespaceParams) error {
 	return createNamespace(ctx, &cloudservice.CreateNamespaceRequest{
 		Spec:             spec,
 		AsyncOperationId: params.AsyncOperationID,
+		ProjectId:        params.ProjectID,
 	})
 }
 
@@ -440,6 +446,7 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 	if c.Command.Flags().Changed("enable-task-queue-fairness") {
 		enableTaskQueueFairness = &c.EnableTaskQueueFairness
 	}
+	projectID := c.ProjectId
 
 	return CreateNamespace(cctx.Context, CreateNamespaceParams{
 		Name:                               c.Name,
@@ -457,6 +464,7 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		CodecPassAccessToken:               c.CodecPassAccessToken,
 		CodecIncludeCrossOriginCredentials: c.CodecIncludeCrossOriginCredentials,
 		ConnectionRuleIDs:                  c.ConnectionRuleId,
+		ProjectID:                          projectID,
 		Cloud:                              cloudClient.CloudService(),
 		Printer:                            cctx.Printer,
 		Prompter:                           newPrompter(cctx),

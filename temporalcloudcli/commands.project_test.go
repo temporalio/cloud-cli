@@ -206,6 +206,11 @@ func TestProjectApply_Create(t *testing.T) {
 	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
 		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 			c.EXPECT().
+				GetProjects(mock.Anything, &cloudservice.GetProjectsRequest{
+					PageSize: 1000,
+				}, mock.Anything).
+				Return(&cloudservice.GetProjectsResponse{}, nil)
+			c.EXPECT().
 				CreateProject(mock.Anything, mock.MatchedBy(func(req *cloudservice.CreateProjectRequest) bool {
 					return proto.Equal(req.Spec, wantSpec)
 				}), mock.Anything).
@@ -223,27 +228,29 @@ func TestProjectApply_Create(t *testing.T) {
 	})
 }
 
-func TestProjectApply_Update(t *testing.T) {
+func TestProjectApply_UpdateBySpecDisplayName(t *testing.T) {
 	cmd := &temporalcloudcli.CloudProjectApplyCommand{
-		ProjectId:              "project-a",
-		Spec:                   `{"display_name":"Platform","description":"Platform workloads"}`,
-		ResourceVersionOptions: temporalcloudcli.ResourceVersionOptions{ResourceVersion: "rv-user"},
+		Spec: `{"display_name":"Engineering","description":"Updated workloads"}`,
 	}
 	existing := testProject("project-a")
 	wantSpec := &projectv1.ProjectSpec{
-		DisplayName: "Platform",
-		Description: "Platform workloads",
+		DisplayName: "Engineering",
+		Description: "Updated workloads",
 	}
 
 	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
 		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 			c.EXPECT().
-				GetProject(mock.Anything, &cloudservice.GetProjectRequest{ProjectId: "project-a"}, mock.Anything).
-				Return(&cloudservice.GetProjectResponse{Project: existing}, nil)
+				GetProjects(mock.Anything, &cloudservice.GetProjectsRequest{
+					PageSize: 1000,
+				}, mock.Anything).
+				Return(&cloudservice.GetProjectsResponse{
+					Projects: []*projectv1.Project{existing},
+				}, nil)
 			c.EXPECT().
 				UpdateProject(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateProjectRequest) bool {
 					return req.ProjectId == "project-a" &&
-						req.ResourceVersion == "rv-user" &&
+						req.ResourceVersion == "rv-project-a" &&
 						proto.Equal(req.Spec, wantSpec)
 				}), mock.Anything).
 				Return(&cloudservice.UpdateProjectResponse{AsyncOperation: testAsyncOperation("op-update")}, nil)
@@ -256,6 +263,28 @@ func TestProjectApply_Update(t *testing.T) {
 		},
 		AsyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-update"},
 		JSONOutput:         true,
+	})
+}
+
+func TestProjectApply_DuplicateDisplayName(t *testing.T) {
+	cmd := &temporalcloudcli.CloudProjectApplyCommand{
+		Spec: `{"display_name":"Engineering","description":"Updated workloads"}`,
+	}
+
+	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetProjects(mock.Anything, &cloudservice.GetProjectsRequest{
+					PageSize: 1000,
+				}, mock.Anything).
+				Return(&cloudservice.GetProjectsResponse{
+					Projects: []*projectv1.Project{
+						testProject("project-a"),
+						testProject("project-b"),
+					},
+				}, nil)
+		},
+		ExpectedError: `multiple projects found with display name "Engineering"`,
 	})
 }
 
