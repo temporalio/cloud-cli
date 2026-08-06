@@ -4748,7 +4748,7 @@ func NewCloudNexusEndpointListCommand(cctx *CommandContext, parent *CloudNexusEn
 	s.Command.Short = "List Nexus Endpoints"
 	s.Command.Long = "List Nexus Endpoint configurations on the Cloud Account."
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to list Nexus Endpoints from.")
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "Filter Nexus Endpoints by project ID.")
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of endpoints to return per page. If no page size is provided, it will default to 100. A maximum of 1000 endpoints can be fetched at a time.")
 	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results. Initial value is empty string.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())

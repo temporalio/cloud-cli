@@ -1871,7 +1871,7 @@ commands:
       - name: project-id
         type: string
         description: |
-          The ID of the project to list Nexus Endpoints from.
+          Filter Nexus Endpoints by project ID.
       - name: page-size
         type: int
         description: |
