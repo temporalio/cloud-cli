@@ -80,7 +80,7 @@ func (c *CloudNexusEndpointGetCommand) run(cctx *CommandContext, _ []string) err
 		return err
 	}
 
-	endpoint, err := resolveNexusEndpoint(cctx, client, c.Name, c.Id, c.ProjectId)
+	endpoint, err := resolveNexusEndpoint(cctx, client, c.Name, c.Id)
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,7 @@ func (c *CloudNexusEndpointDeleteCommand) run(cctx *CommandContext, _ []string) 
 		return err
 	}
 
-	endpoint, err := resolveNexusEndpoint(cctx, client, c.Name, c.Id, c.ProjectId)
+	endpoint, err := resolveNexusEndpoint(cctx, client, c.Name, c.Id)
 	if err != nil {
 		return err
 	}
@@ -184,7 +184,7 @@ func (c *CloudNexusEndpointUpdateCommand) run(cctx *CommandContext, _ []string) 
 		return err
 	}
 
-	endpoint, err := resolveNexusEndpoint(cctx, client, c.Name, c.Id, c.ProjectId)
+	endpoint, err := resolveNexusEndpoint(cctx, client, c.Name, c.Id)
 	if err != nil {
 		return err
 	}
@@ -228,7 +228,7 @@ func (c *CloudNexusEndpointUpdateCommand) run(cctx *CommandContext, _ []string) 
 func resolveNexusEndpoint(
 	cctx *CommandContext,
 	client cloudservice.CloudServiceClient,
-	name, id, projectID string,
+	name, id string,
 ) (*nexusv1.Endpoint, error) {
 	if name == "" && id == "" {
 		return nil, errors.New("either --name or --id is required")
@@ -245,18 +245,17 @@ func resolveNexusEndpoint(
 		}
 		return res.Endpoint, nil
 	}
-	return getNexusEndpointByName(cctx, client, name, projectID)
+	return getNexusEndpointByName(cctx, client, name)
 }
 
 // getNexusEndpointByName looks up a Nexus Endpoint by name using the list RPC with a name filter.
 func getNexusEndpointByName(
 	cctx *CommandContext,
 	client cloudservice.CloudServiceClient,
-	name, projectID string,
+	name string,
 ) (*nexusv1.Endpoint, error) {
 	res, err := client.GetNexusEndpoints(cctx, &cloudservice.GetNexusEndpointsRequest{
-		Name:      name,
-		ProjectId: projectID,
+		Name: name,
 	})
 	if err != nil {
 		return nil, err
@@ -273,7 +272,7 @@ func (c *CloudNexusEndpointAllowedNamespaceListCommand) run(cctx *CommandContext
 		return err
 	}
 
-	endpoint, err := getNexusEndpointByName(cctx, client, c.Name, c.ProjectId)
+	endpoint, err := getNexusEndpointByName(cctx, client, c.Name)
 	if err != nil {
 		return err
 	}
@@ -298,7 +297,7 @@ func (c *CloudNexusEndpointAllowedNamespaceAddCommand) run(cctx *CommandContext,
 		return err
 	}
 
-	endpoint, err := getNexusEndpointByName(cctx, client, c.Name, c.ProjectId)
+	endpoint, err := getNexusEndpointByName(cctx, client, c.Name)
 	if err != nil {
 		return err
 	}
@@ -356,7 +355,7 @@ func (c *CloudNexusEndpointAllowedNamespaceSetCommand) run(cctx *CommandContext,
 		return err
 	}
 
-	endpoint, err := getNexusEndpointByName(cctx, client, c.Name, c.ProjectId)
+	endpoint, err := getNexusEndpointByName(cctx, client, c.Name)
 	if err != nil {
 		return err
 	}
@@ -400,7 +399,7 @@ func (c *CloudNexusEndpointAllowedNamespaceRemoveCommand) run(cctx *CommandConte
 		return err
 	}
 
-	endpoint, err := getNexusEndpointByName(cctx, client, c.Name, c.ProjectId)
+	endpoint, err := getNexusEndpointByName(cctx, client, c.Name)
 	if err != nil {
 		return err
 	}

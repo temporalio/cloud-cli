@@ -1898,10 +1898,6 @@ commands:
         type: string
         description: |
           The ID of the Nexus Endpoint to retrieve.
-      - name: project-id
-        type: string
-        description: |
-          The ID of the project to search when retrieving a Nexus Endpoint by name.
 
   - name: cloud nexus endpoint create
     summary: Create a new Nexus Endpoint
@@ -1973,10 +1969,6 @@ commands:
         type: string
         description: |
           The ID of the Nexus Endpoint to delete.
-      - name: project-id
-        type: string
-        description: |
-          The ID of the project to search when deleting a Nexus Endpoint by name.
 
   - name: cloud nexus endpoint update
     summary: Update an existing Nexus Endpoint by name or ID
@@ -2007,10 +1999,6 @@ commands:
         type: string
         description: |
           The ID of the Nexus Endpoint to update.
-      - name: project-id
-        type: string
-        description: |
-          The ID of the project to search when updating a Nexus Endpoint by name.
       - name: target-namespace
         type: string
         description: |
@@ -2052,10 +2040,6 @@ commands:
         required: true
         description: |
           The name of the Nexus Endpoint.
-      - name: project-id
-        type: string
-        description: |
-          The ID of the project to search for the Nexus Endpoint in.
 
   - name: cloud nexus endpoint allowed-namespace add
     summary: Add allowed namespaces to a Nexus Endpoint
@@ -2073,10 +2057,6 @@ commands:
         required: true
         description: |
           The name of the Nexus Endpoint.
-      - name: project-id
-        type: string
-        description: |
-          The ID of the project to search for the Nexus Endpoint in.
       - name: namespace
         type: string[]
         required: true
@@ -2099,10 +2079,6 @@ commands:
         required: true
         description: |
           The name of the Nexus Endpoint.
-      - name: project-id
-        type: string
-        description: |
-          The ID of the project to search for the Nexus Endpoint in.
       - name: namespace
         type: string[]
         required: true
@@ -2125,10 +2101,6 @@ commands:
         required: true
         description: |
           The name of the Nexus Endpoint.
-      - name: project-id
-        type: string
-        description: |
-          The ID of the project to search for the Nexus Endpoint in.
       - name: namespace
         type: string[]
         required: true
