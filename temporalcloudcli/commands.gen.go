@@ -4820,6 +4820,7 @@ func NewCloudProjectCommand(cctx *CommandContext, parent *CloudCommand) *CloudPr
 	s.Command.AddCommand(&NewCloudProjectGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudProjectListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudProjectUpdateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudProjectUserCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -5060,6 +5061,56 @@ func NewCloudProjectUpdateCommand(cctx *CommandContext, parent *CloudProjectComm
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudProjectUserCommand struct {
+	Parent  *CloudProjectCommand
+	Command cobra.Command
+}
+
+func NewCloudProjectUserCommand(cctx *CommandContext, parent *CloudProjectCommand) *CloudProjectUserCommand {
+	var s CloudProjectUserCommand
+	s.Parent = parent
+	s.Command.Use = "user"
+	s.Command.Short = "Inspect users with access to a project"
+	s.Command.Long = "Commands for inspecting the users that have access to a Temporal Cloud\nproject."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudProjectUserListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudProjectUserListCommand struct {
+	Parent  *CloudProjectUserCommand
+	Command cobra.Command
+	ClientOptions
+	ProjectId string
+	PageSize  int
+	PageToken string
+}
+
+func NewCloudProjectUserListCommand(cctx *CommandContext, parent *CloudProjectUserCommand) *CloudProjectUserListCommand {
+	var s CloudProjectUserListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List users with access to a project"
+	if hasHighlighting {
+		s.Command.Long = "List the users that have access to a Temporal Cloud project, including\nboth directly-assigned and inherited access.\n\nExample:\n\n\x1b[1mtemporal cloud project user list --project-id my-project-id\x1b[0m"
+	} else {
+		s.Command.Long = "List the users that have access to a Temporal Cloud project, including\nboth directly-assigned and inherited access.\n\nExample:\n\n```\ntemporal cloud project user list --project-id my-project-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "project-id")
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of users to return per page. Use for paginated results.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results in a paginated list.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -5476,9 +5527,11 @@ func NewCloudUserCommand(cctx *CommandContext, parent *CloudCommand) *CloudUserC
 	s.Command.AddCommand(&NewCloudUserGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserInviteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserRemoveProjectAccessCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserSetAccountRoleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserSetCustomRolesCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserSetNamespacePermissionsCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudUserSetProjectAccessCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -5623,6 +5676,7 @@ type CloudUserInviteCommand struct {
 	Email           string
 	AccountRole     string
 	NamespaceAccess []string
+	ProjectAccess   []string
 	CustomRole      []string
 }
 
@@ -5633,15 +5687,16 @@ func NewCloudUserInviteCommand(cctx *CommandContext, parent *CloudUserCommand) *
 	s.Command.Use = "invite [flags]"
 	s.Command.Short = "Invite a user to Temporal Cloud"
 	if hasHighlighting {
-		s.Command.Long = "Invite a user to Temporal Cloud by email. Optionally assign an account-level\nrole and namespace-level access permissions.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\n\nExample:\n\n\x1b[1mtemporal cloud user invite --email alice@example.com --account-role developer \\\n  --namespace-access my-namespace.my-account=write\x1b[0m"
+		s.Command.Long = "Invite a user to Temporal Cloud by email. Optionally assign an account-level\nrole, namespace-level access permissions, and project-level access roles.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\nProject access format: 'project-id=role' where role is one of: admin, write, read, list, contribute, member.\n\nExample:\n\n\x1b[1mtemporal cloud user invite --email alice@example.com --account-role developer \\\n  --namespace-access my-namespace.my-account=write \\\n  --project-access my-project-id=write\x1b[0m"
 	} else {
-		s.Command.Long = "Invite a user to Temporal Cloud by email. Optionally assign an account-level\nrole and namespace-level access permissions.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\n\nExample:\n\n```\ntemporal cloud user invite --email alice@example.com --account-role developer \\\n  --namespace-access my-namespace.my-account=write\n```"
+		s.Command.Long = "Invite a user to Temporal Cloud by email. Optionally assign an account-level\nrole, namespace-level access permissions, and project-level access roles.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\nProject access format: 'project-id=role' where role is one of: admin, write, read, list, contribute, member.\n\nExample:\n\n```\ntemporal cloud user invite --email alice@example.com --account-role developer \\\n  --namespace-access my-namespace.my-account=write \\\n  --project-access my-project-id=write\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Email, "email", "", "The email address of the user to invite. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "email")
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
 	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.Command.Flags().StringArrayVar(&s.ProjectAccess, "project-access", nil, "Project access to grant, in the format 'project-id=role'. Role must be one of: admin, write, read, list, contribute, member. Can be repeated.")
 	s.Command.Flags().StringArrayVar(&s.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
@@ -5661,6 +5716,7 @@ type CloudUserListCommand struct {
 	PageToken string
 	Email     string
 	Namespace string
+	ProjectId string
 }
 
 func NewCloudUserListCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserListCommand {
@@ -5679,7 +5735,44 @@ func NewCloudUserListCommand(cctx *CommandContext, parent *CloudUserCommand) *Cl
 	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results in a paginated list.")
 	s.Command.Flags().StringVar(&s.Email, "email", "", "Filter users by email address.")
 	s.Command.Flags().StringVar(&s.Namespace, "namespace", "", "Filter users by the namespace they have access to.")
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "List users with access to the project ID. Cannot be combined with --email or --namespace.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserRemoveProjectAccessCommand struct {
+	Parent  *CloudUserCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	UserIdentificationOptions
+	ProjectId string
+}
+
+func NewCloudUserRemoveProjectAccessCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserRemoveProjectAccessCommand {
+	var s CloudUserRemoveProjectAccessCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "remove-project-access [flags]"
+	s.Command.Short = "Remove project access for a user"
+	if hasHighlighting {
+		s.Command.Long = "Remove a Temporal Cloud user's direct project-level access.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n\x1b[1mtemporal cloud user remove-project-access --user-id my-user-id \\\n  --project-id my-project-id\x1b[0m"
+	} else {
+		s.Command.Long = "Remove a Temporal Cloud user's direct project-level access.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n```\ntemporal cloud user remove-project-access --user-id my-user-id \\\n  --project-id my-project-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "project-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -5783,6 +5876,45 @@ func NewCloudUserSetNamespacePermissionsCommand(cctx *CommandContext, parent *Cl
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access change in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated. Use an empty permission (e.g. 'testns=') to remove access to a namespace. Changes are additive: namespaces not listed are left unchanged. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace-access")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.UserIdentificationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudUserSetProjectAccessCommand struct {
+	Parent  *CloudUserCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	UserIdentificationOptions
+	ProjectId   string
+	ProjectRole string
+}
+
+func NewCloudUserSetProjectAccessCommand(cctx *CommandContext, parent *CloudUserCommand) *CloudUserSetProjectAccessCommand {
+	var s CloudUserSetProjectAccessCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set-project-access [flags]"
+	s.Command.Short = "Set project access for a user"
+	if hasHighlighting {
+		s.Command.Long = "Set project-level access for a Temporal Cloud user.\n\nProject roles: admin, write, read, list, contribute, member.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n\x1b[1mtemporal cloud user set-project-access --user-id my-user-id \\\n  --project-id my-project-id --project-role write\x1b[0m"
+	} else {
+		s.Command.Long = "Set project-level access for a Temporal Cloud user.\n\nProject roles: admin, write, read, list, contribute, member.\n\nSpecify the user with either --user-id or --user-email (not both).\n\nExample:\n\n```\ntemporal cloud user set-project-access --user-id my-user-id \\\n  --project-id my-project-id --project-role write\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "project-id")
+	s.Command.Flags().StringVar(&s.ProjectRole, "project-role", "", "The project-level role to assign. Valid values: admin, write, read, list, contribute, member. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "project-role")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())

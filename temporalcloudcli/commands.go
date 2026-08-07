@@ -592,6 +592,7 @@ func registerKnownPrinterEnumToStringConverters(p *printer.Printer) {
 	printer.RegisterEnumToStringConverter[identityv1.OwnerType](p, "OWNER_TYPE_", identityv1.OwnerType_name)
 	printer.RegisterEnumToStringConverter[identityv1.AccountAccess_Role](p, "ROLE_", identityv1.AccountAccess_Role_name)
 	printer.RegisterEnumToStringConverter[identityv1.NamespaceAccess_Permission](p, "PERMISSION_", identityv1.NamespaceAccess_Permission_name)
+	printer.RegisterEnumToStringConverter[identityv1.ProjectAccess_ProjectRole](p, "PROJECT_ROLE_", identityv1.ProjectAccess_ProjectRole_name)
 	printer.RegisterEnumToStringConverter[accountv1.AuditLogSink_Health](p, "HEALTH_", accountv1.AuditLogSink_Health_name)
 	printer.RegisterEnumToStringConverter[regionv1.Region_CloudProvider](p, "CLOUD_PROVIDER_", regionv1.Region_CloudProvider_name)
 	printer.RegisterEnumToStringConverter[usagev1.RecordType](p, "RECORD_TYPE_", usagev1.RecordType_name)

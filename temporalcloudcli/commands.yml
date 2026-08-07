@@ -2295,6 +2295,40 @@ commands:
         required: true
         description: |
           The ID of the project.
+  - name: cloud project user
+    summary: Inspect users with access to a project
+    description: |
+      Commands for inspecting the users that have access to a Temporal Cloud
+      project.
+    has-init: false
+  - name: cloud project user list
+    summary: List users with access to a project
+    description: |
+      List the users that have access to a Temporal Cloud project, including
+      both directly-assigned and inherited access.
+
+      Example:
+
+      ```
+      temporal cloud project user list --project-id my-project-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: project-id
+        type: string
+        required: true
+        description: |
+          The ID of the project.
+      - name: page-size
+        type: int
+        description: |
+          Number of users to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
 
   # User group commands
   - name: cloud user-group
@@ -3149,6 +3183,64 @@ commands:
           Permission must be one of: admin, write, read. Can be repeated.
           Use an empty permission (e.g. 'testns=') to remove access to a namespace.
           Changes are additive: namespaces not listed are left unchanged.
+  - name: cloud user set-project-access
+    summary: Set project access for a user
+    description: |
+      Set project-level access for a Temporal Cloud user.
+
+      Project roles: admin, write, read, list, contribute, member.
+
+      Specify the user with either --user-id or --user-email (not both).
+
+      Example:
+
+      ```
+      temporal cloud user set-project-access --user-id my-user-id \
+        --project-id my-project-id --project-role write
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - user-identification
+    options:
+      - name: project-id
+        type: string
+        required: true
+        description: |
+          The ID of the project.
+      - name: project-role
+        type: string
+        required: true
+        description: |
+          The project-level role to assign. Valid values: admin, write, read,
+          list, contribute, member.
+  - name: cloud user remove-project-access
+    summary: Remove project access for a user
+    description: |
+      Remove a Temporal Cloud user's direct project-level access.
+
+      Specify the user with either --user-id or --user-email (not both).
+
+      Example:
+
+      ```
+      temporal cloud user remove-project-access --user-id my-user-id \
+        --project-id my-project-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - async-operation
+      - resource-version
+      - user-identification
+    options:
+      - name: project-id
+        type: string
+        required: true
+        description: |
+          The ID of the project.
   - name: cloud user set-account-role
     summary: Set the account role for a user
     description: |
@@ -3280,16 +3372,18 @@ commands:
     summary: Invite a user to Temporal Cloud
     description: |
       Invite a user to Temporal Cloud by email. Optionally assign an account-level
-      role and namespace-level access permissions.
+      role, namespace-level access permissions, and project-level access roles.
 
       Account roles: owner, admin, developer, finance-admin, read, metrics-read.
       Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+      Project access format: 'project-id=role' where role is one of: admin, write, read, list, contribute, member.
 
       Example:
 
       ```
       temporal cloud user invite --email alice@example.com --account-role developer \
-        --namespace-access my-namespace.my-account=write
+        --namespace-access my-namespace.my-account=write \
+        --project-access my-project-id=write
       ```
     has-init: false
     option-sets:
@@ -3311,6 +3405,11 @@ commands:
         description: |
           Namespace access to grant, in the format 'namespace=permission'.
           Permission must be one of: admin, write, read. Can be repeated.
+      - name: project-access
+        type: string[]
+        description: |
+          Project access to grant, in the format 'project-id=role'.
+          Role must be one of: admin, write, read, list, contribute, member. Can be repeated.
       - name: custom-role
         type: string[]
         description: |
@@ -3346,6 +3445,11 @@ commands:
         type: string
         description: |
           Filter users by the namespace they have access to.
+      - name: project-id
+        type: string
+        description: |
+          List users with access to the project ID. Cannot be combined with
+          --email or --namespace.
 
   # Service account commands
   - name: cloud service-account

@@ -58,6 +58,10 @@ func (c *CloudProjectGetCommand) run(cctx *CommandContext, _ []string) error {
 	return cctx.Printer.PrintResource(project, printer.PrintResourceOptions{})
 }
 
+func (c *CloudProjectUserListCommand) run(cctx *CommandContext, _ []string) error {
+	return printProjectUserAssignments(cctx, c.ClientOptions, c.ProjectId, c.PageSize, c.PageToken)
+}
+
 func (c *CloudProjectCreateCommand) run(cctx *CommandContext, _ []string) error {
 	spec := projectSpecFromFlags(c.DisplayName, c.Description, c.EnableDeleteProtection)
 

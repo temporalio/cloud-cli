@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	identityv1 "go.temporal.io/cloud-sdk/api/identity/v1"
 	operationv1 "go.temporal.io/cloud-sdk/api/operation/v1"
 	projectv1 "go.temporal.io/cloud-sdk/api/project/v1"
 	resourcev1 "go.temporal.io/cloud-sdk/api/resource/v1"
@@ -73,6 +74,71 @@ func TestProjectGet(t *testing.T) {
 		},
 		JSONOutput:         true,
 		ExpectedOutputJson: project,
+	})
+}
+
+func TestProjectUserList(t *testing.T) {
+	type listOutput struct {
+		Users         []*identityv1.UserProjectAssignment
+		NextPageToken string
+	}
+
+	cmd := &temporalcloudcli.CloudProjectUserListCommand{
+		ProjectId: "project-a",
+		PageSize:  50,
+		PageToken: "next",
+	}
+	res := &cloudservice.GetUserProjectAssignmentsResponse{
+		Users: []*identityv1.UserProjectAssignment{
+			{
+				Id:    "user-1",
+				Email: "alice@example.com",
+				ProjectAccess: &identityv1.ProjectAccess{
+					Role: identityv1.ProjectAccess_PROJECT_ROLE_WRITE,
+				},
+			},
+			{
+				Id:              "user-2",
+				Email:           "bob@example.com",
+				InheritedAccess: true,
+				ProjectAccess: &identityv1.ProjectAccess{
+					Role: identityv1.ProjectAccess_PROJECT_ROLE_DEVELOPER,
+				},
+			},
+		},
+		NextPageToken: "next-2",
+	}
+
+	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetUserProjectAssignments(mock.Anything, &cloudservice.GetUserProjectAssignmentsRequest{
+					ProjectId: "project-a",
+					PageSize:  50,
+					PageToken: "next",
+				}, mock.Anything).
+				Return(res, nil)
+		},
+		JSONOutput: true,
+		ExpectedOutputJson: listOutput{
+			Users:         res.Users,
+			NextPageToken: "next-2",
+		},
+	})
+}
+
+func TestProjectUserList_ApiError(t *testing.T) {
+	cmd := &temporalcloudcli.CloudProjectUserListCommand{ProjectId: "project-a"}
+
+	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetUserProjectAssignments(mock.Anything, &cloudservice.GetUserProjectAssignmentsRequest{
+					ProjectId: "project-a",
+				}, mock.Anything).
+				Return(nil, errors.New("api error"))
+		},
+		ExpectedError: "api error",
 	})
 }
 

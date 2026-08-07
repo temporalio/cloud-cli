@@ -441,6 +441,421 @@ func TestUserSetAccountRole(t *testing.T) {
 	}
 }
 
+// --- SetProjectAccess ---
+
+func TestUserSetProjectAccess(t *testing.T) {
+	op := &operation.AsyncOperation{Id: "op-project"}
+
+	tests := []struct {
+		name                    string
+		cmd                     temporalcloudcli.CloudUserSetProjectAccessCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		expectPrompt            bool
+		promptResult            bool
+		asyncPollerError        error
+		expectedErr             string
+	}{
+		{
+			name: "ByIdSuccess",
+			cmd: temporalcloudcli.CloudUserSetProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				ProjectId:                 "project-1",
+				ProjectRole:               "write",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
+					Return(&cloudservice.GetUserResponse{
+						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1"},
+					}, nil)
+				c.EXPECT().
+					SetUserProjectAccess(mock.Anything, &cloudservice.SetUserProjectAccessRequest{
+						ProjectId:       "project-1",
+						UserId:          "user-1",
+						Access:          &identityv1.ProjectAccess{Role: identityv1.ProjectAccess_PROJECT_ROLE_WRITE},
+						ResourceVersion: "rv-1",
+					}, mock.Anything).
+					Return(&cloudservice.SetUserProjectAccessResponse{AsyncOperation: op}, nil)
+			},
+			expectPrompt: true,
+			promptResult: true,
+		},
+		{
+			name: "ByEmailSuccess",
+			cmd: temporalcloudcli.CloudUserSetProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserEmail: "alice@example.com"},
+				ProjectId:                 "project-1",
+				ProjectRole:               "member",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{Email: "alice@example.com"}, mock.Anything).
+					Return(&cloudservice.GetUsersResponse{
+						Users: []*identityv1.User{{Id: "user-1", ResourceVersion: "rv-1"}},
+					}, nil)
+				c.EXPECT().
+					SetUserProjectAccess(mock.Anything, &cloudservice.SetUserProjectAccessRequest{
+						ProjectId:       "project-1",
+						UserId:          "user-1",
+						Access:          &identityv1.ProjectAccess{Role: identityv1.ProjectAccess_PROJECT_ROLE_MEMBER},
+						ResourceVersion: "rv-1",
+					}, mock.Anything).
+					Return(&cloudservice.SetUserProjectAccessResponse{AsyncOperation: op}, nil)
+			},
+			expectPrompt: true,
+			promptResult: true,
+		},
+		{
+			name: "ResourceVersionOverride",
+			cmd: temporalcloudcli.CloudUserSetProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				ResourceVersionOptions:    temporalcloudcli.ResourceVersionOptions{ResourceVersion: "rv-override"},
+				ProjectId:                 "project-1",
+				ProjectRole:               "admin",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
+					Return(&cloudservice.GetUserResponse{
+						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1"},
+					}, nil)
+				c.EXPECT().
+					SetUserProjectAccess(mock.Anything, &cloudservice.SetUserProjectAccessRequest{
+						ProjectId:       "project-1",
+						UserId:          "user-1",
+						Access:          &identityv1.ProjectAccess{Role: identityv1.ProjectAccess_PROJECT_ROLE_ADMIN},
+						ResourceVersion: "rv-override",
+					}, mock.Anything).
+					Return(&cloudservice.SetUserProjectAccessResponse{AsyncOperation: op}, nil)
+			},
+			expectPrompt: true,
+			promptResult: true,
+		},
+		{
+			name: "InvalidRole",
+			cmd: temporalcloudcli.CloudUserSetProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				ProjectId:                 "project-1",
+				ProjectRole:               "developer",
+			},
+			expectedErr: "invalid project role",
+		},
+		{
+			name: "PromptDeclined",
+			cmd: temporalcloudcli.CloudUserSetProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				ProjectId:                 "project-1",
+				ProjectRole:               "write",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
+					Return(&cloudservice.GetUserResponse{
+						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1"},
+					}, nil)
+			},
+			expectPrompt: true,
+			promptResult: false,
+			expectedErr:  "Aborting set.",
+		},
+		{
+			name: "ResolveError",
+			cmd: temporalcloudcli.CloudUserSetProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				ProjectId:                 "project-1",
+				ProjectRole:               "write",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("lookup error"))
+			},
+			expectedErr: "lookup error",
+		},
+		{
+			name: "ApiError",
+			cmd: temporalcloudcli.CloudUserSetProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				ProjectId:                 "project-1",
+				ProjectRole:               "write",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
+					Return(&cloudservice.GetUserResponse{
+						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1"},
+					}, nil)
+				c.EXPECT().
+					SetUserProjectAccess(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("set error"))
+			},
+			expectPrompt: true,
+			promptResult: true,
+			expectedErr:  "set error",
+		},
+		{
+			name: "PollerError",
+			cmd: temporalcloudcli.CloudUserSetProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				ProjectId:                 "project-1",
+				ProjectRole:               "write",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
+					Return(&cloudservice.GetUserResponse{
+						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1"},
+					}, nil)
+				c.EXPECT().
+					SetUserProjectAccess(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.SetUserProjectAccessResponse{AsyncOperation: op}, nil)
+			},
+			expectPrompt:     true,
+			promptResult:     true,
+			asyncPollerError: errors.New("poller error"),
+			expectedErr:      "poller error",
+		},
+		{
+			name: "NoIdentifier",
+			cmd: temporalcloudcli.CloudUserSetProjectAccessCommand{
+				ProjectId:   "project-1",
+				ProjectRole: "write",
+			},
+			expectedErr: "must provide either --user-id or --user-email",
+		},
+		{
+			name: "BothIdentifiers",
+			cmd: temporalcloudcli.CloudUserSetProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1", UserEmail: "alice@example.com"},
+				ProjectId:                 "project-1",
+				ProjectRole:               "write",
+			},
+			expectedErr: "cannot provide both --user-id and --user-email",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			promptOpts := temporalcloudcli.TestPromptOptions{}
+			if tt.expectPrompt {
+				promptOpts.ExpectPromptYes = true
+				promptOpts.PromptResult = tt.promptResult
+			}
+			asyncOpts := temporalcloudcli.TestAsyncPollerOptions{}
+			if tt.expectedErr == "" {
+				asyncOpts.AsyncOperationID = op.Id
+			}
+			if tt.asyncPollerError != nil {
+				asyncOpts.AsyncOperationID = op.Id
+				asyncOpts.ErrorToReturn = tt.asyncPollerError
+			}
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           promptOpts,
+				AsyncPollerOptions:      asyncOpts,
+				ExpectedError:           tt.expectedErr,
+			})
+		})
+	}
+}
+
+// --- RemoveProjectAccess ---
+
+func TestUserRemoveProjectAccess(t *testing.T) {
+	op := &operation.AsyncOperation{Id: "op-project-remove"}
+
+	tests := []struct {
+		name                    string
+		cmd                     temporalcloudcli.CloudUserRemoveProjectAccessCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		expectPrompt            bool
+		promptResult            bool
+		asyncPollerError        error
+		expectedErr             string
+	}{
+		{
+			name: "ByIdSuccess",
+			cmd: temporalcloudcli.CloudUserRemoveProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				ProjectId:                 "project-1",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
+					Return(&cloudservice.GetUserResponse{
+						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1"},
+					}, nil)
+				c.EXPECT().
+					SetUserProjectAccess(mock.Anything, &cloudservice.SetUserProjectAccessRequest{
+						ProjectId:       "project-1",
+						UserId:          "user-1",
+						ResourceVersion: "rv-1",
+					}, mock.Anything).
+					Return(&cloudservice.SetUserProjectAccessResponse{AsyncOperation: op}, nil)
+			},
+			expectPrompt: true,
+			promptResult: true,
+		},
+		{
+			name: "ByEmailSuccess",
+			cmd: temporalcloudcli.CloudUserRemoveProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserEmail: "alice@example.com"},
+				ProjectId:                 "project-1",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{Email: "alice@example.com"}, mock.Anything).
+					Return(&cloudservice.GetUsersResponse{
+						Users: []*identityv1.User{{Id: "user-1", ResourceVersion: "rv-1"}},
+					}, nil)
+				c.EXPECT().
+					SetUserProjectAccess(mock.Anything, &cloudservice.SetUserProjectAccessRequest{
+						ProjectId:       "project-1",
+						UserId:          "user-1",
+						ResourceVersion: "rv-1",
+					}, mock.Anything).
+					Return(&cloudservice.SetUserProjectAccessResponse{AsyncOperation: op}, nil)
+			},
+			expectPrompt: true,
+			promptResult: true,
+		},
+		{
+			name: "ResourceVersionOverride",
+			cmd: temporalcloudcli.CloudUserRemoveProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				ResourceVersionOptions:    temporalcloudcli.ResourceVersionOptions{ResourceVersion: "rv-override"},
+				ProjectId:                 "project-1",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
+					Return(&cloudservice.GetUserResponse{
+						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1"},
+					}, nil)
+				c.EXPECT().
+					SetUserProjectAccess(mock.Anything, &cloudservice.SetUserProjectAccessRequest{
+						ProjectId:       "project-1",
+						UserId:          "user-1",
+						ResourceVersion: "rv-override",
+					}, mock.Anything).
+					Return(&cloudservice.SetUserProjectAccessResponse{AsyncOperation: op}, nil)
+			},
+			expectPrompt: true,
+			promptResult: true,
+		},
+		{
+			name: "PromptDeclined",
+			cmd: temporalcloudcli.CloudUserRemoveProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				ProjectId:                 "project-1",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
+					Return(&cloudservice.GetUserResponse{
+						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1"},
+					}, nil)
+			},
+			expectPrompt: true,
+			promptResult: false,
+			expectedErr:  "Aborting remove.",
+		},
+		{
+			name: "ResolveError",
+			cmd: temporalcloudcli.CloudUserRemoveProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				ProjectId:                 "project-1",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("lookup error"))
+			},
+			expectedErr: "lookup error",
+		},
+		{
+			name: "ApiError",
+			cmd: temporalcloudcli.CloudUserRemoveProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				ProjectId:                 "project-1",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
+					Return(&cloudservice.GetUserResponse{
+						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1"},
+					}, nil)
+				c.EXPECT().
+					SetUserProjectAccess(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("remove error"))
+			},
+			expectPrompt: true,
+			promptResult: true,
+			expectedErr:  "remove error",
+		},
+		{
+			name: "PollerError",
+			cmd: temporalcloudcli.CloudUserRemoveProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1"},
+				ProjectId:                 "project-1",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUser(mock.Anything, &cloudservice.GetUserRequest{UserId: "user-1"}, mock.Anything).
+					Return(&cloudservice.GetUserResponse{
+						User: &identityv1.User{Id: "user-1", ResourceVersion: "rv-1"},
+					}, nil)
+				c.EXPECT().
+					SetUserProjectAccess(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.SetUserProjectAccessResponse{AsyncOperation: op}, nil)
+			},
+			expectPrompt:     true,
+			promptResult:     true,
+			asyncPollerError: errors.New("poller error"),
+			expectedErr:      "poller error",
+		},
+		{
+			name: "NoIdentifier",
+			cmd: temporalcloudcli.CloudUserRemoveProjectAccessCommand{
+				ProjectId: "project-1",
+			},
+			expectedErr: "must provide either --user-id or --user-email",
+		},
+		{
+			name: "BothIdentifiers",
+			cmd: temporalcloudcli.CloudUserRemoveProjectAccessCommand{
+				UserIdentificationOptions: temporalcloudcli.UserIdentificationOptions{UserId: "user-1", UserEmail: "alice@example.com"},
+				ProjectId:                 "project-1",
+			},
+			expectedErr: "cannot provide both --user-id and --user-email",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			promptOpts := temporalcloudcli.TestPromptOptions{}
+			if tt.expectPrompt {
+				promptOpts.ExpectPromptYes = true
+				promptOpts.PromptResult = tt.promptResult
+			}
+			asyncOpts := temporalcloudcli.TestAsyncPollerOptions{}
+			if tt.expectedErr == "" {
+				asyncOpts.AsyncOperationID = op.Id
+			}
+			if tt.asyncPollerError != nil {
+				asyncOpts.AsyncOperationID = op.Id
+				asyncOpts.ErrorToReturn = tt.asyncPollerError
+			}
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           promptOpts,
+				AsyncPollerOptions:      asyncOpts,
+				ExpectedError:           tt.expectedErr,
+			})
+		})
+	}
+}
+
 // --- DeleteUser ---
 
 func TestUserDelete(t *testing.T) {
@@ -528,8 +943,8 @@ func TestUserDelete(t *testing.T) {
 			expectedErr: "no user found with email",
 		},
 		{
-			name: "NoIdentifier",
-			cmd:  temporalcloudcli.CloudUserDeleteCommand{},
+			name:        "NoIdentifier",
+			cmd:         temporalcloudcli.CloudUserDeleteCommand{},
 			expectedErr: "must provide either --user-id or --user-email",
 		},
 		{
@@ -843,6 +1258,30 @@ func TestUserApply(t *testing.T) {
 			asyncOpID:    op.Id,
 		},
 		{
+			name: "CreateWithProjectAccess",
+			cmd: temporalcloudcli.CloudUserApplyCommand{
+				Spec: `{"email": "alice@example.com", "access": {"project_accesses": {"project-1": {"role": "PROJECT_ROLE_WRITE"}}}}`,
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				spec := &identityv1.UserSpec{
+					Email: "alice@example.com",
+					Access: &identityv1.Access{
+						ProjectAccesses: map[string]*identityv1.ProjectAccess{
+							"project-1": {Role: identityv1.ProjectAccess_PROJECT_ROLE_WRITE},
+						},
+					},
+				}
+				c.EXPECT().
+					GetUsers(mock.Anything, &cloudservice.GetUsersRequest{Email: "alice@example.com"}, mock.Anything).
+					Return(&cloudservice.GetUsersResponse{Users: nil}, nil)
+				c.EXPECT().
+					CreateUser(mock.Anything, &cloudservice.CreateUserRequest{Spec: spec}, mock.Anything).
+					Return(&cloudservice.CreateUserResponse{UserId: "user-new", AsyncOperation: op}, nil)
+			},
+			promptResult: true,
+			asyncOpID:    op.Id,
+		},
+		{
 			name: "UpdateSuccess",
 			cmd: temporalcloudcli.CloudUserApplyCommand{
 				Spec: `{"email": "alice@example.com", "access": {"account_access": {"role": "ROLE_ADMIN"}}}`,
@@ -1031,6 +1470,7 @@ func TestUserInvite(t *testing.T) {
 				Email:           "alice@example.com",
 				AccountRole:     "developer",
 				NamespaceAccess: []string{"my-ns.my-account=write"},
+				ProjectAccess:   []string{"project-1=write", "project-2=member"},
 			},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				expectedSpec := &identityv1.UserSpec{
@@ -1039,6 +1479,10 @@ func TestUserInvite(t *testing.T) {
 						AccountAccess: &identityv1.AccountAccess{Role: identityv1.AccountAccess_ROLE_DEVELOPER},
 						NamespaceAccesses: map[string]*identityv1.NamespaceAccess{
 							"my-ns.my-account": {Permission: identityv1.NamespaceAccess_PERMISSION_WRITE},
+						},
+						ProjectAccesses: map[string]*identityv1.ProjectAccess{
+							"project-1": {Role: identityv1.ProjectAccess_PROJECT_ROLE_WRITE},
+							"project-2": {Role: identityv1.ProjectAccess_PROJECT_ROLE_MEMBER},
 						},
 					},
 				}
@@ -1111,6 +1555,22 @@ func TestUserInvite(t *testing.T) {
 			// Validation fails before prompt
 			expectedErr: "invalid permission",
 		},
+		{
+			name: "InvalidProjectAccessFormat",
+			cmd: temporalcloudcli.CloudUserInviteCommand{
+				Email:         "alice@example.com",
+				ProjectAccess: []string{"project-1"},
+			},
+			expectedErr: "invalid project-access",
+		},
+		{
+			name: "InvalidProjectAccessRole",
+			cmd: temporalcloudcli.CloudUserInviteCommand{
+				Email:         "alice@example.com",
+				ProjectAccess: []string{"project-1=developer"},
+			},
+			expectedErr: "invalid project role",
+		},
 	}
 
 	for _, tt := range tests {
@@ -1139,6 +1599,10 @@ func TestUserInvite(t *testing.T) {
 func TestUserList(t *testing.T) {
 	type listOutput struct {
 		Users         []*identityv1.User
+		NextPageToken string
+	}
+	type projectAssignmentListOutput struct {
+		Users         []*identityv1.UserProjectAssignment
 		NextPageToken string
 	}
 	apiErr := errors.New("api error")
@@ -1214,6 +1678,62 @@ func TestUserList(t *testing.T) {
 				Users:         []*identityv1.User{{Id: "user-3", Spec: &identityv1.UserSpec{Email: "carol@example.com"}}},
 				NextPageToken: "tok-def",
 			},
+		},
+		{
+			name: "WithProjectId",
+			cmd: temporalcloudcli.CloudUserListCommand{
+				ProjectId: "project-1",
+				PageSize:  10,
+				PageToken: "tok-abc",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUserProjectAssignments(mock.Anything, &cloudservice.GetUserProjectAssignmentsRequest{
+						ProjectId: "project-1",
+						PageSize:  10,
+						PageToken: "tok-abc",
+					}, mock.Anything).
+					Return(&cloudservice.GetUserProjectAssignmentsResponse{
+						Users: []*identityv1.UserProjectAssignment{
+							{
+								Id:    "user-1",
+								Email: "alice@example.com",
+								ProjectAccess: &identityv1.ProjectAccess{
+									Role: identityv1.ProjectAccess_PROJECT_ROLE_WRITE,
+								},
+							},
+						},
+						NextPageToken: "tok-def",
+					}, nil)
+			},
+			expectedOutputJson: projectAssignmentListOutput{
+				Users: []*identityv1.UserProjectAssignment{
+					{
+						Id:    "user-1",
+						Email: "alice@example.com",
+						ProjectAccess: &identityv1.ProjectAccess{
+							Role: identityv1.ProjectAccess_PROJECT_ROLE_WRITE,
+						},
+					},
+				},
+				NextPageToken: "tok-def",
+			},
+		},
+		{
+			name: "ProjectIdWithEmailRejected",
+			cmd: temporalcloudcli.CloudUserListCommand{
+				ProjectId: "project-1",
+				Email:     "alice@example.com",
+			},
+			expectedErr: "--project-id cannot be combined with --email or --namespace",
+		},
+		{
+			name: "ProjectIdWithNamespaceRejected",
+			cmd: temporalcloudcli.CloudUserListCommand{
+				ProjectId: "project-1",
+				Namespace: "my-namespace.my-account",
+			},
+			expectedErr: "--project-id cannot be combined with --email or --namespace",
 		},
 		{
 			name: "ApiError",

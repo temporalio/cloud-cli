@@ -13,9 +13,9 @@ import (
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
-// AIDEV-NOTE: accountRoleNames and namespacePermissionNames are the canonical
-// string-to-enum mappings used by invite (and future update) commands.
-// The keys are the exact strings accepted by --account-role and --namespace-access flags.
+// AIDEV-NOTE: Role maps are the canonical string-to-enum mappings used by user,
+// service account, and user group access commands. The keys are the exact strings
+// accepted by role and access flags.
 var (
 	accountRoleNames = map[string]identityv1.AccountAccess_Role{
 		"owner":         identityv1.AccountAccess_ROLE_OWNER,
@@ -30,6 +30,15 @@ var (
 		"admin": identityv1.NamespaceAccess_PERMISSION_ADMIN,
 		"write": identityv1.NamespaceAccess_PERMISSION_WRITE,
 		"read":  identityv1.NamespaceAccess_PERMISSION_READ,
+	}
+
+	projectRoleNames = map[string]identityv1.ProjectAccess_ProjectRole{
+		"admin":      identityv1.ProjectAccess_PROJECT_ROLE_ADMIN,
+		"write":      identityv1.ProjectAccess_PROJECT_ROLE_WRITE,
+		"read":       identityv1.ProjectAccess_PROJECT_ROLE_READ,
+		"list":       identityv1.ProjectAccess_PROJECT_ROLE_LIST,
+		"contribute": identityv1.ProjectAccess_PROJECT_ROLE_CONTRIBUTE,
+		"member":     identityv1.ProjectAccess_PROJECT_ROLE_MEMBER,
 	}
 )
 
@@ -49,6 +58,13 @@ func (c *CloudUserGetCommand) run(cctx *CommandContext, _ []string) error {
 }
 
 func (c *CloudUserListCommand) run(cctx *CommandContext, _ []string) error {
+	if c.ProjectId != "" {
+		if c.Email != "" || c.Namespace != "" {
+			return errors.New("--project-id cannot be combined with --email or --namespace")
+		}
+		return listUserProjectAssignments(cctx, c)
+	}
+
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -87,6 +103,10 @@ func (c *CloudUserInviteCommand) run(cctx *CommandContext, _ []string) error {
 	if err != nil {
 		return err
 	}
+	projectAccesses, err := parseProjectAccesses(c.ProjectAccess)
+	if err != nil {
+		return err
+	}
 	if c.Command.Flags().Changed("custom-role") {
 		if accountAccess == nil {
 			return errors.New("--custom-role requires --account-role; a principal must have a account role")
@@ -110,6 +130,7 @@ func (c *CloudUserInviteCommand) run(cctx *CommandContext, _ []string) error {
 			Access: &identityv1.Access{
 				AccountAccess:     accountAccess,
 				NamespaceAccesses: namespaceAccesses,
+				ProjectAccesses:   projectAccesses,
 			},
 		},
 		AsyncOperationId: c.AsyncOperationId,
@@ -233,6 +254,77 @@ func (c *CloudUserSetAccountRoleCommand) run(cctx *CommandContext, _ []string) e
 	resp, err := client.UpdateUser(cctx, &cloudservice.UpdateUserRequest{
 		UserId:           user.Id,
 		Spec:             newSpec,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
+func (c *CloudUserSetProjectAccessCommand) run(cctx *CommandContext, _ []string) error {
+	if err := validateUserIdentification(c.UserIdentificationOptions); err != nil {
+		return err
+	}
+	projectAccess, err := parseProjectRole(c.ProjectRole)
+	if err != nil {
+		return err
+	}
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	user, err := resolveUser(cctx, client, c.UserIdentificationOptions)
+	if err != nil {
+		return err
+	}
+
+	yes, err := cctx.GetPrompter().PromptYes("Set project access")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting set.")
+	}
+	rv := user.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.SetUserProjectAccess(cctx, &cloudservice.SetUserProjectAccessRequest{
+		ProjectId:        c.ProjectId,
+		UserId:           user.Id,
+		Access:           projectAccess,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
+func (c *CloudUserRemoveProjectAccessCommand) run(cctx *CommandContext, _ []string) error {
+	if err := validateUserIdentification(c.UserIdentificationOptions); err != nil {
+		return err
+	}
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	user, err := resolveUser(cctx, client, c.UserIdentificationOptions)
+	if err != nil {
+		return err
+	}
+
+	yes, err := cctx.GetPrompter().PromptYes("Remove project access")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting remove.")
+	}
+	rv := user.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.SetUserProjectAccess(cctx, &cloudservice.SetUserProjectAccessRequest{
+		ProjectId:        c.ProjectId,
+		UserId:           user.Id,
 		ResourceVersion:  rv,
 		AsyncOperationId: c.AsyncOperationId,
 	})
@@ -385,6 +477,33 @@ func parseNamespaceAccesses(accesses []string) (map[string]*identityv1.Namespace
 	return result, nil
 }
 
+func parseProjectRole(role string) (*identityv1.ProjectAccess, error) {
+	r, ok := projectRoleNames[role]
+	if !ok {
+		return nil, fmt.Errorf("invalid project role %q: must be one of admin, write, read, list, contribute, member", role)
+	}
+	return &identityv1.ProjectAccess{Role: r}, nil
+}
+
+func parseProjectAccesses(accesses []string) (map[string]*identityv1.ProjectAccess, error) {
+	if len(accesses) == 0 {
+		return nil, nil
+	}
+	result := make(map[string]*identityv1.ProjectAccess, len(accesses))
+	for _, a := range accesses {
+		projectID, role, ok := strings.Cut(a, "=")
+		if !ok {
+			return nil, fmt.Errorf("invalid project-access %q: must be in the format 'project-id=role'", a)
+		}
+		projectAccess, err := parseProjectRole(role)
+		if err != nil {
+			return nil, fmt.Errorf("%w in project-access %q", err, a)
+		}
+		result[projectID] = projectAccess
+	}
+	return result, nil
+}
+
 // applyCustomRoleChanges returns the new CustomRoles slice for an update
 // command, given the existing list and whether --custom-role was passed.
 //
@@ -481,6 +600,44 @@ func (c *CloudUserSetCustomRolesCommand) run(cctx *CommandContext, _ []string) e
 		AsyncOperationId: c.AsyncOperationId,
 	})
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
+func listUserProjectAssignments(cctx *CommandContext, c *CloudUserListCommand) error {
+	return printProjectUserAssignments(cctx, c.ClientOptions, c.ProjectId, c.PageSize, c.PageToken)
+}
+
+func printProjectUserAssignments(
+	cctx *CommandContext,
+	clientOptions ClientOptions,
+	projectID string,
+	pageSize int,
+	pageToken string,
+) error {
+	client, err := cctx.GetCloudClient(clientOptions)
+	if err != nil {
+		return err
+	}
+	res, err := client.GetUserProjectAssignments(cctx, &cloudservice.GetUserProjectAssignmentsRequest{
+		ProjectId: projectID,
+		PageSize:  int32(pageSize),
+		PageToken: pageToken,
+	})
+	if err != nil {
+		return err
+	}
+	return cctx.Printer.PrintResourceList(
+		struct {
+			Users         []*identityv1.UserProjectAssignment
+			NextPageToken string
+		}{
+			Users:         res.Users,
+			NextPageToken: res.NextPageToken,
+		},
+		printer.PrintResourceOptions{
+			Fields: []string{"Id", "Email", "ProjectAccess", "InheritedAccess"},
+		},
+		printer.TableOptions{},
+	)
 }
 
 func validateUserIdentification(identification UserIdentificationOptions) error {
