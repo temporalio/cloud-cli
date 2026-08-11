@@ -48,6 +48,10 @@ func (c *CloudServiceAccountCreateCommand) run(cctx *CommandContext, _ []string)
 	if err != nil {
 		return err
 	}
+	projectAccesses, err := parseProjectAccesses(c.ProjectAccess)
+	if err != nil {
+		return err
+	}
 	if c.Command.Flags().Changed("custom-role") {
 		if accountAccess == nil {
 			return errors.New("--custom-role requires --account-role; a principal must have a account role")
@@ -72,6 +76,7 @@ func (c *CloudServiceAccountCreateCommand) run(cctx *CommandContext, _ []string)
 			Access: &identityv1.Access{
 				AccountAccess:     accountAccess,
 				NamespaceAccesses: namespaceAccesses,
+				ProjectAccesses:   projectAccesses,
 			},
 		},
 		AsyncOperationId: c.AsyncOperationId,
@@ -109,10 +114,47 @@ func (c *CloudServiceAccountCreateNamespaceScopedCommand) run(cctx *CommandConte
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleCreateAsyncOperationResponse(cctx, resp, err)
 }
 
+func (c *CloudServiceAccountCreateProjectScopedCommand) run(cctx *CommandContext, _ []string) error {
+	projectAccess, err := parseProjectRole(c.ProjectRole)
+	if err != nil {
+		return err
+	}
+	namespaceAccesses, err := parseNamespaceAccesses(c.NamespaceAccess)
+	if err != nil {
+		return err
+	}
+	yes, err := cctx.GetPrompter().PromptYes("Create")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting create.")
+	}
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	resp, err := client.CreateServiceAccount(cctx, &cloudservice.CreateServiceAccountRequest{
+		Spec: &identityv1.ServiceAccountSpec{
+			Name:        c.Name,
+			Description: c.Description,
+			ProjectScopedAccess: &identityv1.ProjectScopedAccess{
+				ProjectId:         c.ProjectId,
+				Access:            projectAccess,
+				NamespaceAccesses: namespaceAccesses,
+			},
+		},
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleCreateAsyncOperationResponse(cctx, resp, err)
+}
+
 func (c *CloudServiceAccountUpdateCommand) run(cctx *CommandContext, _ []string) error {
 	// Validate input formats before any API call.
 	accountRoleChanged := c.Command.Flags().Changed("account-role")
 	namespaceAccessChanged := c.Command.Flags().Changed("namespace-access")
+	projectAccessChanged := c.Command.Flags().Changed("project-access")
+	projectRoleChanged := c.Command.Flags().Changed("project-role")
 	namespacePermissionChanged := c.Command.Flags().Changed("namespace-permission")
 	customRoleChanged := c.Command.Flags().Changed("custom-role")
 
@@ -123,6 +165,16 @@ func (c *CloudServiceAccountUpdateCommand) run(cctx *CommandContext, _ []string)
 	}
 	if namespaceAccessChanged {
 		if _, err := applyNamespaceAccessChanges(nil, c.NamespaceAccess); err != nil {
+			return err
+		}
+	}
+	if projectAccessChanged {
+		if _, err := applyProjectAccessChanges(nil, c.ProjectAccess); err != nil {
+			return err
+		}
+	}
+	if projectRoleChanged {
+		if _, err := parseProjectRole(c.ProjectRole); err != nil {
 			return err
 		}
 	}
@@ -144,12 +196,22 @@ func (c *CloudServiceAccountUpdateCommand) run(cctx *CommandContext, _ []string)
 	newSpec := proto.Clone(sa.Spec).(*identityv1.ServiceAccountSpec)
 
 	isNamespaceScoped := newSpec.NamespaceScopedAccess != nil
+	isProjectScoped := newSpec.ProjectScopedAccess != nil
 
-	if isNamespaceScoped && (accountRoleChanged || namespaceAccessChanged || customRoleChanged) {
-		return errors.New("--account-role, --namespace-access, and --custom-role are not valid for namespace-scoped service accounts")
+	if isNamespaceScoped &&
+		(accountRoleChanged || namespaceAccessChanged || projectAccessChanged || projectRoleChanged || customRoleChanged) {
+		return errors.New("--account-role, --namespace-access, --project-access, --project-role, " +
+			"and --custom-role are not valid for namespace-scoped service accounts")
+	}
+	if isProjectScoped && (accountRoleChanged || projectAccessChanged || namespacePermissionChanged || customRoleChanged) {
+		return errors.New("--account-role, --project-access, --namespace-permission, " +
+			"and --custom-role are not valid for project-scoped service accounts")
+	}
+	if !isProjectScoped && projectRoleChanged {
+		return errors.New("--project-role is only valid for project-scoped service accounts")
 	}
 	if !isNamespaceScoped && namespacePermissionChanged {
-		return errors.New("--namespace-permission is not valid for account-scoped service accounts")
+		return errors.New("--namespace-permission is only valid for namespace-scoped service accounts")
 	}
 
 	if c.Command.Flags().Changed("name") {
@@ -170,13 +232,39 @@ func (c *CloudServiceAccountUpdateCommand) run(cctx *CommandContext, _ []string)
 		newSpec.Access.AccountAccess = newAccountAccess
 	}
 	if namespaceAccessChanged {
-		if newSpec.Access == nil {
-			newSpec.Access = &identityv1.Access{}
+		if isProjectScoped {
+			newSpec.ProjectScopedAccess.NamespaceAccesses, err = applyNamespaceAccessChanges(
+				newSpec.ProjectScopedAccess.NamespaceAccesses,
+				c.NamespaceAccess,
+			)
+		} else {
+			if newSpec.Access == nil {
+				newSpec.Access = &identityv1.Access{}
+			}
+			newSpec.Access.NamespaceAccesses, err = applyNamespaceAccessChanges(newSpec.Access.NamespaceAccesses, c.NamespaceAccess)
 		}
-		newSpec.Access.NamespaceAccesses, err = applyNamespaceAccessChanges(newSpec.Access.NamespaceAccesses, c.NamespaceAccess)
 		if err != nil {
 			return err
 		}
+	}
+	if projectAccessChanged {
+		if newSpec.Access == nil {
+			newSpec.Access = &identityv1.Access{}
+		}
+		newSpec.Access.ProjectAccesses, err = applyProjectAccessChanges(newSpec.Access.ProjectAccesses, c.ProjectAccess)
+		if err != nil {
+			return err
+		}
+	}
+	if projectRoleChanged {
+		projectAccess, err := parseProjectRole(c.ProjectRole)
+		if err != nil {
+			return err
+		}
+		if newSpec.ProjectScopedAccess.Access == nil {
+			newSpec.ProjectScopedAccess.Access = &identityv1.ProjectAccess{}
+		}
+		newSpec.ProjectScopedAccess.Access = projectAccess
 	}
 	if customRoleChanged {
 		if newSpec.Access == nil || newSpec.Access.AccountAccess == nil {
@@ -213,6 +301,107 @@ func (c *CloudServiceAccountUpdateCommand) run(cctx *CommandContext, _ []string)
 		AsyncOperationId: c.AsyncOperationId,
 	})
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
+func (c *CloudServiceAccountSetProjectAccessCommand) run(cctx *CommandContext, _ []string) error {
+	projectAccess, err := parseProjectRole(c.ProjectRole)
+	if err != nil {
+		return err
+	}
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	res, err := client.GetServiceAccount(cctx, &cloudservice.GetServiceAccountRequest{ServiceAccountId: c.ServiceAccountId})
+	if err != nil {
+		return err
+	}
+	yes, err := cctx.GetPrompter().PromptYes("Set project access")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting set.")
+	}
+	rv := res.ServiceAccount.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.SetServiceAccountProjectAccess(cctx, &cloudservice.SetServiceAccountProjectAccessRequest{
+		ProjectId:        c.ProjectId,
+		ServiceAccountId: c.ServiceAccountId,
+		Access:           projectAccess,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
+func (c *CloudServiceAccountRemoveProjectAccessCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	res, err := client.GetServiceAccount(cctx, &cloudservice.GetServiceAccountRequest{ServiceAccountId: c.ServiceAccountId})
+	if err != nil {
+		return err
+	}
+	yes, err := cctx.GetPrompter().PromptYes("Remove project access")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting remove.")
+	}
+	rv := res.ServiceAccount.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.SetServiceAccountProjectAccess(cctx, &cloudservice.SetServiceAccountProjectAccessRequest{
+		ProjectId:        c.ProjectId,
+		ServiceAccountId: c.ServiceAccountId,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
+func (c *CloudProjectServiceAccountListCommand) run(cctx *CommandContext, _ []string) error {
+	return listServiceAccountProjectAssignments(cctx, c.ProjectId, c.PageSize, c.PageToken, c.ClientOptions)
+}
+
+func listServiceAccountProjectAssignments(
+	cctx *CommandContext,
+	projectID string,
+	pageSize int,
+	pageToken string,
+	clientOptions ClientOptions,
+) error {
+	client, err := cctx.GetCloudClient(clientOptions)
+	if err != nil {
+		return err
+	}
+	res, err := client.GetServiceAccountProjectAssignments(cctx, &cloudservice.GetServiceAccountProjectAssignmentsRequest{
+		ProjectId: projectID,
+		PageSize:  int32(pageSize),
+		PageToken: pageToken,
+	})
+	if err != nil {
+		return err
+	}
+	return cctx.Printer.PrintResourceList(
+		struct {
+			ServiceAccounts []*identityv1.ServiceAccountProjectAssignment
+			NextPageToken   string
+		}{
+			ServiceAccounts: res.ServiceAccounts,
+			NextPageToken:   res.NextPageToken,
+		},
+		printer.PrintResourceOptions{
+			Fields: []string{"Id", "Name", "ProjectAccess", "InheritedAccess"},
+		},
+		printer.TableOptions{},
+	)
 }
 
 func (c *CloudServiceAccountEditCommand) run(cctx *CommandContext, _ []string) error {
@@ -270,6 +459,30 @@ func (c *CloudServiceAccountListCommand) run(cctx *CommandContext, _ []string) e
 	if err != nil {
 		return err
 	}
+	if c.ProjectId != "" {
+		res, err := client.GetProjectScopedServiceAccounts(cctx, &cloudservice.GetProjectScopedServiceAccountsRequest{
+			ProjectId: c.ProjectId,
+			PageSize:  int32(c.PageSize),
+			PageToken: c.PageToken,
+		})
+		if err != nil {
+			return err
+		}
+		return cctx.Printer.PrintResourceList(
+			struct {
+				ServiceAccounts []*identityv1.ServiceAccount
+				NextPageToken   string
+			}{
+				ServiceAccounts: res.ServiceAccounts,
+				NextPageToken:   res.NextPageToken,
+			},
+			printer.PrintResourceOptions{
+				Fields:     []string{"Id", "State", "CreatedTime"},
+				SpecFields: []string{"Name"},
+			},
+			printer.TableOptions{},
+		)
+	}
 	res, err := client.GetServiceAccounts(cctx, &cloudservice.GetServiceAccountsRequest{
 		PageSize:  int32(c.PageSize),
 		PageToken: c.PageToken,
@@ -305,6 +518,9 @@ func (c *CloudServiceAccountSetCustomRolesCommand) run(cctx *CommandContext, _ [
 	sa := res.ServiceAccount
 	if sa.Spec.NamespaceScopedAccess != nil {
 		return errors.New("--custom-role is not valid for namespace-scoped service accounts")
+	}
+	if sa.Spec.ProjectScopedAccess != nil {
+		return errors.New("--custom-role is not valid for project-scoped service accounts")
 	}
 	newSpec := proto.Clone(sa.Spec).(*identityv1.ServiceAccountSpec)
 	if newSpec.Access == nil || newSpec.Access.AccountAccess == nil {
