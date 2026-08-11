@@ -63,6 +63,9 @@ type (
 		ExpectedError           string
 		ExpectedOutput          string
 		ExpectedOutputJson      any
+		// ExpectedOutputJsonEmitDefaults marshals ExpectedOutputJson with default values emitted. Set this for
+		// commands that print with printer.PrintResourceOptions{EmitDefaultValues: true}.
+		ExpectedOutputJsonEmitDefaults bool
 	}
 )
 
@@ -199,7 +202,9 @@ func TestCommand(t *testing.T, command CommandIfc, opts TestCommandOptions) {
 			var js []byte
 			var err error
 			if protoMessage, ok := opts.ExpectedOutputJson.(proto.Message); ok {
-				js, err = protojson.Marshal(protoMessage)
+				js, err = protojson.MarshalOptions{
+					EmitDefaultValues: opts.ExpectedOutputJsonEmitDefaults,
+				}.Marshal(protoMessage)
 			} else {
 				js, err = json.Marshal(opts.ExpectedOutputJson)
 			}

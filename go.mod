@@ -22,6 +22,9 @@ require (
 	google.golang.org/grpc v1.81.1
 )
 
+// TODO: Remove.
+replace go.temporal.io/api => ../api-go
+
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/brunoga/deep v1.3.1 // indirect

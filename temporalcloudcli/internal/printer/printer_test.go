@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	"go.temporal.io/cloud-sdk/api/operation/v1"
 	"go.temporal.io/cloud-sdk/api/resource/v1"
 )
@@ -826,6 +827,47 @@ func TestPrinter_OverrideJSONPayloadShorthand(t *testing.T) {
 		StructuredOptions{OverrideJSONPayloadShorthand: &trueVal},
 	))
 	require.Contains(t, buf.String(), "key")
+}
+
+func TestPrinter_EmitDefaultValues(t *testing.T) {
+	// A proto with a zero scalar (HasLegacyLimits), a nested message holding only zero scalars (Stats) and an
+	// unset message field (CurrentCapacity).
+	info := &namespacev1.NamespaceCapacityInfo{
+		Namespace: "my-ns",
+		Stats: &namespacev1.NamespaceCapacityInfo_Stats{
+			Aps: &namespacev1.NamespaceCapacityInfo_Stats_Summary{},
+		},
+	}
+
+	t.Run("JSON", func(t *testing.T) {
+		var buf bytes.Buffer
+		p := Printer{Output: &buf, JSON: true}
+		require.NoError(t, p.PrintResource(info, PrintResourceOptions{}))
+		require.NotContains(t, buf.String(), "hasLegacyLimits")
+		require.NotContains(t, buf.String(), "p99")
+
+		buf.Reset()
+		require.NoError(t, p.PrintResource(info, PrintResourceOptions{EmitDefaultValues: true}))
+		require.Contains(t, buf.String(), `"hasLegacyLimits":false`)
+		require.Contains(t, buf.String(), `"p99":0`)
+		// Unset message fields stay omitted even when emitting defaults
+		require.NotContains(t, buf.String(), "currentCapacity")
+	})
+
+	t.Run("Text", func(t *testing.T) {
+		var buf bytes.Buffer
+		p := Printer{Output: &buf}
+		require.NoError(t, p.PrintResource(info, PrintResourceOptions{}))
+		require.NotContains(t, buf.String(), "HasLegacyLimits")
+		require.NotContains(t, buf.String(), "p99")
+
+		buf.Reset()
+		require.NoError(t, p.PrintResource(info, PrintResourceOptions{EmitDefaultValues: true}))
+		require.Contains(t, buf.String(), "HasLegacyLimits")
+		require.Contains(t, buf.String(), "false")
+		require.Contains(t, buf.String(), `"p99":0`)
+		require.NotContains(t, buf.String(), "CurrentCapacity")
+	})
 }
 
 func TestConverters_ResourceState(t *testing.T) {

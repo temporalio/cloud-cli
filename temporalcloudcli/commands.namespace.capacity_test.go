@@ -60,6 +60,8 @@ func TestCapacityGet(t *testing.T) {
 				JSONOutput:              true,
 				ExpectedError:           tt.expectedErr,
 				ExpectedOutputJson:      tt.expectedJsonOutput,
+				// The get command prints with EmitDefaultValues, so zero-valued fields appear in the output.
+				ExpectedOutputJsonEmitDefaults: true,
 			})
 		})
 	}

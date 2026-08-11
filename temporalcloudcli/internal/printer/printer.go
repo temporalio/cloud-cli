@@ -14,8 +14,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/kylelemons/godebug/diff"
-	"github.com/olekukonko/tablewriter/tw"
 	"github.com/olekukonko/tablewriter/pkg/twwidth"
+	"github.com/olekukonko/tablewriter/tw"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/temporalproto"
 	"google.golang.org/protobuf/proto"
@@ -126,6 +126,9 @@ type StructuredOptions struct {
 	OverrideJSONPayloadShorthand *bool
 	// Indent this many additional times when printing non-JSON
 	NonJSONExtraIndent int
+	// If true, fields holding their default value (e.g. 0, false, "") are printed instead of omitted.
+	// Unset pointer fields remain omitted.
+	EmitDefaultValues bool
 }
 
 type Align tw.Align
@@ -155,7 +158,7 @@ func (p *Printer) PrintStructured(v any, options StructuredOptions) error {
 
 	// Get data
 	cols := options.toPredefinedCols()
-	cols, rows, err := p.tableData(cols, v)
+	cols, rows, err := p.tableData(cols, v, options.EmitDefaultValues)
 	if err != nil {
 		return err
 	}
@@ -203,7 +206,7 @@ func (p *Printer) PrintStructuredTableIter(
 		if v == nil || err != nil {
 			return err
 		}
-		row, err := p.tableRowData(cols, v)
+		row, err := p.tableRowData(cols, v, options.EmitDefaultValues)
 		if err != nil {
 			return err
 		}
@@ -248,7 +251,7 @@ func (p *Printer) printJSON(v any, options StructuredOptions) error {
 	if options.OverrideJSONPayloadShorthand != nil {
 		shorthandPayloads = *options.OverrideJSONPayloadShorthand
 	}
-	if b, err := p.jsonVal(v, p.JSONIndent, shorthandPayloads); err != nil {
+	if b, err := p.jsonVal(v, p.JSONIndent, shorthandPayloads, options.EmitDefaultValues); err != nil {
 		return err
 	} else if _, err := p.Output.Write(b); err != nil {
 		return err
@@ -263,10 +266,10 @@ func (p *Printer) printJSON(v any, options StructuredOptions) error {
 	return nil
 }
 
-func (p *Printer) jsonVal(v any, indent string, shorthandPayloads bool) ([]byte, error) {
+func (p *Printer) jsonVal(v any, indent string, shorthandPayloads, emitDefaultValues bool) ([]byte, error) {
 	// Use proto JSON if a proto message
 	if protoMessage, ok := v.(proto.Message); ok {
-		opts := temporalproto.CustomJSONMarshalOptions{Indent: indent}
+		opts := temporalproto.CustomJSONMarshalOptions{Indent: indent, EmitDefaultValues: emitDefaultValues}
 		if shorthandPayloads {
 			opts.Metadata = map[string]any{common.EnablePayloadShorthandMetadataKey: true}
 		}
@@ -443,7 +446,7 @@ func (p *Printer) applyConverters(v any) (string, bool) {
 	return "", false
 }
 
-func (p *Printer) textVal(v any) string {
+func (p *Printer) textVal(v any, emitDefaultValues bool) string {
 	// Check converters first
 	if ifv, ok := p.applyConverters(v); ok {
 		return ifv
@@ -460,7 +463,7 @@ func (p *Printer) textVal(v any) string {
 			}
 			return p.FormatTime(ref.Interface().(time.Time))
 		} else if (ref.Kind() == reflect.Struct && ref.CanInterface()) || ref.Type().Implements(jsonMarshalerType) {
-			b, err := p.jsonVal(v, "", true)
+			b, err := p.jsonVal(v, "", true, emitDefaultValues)
 			if err != nil {
 				return fmt.Sprintf("<failed converting to string: %v>", err)
 			}
@@ -477,7 +480,7 @@ func (p *Printer) textVal(v any) string {
 				if i > 0 {
 					sb.WriteString(", ")
 				}
-				sb.WriteString(p.textVal(ref.Index(i).Interface()))
+				sb.WriteString(p.textVal(ref.Index(i).Interface(), emitDefaultValues))
 			}
 			sb.WriteString("]")
 			return sb.String()
@@ -489,7 +492,11 @@ func (p *Printer) textVal(v any) string {
 	return fmt.Sprintf("%v", v)
 }
 
-func (p *Printer) tableData(predefinedCols []*col, v any) (cols []*col, rows []map[string]colVal, err error) {
+func (p *Printer) tableData(
+	predefinedCols []*col,
+	v any,
+	emitDefaultValues bool,
+) (cols []*col, rows []map[string]colVal, err error) {
 	singleItemType := reflect.TypeOf(v)
 	if singleItemType.Kind() == reflect.Slice {
 		singleItemType = singleItemType.Elem()
@@ -520,7 +527,7 @@ func (p *Printer) tableData(predefinedCols []*col, v any) (cols []*col, rows []m
 		row := make(map[string]colVal, len(cols))
 		for _, col := range cols {
 			colVal := colVal{val: colValGetter(col, itemVal)}
-			colVal.text = p.textVal(colVal.val)
+			colVal.text = p.textVal(colVal.val, emitDefaultValues)
 			row[col.name] = colVal
 		}
 		rows[i] = row
@@ -528,7 +535,7 @@ func (p *Printer) tableData(predefinedCols []*col, v any) (cols []*col, rows []m
 	return
 }
 
-func (p *Printer) tableRowData(cols []*col, v any) (map[string]colVal, error) {
+func (p *Printer) tableRowData(cols []*col, v any, emitDefaultValues bool) (map[string]colVal, error) {
 	colValGetter, err := colValGetterForType(reflect.TypeOf(v))
 	if err != nil {
 		return nil, err
@@ -537,7 +544,7 @@ func (p *Printer) tableRowData(cols []*col, v any) (map[string]colVal, error) {
 	itemVal := reflect.ValueOf(v)
 	for _, col := range cols {
 		colVal := colVal{val: colValGetter(col, itemVal)}
-		colVal.text = p.textVal(colVal.val)
+		colVal.text = p.textVal(colVal.val, emitDefaultValues)
 		row[col.name] = colVal
 	}
 	return row, nil
@@ -668,11 +675,11 @@ func (p *Printer) PrintDiff(a, b any, options DiffOptions) error {
 	// Each value is marshaled individually so proto messages are handled correctly,
 	// then embedded as RawMessage to preserve field order in the outer object.
 	if p.JSON {
-		beforeJSON, err := p.jsonVal(a, "", p.JSONPayloadShorthand)
+		beforeJSON, err := p.jsonVal(a, "", p.JSONPayloadShorthand, false)
 		if err != nil {
 			return fmt.Errorf("unable to convert before value for diff: %w", err)
 		}
-		afterJSON, err := p.jsonVal(b, "", p.JSONPayloadShorthand)
+		afterJSON, err := p.jsonVal(b, "", p.JSONPayloadShorthand, false)
 		if err != nil {
 			return fmt.Errorf("unable to convert after value for diff: %w", err)
 		}
@@ -683,11 +690,11 @@ func (p *Printer) PrintDiff(a, b any, options DiffOptions) error {
 	}
 
 	var atext, btext []byte
-	atext, err := p.jsonVal(a, "  ", true)
+	atext, err := p.jsonVal(a, "  ", true, false)
 	if err != nil {
 		return fmt.Errorf("unable to convert a to text for diff: %w", err)
 	}
-	btext, err = p.jsonVal(b, "  ", true)
+	btext, err = p.jsonVal(b, "  ", true, false)
 	if err != nil {
 		return fmt.Errorf("unable to convert b to text for diff: %w", err)
 	}
@@ -721,11 +728,14 @@ type PrintResourceOptions struct {
 	Fields []string
 	// SpecFields is a list of fields to print from the "Spec" sub-object, if empty all fields are printed. This is ignored for JSON output.
 	SpecFields []string
+	// EmitDefaultValues prints fields holding their default value (e.g. 0, false, "") instead of omitting them.
+	// Unset pointer fields (proto messages and presence-sensing scalars) remain omitted in both output modes.
+	EmitDefaultValues bool
 }
 
 func (p *Printer) PrintResponseWithAsyncOperation(resource any, options PrintResourceOptions) error {
 	if p.JSON {
-		return p.PrintStructured(resource, StructuredOptions{})
+		return p.PrintStructured(resource, StructuredOptions{EmitDefaultValues: options.EmitDefaultValues})
 	}
 	resourceVal := reflect.ValueOf(resource)
 	if resourceVal.Kind() == reflect.Pointer {
@@ -736,11 +746,17 @@ func (p *Printer) PrintResponseWithAsyncOperation(resource any, options PrintRes
 	}
 
 	// print all top-level fields except "Spec"
-	cols, row := p.parseFields(resourceVal, options.Fields, []string{"AsyncOperation"}, 1)
+	cols, row := p.parseFields(resourceVal, options.Fields, []string{"AsyncOperation"}, 1, options.EmitDefaultValues)
 	p.printCard(cols, row)
 
 	// now print "Spec" fields if present
-	specCols, specRow := p.parseFields(resourceVal.FieldByName("AsyncOperation"), options.SpecFields, nil, 2)
+	specCols, specRow := p.parseFields(
+		resourceVal.FieldByName("AsyncOperation"),
+		options.SpecFields,
+		nil,
+		2,
+		options.EmitDefaultValues,
+	)
 	if len(specCols) > 0 {
 		p.writeStr(NonJSONIndent)
 		p.writeStr("AsyncOperation:\n")
@@ -752,7 +768,7 @@ func (p *Printer) PrintResponseWithAsyncOperation(resource any, options PrintRes
 func (p *Printer) PrintResource(resource any, options PrintResourceOptions) error {
 	// For JSON we can just print the whole thing, ignoring the field options
 	if p.JSON {
-		return p.PrintStructured(resource, StructuredOptions{})
+		return p.PrintStructured(resource, StructuredOptions{EmitDefaultValues: options.EmitDefaultValues})
 	}
 
 	// For text we want to print "metadata" fields at the top level, and then "spec" fields below that with an indent. We can achieve this by printing two separate cards.
@@ -765,11 +781,17 @@ func (p *Printer) PrintResource(resource any, options PrintResourceOptions) erro
 	}
 
 	// print all top-level fields except "Spec"
-	cols, row := p.parseFields(resourceVal, options.Fields, []string{"Spec"}, 1)
+	cols, row := p.parseFields(resourceVal, options.Fields, []string{"Spec"}, 1, options.EmitDefaultValues)
 	p.printCard(cols, row)
 
 	// now print "Spec" fields if present
-	specCols, specRow := p.parseFields(resourceVal.FieldByName("Spec"), options.SpecFields, nil, 2)
+	specCols, specRow := p.parseFields(
+		resourceVal.FieldByName("Spec"),
+		options.SpecFields,
+		nil,
+		2,
+		options.EmitDefaultValues,
+	)
 	if len(specCols) > 0 {
 		p.writeStr(NonJSONIndent)
 		p.writeStr("Spec:\n")
@@ -783,6 +805,7 @@ func (p *Printer) parseFields(
 	allowList []string,
 	excludeList []string,
 	indent int,
+	emitDefaultValues bool,
 ) (cols []*col, row map[string]colVal) {
 	if !v.IsValid() {
 		return
@@ -806,11 +829,18 @@ func (p *Printer) parseFields(
 		if slices.Contains(excludeList, field.Name) {
 			continue
 		}
-		if isZero(v.Field(i).Interface()) {
+		if emitDefaultValues {
+			if v.Field(i).Kind() == reflect.Pointer && v.Field(i).IsNil() {
+				continue
+			}
+		} else if isZero(v.Field(i).Interface()) {
 			continue
 		}
 		cols = append(cols, &col{name: field.Name, indentAmount: indent})
-		row[field.Name] = colVal{val: v.Field(i).Interface(), text: p.textVal(v.Field(i).Interface())}
+		row[field.Name] = colVal{
+			val:  v.Field(i).Interface(),
+			text: p.textVal(v.Field(i).Interface(), emitDefaultValues),
+		}
 	}
 	return
 }
@@ -863,7 +893,7 @@ func (p *Printer) PrintResourceList(
 	tableOptions TableOptions,
 ) error {
 	if p.JSON {
-		return p.PrintStructured(resourceListResp, StructuredOptions{})
+		return p.PrintStructured(resourceListResp, StructuredOptions{EmitDefaultValues: options.EmitDefaultValues})
 	}
 
 	v := reflect.ValueOf(resourceListResp)
@@ -918,8 +948,14 @@ func (p *Printer) PrintResourceList(
 		if resourceVal.Kind() == reflect.Pointer {
 			resourceVal = resourceVal.Elem()
 		}
-		_, row := p.parseFields(resourceVal, options.Fields, []string{"Spec"}, 1)
-		_, specRow := p.parseFields(resourceVal.FieldByName("Spec"), options.SpecFields, nil, 1)
+		_, row := p.parseFields(resourceVal, options.Fields, []string{"Spec"}, 1, options.EmitDefaultValues)
+		_, specRow := p.parseFields(
+			resourceVal.FieldByName("Spec"),
+			options.SpecFields,
+			nil,
+			1,
+			options.EmitDefaultValues,
+		)
 		maps.Copy(row, specRow)
 		rows = append(rows, row)
 	}
