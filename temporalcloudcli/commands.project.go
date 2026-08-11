@@ -62,6 +62,10 @@ func (c *CloudProjectUserListCommand) run(cctx *CommandContext, _ []string) erro
 	return printProjectUserAssignments(cctx, c.ClientOptions, c.ProjectId, c.PageSize, c.PageToken)
 }
 
+func (c *CloudProjectUserGroupListCommand) run(cctx *CommandContext, _ []string) error {
+	return printProjectUserGroupAssignments(cctx, c.ClientOptions, c.ProjectId, c.PageSize, c.PageToken)
+}
+
 func (c *CloudProjectCreateCommand) run(cctx *CommandContext, _ []string) error {
 	spec := projectSpecFromFlags(c.DisplayName, c.Description, c.EnableDeleteProtection)
 

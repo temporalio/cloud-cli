@@ -24,6 +24,13 @@ func (c *CloudUserGroupGetCommand) run(cctx *CommandContext, _ []string) error {
 }
 
 func (c *CloudUserGroupListCommand) run(cctx *CommandContext, _ []string) error {
+	if c.ProjectId != "" {
+		if c.Namespace != "" || c.DisplayName != "" || c.GoogleGroupEmailAddress != "" || c.ScimGroupIdpId != "" {
+			return errors.New("--project-id cannot be combined with --namespace, --display-name, --google-group-email-address, or --scim-group-idp-id")
+		}
+		return printProjectUserGroupAssignments(cctx, c.ClientOptions, c.ProjectId, c.PageSize, c.PageToken)
+	}
+
 	client, err := cctx.GetCloudClient(c.ClientOptions)
 	if err != nil {
 		return err
@@ -94,6 +101,10 @@ func (c *CloudUserGroupCreateCloudGroupCommand) run(cctx *CommandContext, _ []st
 	if err != nil {
 		return err
 	}
+	projectAccesses, err := parseProjectAccesses(c.ProjectAccess)
+	if err != nil {
+		return err
+	}
 	if c.Command.Flags().Changed("custom-role") {
 		if accountAccess == nil {
 			return errors.New("--custom-role requires --account-role; a principal must have a account role")
@@ -115,10 +126,11 @@ func (c *CloudUserGroupCreateCloudGroupCommand) run(cctx *CommandContext, _ []st
 		DisplayName: c.DisplayName,
 		GroupType:   &identityv1.UserGroupSpec_CloudGroup{CloudGroup: &identityv1.CloudGroupSpec{}},
 	}
-	if accountAccess != nil || len(namespaceAccesses) > 0 {
+	if accountAccess != nil || len(namespaceAccesses) > 0 || len(projectAccesses) > 0 {
 		spec.Access = &identityv1.Access{
 			AccountAccess:     accountAccess,
 			NamespaceAccesses: namespaceAccesses,
+			ProjectAccesses:   projectAccesses,
 		}
 	}
 	resp, err := client.CreateUserGroup(cctx, &cloudservice.CreateUserGroupRequest{
@@ -134,6 +146,10 @@ func (c *CloudUserGroupCreateGoogleGroupCommand) run(cctx *CommandContext, _ []s
 		return err
 	}
 	namespaceAccesses, err := parseNamespaceAccesses(c.NamespaceAccess)
+	if err != nil {
+		return err
+	}
+	projectAccesses, err := parseProjectAccesses(c.ProjectAccess)
 	if err != nil {
 		return err
 	}
@@ -160,10 +176,11 @@ func (c *CloudUserGroupCreateGoogleGroupCommand) run(cctx *CommandContext, _ []s
 			GoogleGroup: &identityv1.GoogleGroupSpec{EmailAddress: c.GoogleGroupEmail},
 		},
 	}
-	if accountAccess != nil || len(namespaceAccesses) > 0 {
+	if accountAccess != nil || len(namespaceAccesses) > 0 || len(projectAccesses) > 0 {
 		spec.Access = &identityv1.Access{
 			AccountAccess:     accountAccess,
 			NamespaceAccesses: namespaceAccesses,
+			ProjectAccesses:   projectAccesses,
 		}
 	}
 	resp, err := client.CreateUserGroup(cctx, &cloudservice.CreateUserGroupRequest{
@@ -179,6 +196,10 @@ func (c *CloudUserGroupCreateScimGroupCommand) run(cctx *CommandContext, _ []str
 		return err
 	}
 	namespaceAccesses, err := parseNamespaceAccesses(c.NamespaceAccess)
+	if err != nil {
+		return err
+	}
+	projectAccesses, err := parseProjectAccesses(c.ProjectAccess)
 	if err != nil {
 		return err
 	}
@@ -205,10 +226,11 @@ func (c *CloudUserGroupCreateScimGroupCommand) run(cctx *CommandContext, _ []str
 			ScimGroup: &identityv1.SCIMGroupSpec{IdpId: c.ScimIdpId},
 		},
 	}
-	if accountAccess != nil || len(namespaceAccesses) > 0 {
+	if accountAccess != nil || len(namespaceAccesses) > 0 || len(projectAccesses) > 0 {
 		spec.Access = &identityv1.Access{
 			AccountAccess:     accountAccess,
 			NamespaceAccesses: namespaceAccesses,
+			ProjectAccesses:   projectAccesses,
 		}
 	}
 	resp, err := client.CreateUserGroup(cctx, &cloudservice.CreateUserGroupRequest{
@@ -307,11 +329,14 @@ func (c *CloudUserGroupEditCommand) run(cctx *CommandContext, _ []string) error 
 
 func (c *CloudUserGroupUpdateCommand) run(cctx *CommandContext, _ []string) error {
 	customRoleProvided := c.Command.Flags().Changed("custom-role")
-	if c.AccountRole == "" && len(c.NamespaceAccess) == 0 && !customRoleProvided {
-		return errors.New("must provide at least one of --account-role, --namespace-access, or --custom-role")
+	if c.AccountRole == "" && len(c.NamespaceAccess) == 0 && len(c.ProjectAccess) == 0 && !customRoleProvided {
+		return errors.New("must provide at least one of --account-role, --namespace-access, --project-access, or --custom-role")
 	}
 	// Validate inputs before any API call.
 	if _, err := applyNamespaceAccessChanges(nil, c.NamespaceAccess); err != nil {
+		return err
+	}
+	if _, err := applyProjectAccessChanges(nil, c.ProjectAccess); err != nil {
 		return err
 	}
 	var accountAccess *identityv1.AccountAccess
@@ -348,6 +373,13 @@ func (c *CloudUserGroupUpdateCommand) run(cctx *CommandContext, _ []string) erro
 			return err
 		}
 		newSpec.Access.NamespaceAccesses = namespaceAccesses
+	}
+	if len(c.ProjectAccess) > 0 {
+		projectAccesses, err := applyProjectAccessChanges(newSpec.Access.ProjectAccesses, c.ProjectAccess)
+		if err != nil {
+			return err
+		}
+		newSpec.Access.ProjectAccesses = projectAccesses
 	}
 	if customRoleProvided {
 		if newSpec.Access.AccountAccess == nil {
@@ -419,6 +451,69 @@ func (c *CloudUserGroupSetAccountRoleCommand) run(cctx *CommandContext, _ []stri
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
 }
 
+func (c *CloudUserGroupSetProjectAccessCommand) run(cctx *CommandContext, _ []string) error {
+	projectAccess, err := parseProjectRole(c.ProjectRole)
+	if err != nil {
+		return err
+	}
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	res, err := client.GetUserGroup(cctx, &cloudservice.GetUserGroupRequest{GroupId: c.GroupId})
+	if err != nil {
+		return err
+	}
+	yes, err := cctx.GetPrompter().PromptYes("Set project access")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting set.")
+	}
+	rv := res.Group.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.SetUserGroupProjectAccess(cctx, &cloudservice.SetUserGroupProjectAccessRequest{
+		ProjectId:        c.ProjectId,
+		GroupId:          c.GroupId,
+		Access:           projectAccess,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
+func (c *CloudUserGroupRemoveProjectAccessCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	res, err := client.GetUserGroup(cctx, &cloudservice.GetUserGroupRequest{GroupId: c.GroupId})
+	if err != nil {
+		return err
+	}
+	yes, err := cctx.GetPrompter().PromptYes("Remove project access")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting remove.")
+	}
+	rv := res.Group.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.SetUserGroupProjectAccess(cctx, &cloudservice.SetUserGroupProjectAccessRequest{
+		ProjectId:        c.ProjectId,
+		GroupId:          c.GroupId,
+		ResourceVersion:  rv,
+		AsyncOperationId: c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
 func (c *CloudUserGroupSetNamespacePermissionsCommand) run(cctx *CommandContext, _ []string) error {
 	// Validate inputs before any API call.
 	if _, err := applyNamespaceAccessChanges(nil, c.NamespaceAccess); err != nil {
@@ -459,6 +554,40 @@ func (c *CloudUserGroupSetNamespacePermissionsCommand) run(cctx *CommandContext,
 		AsyncOperationId: c.AsyncOperationId,
 	})
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
+}
+
+func printProjectUserGroupAssignments(
+	cctx *CommandContext,
+	clientOptions ClientOptions,
+	projectID string,
+	pageSize int,
+	pageToken string,
+) error {
+	client, err := cctx.GetCloudClient(clientOptions)
+	if err != nil {
+		return err
+	}
+	res, err := client.GetUserGroupProjectAssignments(cctx, &cloudservice.GetUserGroupProjectAssignmentsRequest{
+		ProjectId: projectID,
+		PageSize:  int32(pageSize),
+		PageToken: pageToken,
+	})
+	if err != nil {
+		return err
+	}
+	return cctx.Printer.PrintResourceList(
+		struct {
+			Groups        []*identityv1.UserGroupProjectAssignment
+			NextPageToken string
+		}{
+			Groups:        res.Groups,
+			NextPageToken: res.NextPageToken,
+		},
+		printer.PrintResourceOptions{
+			Fields: []string{"Id", "DisplayName", "ProjectAccess", "InheritedAccess"},
+		},
+		printer.TableOptions{},
+	)
 }
 
 func (c *CloudUserGroupSetCustomRolesCommand) run(cctx *CommandContext, _ []string) error {

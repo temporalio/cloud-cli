@@ -2337,6 +2337,40 @@ commands:
         type: string
         description: |
           Token for retrieving the next page of results in a paginated list.
+  - name: cloud project user-group
+    summary: Inspect user groups with access to a project
+    description: |
+      Commands for inspecting the user groups that have access to a Temporal
+      Cloud project.
+    has-init: false
+  - name: cloud project user-group list
+    summary: List user groups with access to a project
+    description: |
+      List the user groups that have access to a Temporal Cloud project,
+      including both directly-assigned and inherited access.
+
+      Example:
+
+      ```
+      temporal cloud project user-group list --project-id my-project-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+    options:
+      - name: project-id
+        type: string
+        required: true
+        description: |
+          The ID of the project.
+      - name: page-size
+        type: int
+        description: |
+          Number of user groups to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
 
   # User group commands
   - name: cloud user-group
@@ -2393,13 +2427,15 @@ commands:
 
       Account roles: owner, admin, developer, finance-admin, read, metrics-read.
       Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+      Project access format: 'project-id=role' where role is one of: admin, write, read, list, contribute, member.
 
       Example:
 
       ```
       temporal cloud user-group create-cloud-group --display-name "Engineering" \
         --account-role developer \
-        --namespace-access my-namespace.my-account=write
+        --namespace-access my-namespace.my-account=write \
+        --project-access my-project-id=write
       ```
     has-init: false
     option-sets:
@@ -2421,6 +2457,11 @@ commands:
         description: |
           Namespace access to grant, in the format 'namespace=permission'.
           Permission must be one of: admin, write, read. Can be repeated.
+      - name: project-access
+        type: string[]
+        description: |
+          Project access to grant, in the format 'project-id=role'.
+          Role must be one of: admin, write, read, list, contribute, member. Can be repeated.
       - name: custom-role
         type: string[]
         description: |
@@ -2433,13 +2474,15 @@ commands:
 
       Account roles: owner, admin, developer, finance-admin, read, metrics-read.
       Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+      Project access format: 'project-id=role' where role is one of: admin, write, read, list, contribute, member.
 
       Example:
 
       ```
       temporal cloud user-group create-google-group --display-name "Platform" \
         --google-group-email platform@example.com \
-        --account-role developer
+        --account-role developer \
+        --project-access my-project-id=write
       ```
     has-init: false
     option-sets:
@@ -2466,6 +2509,11 @@ commands:
         description: |
           Namespace access to grant, in the format 'namespace=permission'.
           Permission must be one of: admin, write, read. Can be repeated.
+      - name: project-access
+        type: string[]
+        description: |
+          Project access to grant, in the format 'project-id=role'.
+          Role must be one of: admin, write, read, list, contribute, member. Can be repeated.
       - name: custom-role
         type: string[]
         description: |
@@ -2478,13 +2526,15 @@ commands:
 
       Account roles: owner, admin, developer, finance-admin, read, metrics-read.
       Namespace access format: 'namespace=permission' where permission is one of: admin, write, read.
+      Project access format: 'project-id=role' where role is one of: admin, write, read, list, contribute, member.
 
       Example:
 
       ```
       temporal cloud user-group create-scim-group --display-name "Security" \
         --scim-idp-id idp-group-id-123 \
-        --account-role read
+        --account-role read \
+        --project-access my-project-id=read
       ```
     has-init: false
     option-sets:
@@ -2511,6 +2561,11 @@ commands:
         description: |
           Namespace access to grant, in the format 'namespace=permission'.
           Permission must be one of: admin, write, read. Can be repeated.
+      - name: project-access
+        type: string[]
+        description: |
+          Project access to grant, in the format 'project-id=role'.
+          Role must be one of: admin, write, read, list, contribute, member. Can be repeated.
       - name: custom-role
         type: string[]
         description: |
@@ -2556,6 +2611,12 @@ commands:
         type: string
         description: |
           Filter user groups by the namespace they have access to.
+      - name: project-id
+        type: string
+        description: |
+          List user groups with access to the project ID. Cannot be combined
+          with --namespace, --display-name, --google-group-email-address, or
+          --scim-group-idp-id.
       - name: display-name
         type: string
         description: |
@@ -2590,7 +2651,7 @@ commands:
     description: |
       Update an existing Temporal Cloud user group's access settings.
 
-      Provide at least one of --account-role, --namespace-access, or --custom-role.
+      Provide at least one of --account-role, --namespace-access, --project-access, or --custom-role.
 
       Example:
 
@@ -2598,9 +2659,12 @@ commands:
       temporal cloud user-group update --group-id my-group-id --account-role developer
       temporal cloud user-group update --group-id my-group-id \
         --namespace-access my-namespace.my-account=write
+      temporal cloud user-group update --group-id my-group-id \
+        --project-access my-project-id=write
       temporal cloud user-group update --group-id my-group-id --account-role admin \
         --namespace-access my-namespace.my-account=write \
-        --namespace-access other-namespace.my-account=read
+        --namespace-access other-namespace.my-account=read \
+        --project-access my-project-id=read
       ```
     has-init: false
     option-sets:
@@ -2622,6 +2686,13 @@ commands:
           Permission must be one of: admin, write, read. Can be repeated.
           Use an empty permission (e.g. 'testns=') to remove access to a namespace.
           Changes are additive: namespaces not listed are left unchanged.
+      - name: project-access
+        type: string[]
+        description: |
+          Project access change in the format 'project-id=role'.
+          Role must be one of: admin, write, read, list, contribute, member. Can be repeated.
+          Use an empty role (e.g. 'project-id=') to remove access to a project.
+          Changes are additive: projects not listed are left unchanged.
   - name: cloud user-group edit
     summary: Interactively edit a user group configuration
     description: |
@@ -2689,6 +2760,60 @@ commands:
       - async-operation
       - resource-version
       - custom-role
+  - name: cloud user-group set-project-access
+    summary: Set project access for a user group
+    description: |
+      Set project-level access for a Temporal Cloud user group.
+
+      Project roles: admin, write, read, list, contribute, member.
+
+      Example:
+
+      ```
+      temporal cloud user-group set-project-access --group-id my-group-id \
+        --project-id my-project-id --project-role write
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - group-id
+      - async-operation
+      - resource-version
+    options:
+      - name: project-id
+        type: string
+        required: true
+        description: |
+          The ID of the project.
+      - name: project-role
+        type: string
+        required: true
+        description: |
+          The project-level role to assign. Valid values: admin, write, read,
+          list, contribute, member.
+  - name: cloud user-group remove-project-access
+    summary: Remove project access for a user group
+    description: |
+      Remove a Temporal Cloud user group's direct project-level access.
+
+      Example:
+
+      ```
+      temporal cloud user-group remove-project-access --group-id my-group-id \
+        --project-id my-project-id
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - group-id
+      - async-operation
+      - resource-version
+    options:
+      - name: project-id
+        type: string
+        required: true
+        description: |
+          The ID of the project.
   - name: cloud user-group set-namespace-permissions
     summary: Set namespace permissions for a user group
     description: |

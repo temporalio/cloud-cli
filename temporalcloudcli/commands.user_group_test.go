@@ -106,6 +106,34 @@ func TestListUserGroups(t *testing.T) {
 			},
 		},
 		{
+			name: "ProjectId",
+			cmd: temporalcloudcli.CloudUserGroupListCommand{
+				ProjectId: "project-1",
+				PageSize:  50,
+				PageToken: "next",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUserGroupProjectAssignments(mock.Anything, &cloudservice.GetUserGroupProjectAssignmentsRequest{
+						ProjectId: "project-1",
+						PageSize:  50,
+						PageToken: "next",
+					}, mock.Anything).
+					Return(&cloudservice.GetUserGroupProjectAssignmentsResponse{
+						Groups:        []*identityv1.UserGroupProjectAssignment{{Id: "group-1", DisplayName: "Engineering"}},
+						NextPageToken: "next-2",
+					}, nil)
+			},
+		},
+		{
+			name: "ProjectIdWithOtherFilter",
+			cmd: temporalcloudcli.CloudUserGroupListCommand{
+				ProjectId:   "project-1",
+				DisplayName: "Engineering",
+			},
+			expectedErr: "--project-id cannot be combined",
+		},
+		{
 			name: "GetError",
 			cmd:  temporalcloudcli.CloudUserGroupListCommand{},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -241,6 +269,32 @@ func TestCreateCloudGroup(t *testing.T) {
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-1"},
 		},
 		{
+			name: "ProjectAccess",
+			cmd: temporalcloudcli.CloudUserGroupCreateCloudGroupCommand{
+				DisplayName:   "Engineering",
+				ProjectAccess: []string{"project-1=write"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					CreateUserGroup(mock.Anything, &cloudservice.CreateUserGroupRequest{
+						Spec: &identityv1.UserGroupSpec{
+							DisplayName: "Engineering",
+							GroupType:   &identityv1.UserGroupSpec_CloudGroup{CloudGroup: &identityv1.CloudGroupSpec{}},
+							Access: &identityv1.Access{
+								ProjectAccesses: map[string]*identityv1.ProjectAccess{
+									"project-1": {Role: identityv1.ProjectAccess_PROJECT_ROLE_WRITE},
+								},
+							},
+						},
+					}, mock.Anything).
+					Return(&cloudservice.CreateUserGroupResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-1"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-1"},
+		},
+		{
 			name:          "PromptDeclined",
 			cmd:           temporalcloudcli.CloudUserGroupCreateCloudGroupCommand{DisplayName: "Engineering"},
 			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: false},
@@ -310,6 +364,35 @@ func TestCreateGoogleGroup(t *testing.T) {
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-2"},
 		},
 		{
+			name: "ProjectAccess",
+			cmd: temporalcloudcli.CloudUserGroupCreateGoogleGroupCommand{
+				DisplayName:      "Platform",
+				GoogleGroupEmail: "platform@example.com",
+				ProjectAccess:    []string{"project-1=member"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					CreateUserGroup(mock.Anything, &cloudservice.CreateUserGroupRequest{
+						Spec: &identityv1.UserGroupSpec{
+							DisplayName: "Platform",
+							GroupType: &identityv1.UserGroupSpec_GoogleGroup{
+								GoogleGroup: &identityv1.GoogleGroupSpec{EmailAddress: "platform@example.com"},
+							},
+							Access: &identityv1.Access{
+								ProjectAccesses: map[string]*identityv1.ProjectAccess{
+									"project-1": {Role: identityv1.ProjectAccess_PROJECT_ROLE_MEMBER},
+								},
+							},
+						},
+					}, mock.Anything).
+					Return(&cloudservice.CreateUserGroupResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-2"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-2"},
+		},
+		{
 			name: "PromptDeclined",
 			cmd: temporalcloudcli.CloudUserGroupCreateGoogleGroupCommand{
 				DisplayName:      "Platform",
@@ -369,6 +452,35 @@ func TestCreateScimGroup(t *testing.T) {
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
 					CreateUserGroup(mock.Anything, &cloudservice.CreateUserGroupRequest{Spec: scimGroupSpec}, mock.Anything).
+					Return(&cloudservice.CreateUserGroupResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-3"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-3"},
+		},
+		{
+			name: "ProjectAccess",
+			cmd: temporalcloudcli.CloudUserGroupCreateScimGroupCommand{
+				DisplayName:   "Security",
+				ScimIdpId:     "idp-abc",
+				ProjectAccess: []string{"project-1=read"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					CreateUserGroup(mock.Anything, &cloudservice.CreateUserGroupRequest{
+						Spec: &identityv1.UserGroupSpec{
+							DisplayName: "Security",
+							GroupType: &identityv1.UserGroupSpec_ScimGroup{
+								ScimGroup: &identityv1.SCIMGroupSpec{IdpId: "idp-abc"},
+							},
+							Access: &identityv1.Access{
+								ProjectAccesses: map[string]*identityv1.ProjectAccess{
+									"project-1": {Role: identityv1.ProjectAccess_PROJECT_ROLE_READ},
+								},
+							},
+						},
+					}, mock.Anything).
 					Return(&cloudservice.CreateUserGroupResponse{
 						AsyncOperation: &operation.AsyncOperation{Id: "op-3"},
 					}, nil)
@@ -649,14 +761,71 @@ func TestUpdateUserGroup(t *testing.T) {
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
 		},
 		{
+			name: "ProjectAccess",
+			cmd: temporalcloudcli.CloudUserGroupUpdateCommand{
+				GroupIdOptions: temporalcloudcli.GroupIdOptions{
+					GroupId: "group-1",
+				},
+				ProjectAccess: []string{"old-project=", "new-project=write"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUserGroup(mock.Anything, &cloudservice.GetUserGroupRequest{GroupId: "group-1"}, mock.Anything).
+					Return(&cloudservice.GetUserGroupResponse{
+						Group: &identityv1.UserGroup{
+							Id:              "group-1",
+							ResourceVersion: "rv-1",
+							Spec: &identityv1.UserGroupSpec{
+								DisplayName: "Engineering",
+								GroupType:   &identityv1.UserGroupSpec_CloudGroup{CloudGroup: &identityv1.CloudGroupSpec{}},
+								Access: &identityv1.Access{
+									ProjectAccesses: map[string]*identityv1.ProjectAccess{
+										"old-project": {Role: identityv1.ProjectAccess_PROJECT_ROLE_READ},
+									},
+								},
+							},
+						},
+					}, nil)
+				c.EXPECT().
+					UpdateUserGroup(mock.Anything, &cloudservice.UpdateUserGroupRequest{
+						GroupId: "group-1",
+						Spec: &identityv1.UserGroupSpec{
+							DisplayName: "Engineering",
+							GroupType:   &identityv1.UserGroupSpec_CloudGroup{CloudGroup: &identityv1.CloudGroupSpec{}},
+							Access: &identityv1.Access{
+								ProjectAccesses: map[string]*identityv1.ProjectAccess{
+									"new-project": {Role: identityv1.ProjectAccess_PROJECT_ROLE_WRITE},
+								},
+							},
+						},
+						ResourceVersion: "rv-1",
+					}, mock.Anything).
+					Return(&cloudservice.UpdateUserGroupResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-upd"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-upd"},
+		},
+		{
 			name:        "NoFlags",
 			cmd:         temporalcloudcli.CloudUserGroupUpdateCommand{GroupIdOptions: temporalcloudcli.GroupIdOptions{GroupId: "group-1"}},
-			expectedErr: "must provide at least one of --account-role, --namespace-access, or --custom-role",
+			expectedErr: "must provide at least one of --account-role, --namespace-access, --project-access, or --custom-role",
 		},
 		{
 			name:        "InvalidRole",
 			cmd:         temporalcloudcli.CloudUserGroupUpdateCommand{GroupIdOptions: temporalcloudcli.GroupIdOptions{GroupId: "group-1"}, AccountRole: "superadmin"},
 			expectedErr: "invalid account role",
+		},
+		{
+			name:        "InvalidProjectAccessFormat",
+			cmd:         temporalcloudcli.CloudUserGroupUpdateCommand{GroupIdOptions: temporalcloudcli.GroupIdOptions{GroupId: "group-1"}, ProjectAccess: []string{"project-1"}},
+			expectedErr: "invalid project-access",
+		},
+		{
+			name:        "InvalidProjectAccessRole",
+			cmd:         temporalcloudcli.CloudUserGroupUpdateCommand{GroupIdOptions: temporalcloudcli.GroupIdOptions{GroupId: "group-1"}, ProjectAccess: []string{"project-1=developer"}},
+			expectedErr: "invalid project role",
 		},
 		{
 			name: "GetUserGroupError",
@@ -773,6 +942,225 @@ func TestSetUserGroupAccountRole(t *testing.T) {
 				PromptOptions:           tt.promptOptions,
 				AsyncPollerOptions:      tt.asyncPollerOptions,
 				JSONOutput:              true,
+				ExpectedError:           tt.expectedErr,
+			})
+		})
+	}
+}
+
+// ---- SetUserGroupProjectAccess ----
+
+func TestSetUserGroupProjectAccess(t *testing.T) {
+	op := &operation.AsyncOperation{Id: "op-project"}
+	tests := []struct {
+		name                    string
+		cmd                     temporalcloudcli.CloudUserGroupSetProjectAccessCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
+		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
+		expectedErr             string
+	}{
+		{
+			name: "Success",
+			cmd: temporalcloudcli.CloudUserGroupSetProjectAccessCommand{
+				GroupIdOptions: temporalcloudcli.GroupIdOptions{GroupId: "group-1"},
+				ProjectId:      "project-1",
+				ProjectRole:    "write",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUserGroup(mock.Anything, &cloudservice.GetUserGroupRequest{GroupId: "group-1"}, mock.Anything).
+					Return(&cloudservice.GetUserGroupResponse{
+						Group: &identityv1.UserGroup{Id: "group-1", ResourceVersion: "rv-1"},
+					}, nil)
+				c.EXPECT().
+					SetUserGroupProjectAccess(mock.Anything, &cloudservice.SetUserGroupProjectAccessRequest{
+						ProjectId:       "project-1",
+						GroupId:         "group-1",
+						Access:          &identityv1.ProjectAccess{Role: identityv1.ProjectAccess_PROJECT_ROLE_WRITE},
+						ResourceVersion: "rv-1",
+					}, mock.Anything).
+					Return(&cloudservice.SetUserGroupProjectAccessResponse{AsyncOperation: op}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-project"},
+		},
+		{
+			name: "ResourceVersionOverride",
+			cmd: temporalcloudcli.CloudUserGroupSetProjectAccessCommand{
+				GroupIdOptions:         temporalcloudcli.GroupIdOptions{GroupId: "group-1"},
+				ResourceVersionOptions: temporalcloudcli.ResourceVersionOptions{ResourceVersion: "rv-override"},
+				ProjectId:              "project-1",
+				ProjectRole:            "admin",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUserGroup(mock.Anything, &cloudservice.GetUserGroupRequest{GroupId: "group-1"}, mock.Anything).
+					Return(&cloudservice.GetUserGroupResponse{
+						Group: &identityv1.UserGroup{Id: "group-1", ResourceVersion: "rv-1"},
+					}, nil)
+				c.EXPECT().
+					SetUserGroupProjectAccess(mock.Anything, &cloudservice.SetUserGroupProjectAccessRequest{
+						ProjectId:       "project-1",
+						GroupId:         "group-1",
+						Access:          &identityv1.ProjectAccess{Role: identityv1.ProjectAccess_PROJECT_ROLE_ADMIN},
+						ResourceVersion: "rv-override",
+					}, mock.Anything).
+					Return(&cloudservice.SetUserGroupProjectAccessResponse{AsyncOperation: op}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-project"},
+		},
+		{
+			name: "InvalidRole",
+			cmd: temporalcloudcli.CloudUserGroupSetProjectAccessCommand{
+				GroupIdOptions: temporalcloudcli.GroupIdOptions{GroupId: "group-1"},
+				ProjectId:      "project-1",
+				ProjectRole:    "developer",
+			},
+			expectedErr: "invalid project role",
+		},
+		{
+			name: "PromptDeclined",
+			cmd: temporalcloudcli.CloudUserGroupSetProjectAccessCommand{
+				GroupIdOptions: temporalcloudcli.GroupIdOptions{GroupId: "group-1"},
+				ProjectId:      "project-1",
+				ProjectRole:    "write",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUserGroup(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetUserGroupResponse{
+						Group: &identityv1.UserGroup{Id: "group-1", ResourceVersion: "rv-1"},
+					}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: false},
+			expectedErr:   "Aborting set.",
+		},
+		{
+			name: "GetUserGroupError",
+			cmd: temporalcloudcli.CloudUserGroupSetProjectAccessCommand{
+				GroupIdOptions: temporalcloudcli.GroupIdOptions{GroupId: "group-1"},
+				ProjectId:      "project-1",
+				ProjectRole:    "write",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUserGroup(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("not found"))
+			},
+			expectedErr: "not found",
+		},
+		{
+			name: "ApiError",
+			cmd: temporalcloudcli.CloudUserGroupSetProjectAccessCommand{
+				GroupIdOptions: temporalcloudcli.GroupIdOptions{GroupId: "group-1"},
+				ProjectId:      "project-1",
+				ProjectRole:    "write",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUserGroup(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetUserGroupResponse{
+						Group: &identityv1.UserGroup{Id: "group-1", ResourceVersion: "rv-1"},
+					}, nil)
+				c.EXPECT().
+					SetUserGroupProjectAccess(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("set error"))
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			expectedErr:   "set error",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
+				AsyncPollerOptions:      tt.asyncPollerOptions,
+				ExpectedError:           tt.expectedErr,
+			})
+		})
+	}
+}
+
+// ---- RemoveUserGroupProjectAccess ----
+
+func TestRemoveUserGroupProjectAccess(t *testing.T) {
+	op := &operation.AsyncOperation{Id: "op-project-remove"}
+	tests := []struct {
+		name                    string
+		cmd                     temporalcloudcli.CloudUserGroupRemoveProjectAccessCommand
+		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
+		promptOptions           temporalcloudcli.TestPromptOptions
+		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
+		expectedErr             string
+	}{
+		{
+			name: "Success",
+			cmd: temporalcloudcli.CloudUserGroupRemoveProjectAccessCommand{
+				GroupIdOptions: temporalcloudcli.GroupIdOptions{GroupId: "group-1"},
+				ProjectId:      "project-1",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUserGroup(mock.Anything, &cloudservice.GetUserGroupRequest{GroupId: "group-1"}, mock.Anything).
+					Return(&cloudservice.GetUserGroupResponse{
+						Group: &identityv1.UserGroup{Id: "group-1", ResourceVersion: "rv-1"},
+					}, nil)
+				c.EXPECT().
+					SetUserGroupProjectAccess(mock.Anything, &cloudservice.SetUserGroupProjectAccessRequest{
+						ProjectId:       "project-1",
+						GroupId:         "group-1",
+						ResourceVersion: "rv-1",
+					}, mock.Anything).
+					Return(&cloudservice.SetUserGroupProjectAccessResponse{AsyncOperation: op}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-project-remove"},
+		},
+		{
+			name: "PromptDeclined",
+			cmd: temporalcloudcli.CloudUserGroupRemoveProjectAccessCommand{
+				GroupIdOptions: temporalcloudcli.GroupIdOptions{GroupId: "group-1"},
+				ProjectId:      "project-1",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUserGroup(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetUserGroupResponse{
+						Group: &identityv1.UserGroup{Id: "group-1", ResourceVersion: "rv-1"},
+					}, nil)
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: false},
+			expectedErr:   "Aborting remove.",
+		},
+		{
+			name: "ApiError",
+			cmd: temporalcloudcli.CloudUserGroupRemoveProjectAccessCommand{
+				GroupIdOptions: temporalcloudcli.GroupIdOptions{GroupId: "group-1"},
+				ProjectId:      "project-1",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetUserGroup(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetUserGroupResponse{
+						Group: &identityv1.UserGroup{Id: "group-1", ResourceVersion: "rv-1"},
+					}, nil)
+				c.EXPECT().
+					SetUserGroupProjectAccess(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("remove error"))
+			},
+			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			expectedErr:   "remove error",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
+				CloudClientExpectations: tt.cloudClientExpectations,
+				PromptOptions:           tt.promptOptions,
+				AsyncPollerOptions:      tt.asyncPollerOptions,
 				ExpectedError:           tt.expectedErr,
 			})
 		})

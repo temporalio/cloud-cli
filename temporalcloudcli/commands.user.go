@@ -504,6 +504,34 @@ func parseProjectAccesses(accesses []string) (map[string]*identityv1.ProjectAcce
 	return result, nil
 }
 
+// applyProjectAccessChanges merges project access changes into an existing map.
+// Each change is in "project-id=role" format. An empty role removes that project.
+func applyProjectAccessChanges(existing map[string]*identityv1.ProjectAccess, changes []string) (map[string]*identityv1.ProjectAccess, error) {
+	result := make(map[string]*identityv1.ProjectAccess, len(existing))
+	for k, v := range existing {
+		result[k] = v
+	}
+	for _, a := range changes {
+		projectID, role, ok := strings.Cut(a, "=")
+		if !ok {
+			return nil, fmt.Errorf("invalid project-access %q: must be in the format 'project-id=role'", a)
+		}
+		if role == "" {
+			delete(result, projectID)
+			continue
+		}
+		projectAccess, err := parseProjectRole(role)
+		if err != nil {
+			return nil, fmt.Errorf("%w in project-access %q", err, a)
+		}
+		result[projectID] = projectAccess
+	}
+	if len(result) == 0 {
+		return nil, nil
+	}
+	return result, nil
+}
+
 // applyCustomRoleChanges returns the new CustomRoles slice for an update
 // command, given the existing list and whether --custom-role was passed.
 //

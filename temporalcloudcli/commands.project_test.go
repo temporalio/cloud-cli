@@ -142,6 +142,71 @@ func TestProjectUserList_ApiError(t *testing.T) {
 	})
 }
 
+func TestProjectUserGroupList(t *testing.T) {
+	type listOutput struct {
+		Groups        []*identityv1.UserGroupProjectAssignment
+		NextPageToken string
+	}
+
+	cmd := &temporalcloudcli.CloudProjectUserGroupListCommand{
+		ProjectId: "project-a",
+		PageSize:  50,
+		PageToken: "next",
+	}
+	res := &cloudservice.GetUserGroupProjectAssignmentsResponse{
+		Groups: []*identityv1.UserGroupProjectAssignment{
+			{
+				Id:          "group-1",
+				DisplayName: "Engineering",
+				ProjectAccess: &identityv1.ProjectAccess{
+					Role: identityv1.ProjectAccess_PROJECT_ROLE_WRITE,
+				},
+			},
+			{
+				Id:              "group-2",
+				DisplayName:     "Platform",
+				InheritedAccess: true,
+				ProjectAccess: &identityv1.ProjectAccess{
+					Role: identityv1.ProjectAccess_PROJECT_ROLE_DEVELOPER,
+				},
+			},
+		},
+		NextPageToken: "next-2",
+	}
+
+	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetUserGroupProjectAssignments(mock.Anything, &cloudservice.GetUserGroupProjectAssignmentsRequest{
+					ProjectId: "project-a",
+					PageSize:  50,
+					PageToken: "next",
+				}, mock.Anything).
+				Return(res, nil)
+		},
+		JSONOutput: true,
+		ExpectedOutputJson: listOutput{
+			Groups:        res.Groups,
+			NextPageToken: "next-2",
+		},
+	})
+}
+
+func TestProjectUserGroupList_ApiError(t *testing.T) {
+	cmd := &temporalcloudcli.CloudProjectUserGroupListCommand{ProjectId: "project-a"}
+
+	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetUserGroupProjectAssignments(mock.Anything, &cloudservice.GetUserGroupProjectAssignmentsRequest{
+					ProjectId: "project-a",
+				}, mock.Anything).
+				Return(nil, errors.New("api error"))
+		},
+		ExpectedError: "api error",
+	})
+}
+
 func TestProjectCreate(t *testing.T) {
 	cmd := &temporalcloudcli.CloudProjectCreateCommand{
 		DisplayName:            "Engineering",
