@@ -54,17 +54,15 @@ type (
 	}
 
 	TestCommandOptions struct {
-		Args                    []string
-		CloudClientExpectations func(cloudClient *cloudmock.MockCloudServiceClient)
-		AsyncPollerOptions      TestAsyncPollerOptions
-		PromptOptions           TestPromptOptions
-		EditorOptions           TestEditorOptions
-		JSONOutput              bool
-		ExpectedError           string
-		ExpectedOutput          string
-		ExpectedOutputJson      any
-		// ExpectedOutputJsonEmitDefaults marshals ExpectedOutputJson with default values emitted. Set this for
-		// commands that print with printer.PrintResourceOptions{EmitDefaultValues: true}.
+		Args                           []string
+		CloudClientExpectations        func(cloudClient *cloudmock.MockCloudServiceClient)
+		AsyncPollerOptions             TestAsyncPollerOptions
+		PromptOptions                  TestPromptOptions
+		EditorOptions                  TestEditorOptions
+		JSONOutput                     bool
+		ExpectedError                  string
+		ExpectedOutput                 string
+		ExpectedOutputJson             any
 		ExpectedOutputJsonEmitDefaults bool
 	}
 )

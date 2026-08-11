@@ -126,7 +126,7 @@ type StructuredOptions struct {
 	OverrideJSONPayloadShorthand *bool
 	// Indent this many additional times when printing non-JSON
 	NonJSONExtraIndent int
-	// If true, fields holding their default value (e.g. 0, false, "") are printed instead of omitted.
+	// EmitDefaultValues when set to true, fields holding their default value (e.g. 0, false, "") are printed instead of omitted.
 	// Unset pointer fields remain omitted.
 	EmitDefaultValues bool
 }
