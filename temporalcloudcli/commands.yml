@@ -1868,6 +1868,10 @@ commands:
     option-sets:
       - client
     options:
+      - name: project-id
+        type: string
+        description: |
+          Filter Nexus Endpoints by project ID.
       - name: page-size
         type: int
         description: |
@@ -1918,6 +1922,10 @@ commands:
         required: true
         description: |
           The name of the Nexus Endpoint to create.
+      - name: project-id
+        type: string
+        description: |
+          The ID of the project to create the Nexus Endpoint in.
       - name: target-namespace
         type: string
         required: true
