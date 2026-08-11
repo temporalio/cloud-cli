@@ -52,6 +52,7 @@ func (c *CloudNexusEndpointListCommand) run(cctx *CommandContext, _ []string) er
 	res, err := client.GetNexusEndpoints(cctx, &cloudservice.GetNexusEndpointsRequest{
 		PageSize:  int32(c.PageSize),
 		PageToken: c.PageToken,
+		ProjectId: c.ProjectId,
 	})
 	if err != nil {
 		return err
@@ -66,7 +67,7 @@ func (c *CloudNexusEndpointListCommand) run(cctx *CommandContext, _ []string) er
 			NextPageToken: res.NextPageToken,
 		},
 		printer.PrintResourceOptions{
-			Fields:     []string{"Id", "State"},
+			Fields:     []string{"Id", "ProjectId", "State"},
 			SpecFields: []string{"Name", "Description"},
 		},
 		printer.TableOptions{},
@@ -132,6 +133,7 @@ func (c *CloudNexusEndpointCreateCommand) run(cctx *CommandContext, _ []string) 
 			PolicySpecs: policySpecs,
 		},
 		AsyncOperationId: c.AsyncOperationId,
+		ProjectId:        c.ProjectId,
 	})
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleCreateAsyncOperationResponse(cctx, resp, err)
 }
