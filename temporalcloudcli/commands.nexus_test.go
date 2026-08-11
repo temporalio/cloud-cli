@@ -181,6 +181,27 @@ func TestListNexusEndpoints(t *testing.T) {
 			},
 		},
 		{
+			name: "WithProjectID",
+			cmd: temporalcloudcli.CloudNexusEndpointListCommand{
+				ProjectId: "project-123",
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNexusEndpoints(mock.Anything, &cloudservice.GetNexusEndpointsRequest{
+						ProjectId: "project-123",
+					}, mock.Anything).
+					Return(&cloudservice.GetNexusEndpointsResponse{
+						Endpoints: []*nexusv1.Endpoint{testEndpoint},
+					}, nil)
+			},
+			expectedJsonOutput: struct {
+				Endpoints     []*nexusv1.Endpoint
+				NextPageToken string
+			}{
+				Endpoints: []*nexusv1.Endpoint{testEndpoint},
+			},
+		},
+		{
 			name: "APIError",
 			cmd:  temporalcloudcli.CloudNexusEndpointListCommand{},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -219,6 +240,7 @@ func TestCreateNexusEndpoint(t *testing.T) {
 			name: "Success",
 			cmd: temporalcloudcli.CloudNexusEndpointCreateCommand{
 				Name:            "my-endpoint",
+				ProjectId:       "project-123",
 				TargetNamespace: "ns-123",
 				TargetTaskQueue: "my-tq",
 				AllowNamespace:  []string{"caller-ns"},
@@ -230,7 +252,8 @@ func TestCreateNexusEndpoint(t *testing.T) {
 							req.Spec.TargetSpec.GetWorkerTargetSpec().NamespaceId == "ns-123" &&
 							req.Spec.TargetSpec.GetWorkerTargetSpec().TaskQueue == "my-tq" &&
 							len(req.Spec.PolicySpecs) == 1 &&
-							req.Spec.PolicySpecs[0].GetAllowedCloudNamespacePolicySpec().NamespaceId == "caller-ns"
+							req.Spec.PolicySpecs[0].GetAllowedCloudNamespacePolicySpec().NamespaceId == "caller-ns" &&
+							req.ProjectId == "project-123"
 					}), mock.Anything).
 					Return(&cloudservice.CreateNexusEndpointResponse{
 						EndpointId:     "ep-new",
@@ -500,7 +523,6 @@ func TestUpdateNexusEndpoint(t *testing.T) {
 				Endpoints: []*nexusv1.Endpoint{existingEndpoint},
 			}, nil)
 	}
-
 	tests := []struct {
 		name                    string
 		setupCmd                func(*temporalcloudcli.CloudNexusEndpointUpdateCommand)

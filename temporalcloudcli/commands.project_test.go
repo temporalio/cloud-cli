@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	identityv1 "go.temporal.io/cloud-sdk/api/identity/v1"
 	operationv1 "go.temporal.io/cloud-sdk/api/operation/v1"
 	projectv1 "go.temporal.io/cloud-sdk/api/project/v1"
 	resourcev1 "go.temporal.io/cloud-sdk/api/resource/v1"
@@ -73,6 +74,136 @@ func TestProjectGet(t *testing.T) {
 		},
 		JSONOutput:         true,
 		ExpectedOutputJson: project,
+	})
+}
+
+func TestProjectUserList(t *testing.T) {
+	type listOutput struct {
+		Users         []*identityv1.UserProjectAssignment
+		NextPageToken string
+	}
+
+	cmd := &temporalcloudcli.CloudProjectUserListCommand{
+		ProjectId: "project-a",
+		PageSize:  50,
+		PageToken: "next",
+	}
+	res := &cloudservice.GetUserProjectAssignmentsResponse{
+		Users: []*identityv1.UserProjectAssignment{
+			{
+				Id:    "user-1",
+				Email: "alice@example.com",
+				ProjectAccess: &identityv1.ProjectAccess{
+					Role: identityv1.ProjectAccess_PROJECT_ROLE_WRITE,
+				},
+			},
+			{
+				Id:              "user-2",
+				Email:           "bob@example.com",
+				InheritedAccess: true,
+				ProjectAccess: &identityv1.ProjectAccess{
+					Role: identityv1.ProjectAccess_PROJECT_ROLE_DEVELOPER,
+				},
+			},
+		},
+		NextPageToken: "next-2",
+	}
+
+	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetUserProjectAssignments(mock.Anything, &cloudservice.GetUserProjectAssignmentsRequest{
+					ProjectId: "project-a",
+					PageSize:  50,
+					PageToken: "next",
+				}, mock.Anything).
+				Return(res, nil)
+		},
+		JSONOutput: true,
+		ExpectedOutputJson: listOutput{
+			Users:         res.Users,
+			NextPageToken: "next-2",
+		},
+	})
+}
+
+func TestProjectUserList_ApiError(t *testing.T) {
+	cmd := &temporalcloudcli.CloudProjectUserListCommand{ProjectId: "project-a"}
+
+	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetUserProjectAssignments(mock.Anything, &cloudservice.GetUserProjectAssignmentsRequest{
+					ProjectId: "project-a",
+				}, mock.Anything).
+				Return(nil, errors.New("api error"))
+		},
+		ExpectedError: "api error",
+	})
+}
+
+func TestProjectUserGroupList(t *testing.T) {
+	type listOutput struct {
+		Groups        []*identityv1.UserGroupProjectAssignment
+		NextPageToken string
+	}
+
+	cmd := &temporalcloudcli.CloudProjectUserGroupListCommand{
+		ProjectId: "project-a",
+		PageSize:  50,
+		PageToken: "next",
+	}
+	res := &cloudservice.GetUserGroupProjectAssignmentsResponse{
+		Groups: []*identityv1.UserGroupProjectAssignment{
+			{
+				Id:          "group-1",
+				DisplayName: "Engineering",
+				ProjectAccess: &identityv1.ProjectAccess{
+					Role: identityv1.ProjectAccess_PROJECT_ROLE_WRITE,
+				},
+			},
+			{
+				Id:              "group-2",
+				DisplayName:     "Platform",
+				InheritedAccess: true,
+				ProjectAccess: &identityv1.ProjectAccess{
+					Role: identityv1.ProjectAccess_PROJECT_ROLE_DEVELOPER,
+				},
+			},
+		},
+		NextPageToken: "next-2",
+	}
+
+	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetUserGroupProjectAssignments(mock.Anything, &cloudservice.GetUserGroupProjectAssignmentsRequest{
+					ProjectId: "project-a",
+					PageSize:  50,
+					PageToken: "next",
+				}, mock.Anything).
+				Return(res, nil)
+		},
+		JSONOutput: true,
+		ExpectedOutputJson: listOutput{
+			Groups:        res.Groups,
+			NextPageToken: "next-2",
+		},
+	})
+}
+
+func TestProjectUserGroupList_ApiError(t *testing.T) {
+	cmd := &temporalcloudcli.CloudProjectUserGroupListCommand{ProjectId: "project-a"}
+
+	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetUserGroupProjectAssignments(mock.Anything, &cloudservice.GetUserGroupProjectAssignmentsRequest{
+					ProjectId: "project-a",
+				}, mock.Anything).
+				Return(nil, errors.New("api error"))
+		},
+		ExpectedError: "api error",
 	})
 }
 
@@ -206,6 +337,11 @@ func TestProjectApply_Create(t *testing.T) {
 	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
 		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 			c.EXPECT().
+				GetProjects(mock.Anything, &cloudservice.GetProjectsRequest{
+					PageSize: 1000,
+				}, mock.Anything).
+				Return(&cloudservice.GetProjectsResponse{}, nil)
+			c.EXPECT().
 				CreateProject(mock.Anything, mock.MatchedBy(func(req *cloudservice.CreateProjectRequest) bool {
 					return proto.Equal(req.Spec, wantSpec)
 				}), mock.Anything).
@@ -223,27 +359,29 @@ func TestProjectApply_Create(t *testing.T) {
 	})
 }
 
-func TestProjectApply_Update(t *testing.T) {
+func TestProjectApply_UpdateBySpecDisplayName(t *testing.T) {
 	cmd := &temporalcloudcli.CloudProjectApplyCommand{
-		ProjectId:              "project-a",
-		Spec:                   `{"display_name":"Platform","description":"Platform workloads"}`,
-		ResourceVersionOptions: temporalcloudcli.ResourceVersionOptions{ResourceVersion: "rv-user"},
+		Spec: `{"display_name":"Engineering","description":"Updated workloads"}`,
 	}
 	existing := testProject("project-a")
 	wantSpec := &projectv1.ProjectSpec{
-		DisplayName: "Platform",
-		Description: "Platform workloads",
+		DisplayName: "Engineering",
+		Description: "Updated workloads",
 	}
 
 	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
 		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 			c.EXPECT().
-				GetProject(mock.Anything, &cloudservice.GetProjectRequest{ProjectId: "project-a"}, mock.Anything).
-				Return(&cloudservice.GetProjectResponse{Project: existing}, nil)
+				GetProjects(mock.Anything, &cloudservice.GetProjectsRequest{
+					PageSize: 1000,
+				}, mock.Anything).
+				Return(&cloudservice.GetProjectsResponse{
+					Projects: []*projectv1.Project{existing},
+				}, nil)
 			c.EXPECT().
 				UpdateProject(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateProjectRequest) bool {
 					return req.ProjectId == "project-a" &&
-						req.ResourceVersion == "rv-user" &&
+						req.ResourceVersion == "rv-project-a" &&
 						proto.Equal(req.Spec, wantSpec)
 				}), mock.Anything).
 				Return(&cloudservice.UpdateProjectResponse{AsyncOperation: testAsyncOperation("op-update")}, nil)
@@ -256,6 +394,28 @@ func TestProjectApply_Update(t *testing.T) {
 		},
 		AsyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-update"},
 		JSONOutput:         true,
+	})
+}
+
+func TestProjectApply_DuplicateDisplayName(t *testing.T) {
+	cmd := &temporalcloudcli.CloudProjectApplyCommand{
+		Spec: `{"display_name":"Engineering","description":"Updated workloads"}`,
+	}
+
+	temporalcloudcli.TestCommand(t, cmd, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			c.EXPECT().
+				GetProjects(mock.Anything, &cloudservice.GetProjectsRequest{
+					PageSize: 1000,
+				}, mock.Anything).
+				Return(&cloudservice.GetProjectsResponse{
+					Projects: []*projectv1.Project{
+						testProject("project-a"),
+						testProject("project-b"),
+					},
+				}, nil)
+		},
+		ExpectedError: `multiple projects found with display name "Engineering"`,
 	})
 }
 

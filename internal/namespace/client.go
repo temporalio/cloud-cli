@@ -47,6 +47,7 @@ type GetNamespacesParams struct {
 	PageSize  int32
 	PageToken string
 	Name      string
+	ProjectID string
 }
 
 func (c *Client) GetNamespaces(ctx context.Context, params GetNamespacesParams) ([]*namespacev1.Namespace, string, error) {
@@ -54,6 +55,7 @@ func (c *Client) GetNamespaces(ctx context.Context, params GetNamespacesParams) 
 		PageSize:  params.PageSize,
 		PageToken: params.PageToken,
 		Name:      params.Name,
+		ProjectId: params.ProjectID,
 	})
 	if err != nil {
 		return nil, "", err
