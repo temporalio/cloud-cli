@@ -13,6 +13,7 @@ import (
 type (
 	ListConnectivityRulesParams struct {
 		Namespace string
+		ProjectID string
 		PageSize  int32
 		PageToken string
 
@@ -29,6 +30,7 @@ type (
 
 	CreatePublicConnectivityRuleParams struct {
 		EnableStableIPs  bool
+		ProjectID        string
 		AsyncOperationID string
 
 		Cloud            cloudservice.CloudServiceClient
@@ -41,6 +43,7 @@ type (
 		Region            string
 		GCPProjectID      string
 		AzurePeResourceID string
+		ProjectID         string
 		AsyncOperationID  string
 
 		Cloud            cloudservice.CloudServiceClient
@@ -63,6 +66,7 @@ type (
 func ListConnectivityRules(ctx context.Context, params ListConnectivityRulesParams) error {
 	res, err := params.Cloud.GetConnectivityRules(ctx, &cloudservice.GetConnectivityRulesRequest{
 		Namespace: params.Namespace,
+		ProjectId: params.ProjectID,
 		PageSize:  params.PageSize,
 		PageToken: params.PageToken,
 	})
@@ -78,7 +82,7 @@ func ListConnectivityRules(ctx context.Context, params ListConnectivityRulesPara
 			NextPageToken:     res.GetNextPageToken(),
 		},
 		printer.PrintResourceOptions{
-			Fields:     []string{"Id", "State"},
+			Fields:     []string{"Id", "ProjectId", "State"},
 			SpecFields: []string{},
 		},
 		printer.TableOptions{},
@@ -119,6 +123,7 @@ func CreatePublicConnectivityRule(ctx context.Context, params CreatePublicConnec
 	return createRule(ctx, &cloudservice.CreateConnectivityRuleRequest{
 		Spec:             spec,
 		AsyncOperationId: params.AsyncOperationID,
+		ProjectId:        params.ProjectID,
 	})
 }
 
@@ -151,6 +156,7 @@ func CreatePrivateConnectivityRule(ctx context.Context, params CreatePrivateConn
 	return createRule(ctx, &cloudservice.CreateConnectivityRuleRequest{
 		Spec:             spec,
 		AsyncOperationId: params.AsyncOperationID,
+		ProjectId:        params.ProjectID,
 	})
 }
 
@@ -190,6 +196,7 @@ func (c *CloudConnectivityListCommand) run(cctx *CommandContext, _ []string) err
 	}
 	return ListConnectivityRules(cctx.Context, ListConnectivityRulesParams{
 		Namespace: c.Namespace,
+		ProjectID: c.ProjectId,
 		PageSize:  int32(c.PageSize),
 		PageToken: c.PageToken,
 		Cloud:     cloudClient.CloudService(),
@@ -216,6 +223,7 @@ func (c *CloudConnectivityPublicCreateCommand) run(cctx *CommandContext, _ []str
 	}
 	return CreatePublicConnectivityRule(cctx.Context, CreatePublicConnectivityRuleParams{
 		EnableStableIPs:  c.EnableStableIps,
+		ProjectID:        c.ProjectId,
 		AsyncOperationID: c.AsyncOperationId,
 		Cloud:            cloudClient.CloudService(),
 		Prompter:         newPrompter(cctx),
@@ -233,6 +241,7 @@ func (c *CloudConnectivityPrivateCreateCommand) run(cctx *CommandContext, _ []st
 		Region:            c.Region,
 		GCPProjectID:      c.GcpProjectId,
 		AzurePeResourceID: c.AzurePeResourceId,
+		ProjectID:         c.ProjectId,
 		AsyncOperationID:  c.AsyncOperationId,
 		Cloud:             cloudClient.CloudService(),
 		Prompter:          newPrompter(cctx),

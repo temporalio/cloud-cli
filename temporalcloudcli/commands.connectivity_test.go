@@ -71,6 +71,27 @@ func TestListConnectivityRules_WithNamespace(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// TestListConnectivityRules_WithProject verifies that the project filter is passed through.
+func TestListConnectivityRules_WithProject(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+
+	mockCloud.EXPECT().
+		GetConnectivityRules(context.Background(), &cloudservice.GetConnectivityRulesRequest{
+			ProjectId: "project-123",
+		}).
+		Return(&cloudservice.GetConnectivityRulesResponse{
+			ConnectivityRules: []*connectivityrulev1.ConnectivityRule{},
+		}, nil)
+
+	var buf bytes.Buffer
+	err := temporalcloudcli.ListConnectivityRules(context.Background(), temporalcloudcli.ListConnectivityRulesParams{
+		ProjectID: "project-123",
+		Cloud:     mockCloud,
+		Printer:   &printer.Printer{Output: &buf, JSON: true},
+	})
+	require.NoError(t, err)
+}
+
 // TestListConnectivityRules_Error verifies that an API error propagates.
 func TestListConnectivityRules_Error(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
@@ -206,6 +227,42 @@ func TestCreatePublicConnectivityRule_EnableStableIps(t *testing.T) {
 
 	err := temporalcloudcli.CreatePublicConnectivityRule(context.Background(), temporalcloudcli.CreatePublicConnectivityRuleParams{
 		EnableStableIPs:  true,
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
+		OperationHandler: mockHandler,
+	})
+	require.NoError(t, err)
+}
+
+// TestCreatePublicConnectivityRule_ProjectID verifies that the project ID is passed through.
+func TestCreatePublicConnectivityRule_ProjectID(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+
+	expectedSpec := &connectivityrulev1.ConnectivityRuleSpec{
+		ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PublicRule{
+			PublicRule: &connectivityrulev1.PublicConnectivityRule{},
+		},
+	}
+	op := &operation.AsyncOperation{Id: "op-project"}
+	mockPrompter.EXPECT().
+		PromptApply(&connectivityrulev1.ConnectivityRuleSpec{}, expectedSpec, false).
+		Return(nil)
+	mockCloud.EXPECT().
+		CreateConnectivityRule(context.Background(), &cloudservice.CreateConnectivityRuleRequest{
+			Spec:      expectedSpec,
+			ProjectId: "project-123",
+		}).
+		Return(&cloudservice.CreateConnectivityRuleResponse{
+			ConnectivityRuleId: "rule-project",
+			AsyncOperation:     op,
+		}, nil)
+
+	mockHandler.EXPECT().HandleOperation(op, "rule-project").Return(nil)
+
+	err := temporalcloudcli.CreatePublicConnectivityRule(context.Background(), temporalcloudcli.CreatePublicConnectivityRuleParams{
+		ProjectID:        "project-123",
 		Cloud:            mockCloud,
 		Prompter:         mockPrompter,
 		OperationHandler: mockHandler,
@@ -365,6 +422,47 @@ func TestCreatePrivateConnectivityRule_Azure_Success(t *testing.T) {
 		Cloud:             mockCloud,
 		Prompter:          mockPrompter,
 		OperationHandler:  mockHandler,
+	})
+	require.NoError(t, err)
+}
+
+// TestCreatePrivateConnectivityRule_ProjectID verifies that the project ID is passed through.
+func TestCreatePrivateConnectivityRule_ProjectID(t *testing.T) {
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+	mockPrompter := cmdmock.NewMockPrompter(t)
+
+	op := &operation.AsyncOperation{Id: "op-private-project"}
+	expectedSpec := &connectivityrulev1.ConnectivityRuleSpec{
+		ConnectionType: &connectivityrulev1.ConnectivityRuleSpec_PrivateRule{
+			PrivateRule: &connectivityrulev1.PrivateConnectivityRule{
+				ConnectionId: "vpce-12345",
+				Region:       "aws-us-west-2",
+			},
+		},
+	}
+	mockPrompter.EXPECT().
+		PromptApply(&connectivityrulev1.ConnectivityRuleSpec{}, expectedSpec, false).
+		Return(nil)
+	mockCloud.EXPECT().
+		CreateConnectivityRule(context.Background(), &cloudservice.CreateConnectivityRuleRequest{
+			Spec:      expectedSpec,
+			ProjectId: "project-123",
+		}).
+		Return(&cloudservice.CreateConnectivityRuleResponse{
+			ConnectivityRuleId: "rule-private-project",
+			AsyncOperation:     op,
+		}, nil)
+
+	mockHandler.EXPECT().HandleOperation(op, "rule-private-project").Return(nil)
+
+	err := temporalcloudcli.CreatePrivateConnectivityRule(context.Background(), temporalcloudcli.CreatePrivateConnectivityRuleParams{
+		ConnectionID:     "vpce-12345",
+		Region:           "aws-us-west-2",
+		ProjectID:        "project-123",
+		Cloud:            mockCloud,
+		Prompter:         mockPrompter,
+		OperationHandler: mockHandler,
 	})
 	require.NoError(t, err)
 }

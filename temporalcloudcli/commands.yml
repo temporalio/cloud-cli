@@ -2996,6 +2996,10 @@ commands:
     option-sets:
       - client
     options:
+      - name: project-id
+        type: string
+        description: |
+          Filter connectivity rules by project ID.
       - name: namespace
         type: string
         short: n
@@ -3073,6 +3077,10 @@ commands:
       - client
       - async-operation
     options:
+      - name: project-id
+        type: string
+        description: |
+          The ID of the project to create the connectivity rule in.
       - name: enable-stable-ips
         type: bool
         description: |
@@ -3107,6 +3115,10 @@ commands:
       - client
       - async-operation
     options:
+      - name: project-id
+        type: string
+        description: |
+          The ID of the project to create the connectivity rule in.
       - name: connection-id
         type: string
         description: |

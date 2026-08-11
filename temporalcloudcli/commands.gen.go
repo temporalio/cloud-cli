@@ -1412,6 +1412,7 @@ type CloudConnectivityListCommand struct {
 	Parent  *CloudConnectivityCommand
 	Command cobra.Command
 	ClientOptions
+	ProjectId string
 	Namespace string
 	PageSize  int
 	PageToken string
@@ -1429,6 +1430,7 @@ func NewCloudConnectivityListCommand(cctx *CommandContext, parent *CloudConnecti
 		s.Command.Long = "List connectivity rules, optionally filtered by namespace.\n\nExample:\n\n```\ntemporal cloud connectivity list --namespace my-namespace.my-account\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "Filter connectivity rules by project ID.")
 	s.Command.Flags().StringVarP(&s.Namespace, "namespace", "n", "", "Filter connectivity rules by namespace (e.g., 'my-namespace.my-account').")
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of connectivity rules to return per page.")
 	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Page token for pagination.")
@@ -1462,6 +1464,7 @@ type CloudConnectivityPrivateCreateCommand struct {
 	Command cobra.Command
 	ClientOptions
 	AsyncOperationOptions
+	ProjectId         string
 	ConnectionId      string
 	Region            string
 	GcpProjectId      string
@@ -1480,6 +1483,7 @@ func NewCloudConnectivityPrivateCreateCommand(cctx *CommandContext, parent *Clou
 		s.Command.Long = "Create a new private connectivity rule for AWS, GCP, or Azure.\n\nFor AWS, provide --connection-id (VPC endpoint ID) and --region.\nFor GCP, provide --connection-id (PSC connection ID), --gcp-project-id, and --region.\nFor Azure, provide --azure-pe-resource-id (ARM resource ID) and --region.\n\nExamples:\n\n```\ntemporal cloud connectivity private create --connection-id vpce-12345 --region aws-us-west-2\n\ntemporal cloud connectivity private create \\\n  --azure-pe-resource-id /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Network/privateEndpoints/{name} \\\n  --region azure-eastus\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to create the connectivity rule in.")
 	s.Command.Flags().StringVar(&s.ConnectionId, "connection-id", "", "The connection ID for private connectivity (AWS VPC endpoint ID or GCP PSC connection ID).")
 	s.Command.Flags().StringVar(&s.Region, "region", "", "The region for private connectivity. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "region")
@@ -1516,6 +1520,7 @@ type CloudConnectivityPublicCreateCommand struct {
 	Command cobra.Command
 	ClientOptions
 	AsyncOperationOptions
+	ProjectId       string
 	EnableStableIps bool
 }
 
@@ -1531,6 +1536,7 @@ func NewCloudConnectivityPublicCreateCommand(cctx *CommandContext, parent *Cloud
 		s.Command.Long = "Create a new public internet connectivity rule.\n\nExample:\n\n```\ntemporal cloud connectivity public create\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to create the connectivity rule in.")
 	s.Command.Flags().BoolVar(&s.EnableStableIps, "enable-stable-ips", false, "Connect the namespace via a predictable set of IPs on the public internet.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
