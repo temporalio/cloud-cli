@@ -4829,6 +4829,7 @@ func NewCloudProjectCommand(cctx *CommandContext, parent *CloudCommand) *CloudPr
 	s.Command.AddCommand(&NewCloudProjectEditCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudProjectGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudProjectListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudProjectServiceAccountCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudProjectUpdateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudProjectUserCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudProjectUserGroupCommand(cctx, &s).Command)
@@ -5031,6 +5032,56 @@ func NewCloudProjectListCommand(cctx *CommandContext, parent *CloudProjectComman
 	s.Command.Flags().StringArrayVar(&s.ProjectId, "project-id", nil, "Filter by project ID. Can be specified multiple times.")
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 100, "Maximum number of projects to return.")
 	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudProjectServiceAccountCommand struct {
+	Parent  *CloudProjectCommand
+	Command cobra.Command
+}
+
+func NewCloudProjectServiceAccountCommand(cctx *CommandContext, parent *CloudProjectCommand) *CloudProjectServiceAccountCommand {
+	var s CloudProjectServiceAccountCommand
+	s.Parent = parent
+	s.Command.Use = "service-account"
+	s.Command.Short = "Inspect service accounts with access to a project"
+	s.Command.Long = "Commands for inspecting the service accounts that have access to a\nTemporal Cloud project."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudProjectServiceAccountListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudProjectServiceAccountListCommand struct {
+	Parent  *CloudProjectServiceAccountCommand
+	Command cobra.Command
+	ClientOptions
+	ProjectId string
+	PageSize  int
+	PageToken string
+}
+
+func NewCloudProjectServiceAccountListCommand(cctx *CommandContext, parent *CloudProjectServiceAccountCommand) *CloudProjectServiceAccountListCommand {
+	var s CloudProjectServiceAccountListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List service accounts with access to a project"
+	if hasHighlighting {
+		s.Command.Long = "List the service accounts that have access to a Temporal Cloud project,\nincluding both directly-assigned and inherited access.\n\nExample:\n\n\x1b[1mtemporal cloud project service-account list --project-id my-project-id\x1b[0m"
+	} else {
+		s.Command.Long = "List the service accounts that have access to a Temporal Cloud project,\nincluding both directly-assigned and inherited access.\n\nExample:\n\n```\ntemporal cloud project service-account list --project-id my-project-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "project-id")
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of service accounts to return per page. Use for paginated results.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results in a paginated list.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -5268,11 +5319,14 @@ func NewCloudServiceAccountCommand(cctx *CommandContext, parent *CloudCommand) *
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudServiceAccountCreateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudServiceAccountCreateNamespaceScopedCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudServiceAccountCreateProjectScopedCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudServiceAccountDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudServiceAccountEditCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudServiceAccountGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudServiceAccountListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudServiceAccountRemoveProjectAccessCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudServiceAccountSetCustomRolesCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudServiceAccountSetProjectAccessCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudServiceAccountUpdateCommand(cctx, &s).Command)
 	return &s
 }
@@ -5286,6 +5340,7 @@ type CloudServiceAccountCreateCommand struct {
 	Description     string
 	AccountRole     string
 	NamespaceAccess []string
+	ProjectAccess   []string
 	CustomRole      []string
 }
 
@@ -5296,9 +5351,9 @@ func NewCloudServiceAccountCreateCommand(cctx *CommandContext, parent *CloudServ
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "Create a service account"
 	if hasHighlighting {
-		s.Command.Long = "Create a new Temporal Cloud service account with account-level access.\nOptionally assign an account role and namespace-level permissions.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\n\nExample:\n\n\x1b[1mtemporal cloud service-account create --name my-sa --account-role developer \\\n  --namespace-access my-namespace.my-account=write\x1b[0m"
+		s.Command.Long = "Create a new Temporal Cloud service account with account-level access.\nOptionally assign an account role, namespace-level permissions, and\nproject-level roles.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\nProject access format: 'project-id=role' where role is one of: admin, write, read, list, contribute, member.\n\nExample:\n\n\x1b[1mtemporal cloud service-account create --name my-sa --account-role developer \\\n  --namespace-access my-namespace.my-account=write \\\n  --project-access my-project-id=write\x1b[0m"
 	} else {
-		s.Command.Long = "Create a new Temporal Cloud service account with account-level access.\nOptionally assign an account role and namespace-level permissions.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\n\nExample:\n\n```\ntemporal cloud service-account create --name my-sa --account-role developer \\\n  --namespace-access my-namespace.my-account=write\n```"
+		s.Command.Long = "Create a new Temporal Cloud service account with account-level access.\nOptionally assign an account role, namespace-level permissions, and\nproject-level roles.\n\nAccount roles: owner, admin, developer, finance-admin, read, metrics-read.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\nProject access format: 'project-id=role' where role is one of: admin, write, read, list, contribute, member.\n\nExample:\n\n```\ntemporal cloud service-account create --name my-sa --account-role developer \\\n  --namespace-access my-namespace.my-account=write \\\n  --project-access my-project-id=write\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the service account. Must be unique across all active service accounts. Required.")
@@ -5306,6 +5361,7 @@ func NewCloudServiceAccountCreateCommand(cctx *CommandContext, parent *CloudServ
 	s.Command.Flags().StringVar(&s.Description, "description", "", "An optional description for the service account.")
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read.")
 	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
+	s.Command.Flags().StringArrayVar(&s.ProjectAccess, "project-access", nil, "Project access to grant, in the format 'project-id=role'. Role must be one of: admin, write, read, list, contribute, member. Can be repeated.")
 	s.Command.Flags().StringArrayVar(&s.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
@@ -5347,6 +5403,48 @@ func NewCloudServiceAccountCreateNamespaceScopedCommand(cctx *CommandContext, pa
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
 	s.Command.Flags().StringVar(&s.NamespacePermission, "namespace-permission", "", "The permission to grant on the namespace. Valid values: admin, write, read. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace-permission")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudServiceAccountCreateProjectScopedCommand struct {
+	Parent  *CloudServiceAccountCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	Name            string
+	Description     string
+	ProjectId       string
+	ProjectRole     string
+	NamespaceAccess []string
+}
+
+func NewCloudServiceAccountCreateProjectScopedCommand(cctx *CommandContext, parent *CloudServiceAccountCommand) *CloudServiceAccountCreateProjectScopedCommand {
+	var s CloudServiceAccountCreateProjectScopedCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create-project-scoped [flags]"
+	s.Command.Short = "Create a project-scoped service account"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Temporal Cloud service account scoped to a single project.\nOptionally assign namespace-level permissions within the project.\n\nProject roles: admin, write, read, list, contribute, member.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\n\nExample:\n\n\x1b[1mtemporal cloud service-account create-project-scoped --name my-sa \\\n  --project-id my-project-id --project-role write \\\n  --namespace-access my-namespace.my-account=read\x1b[0m"
+	} else {
+		s.Command.Long = "Create a new Temporal Cloud service account scoped to a single project.\nOptionally assign namespace-level permissions within the project.\n\nProject roles: admin, write, read, list, contribute, member.\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\n\nExample:\n\n```\ntemporal cloud service-account create-project-scoped --name my-sa \\\n  --project-id my-project-id --project-role write \\\n  --namespace-access my-namespace.my-account=read\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the service account. Must be unique across all active service accounts. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "An optional description for the service account.")
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to scope the service account to. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "project-id")
+	s.Command.Flags().StringVar(&s.ProjectRole, "project-role", "", "The project-level role to assign. Valid values: admin, write, read, list, contribute, member. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "project-role")
+	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to grant, in the format 'namespace=permission'. Permission must be one of: admin, write, read. Can be repeated.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -5461,6 +5559,7 @@ type CloudServiceAccountListCommand struct {
 	Parent  *CloudServiceAccountCommand
 	Command cobra.Command
 	ClientOptions
+	ProjectId string
 	PageSize  int
 	PageToken string
 }
@@ -5472,14 +5571,52 @@ func NewCloudServiceAccountListCommand(cctx *CommandContext, parent *CloudServic
 	s.Command.Use = "list [flags]"
 	s.Command.Short = "List service accounts"
 	if hasHighlighting {
-		s.Command.Long = "List all Temporal Cloud service accounts accessible with the current\nauthentication credentials.\n\nExample:\n\n\x1b[1mtemporal cloud service-account list\x1b[0m"
+		s.Command.Long = "List all Temporal Cloud service accounts accessible with the current\nauthentication credentials.\n\nExample:\n\n\x1b[1mtemporal cloud service-account list\ntemporal cloud service-account list --project-id my-project-id\x1b[0m"
 	} else {
-		s.Command.Long = "List all Temporal Cloud service accounts accessible with the current\nauthentication credentials.\n\nExample:\n\n```\ntemporal cloud service-account list\n```"
+		s.Command.Long = "List all Temporal Cloud service accounts accessible with the current\nauthentication credentials.\n\nExample:\n\n```\ntemporal cloud service-account list\ntemporal cloud service-account list --project-id my-project-id\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to list project-scoped service accounts for.")
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of service accounts to return per page. Use for paginated results.")
 	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results in a paginated list.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudServiceAccountRemoveProjectAccessCommand struct {
+	Parent  *CloudServiceAccountCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ServiceAccountId string
+	ProjectId        string
+}
+
+func NewCloudServiceAccountRemoveProjectAccessCommand(cctx *CommandContext, parent *CloudServiceAccountCommand) *CloudServiceAccountRemoveProjectAccessCommand {
+	var s CloudServiceAccountRemoveProjectAccessCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "remove-project-access [flags]"
+	s.Command.Short = "Remove project access for a service account"
+	if hasHighlighting {
+		s.Command.Long = "Remove a Temporal Cloud service account's direct project-level access.\n\nExample:\n\n\x1b[1mtemporal cloud service-account remove-project-access --service-account-id my-sa-id \\\n  --project-id my-project-id\x1b[0m"
+	} else {
+		s.Command.Long = "Remove a Temporal Cloud service account's direct project-level access.\n\nExample:\n\n```\ntemporal cloud service-account remove-project-access --service-account-id my-sa-id \\\n  --project-id my-project-id\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The ID of the service account. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-id")
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "project-id")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -5524,6 +5661,46 @@ func NewCloudServiceAccountSetCustomRolesCommand(cctx *CommandContext, parent *C
 	return &s
 }
 
+type CloudServiceAccountSetProjectAccessCommand struct {
+	Parent  *CloudServiceAccountCommand
+	Command cobra.Command
+	ClientOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	ServiceAccountId string
+	ProjectId        string
+	ProjectRole      string
+}
+
+func NewCloudServiceAccountSetProjectAccessCommand(cctx *CommandContext, parent *CloudServiceAccountCommand) *CloudServiceAccountSetProjectAccessCommand {
+	var s CloudServiceAccountSetProjectAccessCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set-project-access [flags]"
+	s.Command.Short = "Set project access for a service account"
+	if hasHighlighting {
+		s.Command.Long = "Set project-level access for a Temporal Cloud service account.\n\nProject roles: admin, write, read, list, contribute, member.\n\nExample:\n\n\x1b[1mtemporal cloud service-account set-project-access --service-account-id my-sa-id \\\n  --project-id my-project-id --project-role write\x1b[0m"
+	} else {
+		s.Command.Long = "Set project-level access for a Temporal Cloud service account.\n\nProject roles: admin, write, read, list, contribute, member.\n\nExample:\n\n```\ntemporal cloud service-account set-project-access --service-account-id my-sa-id \\\n  --project-id my-project-id --project-role write\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The ID of the service account. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account-id")
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "project-id")
+	s.Command.Flags().StringVar(&s.ProjectRole, "project-role", "", "The project-level role to assign. Valid values: admin, write, read, list, contribute, member. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "project-role")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type CloudServiceAccountUpdateCommand struct {
 	Parent  *CloudServiceAccountCommand
 	Command cobra.Command
@@ -5536,6 +5713,8 @@ type CloudServiceAccountUpdateCommand struct {
 	Description         string
 	AccountRole         string
 	NamespaceAccess     []string
+	ProjectAccess       []string
+	ProjectRole         string
 	NamespacePermission string
 }
 
@@ -5546,9 +5725,9 @@ func NewCloudServiceAccountUpdateCommand(cctx *CommandContext, parent *CloudServ
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a service account"
 	if hasHighlighting {
-		s.Command.Long = "Update a Temporal Cloud service account. Only flags that are explicitly provided\nare changed.\n\nFor account-scoped service accounts, use --account-role and/or --namespace-access.\nFor namespace-scoped service accounts, use --namespace-permission.\n\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\nUse 'namespace=' (empty permission) to remove access to a namespace.\n\nExample:\n\n\x1b[1mtemporal cloud service-account update --service-account-id my-sa-id --name new-name\ntemporal cloud service-account update --service-account-id my-sa-id --account-role admin\ntemporal cloud service-account update --service-account-id my-sa-id --namespace-permission write\x1b[0m"
+		s.Command.Long = "Update a Temporal Cloud service account. Only flags that are explicitly provided\nare changed.\n\nFor account-scoped service accounts, use --account-role, --namespace-access, and/or --project-access.\nFor namespace-scoped service accounts, use --namespace-permission.\nFor project-scoped service accounts, use --project-role and/or --namespace-access.\n\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\nUse 'namespace=' (empty permission) to remove access to a namespace.\nProject access format: 'project-id=role' where role is one of: admin, write, read, list, contribute, member.\nUse 'project-id=' (empty role) to remove access to a project.\nProject-scoped service account roles: admin, write, read, list, contribute, member.\n\nExample:\n\n\x1b[1mtemporal cloud service-account update --service-account-id my-sa-id --name new-name\ntemporal cloud service-account update --service-account-id my-sa-id --account-role admin\ntemporal cloud service-account update --service-account-id my-sa-id --project-access my-project-id=write\ntemporal cloud service-account update --service-account-id my-sa-id --project-role write\ntemporal cloud service-account update --service-account-id my-sa-id --namespace-permission write\x1b[0m"
 	} else {
-		s.Command.Long = "Update a Temporal Cloud service account. Only flags that are explicitly provided\nare changed.\n\nFor account-scoped service accounts, use --account-role and/or --namespace-access.\nFor namespace-scoped service accounts, use --namespace-permission.\n\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\nUse 'namespace=' (empty permission) to remove access to a namespace.\n\nExample:\n\n```\ntemporal cloud service-account update --service-account-id my-sa-id --name new-name\ntemporal cloud service-account update --service-account-id my-sa-id --account-role admin\ntemporal cloud service-account update --service-account-id my-sa-id --namespace-permission write\n```"
+		s.Command.Long = "Update a Temporal Cloud service account. Only flags that are explicitly provided\nare changed.\n\nFor account-scoped service accounts, use --account-role, --namespace-access, and/or --project-access.\nFor namespace-scoped service accounts, use --namespace-permission.\nFor project-scoped service accounts, use --project-role and/or --namespace-access.\n\nNamespace access format: 'namespace=permission' where permission is one of: admin, write, read.\nUse 'namespace=' (empty permission) to remove access to a namespace.\nProject access format: 'project-id=role' where role is one of: admin, write, read, list, contribute, member.\nUse 'project-id=' (empty role) to remove access to a project.\nProject-scoped service account roles: admin, write, read, list, contribute, member.\n\nExample:\n\n```\ntemporal cloud service-account update --service-account-id my-sa-id --name new-name\ntemporal cloud service-account update --service-account-id my-sa-id --account-role admin\ntemporal cloud service-account update --service-account-id my-sa-id --project-access my-project-id=write\ntemporal cloud service-account update --service-account-id my-sa-id --project-role write\ntemporal cloud service-account update --service-account-id my-sa-id --namespace-permission write\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.ServiceAccountId, "service-account-id", "", "The ID of the service account to update. Required.")
@@ -5556,7 +5735,9 @@ func NewCloudServiceAccountUpdateCommand(cctx *CommandContext, parent *CloudServ
 	s.Command.Flags().StringVar(&s.Name, "name", "", "New name for the service account.")
 	s.Command.Flags().StringVar(&s.Description, "description", "", "New description for the service account.")
 	s.Command.Flags().StringVar(&s.AccountRole, "account-role", "", "The account-level role to assign. Valid values: owner, admin, developer, finance-admin, read, metrics-read. Only valid for account-scoped service accounts.")
-	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to set, in the format 'namespace=permission'. Use 'namespace=' to remove access. Permission must be one of: admin, write, read. Can be repeated. Only valid for account-scoped service accounts.")
+	s.Command.Flags().StringArrayVar(&s.NamespaceAccess, "namespace-access", nil, "Namespace access to set, in the format 'namespace=permission'. Use 'namespace=' to remove access. Permission must be one of: admin, write, read. Can be repeated. Only valid for account-scoped and project-scoped service accounts.")
+	s.Command.Flags().StringArrayVar(&s.ProjectAccess, "project-access", nil, "Project access to set, in the format 'project-id=role'. Use 'project-id=' to remove access. Role must be one of: admin, write, read, list, contribute, member. Can be repeated. Only valid for account-scoped service accounts.")
+	s.Command.Flags().StringVar(&s.ProjectRole, "project-role", "", "The project-level role to assign. Valid values: admin, write, read, list, contribute, member. Only valid for project-scoped service accounts.")
 	s.Command.Flags().StringVar(&s.NamespacePermission, "namespace-permission", "", "The permission to grant on the scoped namespace. Valid values: admin, write, read. Only valid for namespace-scoped service accounts.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
