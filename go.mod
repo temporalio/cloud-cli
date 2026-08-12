@@ -13,7 +13,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/cli/cliext v0.0.0-20260602200703-8bb57b77ad55
-	go.temporal.io/api v1.62.13
+	go.temporal.io/api v1.63.6-0.20260811224032-89570b10e9e2
 	go.temporal.io/cloud-sdk v0.16.0
 	go.temporal.io/sdk v1.44.1
 	go.temporal.io/sdk/contrib/envconfig v1.0.0
@@ -21,9 +21,6 @@ require (
 	golang.org/x/term v0.43.0
 	google.golang.org/grpc v1.81.1
 )
-
-// TODO: Remove.
-replace go.temporal.io/api => ../api-go
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
