@@ -143,6 +143,7 @@ func TestCreateNamespace_BuildsSpec(t *testing.T) {
 			"MyText":    namespacev1.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_TEXT,
 			"MyKeyword": namespacev1.NamespaceSpec_SEARCH_ATTRIBUTE_TYPE_KEYWORD,
 		},
+		Description: "Example namespace description",
 	}
 
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
@@ -176,6 +177,7 @@ func TestCreateNamespace_BuildsSpec(t *testing.T) {
 			},
 		},
 		SearchAttribute:    []string{"MyText=Text", "MyKeyword=Keyword"},
+		Description:        "Example namespace description",
 		Cloud:              mockCloud,
 		Printer:            &printer.Printer{Output: &buf, JSON: true},
 		Prompter:           mockPrompter,

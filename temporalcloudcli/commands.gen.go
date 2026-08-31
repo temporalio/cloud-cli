@@ -1888,6 +1888,7 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.AddCommand(&NewCloudNamespaceConnectivityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCreateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceDescriptionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceEditCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceExportCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceFairnessCommand(cctx, &s).Command)
@@ -2406,6 +2407,7 @@ type CloudNamespaceCreateCommand struct {
 	SearchAttribute         []string
 	ConnectionRuleId        []string
 	ProjectId               string
+	Description             string
 }
 
 func NewCloudNamespaceCreateCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceCreateCommand {
@@ -2432,6 +2434,7 @@ func NewCloudNamespaceCreateCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Command.Flags().StringArrayVar(&s.SearchAttribute, "search-attribute", nil, "Custom search attribute as 'name=Type' (e.g. --search-attribute myAttr=Keyword). Valid types: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Repeat to add multiple.")
 	s.Command.Flags().StringArrayVar(&s.ConnectionRuleId, "connection-rule-id", nil, "Private connectivity rule ID. Repeat to specify multiple.")
 	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to create the namespace in. If omitted, the namespace is created in the account's default project.")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "The description is a human-readable description of the namespace purpose. Must be at most 255 printable ASCII characters plus whitespace. Optional, default is empty.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.CodecServerOptions.BuildFlags(s.Command.Flags())
@@ -2475,6 +2478,88 @@ func NewCloudNamespaceDeleteCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if the namespace does not exist. Without this flag, the command errors if the namespace is not found.")
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceDescriptionCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceDescriptionCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceDescriptionCommand {
+	var s CloudNamespaceDescriptionCommand
+	s.Parent = parent
+	s.Command.Use = "description"
+	s.Command.Short = "Manage namespace description"
+	s.Command.Long = "Commands for viewing and updating the description of a Temporal Cloud\nnamespace. The description is a human-readable description of the\nnamespace purpose. Must be at most 255 printable ASCII characters plus\nwhitespace. Optional, default is empty."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceDescriptionGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceDescriptionSetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceDescriptionGetCommand struct {
+	Parent  *CloudNamespaceDescriptionCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceDescriptionGetCommand(cctx *CommandContext, parent *CloudNamespaceDescriptionCommand) *CloudNamespaceDescriptionGetCommand {
+	var s CloudNamespaceDescriptionGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get namespace description"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the current description for a Temporal Cloud namespace. The\ndescription is a human-readable description of the namespace purpose.\n\nExample:\n\n\x1b[1mtemporal cloud namespace description get --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the current description for a Temporal Cloud namespace. The\ndescription is a human-readable description of the namespace purpose.\n\nExample:\n\n```\ntemporal cloud namespace description get --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceDescriptionSetCommand struct {
+	Parent  *CloudNamespaceDescriptionCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Value string
+}
+
+func NewCloudNamespaceDescriptionSetCommand(cctx *CommandContext, parent *CloudNamespaceDescriptionCommand) *CloudNamespaceDescriptionSetCommand {
+	var s CloudNamespaceDescriptionSetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set [flags]"
+	s.Command.Short = "Set namespace description"
+	if hasHighlighting {
+		s.Command.Long = "Set the description for a Temporal Cloud namespace without changing other\nnamespace settings. The description is a human-readable description of\nthe namespace purpose. Must be at most 255 printable ASCII characters\nplus whitespace. Pass an empty string to clear the description.\n\nExample:\n\n\x1b[1mtemporal cloud namespace description set --namespace my-namespace.my-account --value \"Updated namespace description\"\x1b[0m"
+	} else {
+		s.Command.Long = "Set the description for a Temporal Cloud namespace without changing other\nnamespace settings. The description is a human-readable description of\nthe namespace purpose. Must be at most 255 printable ASCII characters\nplus whitespace. Pass an empty string to clear the description.\n\nExample:\n\n```\ntemporal cloud namespace description set --namespace my-namespace.my-account --value \"Updated namespace description\"\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Value, "value", "", "New description for the namespace. Must be at most 255 printable ASCII characters plus whitespace. Pass an empty string to clear it. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "value")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

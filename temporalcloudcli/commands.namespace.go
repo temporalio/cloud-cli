@@ -305,7 +305,7 @@ func (c *CloudNamespaceListCommand) run(cctx *CommandContext, _ []string) error 
 		},
 		printer.PrintResourceOptions{
 			Fields:     []string{"Namespace", "ProjectId", "State", "CreatedTime"},
-			SpecFields: []string{"Regions"},
+			SpecFields: []string{"Regions", "Description"},
 		},
 		printer.TableOptions{},
 	)
@@ -329,6 +329,7 @@ type (
 		CodecIncludeCrossOriginCredentials bool
 		ConnectionRuleIDs                  []string
 		ProjectID                          string
+		Description                        string
 
 		Cloud              cloudservice.CloudServiceClient
 		Printer            *printer.Printer
@@ -390,6 +391,7 @@ func CreateNamespace(ctx context.Context, params CreateNamespaceParams) error {
 		Name:                params.Name,
 		Regions:             params.Regions,
 		RetentionDays:       params.RetentionDays,
+		Description:         params.Description,
 		ApiKeyAuth:          &namespacev1.ApiKeyAuthSpec{Enabled: params.ApiKeyAuthEnabled},
 		MtlsAuth:            &namespacev1.MtlsAuthSpec{Enabled: params.MtlsAuthEnabled},
 		Lifecycle:           &namespacev1.LifecycleSpec{EnableDeleteProtection: params.EnableDeleteProtection},
@@ -465,6 +467,7 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		CodecIncludeCrossOriginCredentials: c.CodecIncludeCrossOriginCredentials,
 		ConnectionRuleIDs:                  c.ConnectionRuleId,
 		ProjectID:                          projectID,
+		Description:                        c.Description,
 		Cloud:                              cloudClient.CloudService(),
 		Printer:                            cctx.Printer,
 		Prompter:                           newPrompter(cctx),

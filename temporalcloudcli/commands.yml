@@ -440,6 +440,63 @@ commands:
         description: |
           The ID of the project to create the namespace in. If omitted, the
           namespace is created in the account's default project.
+      - name: description
+        type: string
+        description: |
+          The description is a human-readable description of the namespace
+          purpose. Must be at most 255 printable ASCII characters plus
+          whitespace. Optional, default is empty.
+
+  # Namespace description commands
+  - name: cloud namespace description
+    summary: Manage namespace description
+    description: |
+      Commands for viewing and updating the description of a Temporal Cloud
+      namespace. The description is a human-readable description of the
+      namespace purpose. Must be at most 255 printable ASCII characters plus
+      whitespace. Optional, default is empty.
+    has-init: false
+  - name: cloud namespace description get
+    summary: Get namespace description
+    description: |
+      Retrieve the current description for a Temporal Cloud namespace. The
+      description is a human-readable description of the namespace purpose.
+
+      Example:
+
+      ```
+      temporal cloud namespace description get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace description set
+    summary: Set namespace description
+    description: |
+      Set the description for a Temporal Cloud namespace without changing other
+      namespace settings. The description is a human-readable description of
+      the namespace purpose. Must be at most 255 printable ASCII characters
+      plus whitespace. Pass an empty string to clear the description.
+
+      Example:
+
+      ```
+      temporal cloud namespace description set --namespace my-namespace.my-account --value "Updated namespace description"
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: value
+        type: string
+        description: |
+          New description for the namespace. Must be at most 255 printable
+          ASCII characters plus whitespace. Pass an empty string to clear it.
+        required: true
 
   # Namespace retention commands
   - name: cloud namespace retention
