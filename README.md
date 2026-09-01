@@ -1,8 +1,8 @@
-# Temporal Cloud CLI ([Pre-release](https://docs.temporal.io/evaluate/development-production-features/release-stages))
+# Temporal Cloud CLI ([Public Preview](https://docs.temporal.io/evaluate/development-production-features/release-stagesi#public-preview))
 
 Extension for the Temporal command-line interface to work with [Temporal Cloud](https://docs.temporal.io/cloud).
 
-> **Pre-release:** This extension is offered as a pre-release and is subject to change. Please reach out to [Temporal Support](https://support.temporal.io/) if you have questions.
+> **Public preview:** This extension is offered as a public preview. APIs and configuration may change before the stable release. Please reach out to [Temporal Support](https://support.temporal.io/) if you have questions.
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ Extension for the Temporal command-line interface to work with [Temporal Cloud](
 
 ### Install via Homebrew
 
-    brew install temporalio/prerelease/temporal-cloud
+    brew install temporalio/brew/temporal-cloud
 
 ### Install via download
 
