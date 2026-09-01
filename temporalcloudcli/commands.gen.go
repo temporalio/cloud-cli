@@ -2434,7 +2434,7 @@ func NewCloudNamespaceCreateCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Command.Flags().StringArrayVar(&s.SearchAttribute, "search-attribute", nil, "Custom search attribute as 'name=Type' (e.g. --search-attribute myAttr=Keyword). Valid types: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Repeat to add multiple.")
 	s.Command.Flags().StringArrayVar(&s.ConnectionRuleId, "connection-rule-id", nil, "Private connectivity rule ID. Repeat to specify multiple.")
 	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to create the namespace in. If omitted, the namespace is created in the account's default project.")
-	s.Command.Flags().StringVar(&s.Description, "description", "", "The description is a human-readable description of the namespace purpose. Must be at most 255 printable ASCII characters plus whitespace. Optional, default is empty.")
+	s.Command.Flags().StringVar(&s.Description, "description", "", "The description is a human-readable description of the namespace. Must be at most 255 printable ASCII characters plus whitespace. Optional, default is empty.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.CodecServerOptions.BuildFlags(s.Command.Flags())
@@ -2496,7 +2496,7 @@ func NewCloudNamespaceDescriptionCommand(cctx *CommandContext, parent *CloudName
 	s.Parent = parent
 	s.Command.Use = "description"
 	s.Command.Short = "Manage namespace description"
-	s.Command.Long = "Commands for viewing and updating the description of a Temporal Cloud\nnamespace. The description is a human-readable description of the\nnamespace purpose. Must be at most 255 printable ASCII characters plus\nwhitespace. Optional, default is empty."
+	s.Command.Long = "Commands for viewing and updating the description of a Temporal Cloud\nnamespace. The description is a human-readable description of the\nnamespace. Must be at most 255 printable ASCII characters plus\nwhitespace. Optional, default is empty."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudNamespaceDescriptionGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceDescriptionSetCommand(cctx, &s).Command)
@@ -2517,9 +2517,9 @@ func NewCloudNamespaceDescriptionGetCommand(cctx *CommandContext, parent *CloudN
 	s.Command.Use = "get [flags]"
 	s.Command.Short = "Get namespace description"
 	if hasHighlighting {
-		s.Command.Long = "Retrieve the current description for a Temporal Cloud namespace. The\ndescription is a human-readable description of the namespace purpose.\n\nExample:\n\n\x1b[1mtemporal cloud namespace description get --namespace my-namespace.my-account\x1b[0m"
+		s.Command.Long = "Retrieve the current description for a Temporal Cloud namespace. The\ndescription is a human-readable description of the namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace description get --namespace my-namespace.my-account\x1b[0m"
 	} else {
-		s.Command.Long = "Retrieve the current description for a Temporal Cloud namespace. The\ndescription is a human-readable description of the namespace purpose.\n\nExample:\n\n```\ntemporal cloud namespace description get --namespace my-namespace.my-account\n```"
+		s.Command.Long = "Retrieve the current description for a Temporal Cloud namespace. The\ndescription is a human-readable description of the namespace.\n\nExample:\n\n```\ntemporal cloud namespace description get --namespace my-namespace.my-account\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -2549,9 +2549,9 @@ func NewCloudNamespaceDescriptionSetCommand(cctx *CommandContext, parent *CloudN
 	s.Command.Use = "set [flags]"
 	s.Command.Short = "Set namespace description"
 	if hasHighlighting {
-		s.Command.Long = "Set the description for a Temporal Cloud namespace without changing other\nnamespace settings. The description is a human-readable description of\nthe namespace purpose. Must be at most 255 printable ASCII characters\nplus whitespace. Pass an empty string to clear the description.\n\nExample:\n\n\x1b[1mtemporal cloud namespace description set --namespace my-namespace.my-account --value \"Updated namespace description\"\x1b[0m"
+		s.Command.Long = "Set the description for a Temporal Cloud namespace without changing other\nnamespace settings. The description is a human-readable description of\nthe namespace. Must be at most 255 printable ASCII characters\nplus whitespace. Pass an empty string to clear the description.\n\nExample:\n\n\x1b[1mtemporal cloud namespace description set --namespace my-namespace.my-account --value \"Updated namespace description\"\x1b[0m"
 	} else {
-		s.Command.Long = "Set the description for a Temporal Cloud namespace without changing other\nnamespace settings. The description is a human-readable description of\nthe namespace purpose. Must be at most 255 printable ASCII characters\nplus whitespace. Pass an empty string to clear the description.\n\nExample:\n\n```\ntemporal cloud namespace description set --namespace my-namespace.my-account --value \"Updated namespace description\"\n```"
+		s.Command.Long = "Set the description for a Temporal Cloud namespace without changing other\nnamespace settings. The description is a human-readable description of\nthe namespace. Must be at most 255 printable ASCII characters\nplus whitespace. Pass an empty string to clear the description.\n\nExample:\n\n```\ntemporal cloud namespace description set --namespace my-namespace.my-account --value \"Updated namespace description\"\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Value, "value", "", "New description for the namespace. Must be at most 255 printable ASCII characters plus whitespace. Pass an empty string to clear it. Required.")
