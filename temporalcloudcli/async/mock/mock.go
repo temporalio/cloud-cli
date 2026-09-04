@@ -221,6 +221,69 @@ func (_c *MockPoller_HandleDeleteOperation_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
+// HandleOperation provides a mock function for the type MockPoller
+func (_mock *MockPoller) HandleOperation(ctx context.Context, response async.RespWithAsyncOp, err error) error {
+	ret := _mock.Called(ctx, response, err)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HandleOperation")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, async.RespWithAsyncOp, error) error); ok {
+		r0 = returnFunc(ctx, response, err)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockPoller_HandleOperation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandleOperation'
+type MockPoller_HandleOperation_Call struct {
+	*mock.Call
+}
+
+// HandleOperation is a helper method to define mock.On call
+//   - ctx context.Context
+//   - response async.RespWithAsyncOp
+//   - err error
+func (_e *MockPoller_Expecter) HandleOperation(ctx interface{}, response interface{}, err interface{}) *MockPoller_HandleOperation_Call {
+	return &MockPoller_HandleOperation_Call{Call: _e.mock.On("HandleOperation", ctx, response, err)}
+}
+
+func (_c *MockPoller_HandleOperation_Call) Run(run func(ctx context.Context, response async.RespWithAsyncOp, err error)) *MockPoller_HandleOperation_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 async.RespWithAsyncOp
+		if args[1] != nil {
+			arg1 = args[1].(async.RespWithAsyncOp)
+		}
+		var arg2 error
+		if args[2] != nil {
+			arg2 = args[2].(error)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockPoller_HandleOperation_Call) Return(err1 error) *MockPoller_HandleOperation_Call {
+	_c.Call.Return(err1)
+	return _c
+}
+
+func (_c *MockPoller_HandleOperation_Call) RunAndReturn(run func(ctx context.Context, response async.RespWithAsyncOp, err error) error) *MockPoller_HandleOperation_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // HandleUpdateOperation provides a mock function for the type MockPoller
 func (_mock *MockPoller) HandleUpdateOperation(ctx context.Context, response async.RespWithAsyncOp, err error) error {
 	ret := _mock.Called(ctx, response, err)
