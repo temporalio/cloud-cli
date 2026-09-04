@@ -21,6 +21,9 @@ type (
 		HandleCreateAsyncOperationResponse(ctx context.Context, response RespWithAsyncOp, err error) error
 		HandleUpdateOperation(ctx context.Context, response RespWithAsyncOp, err error) error
 		HandleDeleteOperation(ctx context.Context, response RespWithAsyncOp, err error) error
+		// HandleOperation surfaces an operation the server already treats as idempotent, so
+		// there is no "already in the desired state" rejection for the client to translate.
+		HandleOperation(ctx context.Context, response RespWithAsyncOp, err error) error
 		// AwaitAsyncOperation blocks until the operation with the given ID reaches a terminal state,
 		// then prints the final operation details. Use this when you already have an operation ID
 		// and just need to wait for it to complete.
@@ -96,6 +99,17 @@ func (p *poller) HandleDeleteOperation(
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("delete operation failed: %w", err)
+	}
+	return p.handleAsyncOperation(ctx, response)
+}
+
+func (p *poller) HandleOperation(
+	ctx context.Context,
+	response RespWithAsyncOp,
+	err error,
+) error {
+	if err != nil {
+		return fmt.Errorf("operation failed: %w", err)
 	}
 	return p.handleAsyncOperation(ctx, response)
 }

@@ -1896,6 +1896,7 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.AddCommand(&NewCloudNamespaceHaCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceLifecycleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceMoveToProjectCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceMtlsCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceRetentionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceSearchAttributeCommand(cctx, &s).Command)
@@ -3662,6 +3663,54 @@ func NewCloudNamespaceListCommand(cctx *CommandContext, parent *CloudNamespaceCo
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Filter namespaces by the name as defined in the specification of the namespace.")
 	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "Filter namespaces by project ID.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceMoveToProjectCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	ResourceVersionOptions
+	DestinationProjectId string
+	SourceProjectId      string
+	ConnectivityRuleId   []string
+	NoConnectivityRules  bool
+	AsyncOperationId     string
+	Async                bool
+	PollInterval         cliext.FlagDuration
+}
+
+func NewCloudNamespaceMoveToProjectCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceMoveToProjectCommand {
+	var s CloudNamespaceMoveToProjectCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "move-to-project [flags]"
+	s.Command.Short = "Move a namespace to a different project"
+	if hasHighlighting {
+		s.Command.Long = "Move a namespace to a different project within the same account.\n\nThe namespace keeps its identity, endpoint, and running workflow\nexecutions. Only its project and the access derived from that project\nchange. Principals who reached the namespace only through the source\nproject lose access once the move completes.\n\nConnectivity rules are scoped to a project, so the rules the namespace\nshould have in the destination must be chosen in the same command. Pass\n--connectivity-rule-id once per rule, or --no-connectivity-rules to move\nthe namespace without any. Omit both only when the namespace has no\nconnectivity rules today.\n\nExample:\n\n\x1b[1mtemporal cloud namespace move-to-project \\\n  --namespace my-namespace.my-account \\\n  --destination-project-id my-destination-project \\\n  --source-project-id my-source-project \\\n  --connectivity-rule-id <rule-id>\x1b[0m"
+	} else {
+		s.Command.Long = "Move a namespace to a different project within the same account.\n\nThe namespace keeps its identity, endpoint, and running workflow\nexecutions. Only its project and the access derived from that project\nchange. Principals who reached the namespace only through the source\nproject lose access once the move completes.\n\nConnectivity rules are scoped to a project, so the rules the namespace\nshould have in the destination must be chosen in the same command. Pass\n--connectivity-rule-id once per rule, or --no-connectivity-rules to move\nthe namespace without any. Omit both only when the namespace has no\nconnectivity rules today.\n\nExample:\n\n```\ntemporal cloud namespace move-to-project \\\n  --namespace my-namespace.my-account \\\n  --destination-project-id my-destination-project \\\n  --source-project-id my-source-project \\\n  --connectivity-rule-id <rule-id>\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.DestinationProjectId, "destination-project-id", "", "The ID of the project to move the namespace to. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "destination-project-id")
+	s.Command.Flags().StringVar(&s.SourceProjectId, "source-project-id", "", "The ID of the project the namespace is expected to currently belong to. The move fails if the namespace has since moved elsewhere. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source-project-id")
+	s.Command.Flags().StringArrayVar(&s.ConnectivityRuleId, "connectivity-rule-id", nil, "The ID of a connectivity rule the namespace should have in the destination project. Repeat to specify multiple. Mutually exclusive with --no-connectivity-rules.")
+	s.Command.Flags().BoolVar(&s.NoConnectivityRules, "no-connectivity-rules", false, "Move the namespace without any connectivity rules in the destination project. Mutually exclusive with --connectivity-rule-id.")
+	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
+	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
+	s.PollInterval = cliext.MustParseFlagDuration("1s")
+	s.Command.Flags().Var(&s.PollInterval, "poll-interval", "Time to wait between status checks when waiting for operation completion. Cannot be greater than 10 minutes. Supports minutes (m) and seconds (s).")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
