@@ -446,6 +446,76 @@ commands:
           The description is a human-readable description of the namespace.
           Must be at most 255 printable ASCII characters plus whitespace.
           Optional, default is empty.
+  - name: cloud namespace move-to-project
+    summary: Move a namespace to a different project
+    description: |
+      Move a namespace to a different project within the same account.
+
+      The namespace keeps its identity, endpoint, and running workflow
+      executions. Only its project and the access derived from that project
+      change. Principals who reached the namespace only through the source
+      project lose access once the move completes.
+
+      Connectivity rules are scoped to a project, so the rules the namespace
+      should have in the destination must be chosen in the same command. Pass
+      --connectivity-rule-id once per rule, or --no-connectivity-rules to move
+      the namespace without any. Omit both only when the namespace has no
+      connectivity rules today.
+
+      Example:
+
+      ```
+      temporal cloud namespace move-to-project \
+        --namespace my-namespace.my-account \
+        --destination-project-id my-destination-project \
+        --source-project-id my-source-project \
+        --connectivity-rule-id <rule-id>
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - resource-version
+    options:
+      - name: destination-project-id
+        type: string
+        description: |
+          The ID of the project to move the namespace to.
+        required: true
+      - name: source-project-id
+        type: string
+        description: |
+          The ID of the project the namespace is expected to currently belong
+          to. The move fails if the namespace has since moved elsewhere.
+        required: true
+      - name: connectivity-rule-id
+        type: string[]
+        description: |
+          The ID of a connectivity rule the namespace should have in the
+          destination project. Repeat to specify multiple. Mutually exclusive
+          with --no-connectivity-rules.
+      - name: no-connectivity-rules
+        type: bool
+        description: |
+          Move the namespace without any connectivity rules in the destination
+          project. Mutually exclusive with --connectivity-rule-id.
+      - name: async-operation-id
+        type: string
+        description: |
+          Custom identifier for tracking this async operation. If not provided,
+          a unique ID is generated automatically.
+      - name: async
+        type: bool
+        description: |
+          Return immediately after initiating the operation instead of waiting
+          for completion. Use the returned operation ID to check status later.
+      - name: poll-interval
+        type: duration
+        default: 1s
+        description: |
+          Time to wait between status checks when waiting for operation completion.
+          Cannot be greater than 10 minutes.
+          Supports minutes (m) and seconds (s).
 
   # Namespace description commands
   - name: cloud namespace description
