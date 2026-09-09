@@ -1,4 +1,4 @@
-# Temporal Cloud CLI ([Public Preview](https://docs.temporal.io/evaluate/development-production-features/release-stagesi#public-preview))
+# Temporal Cloud CLI ([Public Preview](https://docs.temporal.io/evaluate/development-production-features/release-stages#public-preview))
 
 Extension for the Temporal command-line interface to work with [Temporal Cloud](https://docs.temporal.io/cloud).
 
