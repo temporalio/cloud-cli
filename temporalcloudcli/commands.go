@@ -172,6 +172,8 @@ func (cctx *CommandContext) BuildCloudClient(clientOpts ClientOptions) (*cloudcl
 	}
 	opts := cloudclient.Options{
 		UserAgent: fmt.Sprintf("temporalio-cloud-cli/%s", VersionString()),
+		// Temporary: staging Cloud Ops still gates EncryptionValidation behind development.
+		APIVersion: "development",
 	}
 	if cloudOpts.Server != "" {
 		opts.HostPort = cloudOpts.Server

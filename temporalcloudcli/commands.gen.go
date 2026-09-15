@@ -24,7 +24,7 @@ type ClientOptions struct {
 
 func (v *ClientOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.StringVar(&v.ApiKey, "api-key", "", "API key for authenticating with Temporal Cloud. Can be used instead of interactive login for automation and CI/CD pipelines. Env: TEMPORAL_API_KEY.")
+	f.StringVar(&v.ApiKey, "api-key", "", "API key for authenticating with Temporal Cloud. Can be used instead of interactive login for automation and CI/CD pipelines.")
 	f.StringVar(&v.Server, "server", "saas-api.tmprl.cloud:443", "Override the Temporal Cloud API server address. Used for connecting to non-production environments.")
 	_ = f.MarkHidden("server")
 }
@@ -1890,6 +1890,7 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.AddCommand(&NewCloudNamespaceDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceDescriptionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceEditCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceEncryptionValidationCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceExportCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceFairnessCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceGetCommand(cctx, &s).Command)
@@ -2397,17 +2398,22 @@ type CloudNamespaceCreateCommand struct {
 	CodecServerOptions
 	CaCertificateOptions
 	CertificateFilterOptions
-	Name                    string
-	Region                  []string
-	RetentionDays           int
-	ApiKeyAuthEnabled       bool
-	MtlsAuthEnabled         bool
-	EnableDeleteProtection  bool
-	EnableTaskQueueFairness bool
-	SearchAttribute         []string
-	ConnectionRuleId        []string
-	ProjectId               string
-	Description             string
+	Name                               string
+	Region                             []string
+	RetentionDays                      int
+	ApiKeyAuthEnabled                  bool
+	MtlsAuthEnabled                    bool
+	EnableDeleteProtection             bool
+	EnableTaskQueueFairness            bool
+	SearchAttribute                    []string
+	ConnectionRuleId                   []string
+	ProjectId                          string
+	Description                        string
+	EncryptionValidationMode           string
+	EncryptionValidationMetadataKey    string
+	EncryptionValidationMetadataValue  []string
+	EncryptionValidationInspectHeader  bool
+	EncryptionValidationInspectFailure bool
 }
 
 func NewCloudNamespaceCreateCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceCreateCommand {
@@ -2435,6 +2441,11 @@ func NewCloudNamespaceCreateCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Command.Flags().StringArrayVar(&s.ConnectionRuleId, "connection-rule-id", nil, "Private connectivity rule ID. Repeat to specify multiple.")
 	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to create the namespace in. If omitted, the namespace is created in the account's default project.")
 	s.Command.Flags().StringVar(&s.Description, "description", "", "The description is a human-readable description of the namespace. Must be at most 255 printable ASCII characters plus whitespace. Optional, default is empty.")
+	s.Command.Flags().StringVar(&s.EncryptionValidationMode, "encryption-validation-mode", "", "Payload encryption validation mode. Valid values: disabled, warn, deny. When any encryption-validation flag is set, this field is required.")
+	s.Command.Flags().StringVar(&s.EncryptionValidationMetadataKey, "encryption-validation-metadata-key", "", "Payload metadata key used to identify encrypted payloads. If omitted, an empty key is sent.")
+	s.Command.Flags().StringArrayVar(&s.EncryptionValidationMetadataValue, "encryption-validation-metadata-value", nil, "Payload metadata value used to identify encrypted payloads. Repeat to add additional values. If omitted, no values are sent.")
+	s.Command.Flags().BoolVar(&s.EncryptionValidationInspectHeader, "encryption-validation-inspect-header", false, "Inspect workflow headers for encryption validation. Default is false.")
+	s.Command.Flags().BoolVar(&s.EncryptionValidationInspectFailure, "encryption-validation-inspect-failure", false, "Inspect Failure payloads for encryption validation. Default is false.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.CodecServerOptions.BuildFlags(s.Command.Flags())
@@ -2600,6 +2611,166 @@ func NewCloudNamespaceEditCommand(cctx *CommandContext, parent *CloudNamespaceCo
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceEncryptionValidationCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceEncryptionValidationCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceEncryptionValidationCommand {
+	var s CloudNamespaceEncryptionValidationCommand
+	s.Parent = parent
+	s.Command.Use = "encryption-validation"
+	s.Command.Short = "Manage namespace payload encryption validation settings"
+	s.Command.Long = "Commands for managing payload encryption validation configuration of Temporal Cloud namespaces."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceEncryptionValidationDisableCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceEncryptionValidationEnableCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceEncryptionValidationGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceEncryptionValidationSetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceEncryptionValidationDisableCommand struct {
+	Parent  *CloudNamespaceEncryptionValidationCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+}
+
+func NewCloudNamespaceEncryptionValidationDisableCommand(cctx *CommandContext, parent *CloudNamespaceEncryptionValidationCommand) *CloudNamespaceEncryptionValidationDisableCommand {
+	var s CloudNamespaceEncryptionValidationDisableCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "disable [flags]"
+	s.Command.Short = "Disable payload encryption validation for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Disable payload encryption validation for a Temporal Cloud namespace.\nExisting metadata and inspect settings are kept.\n\nExample:\n\n\x1b[1mtemporal cloud namespace encryption-validation disable --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Disable payload encryption validation for a Temporal Cloud namespace.\nExisting metadata and inspect settings are kept.\n\nExample:\n\n```\ntemporal cloud namespace encryption-validation disable --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceEncryptionValidationEnableCommand struct {
+	Parent  *CloudNamespaceEncryptionValidationCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Deny bool
+}
+
+func NewCloudNamespaceEncryptionValidationEnableCommand(cctx *CommandContext, parent *CloudNamespaceEncryptionValidationCommand) *CloudNamespaceEncryptionValidationEnableCommand {
+	var s CloudNamespaceEncryptionValidationEnableCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "enable [flags]"
+	s.Command.Short = "Enable payload encryption validation for a namespace"
+	if hasHighlighting {
+		s.Command.Long = "Enable payload encryption validation for a Temporal Cloud namespace.\nIf validation has not been configured, default values are applied\n(mode=warn, metadata-key=encoding, metadata-values=[binary/encrypted]).\nIf validation is disabled, the existing configuration is re-enabled.\nIf validation is already warn or deny, the existing configuration is kept.\nUse --deny to enable in deny mode.\n\nExample:\n\n\x1b[1mtemporal cloud namespace encryption-validation enable --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Enable payload encryption validation for a Temporal Cloud namespace.\nIf validation has not been configured, default values are applied\n(mode=warn, metadata-key=encoding, metadata-values=[binary/encrypted]).\nIf validation is disabled, the existing configuration is re-enabled.\nIf validation is already warn or deny, the existing configuration is kept.\nUse --deny to enable in deny mode.\n\nExample:\n\n```\ntemporal cloud namespace encryption-validation enable --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.Deny, "deny", false, "Enable validation in deny mode instead of warn.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceEncryptionValidationGetCommand struct {
+	Parent  *CloudNamespaceEncryptionValidationCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+}
+
+func NewCloudNamespaceEncryptionValidationGetCommand(cctx *CommandContext, parent *CloudNamespaceEncryptionValidationCommand) *CloudNamespaceEncryptionValidationGetCommand {
+	var s CloudNamespaceEncryptionValidationGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get namespace payload encryption validation configuration"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the current payload encryption validation configuration for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace encryption-validation get --namespace my-namespace.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the current payload encryption validation configuration for a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace encryption-validation get --namespace my-namespace.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceEncryptionValidationSetCommand struct {
+	Parent  *CloudNamespaceEncryptionValidationCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Mode           string
+	MetadataKey    string
+	MetadataValue  []string
+	InspectHeader  bool
+	InspectFailure bool
+}
+
+func NewCloudNamespaceEncryptionValidationSetCommand(cctx *CommandContext, parent *CloudNamespaceEncryptionValidationCommand) *CloudNamespaceEncryptionValidationSetCommand {
+	var s CloudNamespaceEncryptionValidationSetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "set [flags]"
+	s.Command.Short = "Set namespace payload encryption validation configuration"
+	if hasHighlighting {
+		s.Command.Long = "Replace the payload encryption validation configuration for a Temporal Cloud\nnamespace. Omitted optional flags are sent as empty or false and do not\nkeep the existing values.\n\nExample:\n\n\x1b[1mtemporal cloud namespace encryption-validation set --namespace my-namespace.my-account --mode warn --metadata-key encoding --metadata-value binary/encrypted\x1b[0m"
+	} else {
+		s.Command.Long = "Replace the payload encryption validation configuration for a Temporal Cloud\nnamespace. Omitted optional flags are sent as empty or false and do not\nkeep the existing values.\n\nExample:\n\n```\ntemporal cloud namespace encryption-validation set --namespace my-namespace.my-account --mode warn --metadata-key encoding --metadata-value binary/encrypted\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Mode, "mode", "", "Payload encryption validation mode. Valid values: disabled, warn, deny. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "mode")
+	s.Command.Flags().StringVar(&s.MetadataKey, "metadata-key", "", "Payload metadata key used to identify encrypted payloads. If omitted, an empty key is sent.")
+	s.Command.Flags().StringArrayVar(&s.MetadataValue, "metadata-value", nil, "Payload metadata value used to identify encrypted payloads. Repeat to add additional values. If omitted, no values are sent.")
+	s.Command.Flags().BoolVar(&s.InspectHeader, "inspect-header", false, "Inspect workflow headers for encryption validation. Default is false.")
+	s.Command.Flags().BoolVar(&s.InspectFailure, "inspect-failure", false, "Inspect Failure payloads for encryption validation. Default is false.")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
