@@ -435,3 +435,61 @@ func TestCreateNamespace_InvalidInput(t *testing.T) {
 		})
 	}
 }
+
+func TestCreateNamespace_EncryptionValidation(t *testing.T) {
+	tests := []struct {
+		name     string
+		spec     *namespacev1.EncryptionValidationSpec
+		expected *namespacev1.EncryptionValidationSpec
+	}{
+		{name: "Unset", spec: nil, expected: nil},
+		{
+			name: "Explicit",
+			spec: &namespacev1.EncryptionValidationSpec{
+				Mode:           namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_DENY,
+				MetadataKey:    "encoding",
+				MetadataValues: []string{"binary/encrypted"},
+				InspectHeader:  true,
+			},
+			expected: &namespacev1.EncryptionValidationSpec{
+				Mode:           namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_DENY,
+				MetadataKey:    "encoding",
+				MetadataValues: []string{"binary/encrypted"},
+				InspectHeader:  true,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expectedSpec := baseNamespaceSpec()
+			expectedSpec.EncryptionValidation = tt.expected
+
+			mockCloud := cloudmock.NewMockCloudServiceClient(t)
+			mockPrompter := cmdmock.NewMockPrompter(t)
+			mockHandler := cmdmock.NewMockAsyncOperationHandler(t)
+
+			mockPrompter.EXPECT().
+				PromptApply(&namespacev1.NamespaceSpec{}, specMatcher(expectedSpec), false).
+				Return(nil)
+			mockCloud.EXPECT().
+				CreateNamespace(context.Background(), createReqMatcher(expectedSpec)).
+				Return(defaultCreateResponse, nil)
+			mockHandler.EXPECT().
+				HandleOperation(defaultCreateResponse.AsyncOperation, "my-namespace.my-account").
+				Return(nil)
+
+			var buf bytes.Buffer
+			err := temporalcloudcli.CreateNamespace(context.Background(), temporalcloudcli.CreateNamespaceParams{
+				Name:                 "my-namespace",
+				Regions:              []string{"aws-us-east-1"},
+				Cloud:                mockCloud,
+				Printer:              &printer.Printer{Output: &buf, JSON: true},
+				Prompter:             mockPrompter,
+				UnmarshalProtoJSON:   noopUnmarshalProtoJSON,
+				OperationHandler:     mockHandler,
+				EncryptionValidation: tt.spec,
+			})
+			require.NoError(t, err)
+		})
+	}
+}

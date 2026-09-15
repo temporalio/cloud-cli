@@ -446,6 +446,29 @@ commands:
           The description is a human-readable description of the namespace.
           Must be at most 255 printable ASCII characters plus whitespace.
           Optional, default is empty.
+      - name: encryption-validation-mode
+        type: string
+        description: |
+          Payload encryption validation mode. Valid values: disabled, warn, deny.
+          When any encryption-validation flag is set, this field is required.
+      - name: encryption-validation-metadata-key
+        type: string
+        description: |
+          Payload metadata key used to identify encrypted payloads. If omitted,
+          an empty key is sent.
+      - name: encryption-validation-metadata-value
+        type: string[]
+        description: |
+          Payload metadata value used to identify encrypted payloads. Repeat to
+          add additional values. If omitted, no values are sent.
+      - name: encryption-validation-inspect-header
+        type: bool
+        description: |
+          Inspect workflow headers for encryption validation. Default is false.
+      - name: encryption-validation-inspect-failure
+        type: bool
+        description: |
+          Inspect Failure payloads for encryption validation. Default is false.
 
   # Namespace description commands
   - name: cloud namespace description
@@ -670,6 +693,112 @@ commands:
         required: true
         description: |
           Enable or disable task queue fairness for the namespace.
+
+  # Namespace encryption validation commands
+  - name: cloud namespace encryption-validation
+    summary: Manage namespace payload encryption validation settings
+    description: |
+      Commands for managing payload encryption validation configuration of Temporal Cloud namespaces.
+    has-init: false
+  - name: cloud namespace encryption-validation get
+    summary: Get namespace payload encryption validation configuration
+    description: |
+      Retrieve the current payload encryption validation configuration for a Temporal Cloud namespace.
+
+      Example:
+
+      ```
+      temporal cloud namespace encryption-validation get --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+  - name: cloud namespace encryption-validation set
+    summary: Set namespace payload encryption validation configuration
+    description: |
+      Replace the payload encryption validation configuration for a Temporal Cloud
+      namespace. Omitted optional flags are sent as empty or false and do not
+      keep the existing values.
+
+      Example:
+
+      ```
+      temporal cloud namespace encryption-validation set --namespace my-namespace.my-account --mode warn --metadata-key encoding --metadata-value binary/encrypted
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: mode
+        type: string
+        required: true
+        description: |
+          Payload encryption validation mode. Valid values: disabled, warn, deny.
+      - name: metadata-key
+        type: string
+        description: |
+          Payload metadata key used to identify encrypted payloads. If omitted,
+          an empty key is sent.
+      - name: metadata-value
+        type: string[]
+        description: |
+          Payload metadata value used to identify encrypted payloads. Repeat to
+          add additional values. If omitted, no values are sent.
+      - name: inspect-header
+        type: bool
+        description: |
+          Inspect workflow headers for encryption validation. Default is false.
+      - name: inspect-failure
+        type: bool
+        description: |
+          Inspect Failure payloads for encryption validation. Default is false.
+  - name: cloud namespace encryption-validation enable
+    summary: Enable payload encryption validation for a namespace
+    description: |
+      Enable payload encryption validation for a Temporal Cloud namespace.
+      If validation has not been configured, default values are applied
+      (mode=warn, metadata-key=encoding, metadata-values=[binary/encrypted]).
+      If validation is disabled, the existing configuration is re-enabled.
+      If validation is already warn or deny, the existing configuration is kept.
+      Use --deny to enable in deny mode.
+
+      Example:
+
+      ```
+      temporal cloud namespace encryption-validation enable --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
+    options:
+      - name: deny
+        type: bool
+        description: |
+          Enable validation in deny mode instead of warn.
+  - name: cloud namespace encryption-validation disable
+    summary: Disable payload encryption validation for a namespace
+    description: |
+      Disable payload encryption validation for a Temporal Cloud namespace.
+      Existing metadata and inspect settings are kept.
+
+      Example:
+
+      ```
+      temporal cloud namespace encryption-validation disable --namespace my-namespace.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - async-operation
+      - resource-version
 
   # Namespace mtls commands
   - name: cloud namespace mtls

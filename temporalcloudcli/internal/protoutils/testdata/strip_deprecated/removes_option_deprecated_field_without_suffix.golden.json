@@ -4,6 +4,7 @@
     "codecServer": null,
     "connectivityRuleIds": [],
     "description": "",
+    "encryptionValidation": null,
     "fairness": null,
     "highAvailability": null,
     "lifecycle": null,
