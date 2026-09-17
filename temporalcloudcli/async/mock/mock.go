@@ -221,12 +221,12 @@ func (_c *MockPoller_HandleDeleteOperation_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
-// HandleOperation provides a mock function for the type MockPoller
-func (_mock *MockPoller) HandleOperation(ctx context.Context, response async.RespWithAsyncOp, err error) error {
+// HandleIdempotentOperation provides a mock function for the type MockPoller
+func (_mock *MockPoller) HandleIdempotentOperation(ctx context.Context, response async.RespWithAsyncOp, err error) error {
 	ret := _mock.Called(ctx, response, err)
 
 	if len(ret) == 0 {
-		panic("no return value specified for HandleOperation")
+		panic("no return value specified for HandleIdempotentOperation")
 	}
 
 	var r0 error
@@ -238,20 +238,20 @@ func (_mock *MockPoller) HandleOperation(ctx context.Context, response async.Res
 	return r0
 }
 
-// MockPoller_HandleOperation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandleOperation'
-type MockPoller_HandleOperation_Call struct {
+// MockPoller_HandleIdempotentOperation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandleIdempotentOperation'
+type MockPoller_HandleIdempotentOperation_Call struct {
 	*mock.Call
 }
 
-// HandleOperation is a helper method to define mock.On call
+// HandleIdempotentOperation is a helper method to define mock.On call
 //   - ctx context.Context
 //   - response async.RespWithAsyncOp
 //   - err error
-func (_e *MockPoller_Expecter) HandleOperation(ctx interface{}, response interface{}, err interface{}) *MockPoller_HandleOperation_Call {
-	return &MockPoller_HandleOperation_Call{Call: _e.mock.On("HandleOperation", ctx, response, err)}
+func (_e *MockPoller_Expecter) HandleIdempotentOperation(ctx interface{}, response interface{}, err interface{}) *MockPoller_HandleIdempotentOperation_Call {
+	return &MockPoller_HandleIdempotentOperation_Call{Call: _e.mock.On("HandleIdempotentOperation", ctx, response, err)}
 }
 
-func (_c *MockPoller_HandleOperation_Call) Run(run func(ctx context.Context, response async.RespWithAsyncOp, err error)) *MockPoller_HandleOperation_Call {
+func (_c *MockPoller_HandleIdempotentOperation_Call) Run(run func(ctx context.Context, response async.RespWithAsyncOp, err error)) *MockPoller_HandleIdempotentOperation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -274,12 +274,12 @@ func (_c *MockPoller_HandleOperation_Call) Run(run func(ctx context.Context, res
 	return _c
 }
 
-func (_c *MockPoller_HandleOperation_Call) Return(err1 error) *MockPoller_HandleOperation_Call {
+func (_c *MockPoller_HandleIdempotentOperation_Call) Return(err1 error) *MockPoller_HandleIdempotentOperation_Call {
 	_c.Call.Return(err1)
 	return _c
 }
 
-func (_c *MockPoller_HandleOperation_Call) RunAndReturn(run func(ctx context.Context, response async.RespWithAsyncOp, err error) error) *MockPoller_HandleOperation_Call {
+func (_c *MockPoller_HandleIdempotentOperation_Call) RunAndReturn(run func(ctx context.Context, response async.RespWithAsyncOp, err error) error) *MockPoller_HandleIdempotentOperation_Call {
 	_c.Call.Return(run)
 	return _c
 }

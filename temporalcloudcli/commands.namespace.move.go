@@ -70,5 +70,5 @@ func (c *CloudNamespaceMoveToProjectCommand) run(cctx *CommandContext, _ []strin
 		Async:            c.Async,
 		PollInterval:     c.PollInterval,
 	})
-	return poller.HandleOperation(cctx, resp, err)
+	return poller.HandleIdempotentOperation(cctx, resp, err)
 }

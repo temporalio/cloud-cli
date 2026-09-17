@@ -21,9 +21,10 @@ type (
 		HandleCreateAsyncOperationResponse(ctx context.Context, response RespWithAsyncOp, err error) error
 		HandleUpdateOperation(ctx context.Context, response RespWithAsyncOp, err error) error
 		HandleDeleteOperation(ctx context.Context, response RespWithAsyncOp, err error) error
-		// HandleOperation surfaces an operation the server already treats as idempotent, so
-		// there is no "already in the desired state" rejection for the client to translate.
-		HandleOperation(ctx context.Context, response RespWithAsyncOp, err error) error
+		// HandleIdempotentOperation surfaces an operation the server already treats as
+		// idempotent: there is no "already in the desired state" rejection to translate,
+		// and the --idempotent flag has no effect.
+		HandleIdempotentOperation(ctx context.Context, response RespWithAsyncOp, err error) error
 		// AwaitAsyncOperation blocks until the operation with the given ID reaches a terminal state,
 		// then prints the final operation details. Use this when you already have an operation ID
 		// and just need to wait for it to complete.
@@ -103,7 +104,7 @@ func (p *poller) HandleDeleteOperation(
 	return p.handleAsyncOperation(ctx, response)
 }
 
-func (p *poller) HandleOperation(
+func (p *poller) HandleIdempotentOperation(
 	ctx context.Context,
 	response RespWithAsyncOp,
 	err error,
