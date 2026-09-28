@@ -3,7 +3,6 @@ package temporalcloudcli_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 
@@ -51,7 +50,7 @@ func TestGetRetention_Success(t *testing.T) {
 		RetentionDays int32  `json:"retentionDays"`
 	}
 	var out retentionOutput
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &out))
 	assert.Equal(t, retentionOutput{Namespace: "my-namespace", RetentionDays: 14}, out)
 }
 

@@ -3,10 +3,10 @@ package temporalcloudcli_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/cloud-sdk/api/operation/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/testing/protocmp"
 
 	"github.com/temporalio/cloud-cli/internal/namespace"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
@@ -46,7 +47,7 @@ func TestCloudNamespaceSearchAttributeListCommand_Success(t *testing.T) {
 	var result struct {
 		SearchAttributes []temporalcloudcli.SearchAttributeOutput `json:"SearchAttributes"`
 	}
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &result))
 	assert.Equal(t, []temporalcloudcli.SearchAttributeOutput{{Name: "MyField", Type: "Keyword"}}, result.SearchAttributes)
 }
 
@@ -124,11 +125,11 @@ func TestCloudNamespaceSearchAttributeCreateCommand_Success(t *testing.T) {
 			},
 			assertResult: func(t *testing.T, buf bytes.Buffer) {
 				var result temporalcloudcli.MutationResult
-				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-				assert.Equal(t, temporalcloudcli.MutationResult{
+				require.NoError(t, unmarshalWithProtos(buf.Bytes(), &result))
+				assert.Empty(t, cmp.Diff(temporalcloudcli.MutationResult{
 					AsyncOp: &operation.AsyncOperation{Id: "test-operation-id"},
 					ID:      "test-namespace.test-account",
-				}, result)
+				}, result, protocmp.Transform()))
 			},
 		},
 		{
@@ -243,7 +244,7 @@ func TestCloudNamespaceSearchAttributeCreateCommand_NothingToChange(t *testing.T
 			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
 				require.NoError(t, capturedErr)
 				var result temporalcloudcli.Result
-				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
+				require.NoError(t, unmarshalWithProtos(buf.Bytes(), &result))
 				assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, result)
 			},
 		},
@@ -390,11 +391,11 @@ func TestCloudNamespaceSearchAttributeRenameCommand_Success(t *testing.T) {
 			},
 			assertResult: func(t *testing.T, buf bytes.Buffer) {
 				var result temporalcloudcli.MutationResult
-				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-				assert.Equal(t, temporalcloudcli.MutationResult{
+				require.NoError(t, unmarshalWithProtos(buf.Bytes(), &result))
+				assert.Empty(t, cmp.Diff(temporalcloudcli.MutationResult{
 					AsyncOp: &operation.AsyncOperation{Id: "test-operation-id"},
 					ID:      "test-namespace.test-account",
-				}, result)
+				}, result, protocmp.Transform()))
 			},
 		},
 		{

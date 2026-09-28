@@ -3,16 +3,17 @@ package temporalcloudcli_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 	auditlogv1 "go.temporal.io/cloud-sdk/api/auditlog/v1"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
+	"google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/stretchr/testify/assert"
@@ -23,8 +24,8 @@ func TestListAuditLogs_Success(t *testing.T) {
 	mockCloud := cloudmock.NewMockCloudServiceClient(t)
 
 	expected := struct {
-		AuditLogs []*auditlogv1.LogRecord `json:"auditLogs"`
-		NextPageToken string              `json:"nextPageToken"`
+		AuditLogs     []*auditlogv1.LogRecord
+		NextPageToken string
 	}{
 		AuditLogs: []*auditlogv1.LogRecord{
 			{LogId: "log-1", Operation: "CreateNamespace"},
@@ -47,11 +48,11 @@ func TestListAuditLogs_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	var out struct {
-		AuditLogs []*auditlogv1.LogRecord `json:"auditLogs"`
-		NextPageToken string              `json:"nextPageToken"`
+		AuditLogs     []*auditlogv1.LogRecord
+		NextPageToken string
 	}
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
-	assert.Equal(t, expected, out)
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &out))
+	assert.Empty(t, cmp.Diff(expected, out, protocmp.Transform()))
 }
 
 func TestGetAuditLogs_WithPagination(t *testing.T) {

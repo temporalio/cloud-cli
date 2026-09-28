@@ -3,10 +3,10 @@ package temporalcloudcli_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -18,6 +18,7 @@ import (
 	"go.temporal.io/cloud-sdk/api/operation/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 func TestCloudNamespaceCertFilterListCommand_Success(t *testing.T) {
@@ -56,15 +57,15 @@ func TestCloudNamespaceCertFilterListCommand_Success(t *testing.T) {
 	require.NoError(t, capturedErr)
 
 	var result struct {
-		CertificateFilters []*namespacev1.CertificateFilterSpec `json:"certificateFilters"`
+		CertificateFilters []*namespacev1.CertificateFilterSpec
 	}
-	err := json.Unmarshal(buf.Bytes(), &result)
+	err := unmarshalWithProtos(buf.Bytes(), &result)
 	require.NoError(t, err)
 
 	expected := struct {
-		CertificateFilters []*namespacev1.CertificateFilterSpec `json:"certificateFilters"`
+		CertificateFilters []*namespacev1.CertificateFilterSpec
 	}{CertificateFilters: expectedFilters}
-	assert.Equal(t, expected, result)
+	assert.Empty(t, cmp.Diff(expected, result, protocmp.Transform()))
 }
 
 func TestCloudNamespaceMtlsCertFilterListCommand_EmptyList(t *testing.T) {
@@ -93,9 +94,9 @@ func TestCloudNamespaceMtlsCertFilterListCommand_EmptyList(t *testing.T) {
 	require.NoError(t, capturedErr)
 
 	var result struct {
-		CertificateFilters []*namespacev1.CertificateFilterSpec `json:"certificateFilters"`
+		CertificateFilters []*namespacev1.CertificateFilterSpec
 	}
-	err := json.Unmarshal(buf.Bytes(), &result)
+	err := unmarshalWithProtos(buf.Bytes(), &result)
 	require.NoError(t, err)
 	assert.Empty(t, result.CertificateFilters)
 }
@@ -187,7 +188,7 @@ func TestCloudNamespaceMtlsCertFilterCreateCommand_Success(t *testing.T) {
 			},
 			assertResult: func(t *testing.T, buf bytes.Buffer) {
 				var result temporalcloudcli.MutationResult
-				err := json.Unmarshal(buf.Bytes(), &result)
+				err := unmarshalWithProtos(buf.Bytes(), &result)
 				require.NoError(t, err)
 				expected := temporalcloudcli.MutationResult{
 					AsyncOp: &operation.AsyncOperation{
@@ -195,7 +196,7 @@ func TestCloudNamespaceMtlsCertFilterCreateCommand_Success(t *testing.T) {
 					},
 					ID: "test-namespace.test-account",
 				}
-				assert.Equal(t, expected, result)
+				assert.Empty(t, cmp.Diff(expected, result, protocmp.Transform()))
 			},
 		},
 		{
@@ -352,7 +353,7 @@ func TestCloudNamespaceCertFilterCreateCommand_NothingToChange(t *testing.T) {
 				var result struct {
 					Status string `json:"status"`
 				}
-				err := json.Unmarshal(buf.Bytes(), &result)
+				err := unmarshalWithProtos(buf.Bytes(), &result)
 				require.NoError(t, err)
 				expected := struct {
 					Status string `json:"status"`
@@ -639,7 +640,7 @@ func TestCloudNamespaceMtlsCertFilterDeleteCommand_Success(t *testing.T) {
 			},
 			assertResult: func(t *testing.T, buf bytes.Buffer) {
 				var result temporalcloudcli.MutationResult
-				err := json.Unmarshal(buf.Bytes(), &result)
+				err := unmarshalWithProtos(buf.Bytes(), &result)
 				require.NoError(t, err)
 				expected := temporalcloudcli.MutationResult{
 					AsyncOp: &operation.AsyncOperation{
@@ -647,7 +648,7 @@ func TestCloudNamespaceMtlsCertFilterDeleteCommand_Success(t *testing.T) {
 					},
 					ID: "test-namespace.test-account",
 				}
-				assert.Equal(t, expected, result)
+				assert.Empty(t, cmp.Diff(expected, result, protocmp.Transform()))
 			},
 		},
 		{
@@ -804,7 +805,7 @@ func TestCloudNamespaceMtlsCertFilterDeleteCommand_NothingToChange(t *testing.T)
 				var result struct {
 					Status string `json:"status"`
 				}
-				err := json.Unmarshal(buf.Bytes(), &result)
+				err := unmarshalWithProtos(buf.Bytes(), &result)
 				require.NoError(t, err)
 				expected := struct {
 					Status string `json:"status"`

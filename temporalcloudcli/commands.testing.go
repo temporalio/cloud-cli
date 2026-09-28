@@ -3,14 +3,14 @@ package temporalcloudcli
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 	"time"
 
+	"go.temporal.io/api/temporalproto"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	"go.temporal.io/cloud-sdk/api/operation/v1"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/stretchr/testify/assert"
@@ -199,13 +199,12 @@ func TestCommand(t *testing.T, command CommandIfc, opts TestCommandOptions) {
 		if opts.ExpectedOutputJson != nil {
 			var js []byte
 			var err error
-			if protoMessage, ok := opts.ExpectedOutputJson.(proto.Message); ok {
-				js, err = protojson.MarshalOptions{
-					EmitDefaultValues: opts.ExpectedOutputJsonEmitDefaults,
-				}.Marshal(protoMessage)
-			} else {
-				js, err = json.Marshal(opts.ExpectedOutputJson)
-			}
+			customMarshalers := jsonv2.WithMarshalers(jsonv2.JoinMarshalers(jsonv2.MarshalFunc(func(m proto.Message) ([]byte, error) {
+				protoOpts := temporalproto.CustomJSONMarshalOptions{EmitDefaultValues: opts.ExpectedOutputJsonEmitDefaults}
+				return protoOpts.Marshal(m)
+			})))
+
+			js, err = jsonv2.Marshal(opts.ExpectedOutputJson, customMarshalers)
 			assert.NoError(t, err)
 			assert.JSONEq(t, string(js), printerBuf.String())
 		}

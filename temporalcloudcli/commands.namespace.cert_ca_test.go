@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
-	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"math/big"
@@ -16,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -27,6 +27,7 @@ import (
 	"go.temporal.io/cloud-sdk/api/operation/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 func TestCloudNamespaceCertCaCreateCommand_Success(t *testing.T) {
@@ -80,7 +81,7 @@ func TestCloudNamespaceCertCaCreateCommand_Success(t *testing.T) {
 			},
 			assertResult: func(t *testing.T, buf bytes.Buffer) {
 				var result temporalcloudcli.MutationResult
-				err := json.Unmarshal(buf.Bytes(), &result)
+				err := unmarshalWithProtos(buf.Bytes(), &result)
 				require.NoError(t, err)
 				expected := temporalcloudcli.MutationResult{
 					AsyncOp: &operation.AsyncOperation{
@@ -88,7 +89,7 @@ func TestCloudNamespaceCertCaCreateCommand_Success(t *testing.T) {
 					},
 					ID: "test-namespace.test-account",
 				}
-				assert.Equal(t, expected, result)
+				assert.Empty(t, cmp.Diff(expected, result, protocmp.Transform()))
 			},
 		},
 		{
@@ -113,7 +114,7 @@ func TestCloudNamespaceCertCaCreateCommand_Success(t *testing.T) {
 			},
 			assertResult: func(t *testing.T, buf bytes.Buffer) {
 				var result temporalcloudcli.MutationResult
-				err := json.Unmarshal(buf.Bytes(), &result)
+				err := unmarshalWithProtos(buf.Bytes(), &result)
 				require.NoError(t, err)
 				expected := temporalcloudcli.MutationResult{
 					AsyncOp: &operation.AsyncOperation{
@@ -121,7 +122,7 @@ func TestCloudNamespaceCertCaCreateCommand_Success(t *testing.T) {
 					},
 					ID: "test-namespace.test-account",
 				}
-				assert.Equal(t, expected, result)
+				assert.Empty(t, cmp.Diff(expected, result, protocmp.Transform()))
 			},
 		},
 		{
@@ -313,7 +314,7 @@ func TestCloudNamespaceMtlsCertCaCreateCommand_NothingToChange(t *testing.T) {
 				var result struct {
 					Status string `json:"status"`
 				}
-				err := json.Unmarshal(buf.Bytes(), &result)
+				err := unmarshalWithProtos(buf.Bytes(), &result)
 				require.NoError(t, err)
 				assert.Equal(t, "unchanged", result.Status)
 			},
@@ -574,7 +575,7 @@ func TestCloudNamespaceMtlsCertCaDeleteCommand_Success(t *testing.T) {
 			},
 			assertResult: func(t *testing.T, buf bytes.Buffer) {
 				var result temporalcloudcli.MutationResult
-				err := json.Unmarshal(buf.Bytes(), &result)
+				err := unmarshalWithProtos(buf.Bytes(), &result)
 				require.NoError(t, err)
 				expected := temporalcloudcli.MutationResult{
 					AsyncOp: &operation.AsyncOperation{
@@ -582,7 +583,7 @@ func TestCloudNamespaceMtlsCertCaDeleteCommand_Success(t *testing.T) {
 					},
 					ID: "test-namespace.test-account",
 				}
-				assert.Equal(t, expected, result)
+				assert.Empty(t, cmp.Diff(expected, result, protocmp.Transform()))
 			},
 		},
 		{
@@ -607,7 +608,7 @@ func TestCloudNamespaceMtlsCertCaDeleteCommand_Success(t *testing.T) {
 			},
 			assertResult: func(t *testing.T, buf bytes.Buffer) {
 				var result temporalcloudcli.MutationResult
-				err := json.Unmarshal(buf.Bytes(), &result)
+				err := unmarshalWithProtos(buf.Bytes(), &result)
 				require.NoError(t, err)
 				expected := temporalcloudcli.MutationResult{
 					AsyncOp: &operation.AsyncOperation{
@@ -615,7 +616,7 @@ func TestCloudNamespaceMtlsCertCaDeleteCommand_Success(t *testing.T) {
 					},
 					ID: "test-namespace.test-account",
 				}
-				assert.Equal(t, expected, result)
+				assert.Empty(t, cmp.Diff(expected, result, protocmp.Transform()))
 			},
 		},
 		{
@@ -816,7 +817,7 @@ func TestCloudNamespaceMtlsCertCaDeleteCommand_NothingToChange(t *testing.T) {
 				var result struct {
 					Status string `json:"status"`
 				}
-				err := json.Unmarshal(buf.Bytes(), &result)
+				err := unmarshalWithProtos(buf.Bytes(), &result)
 				require.NoError(t, err)
 				assert.Equal(t, "unchanged", result.Status)
 			},

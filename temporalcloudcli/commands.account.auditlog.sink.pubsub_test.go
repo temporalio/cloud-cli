@@ -3,7 +3,6 @@ package temporalcloudcli_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 
@@ -329,9 +328,13 @@ func TestValidateAuditLogSinkPubSub_Success(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	var out struct{ Status string }
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
-	assert.Equal(t, struct{ Status string }{Status: "valid"}, out)
+	var out struct {
+		Status string `json:"status"`
+	}
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &out))
+	assert.Equal(t, struct {
+		Status string `json:"status"`
+	}{Status: "valid"}, out)
 }
 
 // TestValidateAuditLogSinkPubSub_APIError verifies that a ValidateAccountAuditLogSink error is returned.

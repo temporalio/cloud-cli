@@ -3,16 +3,16 @@ package temporalcloudcli_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	connectivityrulev1 "go.temporal.io/cloud-sdk/api/connectivityrule/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
-	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/testing/protocmp"
 
 	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
@@ -42,12 +42,12 @@ func TestListConnectivityRules_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	type listConnectivityRulesOutput struct {
-		ConnectivityRules []*connectivityrulev1.ConnectivityRule `json:"connectivityRules"`
-		NextPageToken     string                                 `json:"nextPageToken"`
+		ConnectivityRules []*connectivityrulev1.ConnectivityRule
+		NextPageToken     string
 	}
 	var out listConnectivityRulesOutput
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
-	assert.Equal(t, listConnectivityRulesOutput{ConnectivityRules: rules, NextPageToken: ""}, out)
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &out))
+	assert.Empty(t, cmp.Diff(listConnectivityRulesOutput{ConnectivityRules: rules, NextPageToken: ""}, out, protocmp.Transform()))
 }
 
 // TestListConnectivityRules_WithNamespace verifies that the namespace filter is passed through.
@@ -135,8 +135,8 @@ func TestGetConnectivityRule_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	var out connectivityrulev1.ConnectivityRule
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
-	assert.True(t, proto.Equal(&connectivityrulev1.ConnectivityRule{Id: "rule-1"}, &out))
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &out))
+	assert.Empty(t, cmp.Diff(&connectivityrulev1.ConnectivityRule{Id: "rule-1", ResourceVersion: "rv-1"}, &out, protocmp.Transform()))
 }
 
 // TestGetConnectivityRule_Error verifies that an API error propagates.

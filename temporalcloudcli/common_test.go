@@ -3,7 +3,7 @@ package temporalcloudcli_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"regexp"
@@ -11,14 +11,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 	cmdmock "github.com/temporalio/cloud-cli/temporalcloudcli/mock"
+	"go.temporal.io/api/temporalproto"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 type CommandHarness struct {
@@ -50,6 +54,18 @@ func (h *CommandHarness) Close() {
 // Pieces must appear in order on the line and not overlap
 func (h *CommandHarness) ContainsOnSameLine(text string, pieces ...string) {
 	h.NoError(AssertContainsOnSameLine(text, pieces...))
+}
+
+func unmarshalWithProtos(b []byte, out any) error {
+	opts := jsonv2.WithUnmarshalers(
+		jsonv2.JoinUnmarshalers(
+			jsonv2.UnmarshalFunc(func(b []byte, m proto.Message) error {
+				protoOpts := temporalproto.CustomJSONUnmarshalOptions{}
+				return protoOpts.Unmarshal(b, m)
+			}),
+		),
+	)
+	return jsonv2.Unmarshal(b, out, opts, jsonv2.RejectUnknownMembers(true))
 }
 
 func AssertContainsOnSameLine(text string, pieces ...string) error {
@@ -168,8 +184,8 @@ func TestAsyncOperationHandler_Async(t *testing.T) {
 	require.NoError(t, err)
 
 	var out temporalcloudcli.MutationResult
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
-	assert.Equal(t, temporalcloudcli.MutationResult{AsyncOp: op, ID: "my-namespace"}, out)
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &out))
+	assert.Empty(t, cmp.Diff(temporalcloudcli.MutationResult{AsyncOp: op, ID: "my-namespace"}, out, protocmp.Transform()))
 }
 
 func TestAsyncOperationHandler_Sync(t *testing.T) {
@@ -214,7 +230,7 @@ func TestAsyncOperationHandler_HandleUpdateErr_NothingToChange_Idempotent(t *tes
 	require.NoError(t, err)
 
 	var out temporalcloudcli.Result
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &out))
 	assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, out)
 }
 
@@ -253,7 +269,7 @@ func TestAsyncOperationHandler_HandleCreateErr_AlreadyExists_Idempotent(t *testi
 	require.NoError(t, err)
 
 	var out temporalcloudcli.Result
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &out))
 	assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, out)
 }
 
@@ -280,7 +296,7 @@ func TestAsyncOperationHandler_HandleDeleteErr_NotFound_Idempotent(t *testing.T)
 	require.NoError(t, err)
 
 	var out temporalcloudcli.Result
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &out))
 	assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, out)
 }
 

@@ -4,7 +4,6 @@
 package temporalcloudcli_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -14,7 +13,6 @@ import (
 	"go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespace "go.temporal.io/cloud-sdk/api/namespace/v1"
 	resource "go.temporal.io/cloud-sdk/api/resource/v1"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const (
@@ -58,7 +56,7 @@ func (s *SharedServerSuite) TestNamespaceCreate() {
 	s.Suite.Require().NoError(err)
 
 	result := &temporalcloudcli.MutationResult{}
-	err = json.Unmarshal(buf, result)
+	err = unmarshalWithProtos(buf, result)
 	s.Suite.Require().NoError(err)
 	s.Suite.Require().NotEmpty(result.ID)
 	s.Suite.Require().NotNil(result.AsyncOp)
@@ -125,7 +123,7 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 	buf, err = io.ReadAll(&res.Stdout)
 	s.Suite.Require().NoError(err)
 	result := &temporalcloudcli.MutationResult{}
-	err = json.Unmarshal(buf, result)
+	err = unmarshalWithProtos(buf, result)
 	s.Suite.Require().NoError(err)
 
 	namespaceID := result.ID
@@ -149,7 +147,7 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 	s.Suite.Require().NoError(err)
 
 	readNamespace := &namespace.Namespace{}
-	err = protojson.Unmarshal(buf, readNamespace)
+	err = unmarshalWithProtos(buf, readNamespace)
 	s.Suite.Require().NoError(err)
 
 	// compare it to the inputted spec
@@ -194,7 +192,7 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 	buf, err = io.ReadAll(&res.Stdout)
 	s.Suite.Require().NoError(err)
 	result = &temporalcloudcli.MutationResult{}
-	err = json.Unmarshal(buf, result)
+	err = unmarshalWithProtos(buf, result)
 	s.Suite.Require().NoError(err)
 
 	// make sure ns apply is completed
@@ -216,7 +214,7 @@ func (s *SharedServerSuite) testnamespaceCRUD() {
 	s.Suite.Require().NoError(err)
 
 	readNamespace = &namespace.Namespace{}
-	err = protojson.Unmarshal(buf, readNamespace)
+	err = unmarshalWithProtos(buf, readNamespace)
 	s.Suite.Require().NoError(err)
 
 	// compare it to the inputted spec
