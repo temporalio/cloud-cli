@@ -3,10 +3,10 @@ package temporalcloudcli_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
@@ -14,7 +14,7 @@ import (
 	accountv1 "go.temporal.io/cloud-sdk/api/account/v1"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
-	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/testing/protocmp"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,7 +44,7 @@ func TestGetAuditLogSink_Success(t *testing.T) {
 
 	// Printer uses protojson for proto messages (camelCase output).
 	var out accountv1.AuditLogSink
-	require.NoError(t, protojson.Unmarshal(buf.Bytes(), &out))
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &out))
 	assert.Equal(t, sink.Name, out.Name)
 	assert.Equal(t, sink.ResourceVersion, out.ResourceVersion)
 }
@@ -91,15 +91,16 @@ func TestListAuditLogSinks_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	type listResponse struct {
-		Sinks         []*accountv1.AuditLogSink `json:"sinks"`
-		NextPageToken string                    `json:"nextPageToken"`
+		Sinks         []*accountv1.AuditLogSink
+		NextPageToken string
 	}
 	var out listResponse
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
-	assert.Equal(t, listResponse{
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &out))
+	assert.Empty(t, cmp.Diff(listResponse{
 		Sinks:         sinks,
 		NextPageToken: "next-token",
-	}, out)
+	}, out,
+		protocmp.Transform()))
 }
 
 func TestListAuditLogSinks_WithPagination(t *testing.T) {

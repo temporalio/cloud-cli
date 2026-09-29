@@ -8,7 +8,6 @@ import (
 	"io"
 
 	"go.temporal.io/cloud-sdk/api/cloudservice/v1"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func (s *SharedServerSuite) TestWhoami() {
@@ -23,7 +22,7 @@ func (s *SharedServerSuite) TestWhoami() {
 	s.Suite.Require().NoError(err)
 
 	identity := &cloudservice.GetCurrentIdentityResponse{}
-	err = protojson.Unmarshal(buf, identity)
+	err = unmarshalWithProtos(buf, identity)
 	s.Suite.Require().NoError(err)
 
 	// The response must identify the caller as either a user or a service account.

@@ -7,11 +7,13 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/testing/protocmp"
 
 	"github.com/temporalio/cloud-cli/internal/namespace"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
@@ -47,7 +49,7 @@ func TestCloudNamespaceCodecGetCommand_NoCodecServer(t *testing.T) {
 		Namespace string          `json:"Namespace"`
 		Spec      json.RawMessage `json:"Spec"`
 	}
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &result))
 	assert.Equal(t, "test-namespace.test-account", result.Namespace)
 	assert.Equal(t, "null", string(result.Spec))
 }
@@ -135,11 +137,11 @@ func TestCloudNamespaceCodecSetCommand_Success(t *testing.T) {
 			},
 			assertResult: func(t *testing.T, buf bytes.Buffer) {
 				var result temporalcloudcli.MutationResult
-				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-				assert.Equal(t, temporalcloudcli.MutationResult{
+				require.NoError(t, unmarshalWithProtos(buf.Bytes(), &result))
+				assert.Empty(t, cmp.Diff(temporalcloudcli.MutationResult{
 					AsyncOp: &operation.AsyncOperation{Id: "test-operation-id"},
 					ID:      "test-namespace.test-account",
-				}, result)
+				}, result, protocmp.Transform()))
 			},
 		},
 		{
@@ -211,11 +213,11 @@ func TestCloudNamespaceCodecSetCommand_WithCustomErrorMessage(t *testing.T) {
 	require.NoError(t, capturedErr)
 
 	var result temporalcloudcli.MutationResult
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-	assert.Equal(t, temporalcloudcli.MutationResult{
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &result))
+	assert.Empty(t, cmp.Diff(temporalcloudcli.MutationResult{
 		AsyncOp: &operation.AsyncOperation{Id: "test-operation-id"},
 		ID:      "test-namespace.test-account",
-	}, result)
+	}, result, protocmp.Transform()))
 }
 
 func TestCloudNamespaceCodecSetCommand_Error(t *testing.T) {
@@ -260,7 +262,7 @@ func TestCloudNamespaceCodecSetCommand_NothingToChange(t *testing.T) {
 			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
 				require.NoError(t, capturedErr)
 				var result temporalcloudcli.Result
-				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
+				require.NoError(t, unmarshalWithProtos(buf.Bytes(), &result))
 				assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, result)
 			},
 		},
@@ -364,11 +366,11 @@ func TestCloudNamespaceCodecDeleteCommand_Success(t *testing.T) {
 			},
 			assertResult: func(t *testing.T, buf bytes.Buffer) {
 				var result temporalcloudcli.MutationResult
-				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
-				assert.Equal(t, temporalcloudcli.MutationResult{
+				require.NoError(t, unmarshalWithProtos(buf.Bytes(), &result))
+				assert.Empty(t, cmp.Diff(temporalcloudcli.MutationResult{
 					AsyncOp: &operation.AsyncOperation{Id: "test-operation-id"},
 					ID:      "test-namespace.test-account",
-				}, result)
+				}, result, protocmp.Transform()))
 			},
 		},
 		{
@@ -499,7 +501,7 @@ func TestCloudNamespaceCodecDeleteCommand_NothingToChange(t *testing.T) {
 			assertResult: func(t *testing.T, capturedErr error, buf bytes.Buffer) {
 				require.NoError(t, capturedErr)
 				var result temporalcloudcli.Result
-				require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
+				require.NoError(t, unmarshalWithProtos(buf.Bytes(), &result))
 				assert.Equal(t, temporalcloudcli.Result{Status: "unchanged"}, result)
 			},
 		},

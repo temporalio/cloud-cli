@@ -3,6 +3,8 @@ package printer
 import (
 	"encoding/base64"
 	"encoding/json"
+	jsontext "encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"fmt"
 	"io"
 	"maps"
@@ -267,20 +269,29 @@ func (p *Printer) printJSON(v any, options StructuredOptions) error {
 }
 
 func (p *Printer) jsonVal(v any, indent string, shorthandPayloads, emitDefaultValues bool) ([]byte, error) {
-	// Use proto JSON if a proto message
-	if protoMessage, ok := v.(proto.Message); ok {
-		opts := temporalproto.CustomJSONMarshalOptions{Indent: indent, EmitDefaultValues: emitDefaultValues}
-		if shorthandPayloads {
-			opts.Metadata = map[string]any{common.EnablePayloadShorthandMetadataKey: true}
-		}
-		return opts.Marshal(protoMessage)
+	opts := make([]jsonv2.Options, 0, 4)
+	// Preserve parts of jsonv1 behavior to make the CLI more resilient
+	opts = append(
+		opts,
+		// Emit a placeholder rather than hard fail
+		jsontext.AllowInvalidUTF8(true),
+		// Emit durations as number of nanoseconds, rather than hard fail
+		json.FormatDurationAsNano(true),
+	)
+	if indent != "" {
+		// This will also re-indent any json created by custom marshalers, so we don't need to pass indentation rules through to them
+		opts = append(opts, jsontext.WithIndent(indent))
 	}
 
-	// Normal JSON encoding
-	if indent != "" {
-		return json.MarshalIndent(v, "", indent)
-	}
-	return json.Marshal(v)
+	opts = append(opts, jsonv2.WithMarshalers(jsonv2.JoinMarshalers(jsonv2.MarshalFunc(func(m proto.Message) ([]byte, error) {
+		protoOpts := temporalproto.CustomJSONMarshalOptions{EmitDefaultValues: emitDefaultValues}
+		if shorthandPayloads {
+			protoOpts.Metadata = map[string]any{common.EnablePayloadShorthandMetadataKey: true}
+		}
+		return protoOpts.Marshal(m)
+	}))))
+
+	return jsonv2.Marshal(v, opts...)
 }
 
 type col struct {

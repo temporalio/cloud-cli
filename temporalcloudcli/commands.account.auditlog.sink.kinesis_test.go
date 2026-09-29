@@ -3,7 +3,6 @@ package temporalcloudcli_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 
@@ -440,7 +439,7 @@ func TestValidateAuditLogSinkKinesis_Success(t *testing.T) {
 	var out struct {
 		Status string `json:"status"`
 	}
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &out))
 	assert.Equal(t, "valid", out.Status)
 }
 

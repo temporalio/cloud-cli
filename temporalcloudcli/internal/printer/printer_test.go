@@ -3,6 +3,7 @@ package printer
 import (
 	"bytes"
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"strings"
 	"testing"
 	"time"
@@ -10,9 +11,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.temporal.io/api/temporalproto"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	"go.temporal.io/cloud-sdk/api/operation/v1"
 	"go.temporal.io/cloud-sdk/api/resource/v1"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestPrinter_Text(t *testing.T) {
@@ -70,6 +73,18 @@ func normalizeMultiline(s string) string {
 		}
 	}
 	return ret
+}
+
+func unmarshalWithProtos(b []byte, out any) error {
+	opts := jsonv2.WithUnmarshalers(
+		jsonv2.JoinUnmarshalers(
+			jsonv2.UnmarshalFunc(func(b []byte, m proto.Message) error {
+				protoOpts := temporalproto.CustomJSONUnmarshalOptions{}
+				return protoOpts.Unmarshal(b, m)
+			}),
+		),
+	)
+	return jsonv2.Unmarshal(b, out, opts, jsonv2.RejectUnknownMembers(true))
 }
 
 func TestPrinter_JSON(t *testing.T) {
@@ -353,7 +368,7 @@ func TestPrinter_PrintDiff_JSON(t *testing.T) {
 	p := Printer{Output: &buf, JSON: true}
 	require.NoError(t, p.PrintDiff(a, b, DiffOptions{}))
 	var result map[string]json.RawMessage
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &result))
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &result))
 	require.Contains(t, result, "before")
 	require.Contains(t, result, "after")
 	require.Contains(t, string(result["before"]), "old")
@@ -364,7 +379,7 @@ func TestPrinter_PrintDiff_JSON(t *testing.T) {
 	p.JSONIndent = "  "
 	require.NoError(t, p.PrintDiff(a, b, DiffOptions{}))
 	var prettyResult map[string]json.RawMessage
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &prettyResult))
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &prettyResult))
 	require.Contains(t, prettyResult, "before")
 	require.Contains(t, prettyResult, "after")
 }
@@ -434,7 +449,7 @@ func TestPrinter_PrintResource(t *testing.T) {
 	p.JSONIndent = "  "
 	require.NoError(t, p.PrintResource(resource, PrintResourceOptions{}))
 	var jsonResult map[string]any
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &jsonResult))
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &jsonResult))
 	require.Equal(t, "my-resource", jsonResult["Name"])
 }
 
@@ -521,7 +536,7 @@ func TestPrinter_PrintResourceList(t *testing.T) {
 	p.JSON = true
 	require.NoError(t, p.PrintResourceList(response, PrintResourceOptions{}, TableOptions{}))
 	var jsonResult map[string]any
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &jsonResult))
+	require.NoError(t, unmarshalWithProtos(buf.Bytes(), &jsonResult))
 	require.NotNil(t, jsonResult["Resources"])
 }
 
