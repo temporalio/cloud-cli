@@ -156,6 +156,8 @@ func (p *poller) waitForAsyncOperation(
 ) (*operation.AsyncOperation, error) {
 	ticker := time.NewTicker(p.pollInterval)
 	defer ticker.Stop()
+	status := p.printer.NewStatusLine()
+	defer status.Clear()
 	for {
 		select {
 		case <-ctx.Done():
@@ -182,10 +184,10 @@ func (p *poller) waitForAsyncOperation(
 			)
 			switch asyncOp.State {
 			case operation.AsyncOperation_STATE_PENDING:
-				outString = "Operation pending..."
+				outString = "Operation pending"
 				continuePolling = true
 			case operation.AsyncOperation_STATE_IN_PROGRESS:
-				outString = "Operation in progress..."
+				outString = "Operation in progress"
 				continuePolling = true
 			case operation.AsyncOperation_STATE_FULFILLED:
 				outString = "Operation completed successfully"
@@ -200,16 +202,19 @@ func (p *poller) waitForAsyncOperation(
 				outErr = true
 			default:
 				// This should never happen, but if we get an unknown state, print it and continue polling
-				outString = fmt.Sprintf("Unknown operation state: %s, trying again...", asyncOp.State.String())
+				outString = fmt.Sprintf("Unknown operation state: %s, trying again", asyncOp.State.String())
 				continuePolling = true
 			}
-			p.printer.Print(fmt.Sprintf("[%s] %s\n", time.Now().Format("15:04:05"), outString))
-			if !continuePolling {
-				if outErr {
-					return nil, errors.New(outString)
-				}
-				return asyncOp, nil
+			line := fmt.Sprintf("[%s] %s", time.Now().Format("15:04:05"), outString)
+			if continuePolling {
+				status.Progress(line)
+				continue
 			}
+			status.Done(line)
+			if outErr {
+				return nil, errors.New(outString)
+			}
+			return asyncOp, nil
 		}
 	}
 }
