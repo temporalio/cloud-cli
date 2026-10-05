@@ -392,11 +392,11 @@ func CreateNamespace(ctx context.Context, params CreateNamespaceParams) error {
 		Name:                params.Name,
 		Regions:             params.Regions,
 		RetentionDays:       params.RetentionDays,
+		Description:         params.Description,
 		ApiKeyAuth:          &namespacev1.ApiKeyAuthSpec{Enabled: params.ApiKeyAuthEnabled},
 		MtlsAuth:            &namespacev1.MtlsAuthSpec{Enabled: params.MtlsAuthEnabled},
 		Lifecycle:           &namespacev1.LifecycleSpec{EnableDeleteProtection: params.EnableDeleteProtection},
 		ConnectivityRuleIds: params.ConnectionRuleIDs,
-		Description:         params.Description,
 	}
 
 	// Only set fairness when the flag was explicitly provided; otherwise leave it
