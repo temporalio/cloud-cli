@@ -420,10 +420,7 @@ func CreateNamespace(ctx context.Context, params CreateNamespaceParams) error {
 	}
 
 	spec.SearchAttributes = searchAttrs
-
-	if params.EncryptionValidation != nil {
-		spec.EncryptionValidation = params.EncryptionValidation
-	}
+	spec.EncryptionValidation = params.EncryptionValidation
 
 	if err := params.Prompter.PromptApply(&namespacev1.NamespaceSpec{}, spec, false); err != nil {
 		return err
