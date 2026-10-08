@@ -62,12 +62,22 @@ func (c *CloudNamespaceEncryptionValidationSetCommand) run(cctx *CommandContext,
 
 	ns := res.Namespace
 	newSpec := proto.Clone(ns.Spec).(*namespacev1.NamespaceSpec)
-	newSpec.EncryptionValidation = &namespacev1.EncryptionValidationSpec{
-		Mode:           mode,
-		MetadataKey:    c.MetadataKey,
-		MetadataValues: c.MetadataValue,
-		InspectHeader:  c.InspectHeader,
-		InspectFailure: c.InspectFailure,
+	if newSpec.EncryptionValidation == nil {
+		newSpec.EncryptionValidation = &namespacev1.EncryptionValidationSpec{}
+	}
+	newSpec.EncryptionValidation.Mode = mode
+	flags := c.Command.Flags()
+	if flags.Changed("metadata-key") {
+		newSpec.EncryptionValidation.MetadataKey = c.MetadataKey
+	}
+	if flags.Changed("metadata-value") {
+		newSpec.EncryptionValidation.MetadataValues = c.MetadataValue
+	}
+	if flags.Changed("inspect-header") {
+		newSpec.EncryptionValidation.InspectHeader = c.InspectHeader
+	}
+	if flags.Changed("inspect-failure") {
+		newSpec.EncryptionValidation.InspectFailure = c.InspectFailure
 	}
 
 	yes, err := cctx.GetPrompter().PromptApply(ns.Spec, newSpec, false)

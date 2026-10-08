@@ -2757,17 +2757,17 @@ func NewCloudNamespaceEncryptionValidationSetCommand(cctx *CommandContext, paren
 	s.Command.Use = "set [flags]"
 	s.Command.Short = "Set namespace payload encryption validation configuration"
 	if hasHighlighting {
-		s.Command.Long = "Replace the payload encryption validation configuration for a Temporal Cloud\nnamespace. Omitted optional flags are sent as empty or false and do not\nkeep the existing values.\n\nExample:\n\n\x1b[1mtemporal cloud namespace encryption-validation set --namespace my-namespace.my-account --mode warn --metadata-key encoding --metadata-value binary/encrypted\x1b[0m"
+		s.Command.Long = "Update the payload encryption validation configuration for a Temporal Cloud\nnamespace. Omitted optional flags keep the existing values.\n\nExample:\n\n\x1b[1mtemporal cloud namespace encryption-validation set --namespace my-namespace.my-account --mode warn --metadata-key encoding --metadata-value binary/encrypted\x1b[0m"
 	} else {
-		s.Command.Long = "Replace the payload encryption validation configuration for a Temporal Cloud\nnamespace. Omitted optional flags are sent as empty or false and do not\nkeep the existing values.\n\nExample:\n\n```\ntemporal cloud namespace encryption-validation set --namespace my-namespace.my-account --mode warn --metadata-key encoding --metadata-value binary/encrypted\n```"
+		s.Command.Long = "Update the payload encryption validation configuration for a Temporal Cloud\nnamespace. Omitted optional flags keep the existing values.\n\nExample:\n\n```\ntemporal cloud namespace encryption-validation set --namespace my-namespace.my-account --mode warn --metadata-key encoding --metadata-value binary/encrypted\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Mode, "mode", "", "Payload encryption validation mode. Valid values: disabled, warn, deny. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "mode")
-	s.Command.Flags().StringVar(&s.MetadataKey, "metadata-key", "", "Payload metadata key used to identify encrypted payloads. If omitted, an empty key is sent.")
-	s.Command.Flags().StringArrayVar(&s.MetadataValue, "metadata-value", nil, "Payload metadata value used to identify encrypted payloads. Repeat to add additional values. If omitted, no values are sent.")
-	s.Command.Flags().BoolVar(&s.InspectHeader, "inspect-header", false, "Inspect workflow headers for encryption validation. Default is false.")
-	s.Command.Flags().BoolVar(&s.InspectFailure, "inspect-failure", false, "Inspect Failure payloads for encryption validation. Default is false.")
+	s.Command.Flags().StringVar(&s.MetadataKey, "metadata-key", "", "Payload metadata key used to identify encrypted payloads. If omitted, the existing key is kept.")
+	s.Command.Flags().StringArrayVar(&s.MetadataValue, "metadata-value", nil, "Payload metadata value used to identify encrypted payloads. Repeat to add additional values. Replaces the existing values. If omitted, the existing values are kept.")
+	s.Command.Flags().BoolVar(&s.InspectHeader, "inspect-header", false, "Inspect workflow headers for encryption validation. If omitted, the existing value is kept.")
+	s.Command.Flags().BoolVar(&s.InspectFailure, "inspect-failure", false, "Inspect Failure payloads for encryption validation. If omitted, the existing value is kept.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
