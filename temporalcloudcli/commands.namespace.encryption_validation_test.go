@@ -114,9 +114,9 @@ func TestNamespaceEncryptionValidationSet(t *testing.T) {
 			name: "AllFlags",
 			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationSetCommand{
 				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-				Mode:             "warn",
 			},
 			args: []string{
+				"--mode=warn",
 				"--metadata-key=encoding",
 				"--metadata-value=binary/encrypted",
 				"--metadata-value=legacy-value",
@@ -150,8 +150,8 @@ func TestNamespaceEncryptionValidationSet(t *testing.T) {
 			name: "OmittedFlagsPreserved",
 			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationSetCommand{
 				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-				Mode:             "deny",
 			},
+			args: []string{"--mode=deny"},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
 					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
@@ -183,7 +183,6 @@ func TestNamespaceEncryptionValidationSet(t *testing.T) {
 			name: "ExplicitFalseOverrides",
 			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationSetCommand{
 				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-				Mode:             "warn",
 			},
 			args: []string{"--inspect-failure=false"},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -210,17 +209,30 @@ func TestNamespaceEncryptionValidationSet(t *testing.T) {
 			name: "InvalidMode",
 			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationSetCommand{
 				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-				Mode:             "oops",
 			},
+			args:        []string{"--mode=oops"},
 			expectedErr: `invalid encryption validation mode "oops": must be disabled, warn, or deny`,
+		},
+		{
+			name: "ModeRequiredWhenUnconfigured",
+			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationSetCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
+			},
+			args: []string{"--inspect-failure"},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: namespaceWithEncryptionValidation(nil)}, nil)
+			},
+			expectedErr: "--mode is required when encryption validation is not configured",
 		},
 		{
 			name: "ResourceVersionOverride",
 			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationSetCommand{
 				NamespaceOptions:       temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
 				ResourceVersionOptions: temporalcloudcli.ResourceVersionOptions{ResourceVersion: "rv-user"},
-				Mode:                   "deny",
 			},
+			args: []string{"--mode=deny"},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
 					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
@@ -244,8 +256,8 @@ func TestNamespaceEncryptionValidationSet(t *testing.T) {
 			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationSetCommand{
 				NamespaceOptions:      temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
 				AsyncOperationOptions: temporalcloudcli.AsyncOperationOptions{AsyncOperationId: "op-custom"},
-				Mode:                  "warn",
 			},
+			args: []string{"--mode=warn"},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
 					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
@@ -265,8 +277,8 @@ func TestNamespaceEncryptionValidationSet(t *testing.T) {
 			name: "GetNamespaceError",
 			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationSetCommand{
 				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-				Mode:             "warn",
 			},
+			args: []string{"--mode=warn"},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
 					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
@@ -278,8 +290,8 @@ func TestNamespaceEncryptionValidationSet(t *testing.T) {
 			name: "UpdateNamespaceError",
 			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationSetCommand{
 				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-				Mode:             "warn",
 			},
+			args: []string{"--mode=warn"},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
 					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
@@ -295,8 +307,8 @@ func TestNamespaceEncryptionValidationSet(t *testing.T) {
 			name: "PromptDeclined",
 			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationSetCommand{
 				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-				Mode:             "warn",
 			},
+			args: []string{"--mode=warn"},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
 				c.EXPECT().
 					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
@@ -309,6 +321,7 @@ func TestNamespaceEncryptionValidationSet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fs := tt.cmd.Command.Flags()
+			fs.StringVar(&tt.cmd.Mode, "mode", "", "")
 			fs.StringVar(&tt.cmd.MetadataKey, "metadata-key", "", "")
 			fs.StringArrayVar(&tt.cmd.MetadataValue, "metadata-value", nil, "")
 			fs.BoolVar(&tt.cmd.InspectHeader, "inspect-header", false, "")

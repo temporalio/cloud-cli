@@ -46,9 +46,14 @@ func (c *CloudNamespaceEncryptionValidationGetCommand) run(cctx *CommandContext,
 }
 
 func (c *CloudNamespaceEncryptionValidationSetCommand) run(cctx *CommandContext, _ []string) error {
-	mode, err := parseEncryptionValidationMode(c.Mode)
-	if err != nil {
-		return err
+	flags := c.Command.Flags()
+	var mode namespacev1.EncryptionValidationSpec_EncryptionValidationMode
+	if flags.Changed("mode") {
+		var err error
+		mode, err = parseEncryptionValidationMode(c.Mode)
+		if err != nil {
+			return err
+		}
 	}
 
 	client, err := cctx.GetCloudClient(c.ClientOptions)
@@ -63,10 +68,14 @@ func (c *CloudNamespaceEncryptionValidationSetCommand) run(cctx *CommandContext,
 	ns := res.Namespace
 	newSpec := proto.Clone(ns.Spec).(*namespacev1.NamespaceSpec)
 	if newSpec.EncryptionValidation == nil {
+		if !flags.Changed("mode") {
+			return errors.New("--mode is required when encryption validation is not configured")
+		}
 		newSpec.EncryptionValidation = &namespacev1.EncryptionValidationSpec{}
 	}
-	newSpec.EncryptionValidation.Mode = mode
-	flags := c.Command.Flags()
+	if flags.Changed("mode") {
+		newSpec.EncryptionValidation.Mode = mode
+	}
 	if flags.Changed("metadata-key") {
 		newSpec.EncryptionValidation.MetadataKey = c.MetadataKey
 	}
