@@ -787,9 +787,8 @@ commands:
   - name: cloud namespace encryption-validation set
     summary: Set namespace payload encryption validation configuration
     description: |
-      Replace the payload encryption validation configuration for a Temporal Cloud
-      namespace. Omitted optional flags are sent as empty or false and do not
-      keep the existing values.
+      Update the payload encryption validation configuration for a Temporal Cloud
+      namespace. Omitted optional flags keep the existing values.
 
       Example:
 
@@ -812,20 +811,23 @@ commands:
         type: string
         description: |
           Payload metadata key used to identify encrypted payloads. If omitted,
-          an empty key is sent.
+          the existing key is kept.
       - name: metadata-value
         type: string[]
         description: |
           Payload metadata value used to identify encrypted payloads. Repeat to
-          add additional values. If omitted, no values are sent.
+          add additional values. Replaces the existing values. If omitted, the
+          existing values are kept.
       - name: inspect-header
         type: bool
         description: |
-          Inspect workflow headers for encryption validation. Default is false.
+          Inspect workflow headers for encryption validation. If omitted, the
+          existing value is kept.
       - name: inspect-failure
         type: bool
         description: |
-          Inspect Failure payloads for encryption validation. Default is false.
+          Inspect Failure payloads for encryption validation. If omitted, the
+          existing value is kept.
   - name: cloud namespace encryption-validation enable
     summary: Enable payload encryption validation for a namespace
     description: |
