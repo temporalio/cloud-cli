@@ -449,26 +449,26 @@ commands:
       - name: encryption-validation-mode
         type: string
         description: |
-          Payload encryption validation mode. Valid values: disabled, warn, deny.
+          [Experimental] Payload encryption validation mode. Valid values: disabled, warn, deny.
           When any encryption-validation flag is set, this field is required.
       - name: encryption-validation-metadata-key
         type: string
         description: |
-          Payload metadata key used to identify encrypted payloads. If omitted,
+          [Experimental] Payload metadata key used to identify encrypted payloads. If omitted,
           an empty key is sent.
       - name: encryption-validation-metadata-value
         type: string[]
         description: |
-          Payload metadata value used to identify encrypted payloads. Repeat to
+          [Experimental] Payload metadata value used to identify encrypted payloads. Repeat to
           add additional values. If omitted, no values are sent.
       - name: encryption-validation-inspect-header
         type: bool
         description: |
-          Inspect workflow headers for encryption validation. Default is false.
+          [Experimental] Inspect workflow headers for encryption validation. Default is false.
       - name: encryption-validation-inspect-failure
         type: bool
         description: |
-          Inspect Failure payloads for encryption validation. Default is false.
+          [Experimental] Inspect Failure payloads for encryption validation. Default is false.
   - name: cloud namespace move-to-project
     summary: Move a namespace to a different project
     description: |
@@ -766,12 +766,12 @@ commands:
 
   # Namespace encryption validation commands
   - name: cloud namespace encryption-validation
-    summary: Manage namespace payload encryption validation settings
+    summary: '[Experimental] Manage namespace payload encryption validation settings'
     description: |
       Commands for managing payload encryption validation configuration of Temporal Cloud namespaces.
     has-init: false
   - name: cloud namespace encryption-validation get
-    summary: Get namespace payload encryption validation configuration
+    summary: '[Experimental] Get namespace payload encryption validation configuration'
     description: |
       Retrieve the current payload encryption validation configuration for a Temporal Cloud namespace.
 
@@ -785,7 +785,7 @@ commands:
       - client
       - namespace
   - name: cloud namespace encryption-validation set
-    summary: Set namespace payload encryption validation configuration
+    summary: '[Experimental] Set namespace payload encryption validation configuration'
     description: |
       Update the payload encryption validation configuration for a Temporal Cloud
       namespace. Omitted optional flags keep the existing values.
@@ -804,9 +804,10 @@ commands:
     options:
       - name: mode
         type: string
-        required: true
         description: |
           Payload encryption validation mode. Valid values: disabled, warn, deny.
+          If omitted, the existing mode is kept. Required when encryption
+          validation is not configured yet.
       - name: metadata-key
         type: string
         description: |
@@ -829,7 +830,7 @@ commands:
           Inspect Failure payloads for encryption validation. If omitted, the
           existing value is kept.
   - name: cloud namespace encryption-validation enable
-    summary: Enable payload encryption validation for a namespace
+    summary: '[Experimental] Enable payload encryption validation for a namespace'
     description: |
       Enable payload encryption validation for a Temporal Cloud namespace.
       If validation has not been configured, default values are applied
@@ -855,7 +856,7 @@ commands:
         description: |
           Enable validation in deny mode instead of warn.
   - name: cloud namespace encryption-validation disable
-    summary: Disable payload encryption validation for a namespace
+    summary: '[Experimental] Disable payload encryption validation for a namespace'
     description: |
       Disable payload encryption validation for a Temporal Cloud namespace.
       Existing metadata and inspect settings are kept.
