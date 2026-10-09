@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/spf13/pflag"
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	"go.temporal.io/sdk/converter"
@@ -47,11 +48,8 @@ func (c *CloudNamespaceEncryptionValidationGetCommand) run(cctx *CommandContext,
 
 func (c *CloudNamespaceEncryptionValidationSetCommand) run(cctx *CommandContext, _ []string) error {
 	flags := c.Command.Flags()
-	var mode namespacev1.EncryptionValidationSpec_EncryptionValidationMode
 	if flags.Changed("mode") {
-		var err error
-		mode, err = parseEncryptionValidationMode(c.Mode)
-		if err != nil {
+		if _, err := parseEncryptionValidationMode(c.Mode); err != nil {
 			return err
 		}
 	}
@@ -73,20 +71,8 @@ func (c *CloudNamespaceEncryptionValidationSetCommand) run(cctx *CommandContext,
 		}
 		newSpec.EncryptionValidation = &namespacev1.EncryptionValidationSpec{}
 	}
-	if flags.Changed("mode") {
-		newSpec.EncryptionValidation.Mode = mode
-	}
-	if flags.Changed("metadata-key") {
-		newSpec.EncryptionValidation.MetadataKey = c.MetadataKey
-	}
-	if flags.Changed("metadata-value") {
-		newSpec.EncryptionValidation.MetadataValues = c.MetadataValue
-	}
-	if flags.Changed("inspect-header") {
-		newSpec.EncryptionValidation.InspectHeader = c.InspectHeader
-	}
-	if flags.Changed("inspect-failure") {
-		newSpec.EncryptionValidation.InspectFailure = c.InspectFailure
+	if err := applyEncryptionValidationFlags(newSpec.EncryptionValidation, flags, ""); err != nil {
+		return err
 	}
 
 	yes, err := cctx.GetPrompter().PromptApply(ns.Spec, newSpec, false)
@@ -206,6 +192,54 @@ func enableEncryptionValidation(existing *namespacev1.EncryptionValidationSpec, 
 	return spec
 }
 
+// applyEncryptionValidationFlags overwrites only the spec fields whose flags (prefix + name) were explicitly passed.
+func applyEncryptionValidationFlags(
+	spec *namespacev1.EncryptionValidationSpec,
+	flagSet *pflag.FlagSet,
+	prefix string,
+) error {
+	if flagSet.Changed(prefix + "mode") {
+		raw, err := flagSet.GetString(prefix + "mode")
+		if err != nil {
+			return err
+		}
+		mode, err := parseEncryptionValidationMode(raw)
+		if err != nil {
+			return err
+		}
+		spec.Mode = mode
+	}
+	if flagSet.Changed(prefix + "metadata-key") {
+		key, err := flagSet.GetString(prefix + "metadata-key")
+		if err != nil {
+			return err
+		}
+		spec.MetadataKey = key
+	}
+	if flagSet.Changed(prefix + "metadata-value") {
+		values, err := flagSet.GetStringArray(prefix + "metadata-value")
+		if err != nil {
+			return err
+		}
+		spec.MetadataValues = values
+	}
+	if flagSet.Changed(prefix + "inspect-header") {
+		inspectHeader, err := flagSet.GetBool(prefix + "inspect-header")
+		if err != nil {
+			return err
+		}
+		spec.InspectHeader = inspectHeader
+	}
+	if flagSet.Changed(prefix + "inspect-failure") {
+		inspectFailure, err := flagSet.GetBool(prefix + "inspect-failure")
+		if err != nil {
+			return err
+		}
+		spec.InspectFailure = inspectFailure
+	}
+	return nil
+}
+
 func parseEncryptionValidationMode(value string) (namespacev1.EncryptionValidationSpec_EncryptionValidationMode, error) {
 	switch strings.ToLower(value) {
 	case encryptionValidationModeDisabled:
@@ -223,26 +257,9 @@ func parseEncryptionValidationMode(value string) (namespacev1.EncryptionValidati
 }
 
 func encryptionValidationFromCreateFlags(c *CloudNamespaceCreateCommand) (*namespacev1.EncryptionValidationSpec, error) {
-	flags := c.Command.Flags()
 	spec := &namespacev1.EncryptionValidationSpec{}
-	if flags.Changed("encryption-validation-mode") {
-		mode, err := parseEncryptionValidationMode(c.EncryptionValidationMode)
-		if err != nil {
-			return nil, err
-		}
-		spec.Mode = mode
-	}
-	if flags.Changed("encryption-validation-metadata-key") {
-		spec.MetadataKey = c.EncryptionValidationMetadataKey
-	}
-	if flags.Changed("encryption-validation-metadata-value") {
-		spec.MetadataValues = c.EncryptionValidationMetadataValue
-	}
-	if flags.Changed("encryption-validation-inspect-header") {
-		spec.InspectHeader = c.EncryptionValidationInspectHeader
-	}
-	if flags.Changed("encryption-validation-inspect-failure") {
-		spec.InspectFailure = c.EncryptionValidationInspectFailure
+	if err := applyEncryptionValidationFlags(spec, c.Command.Flags(), "encryption-validation-"); err != nil {
+		return nil, err
 	}
 	if proto.Equal(spec, &namespacev1.EncryptionValidationSpec{}) {
 		return nil, nil
