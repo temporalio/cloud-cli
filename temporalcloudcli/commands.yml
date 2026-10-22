@@ -2097,6 +2097,67 @@ commands:
         description: |
           The ID of the Nexus Endpoint to delete.
 
+  - name: cloud nexus endpoint move-to-project
+    summary: Move a Nexus Endpoint to a different project
+    description: |
+      Move a Nexus Endpoint to a different project within the same account.
+      Specify either `--name` or `--id` (exactly one is required).
+
+      The endpoint keeps its ID, name, target, allowed caller namespaces, and
+      routing, so Nexus calls through it are unaffected. Only the project that
+      governs access to it changes: access granted through the source project
+      is lost, and access granted through the destination project applies.
+
+      Example:
+
+      ```
+      temporal cloud nexus endpoint move-to-project \
+        --name my-endpoint \
+        --destination-project-id my-destination-project \
+        --source-project-id my-source-project
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - resource-version
+    options:
+      - name: name
+        type: string
+        description: |
+          The name of the Nexus Endpoint to move.
+      - name: id
+        type: string
+        description: |
+          The ID of the Nexus Endpoint to move.
+      - name: destination-project-id
+        type: string
+        description: |
+          The ID of the project to move the Nexus Endpoint to.
+        required: true
+      - name: source-project-id
+        type: string
+        description: |
+          The ID of the project the Nexus Endpoint is expected to currently
+          belong to. The move fails if the endpoint has since moved elsewhere.
+        required: true
+      - name: async-operation-id
+        type: string
+        description: |
+          Custom identifier for tracking this async operation. If not provided,
+          a unique ID is generated automatically.
+      - name: async
+        type: bool
+        description: |
+          Return immediately after initiating the operation instead of waiting
+          for completion. Use the returned operation ID to check status later.
+      - name: poll-interval
+        type: duration
+        default: 1s
+        description: |
+          Time to wait between status checks when waiting for operation completion.
+          Cannot be greater than 10 minutes.
+          Supports minutes (m) and seconds (s).
+
   - name: cloud nexus endpoint update
     summary: Update an existing Nexus Endpoint by name or ID
     description: |

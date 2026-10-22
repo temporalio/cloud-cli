@@ -5600,6 +5600,89 @@ func (_c *MockCloudServiceClient_MoveNamespaceToProject_Call) RunAndReturn(run f
 	return _c
 }
 
+// MoveNexusEndpointToProject provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) MoveNexusEndpointToProject(ctx context.Context, in *cloudservice.MoveNexusEndpointToProjectRequest, opts ...grpc.CallOption) (*cloudservice.MoveNexusEndpointToProjectResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for MoveNexusEndpointToProject")
+	}
+
+	var r0 *cloudservice.MoveNexusEndpointToProjectResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.MoveNexusEndpointToProjectRequest, ...grpc.CallOption) (*cloudservice.MoveNexusEndpointToProjectResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.MoveNexusEndpointToProjectRequest, ...grpc.CallOption) *cloudservice.MoveNexusEndpointToProjectResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.MoveNexusEndpointToProjectResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.MoveNexusEndpointToProjectRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_MoveNexusEndpointToProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MoveNexusEndpointToProject'
+type MockCloudServiceClient_MoveNexusEndpointToProject_Call struct {
+	*mock.Call
+}
+
+// MoveNexusEndpointToProject is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.MoveNexusEndpointToProjectRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) MoveNexusEndpointToProject(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_MoveNexusEndpointToProject_Call {
+	return &MockCloudServiceClient_MoveNexusEndpointToProject_Call{Call: _e.mock.On("MoveNexusEndpointToProject",
+		append([]interface{}{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_MoveNexusEndpointToProject_Call) Run(run func(ctx context.Context, in *cloudservice.MoveNexusEndpointToProjectRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_MoveNexusEndpointToProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.MoveNexusEndpointToProjectRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.MoveNexusEndpointToProjectRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_MoveNexusEndpointToProject_Call) Return(moveNexusEndpointToProjectResponse *cloudservice.MoveNexusEndpointToProjectResponse, err error) *MockCloudServiceClient_MoveNexusEndpointToProject_Call {
+	_c.Call.Return(moveNexusEndpointToProjectResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_MoveNexusEndpointToProject_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.MoveNexusEndpointToProjectRequest, opts ...grpc.CallOption) (*cloudservice.MoveNexusEndpointToProjectResponse, error)) *MockCloudServiceClient_MoveNexusEndpointToProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RemoveUserGroupMember provides a mock function for the type MockCloudServiceClient
 func (_mock *MockCloudServiceClient) RemoveUserGroupMember(ctx context.Context, in *cloudservice.RemoveUserGroupMemberRequest, opts ...grpc.CallOption) (*cloudservice.RemoveUserGroupMemberResponse, error) {
 	var tmpRet mock.Arguments

@@ -4611,6 +4611,7 @@ func NewCloudNexusEndpointCommand(cctx *CommandContext, parent *CloudNexusComman
 	s.Command.AddCommand(&NewCloudNexusEndpointDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNexusEndpointGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNexusEndpointListCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNexusEndpointMoveToProjectCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNexusEndpointUpdateCommand(cctx, &s).Command)
 	return &s
 }
@@ -4892,6 +4893,52 @@ func NewCloudNexusEndpointListCommand(cctx *CommandContext, parent *CloudNexusEn
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of endpoints to return per page. If no page size is provided, it will default to 100. A maximum of 1000 endpoints can be fetched at a time.")
 	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results. Initial value is empty string.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNexusEndpointMoveToProjectCommand struct {
+	Parent  *CloudNexusEndpointCommand
+	Command cobra.Command
+	ClientOptions
+	ResourceVersionOptions
+	Name                 string
+	Id                   string
+	DestinationProjectId string
+	SourceProjectId      string
+	AsyncOperationId     string
+	Async                bool
+	PollInterval         cliext.FlagDuration
+}
+
+func NewCloudNexusEndpointMoveToProjectCommand(cctx *CommandContext, parent *CloudNexusEndpointCommand) *CloudNexusEndpointMoveToProjectCommand {
+	var s CloudNexusEndpointMoveToProjectCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "move-to-project [flags]"
+	s.Command.Short = "Move a Nexus Endpoint to a different project"
+	if hasHighlighting {
+		s.Command.Long = "Move a Nexus Endpoint to a different project within the same account.\nSpecify either \x1b[1m--name\x1b[0m or \x1b[1m--id\x1b[0m (exactly one is required).\n\nThe endpoint keeps its ID, name, target, allowed caller namespaces, and\nrouting, so Nexus calls through it are unaffected. Only the project that\ngoverns access to it changes: access granted through the source project\nis lost, and access granted through the destination project applies.\n\nExample:\n\n\x1b[1mtemporal cloud nexus endpoint move-to-project \\\n  --name my-endpoint \\\n  --destination-project-id my-destination-project \\\n  --source-project-id my-source-project\x1b[0m"
+	} else {
+		s.Command.Long = "Move a Nexus Endpoint to a different project within the same account.\nSpecify either `--name` or `--id` (exactly one is required).\n\nThe endpoint keeps its ID, name, target, allowed caller namespaces, and\nrouting, so Nexus calls through it are unaffected. Only the project that\ngoverns access to it changes: access granted through the source project\nis lost, and access granted through the destination project applies.\n\nExample:\n\n```\ntemporal cloud nexus endpoint move-to-project \\\n  --name my-endpoint \\\n  --destination-project-id my-destination-project \\\n  --source-project-id my-source-project\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Name, "name", "", "The name of the Nexus Endpoint to move.")
+	s.Command.Flags().StringVar(&s.Id, "id", "", "The ID of the Nexus Endpoint to move.")
+	s.Command.Flags().StringVar(&s.DestinationProjectId, "destination-project-id", "", "The ID of the project to move the Nexus Endpoint to. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "destination-project-id")
+	s.Command.Flags().StringVar(&s.SourceProjectId, "source-project-id", "", "The ID of the project the Nexus Endpoint is expected to currently belong to. The move fails if the endpoint has since moved elsewhere. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source-project-id")
+	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
+	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
+	s.PollInterval = cliext.MustParseFlagDuration("1s")
+	s.Command.Flags().Var(&s.PollInterval, "poll-interval", "Time to wait between status checks when waiting for operation completion. Cannot be greater than 10 minutes. Supports minutes (m) and seconds (s).")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
