@@ -9,6 +9,7 @@ import (
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
+	projectv1 "go.temporal.io/cloud-sdk/api/project/v1"
 
 	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
@@ -32,6 +33,25 @@ func expectGetNamespaceForMove(c *cloudmock.MockCloudServiceClient) {
 				Spec:            &namespacev1.NamespaceSpec{},
 			},
 		}, nil)
+}
+
+func testMoveProject(id, displayName string) *projectv1.Project {
+	return &projectv1.Project{Id: id, Spec: &projectv1.ProjectSpec{DisplayName: displayName}}
+}
+
+func expectProjectLookup(c *cloudmock.MockCloudServiceClient, found ...*projectv1.Project) {
+	c.EXPECT().
+		GetProjects(
+			mock.Anything,
+			&cloudservice.GetProjectsRequest{ProjectIds: []string{testMoveSource, testMoveDest}},
+			mock.Anything,
+		).
+		Return(&cloudservice.GetProjectsResponse{Projects: found}, nil)
+}
+
+func expectMoveLookups(c *cloudmock.MockCloudServiceClient) {
+	expectGetNamespaceForMove(c)
+	expectProjectLookup(c, testMoveProject(testMoveSource, "source"), testMoveProject(testMoveDest, "destination"))
 }
 
 func expectMove(
@@ -90,7 +110,7 @@ func TestNamespaceMoveToProjectConnectivitySelection(t *testing.T) {
 			cmd.Namespace = testMoveNamespace
 			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-					expectGetNamespaceForMove(c)
+					expectMoveLookups(c)
 					expectMove(c, tt.wantRequest)
 				},
 				PromptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
@@ -119,7 +139,7 @@ func TestNamespaceMoveToProjectRequestFields(t *testing.T) {
 			cmd.ResourceVersion = tt.resourceVersion
 			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-					expectGetNamespaceForMove(c)
+					expectMoveLookups(c)
 					expectMove(c, func(req *cloudservice.MoveNamespaceToProjectRequest) bool {
 						return req.GetNamespace() == testMoveNamespace &&
 							req.GetDestinationProjectId() == testMoveDest &&
@@ -171,6 +191,21 @@ func TestNamespaceMoveToProjectRejectsInvalidRuleSelection(t *testing.T) {
 	}
 }
 
+func TestNamespaceMoveToProjectUnknownDestination(t *testing.T) {
+	cmd := temporalcloudcli.CloudNamespaceMoveToProjectCommand{
+		DestinationProjectId: testMoveDest,
+		SourceProjectId:      testMoveSource,
+	}
+	cmd.Namespace = testMoveNamespace
+	temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
+		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+			expectGetNamespaceForMove(c)
+			expectProjectLookup(c, testMoveProject(testMoveSource, "source"))
+		},
+		ExpectedError: `destination project "proj-dest" not found`,
+	})
+}
+
 func TestNamespaceMoveToProjectPromptDeclined(t *testing.T) {
 	cmd := temporalcloudcli.CloudNamespaceMoveToProjectCommand{
 		DestinationProjectId: testMoveDest,
@@ -178,10 +213,10 @@ func TestNamespaceMoveToProjectPromptDeclined(t *testing.T) {
 	}
 	cmd.Namespace = testMoveNamespace
 	temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
-		CloudClientExpectations: expectGetNamespaceForMove,
+		CloudClientExpectations: expectMoveLookups,
 		PromptOptions: temporalcloudcli.TestPromptOptions{
 			ExpectPromptYes:        true,
-			ExpectPromptYesMessage: `Move namespace "my-ns.my-acct" from project "proj-source" to project "proj-dest"`,
+			ExpectPromptYesMessage: `Move namespace "my-ns.my-acct" from project "source" (proj-source) to project "destination" (proj-dest)`,
 			PromptResult:           false,
 		},
 		ExpectedError: "Aborting move.",
@@ -196,7 +231,7 @@ func TestNamespaceMoveToProjectSurfacesRejection(t *testing.T) {
 	cmd.Namespace = testMoveNamespace
 	temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
 		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-			expectGetNamespaceForMove(c)
+			expectMoveLookups(c)
 			c.EXPECT().
 				MoveNamespaceToProject(mock.Anything, mock.Anything, mock.Anything).
 				Return(nil, errors.New(`namespace "my-ns.my-acct" has a migration in progress`))

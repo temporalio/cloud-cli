@@ -1,6 +1,7 @@
 package temporalcloudcli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -29,9 +30,17 @@ func (c *CloudNamespaceMoveToProjectCommand) run(cctx *CommandContext, _ []strin
 	}
 	ns := res.Namespace
 
+	names, err := projectDisplayNames(cctx, client, ns.GetProjectId(), c.DestinationProjectId)
+	if err != nil {
+		return err
+	}
+	if _, ok := names[c.DestinationProjectId]; !ok {
+		return fmt.Errorf("destination project %q not found", c.DestinationProjectId)
+	}
+
 	yes, err := cctx.GetPrompter().PromptYes(fmt.Sprintf(
-		"Move namespace %q from project %q to project %q",
-		c.Namespace, ns.GetProjectId(), c.DestinationProjectId,
+		"Move namespace %q from project %s to project %s",
+		c.Namespace, projectLabel(names, ns.GetProjectId()), projectLabel(names, c.DestinationProjectId),
 	))
 	if err != nil {
 		return err
@@ -71,4 +80,29 @@ func (c *CloudNamespaceMoveToProjectCommand) run(cctx *CommandContext, _ []strin
 		PollInterval:     c.PollInterval,
 	})
 	return poller.HandleIdempotentOperation(cctx, resp, err)
+}
+
+// projectDisplayNames maps project IDs to display names. A project that does not exist, or that
+// the caller cannot see, is absent from the result rather than reported as an error.
+func projectDisplayNames(
+	ctx context.Context,
+	client cloudservice.CloudServiceClient,
+	ids ...string,
+) (map[string]string, error) {
+	res, err := client.GetProjects(ctx, &cloudservice.GetProjectsRequest{ProjectIds: ids})
+	if err != nil {
+		return nil, err
+	}
+	names := make(map[string]string, len(res.GetProjects()))
+	for _, p := range res.GetProjects() {
+		names[p.GetId()] = p.GetSpec().GetDisplayName()
+	}
+	return names, nil
+}
+
+func projectLabel(names map[string]string, id string) string {
+	if name, ok := names[id]; ok {
+		return fmt.Sprintf("%q (%s)", name, id)
+	}
+	return fmt.Sprintf("%q", id)
 }
