@@ -18,10 +18,19 @@ func NewMockCloudServiceClient(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockCloudServiceClient {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockCloudServiceClient{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -82,9 +91,9 @@ type MockCloudServiceClient_AddNamespaceRegion_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.AddNamespaceRegionRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) AddNamespaceRegion(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_AddNamespaceRegion_Call {
+func (_e *MockCloudServiceClient_Expecter) AddNamespaceRegion(ctx any, in any, opts ...any) *MockCloudServiceClient_AddNamespaceRegion_Call {
 	return &MockCloudServiceClient_AddNamespaceRegion_Call{Call: _e.mock.On("AddNamespaceRegion",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_AddNamespaceRegion_Call) Run(run func(ctx context.Context, in *cloudservice.AddNamespaceRegionRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_AddNamespaceRegion_Call {
@@ -165,9 +174,9 @@ type MockCloudServiceClient_AddUserGroupMember_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.AddUserGroupMemberRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) AddUserGroupMember(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_AddUserGroupMember_Call {
+func (_e *MockCloudServiceClient_Expecter) AddUserGroupMember(ctx any, in any, opts ...any) *MockCloudServiceClient_AddUserGroupMember_Call {
 	return &MockCloudServiceClient_AddUserGroupMember_Call{Call: _e.mock.On("AddUserGroupMember",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_AddUserGroupMember_Call) Run(run func(ctx context.Context, in *cloudservice.AddUserGroupMemberRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_AddUserGroupMember_Call {
@@ -248,9 +257,9 @@ type MockCloudServiceClient_CreateAccountAuditLogSink_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.CreateAccountAuditLogSinkRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) CreateAccountAuditLogSink(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_CreateAccountAuditLogSink_Call {
+func (_e *MockCloudServiceClient_Expecter) CreateAccountAuditLogSink(ctx any, in any, opts ...any) *MockCloudServiceClient_CreateAccountAuditLogSink_Call {
 	return &MockCloudServiceClient_CreateAccountAuditLogSink_Call{Call: _e.mock.On("CreateAccountAuditLogSink",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_CreateAccountAuditLogSink_Call) Run(run func(ctx context.Context, in *cloudservice.CreateAccountAuditLogSinkRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_CreateAccountAuditLogSink_Call {
@@ -331,9 +340,9 @@ type MockCloudServiceClient_CreateApiKey_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.CreateApiKeyRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) CreateApiKey(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_CreateApiKey_Call {
+func (_e *MockCloudServiceClient_Expecter) CreateApiKey(ctx any, in any, opts ...any) *MockCloudServiceClient_CreateApiKey_Call {
 	return &MockCloudServiceClient_CreateApiKey_Call{Call: _e.mock.On("CreateApiKey",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_CreateApiKey_Call) Run(run func(ctx context.Context, in *cloudservice.CreateApiKeyRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_CreateApiKey_Call {
@@ -414,9 +423,9 @@ type MockCloudServiceClient_CreateBillingReport_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.CreateBillingReportRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) CreateBillingReport(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_CreateBillingReport_Call {
+func (_e *MockCloudServiceClient_Expecter) CreateBillingReport(ctx any, in any, opts ...any) *MockCloudServiceClient_CreateBillingReport_Call {
 	return &MockCloudServiceClient_CreateBillingReport_Call{Call: _e.mock.On("CreateBillingReport",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_CreateBillingReport_Call) Run(run func(ctx context.Context, in *cloudservice.CreateBillingReportRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_CreateBillingReport_Call {
@@ -497,9 +506,9 @@ type MockCloudServiceClient_CreateConnectivityRule_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.CreateConnectivityRuleRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) CreateConnectivityRule(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_CreateConnectivityRule_Call {
+func (_e *MockCloudServiceClient_Expecter) CreateConnectivityRule(ctx any, in any, opts ...any) *MockCloudServiceClient_CreateConnectivityRule_Call {
 	return &MockCloudServiceClient_CreateConnectivityRule_Call{Call: _e.mock.On("CreateConnectivityRule",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_CreateConnectivityRule_Call) Run(run func(ctx context.Context, in *cloudservice.CreateConnectivityRuleRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_CreateConnectivityRule_Call {
@@ -580,9 +589,9 @@ type MockCloudServiceClient_CreateCustomRole_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.CreateCustomRoleRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) CreateCustomRole(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_CreateCustomRole_Call {
+func (_e *MockCloudServiceClient_Expecter) CreateCustomRole(ctx any, in any, opts ...any) *MockCloudServiceClient_CreateCustomRole_Call {
 	return &MockCloudServiceClient_CreateCustomRole_Call{Call: _e.mock.On("CreateCustomRole",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_CreateCustomRole_Call) Run(run func(ctx context.Context, in *cloudservice.CreateCustomRoleRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_CreateCustomRole_Call {
@@ -663,9 +672,9 @@ type MockCloudServiceClient_CreateNamespace_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.CreateNamespaceRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) CreateNamespace(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_CreateNamespace_Call {
+func (_e *MockCloudServiceClient_Expecter) CreateNamespace(ctx any, in any, opts ...any) *MockCloudServiceClient_CreateNamespace_Call {
 	return &MockCloudServiceClient_CreateNamespace_Call{Call: _e.mock.On("CreateNamespace",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_CreateNamespace_Call) Run(run func(ctx context.Context, in *cloudservice.CreateNamespaceRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_CreateNamespace_Call {
@@ -746,9 +755,9 @@ type MockCloudServiceClient_CreateNamespaceExportSink_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.CreateNamespaceExportSinkRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) CreateNamespaceExportSink(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_CreateNamespaceExportSink_Call {
+func (_e *MockCloudServiceClient_Expecter) CreateNamespaceExportSink(ctx any, in any, opts ...any) *MockCloudServiceClient_CreateNamespaceExportSink_Call {
 	return &MockCloudServiceClient_CreateNamespaceExportSink_Call{Call: _e.mock.On("CreateNamespaceExportSink",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_CreateNamespaceExportSink_Call) Run(run func(ctx context.Context, in *cloudservice.CreateNamespaceExportSinkRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_CreateNamespaceExportSink_Call {
@@ -829,9 +838,9 @@ type MockCloudServiceClient_CreateNexusEndpoint_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.CreateNexusEndpointRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) CreateNexusEndpoint(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_CreateNexusEndpoint_Call {
+func (_e *MockCloudServiceClient_Expecter) CreateNexusEndpoint(ctx any, in any, opts ...any) *MockCloudServiceClient_CreateNexusEndpoint_Call {
 	return &MockCloudServiceClient_CreateNexusEndpoint_Call{Call: _e.mock.On("CreateNexusEndpoint",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_CreateNexusEndpoint_Call) Run(run func(ctx context.Context, in *cloudservice.CreateNexusEndpointRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_CreateNexusEndpoint_Call {
@@ -912,9 +921,9 @@ type MockCloudServiceClient_CreateProject_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.CreateProjectRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) CreateProject(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_CreateProject_Call {
+func (_e *MockCloudServiceClient_Expecter) CreateProject(ctx any, in any, opts ...any) *MockCloudServiceClient_CreateProject_Call {
 	return &MockCloudServiceClient_CreateProject_Call{Call: _e.mock.On("CreateProject",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_CreateProject_Call) Run(run func(ctx context.Context, in *cloudservice.CreateProjectRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_CreateProject_Call {
@@ -995,9 +1004,9 @@ type MockCloudServiceClient_CreateServiceAccount_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.CreateServiceAccountRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) CreateServiceAccount(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_CreateServiceAccount_Call {
+func (_e *MockCloudServiceClient_Expecter) CreateServiceAccount(ctx any, in any, opts ...any) *MockCloudServiceClient_CreateServiceAccount_Call {
 	return &MockCloudServiceClient_CreateServiceAccount_Call{Call: _e.mock.On("CreateServiceAccount",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_CreateServiceAccount_Call) Run(run func(ctx context.Context, in *cloudservice.CreateServiceAccountRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_CreateServiceAccount_Call {
@@ -1078,9 +1087,9 @@ type MockCloudServiceClient_CreateUser_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.CreateUserRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) CreateUser(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_CreateUser_Call {
+func (_e *MockCloudServiceClient_Expecter) CreateUser(ctx any, in any, opts ...any) *MockCloudServiceClient_CreateUser_Call {
 	return &MockCloudServiceClient_CreateUser_Call{Call: _e.mock.On("CreateUser",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_CreateUser_Call) Run(run func(ctx context.Context, in *cloudservice.CreateUserRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_CreateUser_Call {
@@ -1161,9 +1170,9 @@ type MockCloudServiceClient_CreateUserGroup_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.CreateUserGroupRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) CreateUserGroup(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_CreateUserGroup_Call {
+func (_e *MockCloudServiceClient_Expecter) CreateUserGroup(ctx any, in any, opts ...any) *MockCloudServiceClient_CreateUserGroup_Call {
 	return &MockCloudServiceClient_CreateUserGroup_Call{Call: _e.mock.On("CreateUserGroup",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_CreateUserGroup_Call) Run(run func(ctx context.Context, in *cloudservice.CreateUserGroupRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_CreateUserGroup_Call {
@@ -1244,9 +1253,9 @@ type MockCloudServiceClient_DeleteAccountAuditLogSink_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.DeleteAccountAuditLogSinkRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) DeleteAccountAuditLogSink(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_DeleteAccountAuditLogSink_Call {
+func (_e *MockCloudServiceClient_Expecter) DeleteAccountAuditLogSink(ctx any, in any, opts ...any) *MockCloudServiceClient_DeleteAccountAuditLogSink_Call {
 	return &MockCloudServiceClient_DeleteAccountAuditLogSink_Call{Call: _e.mock.On("DeleteAccountAuditLogSink",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_DeleteAccountAuditLogSink_Call) Run(run func(ctx context.Context, in *cloudservice.DeleteAccountAuditLogSinkRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_DeleteAccountAuditLogSink_Call {
@@ -1327,9 +1336,9 @@ type MockCloudServiceClient_DeleteApiKey_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.DeleteApiKeyRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) DeleteApiKey(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_DeleteApiKey_Call {
+func (_e *MockCloudServiceClient_Expecter) DeleteApiKey(ctx any, in any, opts ...any) *MockCloudServiceClient_DeleteApiKey_Call {
 	return &MockCloudServiceClient_DeleteApiKey_Call{Call: _e.mock.On("DeleteApiKey",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_DeleteApiKey_Call) Run(run func(ctx context.Context, in *cloudservice.DeleteApiKeyRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_DeleteApiKey_Call {
@@ -1410,9 +1419,9 @@ type MockCloudServiceClient_DeleteConnectivityRule_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.DeleteConnectivityRuleRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) DeleteConnectivityRule(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_DeleteConnectivityRule_Call {
+func (_e *MockCloudServiceClient_Expecter) DeleteConnectivityRule(ctx any, in any, opts ...any) *MockCloudServiceClient_DeleteConnectivityRule_Call {
 	return &MockCloudServiceClient_DeleteConnectivityRule_Call{Call: _e.mock.On("DeleteConnectivityRule",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_DeleteConnectivityRule_Call) Run(run func(ctx context.Context, in *cloudservice.DeleteConnectivityRuleRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_DeleteConnectivityRule_Call {
@@ -1493,9 +1502,9 @@ type MockCloudServiceClient_DeleteCustomRole_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.DeleteCustomRoleRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) DeleteCustomRole(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_DeleteCustomRole_Call {
+func (_e *MockCloudServiceClient_Expecter) DeleteCustomRole(ctx any, in any, opts ...any) *MockCloudServiceClient_DeleteCustomRole_Call {
 	return &MockCloudServiceClient_DeleteCustomRole_Call{Call: _e.mock.On("DeleteCustomRole",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_DeleteCustomRole_Call) Run(run func(ctx context.Context, in *cloudservice.DeleteCustomRoleRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_DeleteCustomRole_Call {
@@ -1576,9 +1585,9 @@ type MockCloudServiceClient_DeleteNamespace_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.DeleteNamespaceRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) DeleteNamespace(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_DeleteNamespace_Call {
+func (_e *MockCloudServiceClient_Expecter) DeleteNamespace(ctx any, in any, opts ...any) *MockCloudServiceClient_DeleteNamespace_Call {
 	return &MockCloudServiceClient_DeleteNamespace_Call{Call: _e.mock.On("DeleteNamespace",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_DeleteNamespace_Call) Run(run func(ctx context.Context, in *cloudservice.DeleteNamespaceRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_DeleteNamespace_Call {
@@ -1659,9 +1668,9 @@ type MockCloudServiceClient_DeleteNamespaceExportSink_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.DeleteNamespaceExportSinkRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) DeleteNamespaceExportSink(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_DeleteNamespaceExportSink_Call {
+func (_e *MockCloudServiceClient_Expecter) DeleteNamespaceExportSink(ctx any, in any, opts ...any) *MockCloudServiceClient_DeleteNamespaceExportSink_Call {
 	return &MockCloudServiceClient_DeleteNamespaceExportSink_Call{Call: _e.mock.On("DeleteNamespaceExportSink",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_DeleteNamespaceExportSink_Call) Run(run func(ctx context.Context, in *cloudservice.DeleteNamespaceExportSinkRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_DeleteNamespaceExportSink_Call {
@@ -1742,9 +1751,9 @@ type MockCloudServiceClient_DeleteNamespaceRegion_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.DeleteNamespaceRegionRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) DeleteNamespaceRegion(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_DeleteNamespaceRegion_Call {
+func (_e *MockCloudServiceClient_Expecter) DeleteNamespaceRegion(ctx any, in any, opts ...any) *MockCloudServiceClient_DeleteNamespaceRegion_Call {
 	return &MockCloudServiceClient_DeleteNamespaceRegion_Call{Call: _e.mock.On("DeleteNamespaceRegion",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_DeleteNamespaceRegion_Call) Run(run func(ctx context.Context, in *cloudservice.DeleteNamespaceRegionRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_DeleteNamespaceRegion_Call {
@@ -1825,9 +1834,9 @@ type MockCloudServiceClient_DeleteNexusEndpoint_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.DeleteNexusEndpointRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) DeleteNexusEndpoint(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_DeleteNexusEndpoint_Call {
+func (_e *MockCloudServiceClient_Expecter) DeleteNexusEndpoint(ctx any, in any, opts ...any) *MockCloudServiceClient_DeleteNexusEndpoint_Call {
 	return &MockCloudServiceClient_DeleteNexusEndpoint_Call{Call: _e.mock.On("DeleteNexusEndpoint",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_DeleteNexusEndpoint_Call) Run(run func(ctx context.Context, in *cloudservice.DeleteNexusEndpointRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_DeleteNexusEndpoint_Call {
@@ -1908,9 +1917,9 @@ type MockCloudServiceClient_DeleteProject_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.DeleteProjectRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) DeleteProject(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_DeleteProject_Call {
+func (_e *MockCloudServiceClient_Expecter) DeleteProject(ctx any, in any, opts ...any) *MockCloudServiceClient_DeleteProject_Call {
 	return &MockCloudServiceClient_DeleteProject_Call{Call: _e.mock.On("DeleteProject",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_DeleteProject_Call) Run(run func(ctx context.Context, in *cloudservice.DeleteProjectRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_DeleteProject_Call {
@@ -1991,9 +2000,9 @@ type MockCloudServiceClient_DeleteServiceAccount_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.DeleteServiceAccountRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) DeleteServiceAccount(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_DeleteServiceAccount_Call {
+func (_e *MockCloudServiceClient_Expecter) DeleteServiceAccount(ctx any, in any, opts ...any) *MockCloudServiceClient_DeleteServiceAccount_Call {
 	return &MockCloudServiceClient_DeleteServiceAccount_Call{Call: _e.mock.On("DeleteServiceAccount",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_DeleteServiceAccount_Call) Run(run func(ctx context.Context, in *cloudservice.DeleteServiceAccountRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_DeleteServiceAccount_Call {
@@ -2074,9 +2083,9 @@ type MockCloudServiceClient_DeleteUser_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.DeleteUserRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) DeleteUser(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_DeleteUser_Call {
+func (_e *MockCloudServiceClient_Expecter) DeleteUser(ctx any, in any, opts ...any) *MockCloudServiceClient_DeleteUser_Call {
 	return &MockCloudServiceClient_DeleteUser_Call{Call: _e.mock.On("DeleteUser",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_DeleteUser_Call) Run(run func(ctx context.Context, in *cloudservice.DeleteUserRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_DeleteUser_Call {
@@ -2157,9 +2166,9 @@ type MockCloudServiceClient_DeleteUserGroup_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.DeleteUserGroupRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) DeleteUserGroup(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_DeleteUserGroup_Call {
+func (_e *MockCloudServiceClient_Expecter) DeleteUserGroup(ctx any, in any, opts ...any) *MockCloudServiceClient_DeleteUserGroup_Call {
 	return &MockCloudServiceClient_DeleteUserGroup_Call{Call: _e.mock.On("DeleteUserGroup",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_DeleteUserGroup_Call) Run(run func(ctx context.Context, in *cloudservice.DeleteUserGroupRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_DeleteUserGroup_Call {
@@ -2240,9 +2249,9 @@ type MockCloudServiceClient_FailoverNamespaceRegion_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.FailoverNamespaceRegionRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) FailoverNamespaceRegion(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_FailoverNamespaceRegion_Call {
+func (_e *MockCloudServiceClient_Expecter) FailoverNamespaceRegion(ctx any, in any, opts ...any) *MockCloudServiceClient_FailoverNamespaceRegion_Call {
 	return &MockCloudServiceClient_FailoverNamespaceRegion_Call{Call: _e.mock.On("FailoverNamespaceRegion",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_FailoverNamespaceRegion_Call) Run(run func(ctx context.Context, in *cloudservice.FailoverNamespaceRegionRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_FailoverNamespaceRegion_Call {
@@ -2323,9 +2332,9 @@ type MockCloudServiceClient_GetAccount_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetAccountRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetAccount(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetAccount_Call {
+func (_e *MockCloudServiceClient_Expecter) GetAccount(ctx any, in any, opts ...any) *MockCloudServiceClient_GetAccount_Call {
 	return &MockCloudServiceClient_GetAccount_Call{Call: _e.mock.On("GetAccount",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetAccount_Call) Run(run func(ctx context.Context, in *cloudservice.GetAccountRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetAccount_Call {
@@ -2406,9 +2415,9 @@ type MockCloudServiceClient_GetAccountAuditLogSink_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetAccountAuditLogSinkRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetAccountAuditLogSink(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetAccountAuditLogSink_Call {
+func (_e *MockCloudServiceClient_Expecter) GetAccountAuditLogSink(ctx any, in any, opts ...any) *MockCloudServiceClient_GetAccountAuditLogSink_Call {
 	return &MockCloudServiceClient_GetAccountAuditLogSink_Call{Call: _e.mock.On("GetAccountAuditLogSink",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetAccountAuditLogSink_Call) Run(run func(ctx context.Context, in *cloudservice.GetAccountAuditLogSinkRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetAccountAuditLogSink_Call {
@@ -2489,9 +2498,9 @@ type MockCloudServiceClient_GetAccountAuditLogSinks_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetAccountAuditLogSinksRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetAccountAuditLogSinks(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetAccountAuditLogSinks_Call {
+func (_e *MockCloudServiceClient_Expecter) GetAccountAuditLogSinks(ctx any, in any, opts ...any) *MockCloudServiceClient_GetAccountAuditLogSinks_Call {
 	return &MockCloudServiceClient_GetAccountAuditLogSinks_Call{Call: _e.mock.On("GetAccountAuditLogSinks",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetAccountAuditLogSinks_Call) Run(run func(ctx context.Context, in *cloudservice.GetAccountAuditLogSinksRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetAccountAuditLogSinks_Call {
@@ -2572,9 +2581,9 @@ type MockCloudServiceClient_GetApiKey_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetApiKeyRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetApiKey(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetApiKey_Call {
+func (_e *MockCloudServiceClient_Expecter) GetApiKey(ctx any, in any, opts ...any) *MockCloudServiceClient_GetApiKey_Call {
 	return &MockCloudServiceClient_GetApiKey_Call{Call: _e.mock.On("GetApiKey",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetApiKey_Call) Run(run func(ctx context.Context, in *cloudservice.GetApiKeyRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetApiKey_Call {
@@ -2655,9 +2664,9 @@ type MockCloudServiceClient_GetApiKeys_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetApiKeysRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetApiKeys(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetApiKeys_Call {
+func (_e *MockCloudServiceClient_Expecter) GetApiKeys(ctx any, in any, opts ...any) *MockCloudServiceClient_GetApiKeys_Call {
 	return &MockCloudServiceClient_GetApiKeys_Call{Call: _e.mock.On("GetApiKeys",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetApiKeys_Call) Run(run func(ctx context.Context, in *cloudservice.GetApiKeysRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetApiKeys_Call {
@@ -2738,9 +2747,9 @@ type MockCloudServiceClient_GetAsyncOperation_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetAsyncOperationRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetAsyncOperation(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetAsyncOperation_Call {
+func (_e *MockCloudServiceClient_Expecter) GetAsyncOperation(ctx any, in any, opts ...any) *MockCloudServiceClient_GetAsyncOperation_Call {
 	return &MockCloudServiceClient_GetAsyncOperation_Call{Call: _e.mock.On("GetAsyncOperation",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetAsyncOperation_Call) Run(run func(ctx context.Context, in *cloudservice.GetAsyncOperationRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetAsyncOperation_Call {
@@ -2821,9 +2830,9 @@ type MockCloudServiceClient_GetAuditLogs_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetAuditLogsRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetAuditLogs(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetAuditLogs_Call {
+func (_e *MockCloudServiceClient_Expecter) GetAuditLogs(ctx any, in any, opts ...any) *MockCloudServiceClient_GetAuditLogs_Call {
 	return &MockCloudServiceClient_GetAuditLogs_Call{Call: _e.mock.On("GetAuditLogs",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetAuditLogs_Call) Run(run func(ctx context.Context, in *cloudservice.GetAuditLogsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetAuditLogs_Call {
@@ -2904,9 +2913,9 @@ type MockCloudServiceClient_GetBillingReport_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetBillingReportRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetBillingReport(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetBillingReport_Call {
+func (_e *MockCloudServiceClient_Expecter) GetBillingReport(ctx any, in any, opts ...any) *MockCloudServiceClient_GetBillingReport_Call {
 	return &MockCloudServiceClient_GetBillingReport_Call{Call: _e.mock.On("GetBillingReport",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetBillingReport_Call) Run(run func(ctx context.Context, in *cloudservice.GetBillingReportRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetBillingReport_Call {
@@ -2987,9 +2996,9 @@ type MockCloudServiceClient_GetConnectivityRule_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetConnectivityRuleRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetConnectivityRule(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetConnectivityRule_Call {
+func (_e *MockCloudServiceClient_Expecter) GetConnectivityRule(ctx any, in any, opts ...any) *MockCloudServiceClient_GetConnectivityRule_Call {
 	return &MockCloudServiceClient_GetConnectivityRule_Call{Call: _e.mock.On("GetConnectivityRule",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetConnectivityRule_Call) Run(run func(ctx context.Context, in *cloudservice.GetConnectivityRuleRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetConnectivityRule_Call {
@@ -3070,9 +3079,9 @@ type MockCloudServiceClient_GetConnectivityRules_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetConnectivityRulesRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetConnectivityRules(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetConnectivityRules_Call {
+func (_e *MockCloudServiceClient_Expecter) GetConnectivityRules(ctx any, in any, opts ...any) *MockCloudServiceClient_GetConnectivityRules_Call {
 	return &MockCloudServiceClient_GetConnectivityRules_Call{Call: _e.mock.On("GetConnectivityRules",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetConnectivityRules_Call) Run(run func(ctx context.Context, in *cloudservice.GetConnectivityRulesRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetConnectivityRules_Call {
@@ -3153,9 +3162,9 @@ type MockCloudServiceClient_GetCurrentIdentity_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetCurrentIdentityRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetCurrentIdentity(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetCurrentIdentity_Call {
+func (_e *MockCloudServiceClient_Expecter) GetCurrentIdentity(ctx any, in any, opts ...any) *MockCloudServiceClient_GetCurrentIdentity_Call {
 	return &MockCloudServiceClient_GetCurrentIdentity_Call{Call: _e.mock.On("GetCurrentIdentity",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetCurrentIdentity_Call) Run(run func(ctx context.Context, in *cloudservice.GetCurrentIdentityRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetCurrentIdentity_Call {
@@ -3236,9 +3245,9 @@ type MockCloudServiceClient_GetCustomRole_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetCustomRoleRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetCustomRole(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetCustomRole_Call {
+func (_e *MockCloudServiceClient_Expecter) GetCustomRole(ctx any, in any, opts ...any) *MockCloudServiceClient_GetCustomRole_Call {
 	return &MockCloudServiceClient_GetCustomRole_Call{Call: _e.mock.On("GetCustomRole",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetCustomRole_Call) Run(run func(ctx context.Context, in *cloudservice.GetCustomRoleRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetCustomRole_Call {
@@ -3319,9 +3328,9 @@ type MockCloudServiceClient_GetCustomRoles_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetCustomRolesRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetCustomRoles(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetCustomRoles_Call {
+func (_e *MockCloudServiceClient_Expecter) GetCustomRoles(ctx any, in any, opts ...any) *MockCloudServiceClient_GetCustomRoles_Call {
 	return &MockCloudServiceClient_GetCustomRoles_Call{Call: _e.mock.On("GetCustomRoles",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetCustomRoles_Call) Run(run func(ctx context.Context, in *cloudservice.GetCustomRolesRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetCustomRoles_Call {
@@ -3402,9 +3411,9 @@ type MockCloudServiceClient_GetNamespace_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetNamespaceRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetNamespace(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetNamespace_Call {
+func (_e *MockCloudServiceClient_Expecter) GetNamespace(ctx any, in any, opts ...any) *MockCloudServiceClient_GetNamespace_Call {
 	return &MockCloudServiceClient_GetNamespace_Call{Call: _e.mock.On("GetNamespace",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetNamespace_Call) Run(run func(ctx context.Context, in *cloudservice.GetNamespaceRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetNamespace_Call {
@@ -3485,9 +3494,9 @@ type MockCloudServiceClient_GetNamespaceCapacityInfo_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetNamespaceCapacityInfoRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetNamespaceCapacityInfo(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetNamespaceCapacityInfo_Call {
+func (_e *MockCloudServiceClient_Expecter) GetNamespaceCapacityInfo(ctx any, in any, opts ...any) *MockCloudServiceClient_GetNamespaceCapacityInfo_Call {
 	return &MockCloudServiceClient_GetNamespaceCapacityInfo_Call{Call: _e.mock.On("GetNamespaceCapacityInfo",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetNamespaceCapacityInfo_Call) Run(run func(ctx context.Context, in *cloudservice.GetNamespaceCapacityInfoRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetNamespaceCapacityInfo_Call {
@@ -3568,9 +3577,9 @@ type MockCloudServiceClient_GetNamespaceExportSink_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetNamespaceExportSinkRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetNamespaceExportSink(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetNamespaceExportSink_Call {
+func (_e *MockCloudServiceClient_Expecter) GetNamespaceExportSink(ctx any, in any, opts ...any) *MockCloudServiceClient_GetNamespaceExportSink_Call {
 	return &MockCloudServiceClient_GetNamespaceExportSink_Call{Call: _e.mock.On("GetNamespaceExportSink",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetNamespaceExportSink_Call) Run(run func(ctx context.Context, in *cloudservice.GetNamespaceExportSinkRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetNamespaceExportSink_Call {
@@ -3651,9 +3660,9 @@ type MockCloudServiceClient_GetNamespaceExportSinks_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetNamespaceExportSinksRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetNamespaceExportSinks(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetNamespaceExportSinks_Call {
+func (_e *MockCloudServiceClient_Expecter) GetNamespaceExportSinks(ctx any, in any, opts ...any) *MockCloudServiceClient_GetNamespaceExportSinks_Call {
 	return &MockCloudServiceClient_GetNamespaceExportSinks_Call{Call: _e.mock.On("GetNamespaceExportSinks",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetNamespaceExportSinks_Call) Run(run func(ctx context.Context, in *cloudservice.GetNamespaceExportSinksRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetNamespaceExportSinks_Call {
@@ -3734,9 +3743,9 @@ type MockCloudServiceClient_GetNamespaces_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetNamespacesRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetNamespaces(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetNamespaces_Call {
+func (_e *MockCloudServiceClient_Expecter) GetNamespaces(ctx any, in any, opts ...any) *MockCloudServiceClient_GetNamespaces_Call {
 	return &MockCloudServiceClient_GetNamespaces_Call{Call: _e.mock.On("GetNamespaces",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetNamespaces_Call) Run(run func(ctx context.Context, in *cloudservice.GetNamespacesRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetNamespaces_Call {
@@ -3817,9 +3826,9 @@ type MockCloudServiceClient_GetNexusEndpoint_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetNexusEndpointRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetNexusEndpoint(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetNexusEndpoint_Call {
+func (_e *MockCloudServiceClient_Expecter) GetNexusEndpoint(ctx any, in any, opts ...any) *MockCloudServiceClient_GetNexusEndpoint_Call {
 	return &MockCloudServiceClient_GetNexusEndpoint_Call{Call: _e.mock.On("GetNexusEndpoint",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetNexusEndpoint_Call) Run(run func(ctx context.Context, in *cloudservice.GetNexusEndpointRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetNexusEndpoint_Call {
@@ -3900,9 +3909,9 @@ type MockCloudServiceClient_GetNexusEndpoints_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetNexusEndpointsRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetNexusEndpoints(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetNexusEndpoints_Call {
+func (_e *MockCloudServiceClient_Expecter) GetNexusEndpoints(ctx any, in any, opts ...any) *MockCloudServiceClient_GetNexusEndpoints_Call {
 	return &MockCloudServiceClient_GetNexusEndpoints_Call{Call: _e.mock.On("GetNexusEndpoints",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetNexusEndpoints_Call) Run(run func(ctx context.Context, in *cloudservice.GetNexusEndpointsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetNexusEndpoints_Call {
@@ -3983,9 +3992,9 @@ type MockCloudServiceClient_GetProject_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetProjectRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetProject(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetProject_Call {
+func (_e *MockCloudServiceClient_Expecter) GetProject(ctx any, in any, opts ...any) *MockCloudServiceClient_GetProject_Call {
 	return &MockCloudServiceClient_GetProject_Call{Call: _e.mock.On("GetProject",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetProject_Call) Run(run func(ctx context.Context, in *cloudservice.GetProjectRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetProject_Call {
@@ -4066,9 +4075,9 @@ type MockCloudServiceClient_GetProjectScopedServiceAccounts_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetProjectScopedServiceAccountsRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetProjectScopedServiceAccounts(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetProjectScopedServiceAccounts_Call {
+func (_e *MockCloudServiceClient_Expecter) GetProjectScopedServiceAccounts(ctx any, in any, opts ...any) *MockCloudServiceClient_GetProjectScopedServiceAccounts_Call {
 	return &MockCloudServiceClient_GetProjectScopedServiceAccounts_Call{Call: _e.mock.On("GetProjectScopedServiceAccounts",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetProjectScopedServiceAccounts_Call) Run(run func(ctx context.Context, in *cloudservice.GetProjectScopedServiceAccountsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetProjectScopedServiceAccounts_Call {
@@ -4149,9 +4158,9 @@ type MockCloudServiceClient_GetProjects_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetProjectsRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetProjects(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetProjects_Call {
+func (_e *MockCloudServiceClient_Expecter) GetProjects(ctx any, in any, opts ...any) *MockCloudServiceClient_GetProjects_Call {
 	return &MockCloudServiceClient_GetProjects_Call{Call: _e.mock.On("GetProjects",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetProjects_Call) Run(run func(ctx context.Context, in *cloudservice.GetProjectsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetProjects_Call {
@@ -4232,9 +4241,9 @@ type MockCloudServiceClient_GetRegion_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetRegionRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetRegion(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetRegion_Call {
+func (_e *MockCloudServiceClient_Expecter) GetRegion(ctx any, in any, opts ...any) *MockCloudServiceClient_GetRegion_Call {
 	return &MockCloudServiceClient_GetRegion_Call{Call: _e.mock.On("GetRegion",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetRegion_Call) Run(run func(ctx context.Context, in *cloudservice.GetRegionRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetRegion_Call {
@@ -4315,9 +4324,9 @@ type MockCloudServiceClient_GetRegions_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetRegionsRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetRegions(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetRegions_Call {
+func (_e *MockCloudServiceClient_Expecter) GetRegions(ctx any, in any, opts ...any) *MockCloudServiceClient_GetRegions_Call {
 	return &MockCloudServiceClient_GetRegions_Call{Call: _e.mock.On("GetRegions",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetRegions_Call) Run(run func(ctx context.Context, in *cloudservice.GetRegionsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetRegions_Call {
@@ -4398,9 +4407,9 @@ type MockCloudServiceClient_GetServiceAccount_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetServiceAccountRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetServiceAccount(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetServiceAccount_Call {
+func (_e *MockCloudServiceClient_Expecter) GetServiceAccount(ctx any, in any, opts ...any) *MockCloudServiceClient_GetServiceAccount_Call {
 	return &MockCloudServiceClient_GetServiceAccount_Call{Call: _e.mock.On("GetServiceAccount",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetServiceAccount_Call) Run(run func(ctx context.Context, in *cloudservice.GetServiceAccountRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetServiceAccount_Call {
@@ -4481,9 +4490,9 @@ type MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetServiceAccountNamespaceAssignmentsRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetServiceAccountNamespaceAssignments(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call {
+func (_e *MockCloudServiceClient_Expecter) GetServiceAccountNamespaceAssignments(ctx any, in any, opts ...any) *MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call {
 	return &MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call{Call: _e.mock.On("GetServiceAccountNamespaceAssignments",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call) Run(run func(ctx context.Context, in *cloudservice.GetServiceAccountNamespaceAssignmentsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetServiceAccountNamespaceAssignments_Call {
@@ -4564,9 +4573,9 @@ type MockCloudServiceClient_GetServiceAccountProjectAssignments_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetServiceAccountProjectAssignmentsRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetServiceAccountProjectAssignments(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetServiceAccountProjectAssignments_Call {
+func (_e *MockCloudServiceClient_Expecter) GetServiceAccountProjectAssignments(ctx any, in any, opts ...any) *MockCloudServiceClient_GetServiceAccountProjectAssignments_Call {
 	return &MockCloudServiceClient_GetServiceAccountProjectAssignments_Call{Call: _e.mock.On("GetServiceAccountProjectAssignments",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetServiceAccountProjectAssignments_Call) Run(run func(ctx context.Context, in *cloudservice.GetServiceAccountProjectAssignmentsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetServiceAccountProjectAssignments_Call {
@@ -4647,9 +4656,9 @@ type MockCloudServiceClient_GetServiceAccounts_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetServiceAccountsRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetServiceAccounts(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetServiceAccounts_Call {
+func (_e *MockCloudServiceClient_Expecter) GetServiceAccounts(ctx any, in any, opts ...any) *MockCloudServiceClient_GetServiceAccounts_Call {
 	return &MockCloudServiceClient_GetServiceAccounts_Call{Call: _e.mock.On("GetServiceAccounts",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetServiceAccounts_Call) Run(run func(ctx context.Context, in *cloudservice.GetServiceAccountsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetServiceAccounts_Call {
@@ -4730,9 +4739,9 @@ type MockCloudServiceClient_GetUsage_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetUsageRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetUsage(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetUsage_Call {
+func (_e *MockCloudServiceClient_Expecter) GetUsage(ctx any, in any, opts ...any) *MockCloudServiceClient_GetUsage_Call {
 	return &MockCloudServiceClient_GetUsage_Call{Call: _e.mock.On("GetUsage",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetUsage_Call) Run(run func(ctx context.Context, in *cloudservice.GetUsageRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetUsage_Call {
@@ -4813,9 +4822,9 @@ type MockCloudServiceClient_GetUser_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetUserRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetUser(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetUser_Call {
+func (_e *MockCloudServiceClient_Expecter) GetUser(ctx any, in any, opts ...any) *MockCloudServiceClient_GetUser_Call {
 	return &MockCloudServiceClient_GetUser_Call{Call: _e.mock.On("GetUser",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetUser_Call) Run(run func(ctx context.Context, in *cloudservice.GetUserRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetUser_Call {
@@ -4896,9 +4905,9 @@ type MockCloudServiceClient_GetUserGroup_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetUserGroupRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetUserGroup(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetUserGroup_Call {
+func (_e *MockCloudServiceClient_Expecter) GetUserGroup(ctx any, in any, opts ...any) *MockCloudServiceClient_GetUserGroup_Call {
 	return &MockCloudServiceClient_GetUserGroup_Call{Call: _e.mock.On("GetUserGroup",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetUserGroup_Call) Run(run func(ctx context.Context, in *cloudservice.GetUserGroupRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetUserGroup_Call {
@@ -4979,9 +4988,9 @@ type MockCloudServiceClient_GetUserGroupMembers_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetUserGroupMembersRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetUserGroupMembers(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetUserGroupMembers_Call {
+func (_e *MockCloudServiceClient_Expecter) GetUserGroupMembers(ctx any, in any, opts ...any) *MockCloudServiceClient_GetUserGroupMembers_Call {
 	return &MockCloudServiceClient_GetUserGroupMembers_Call{Call: _e.mock.On("GetUserGroupMembers",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetUserGroupMembers_Call) Run(run func(ctx context.Context, in *cloudservice.GetUserGroupMembersRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetUserGroupMembers_Call {
@@ -5062,9 +5071,9 @@ type MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetUserGroupNamespaceAssignmentsRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetUserGroupNamespaceAssignments(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call {
+func (_e *MockCloudServiceClient_Expecter) GetUserGroupNamespaceAssignments(ctx any, in any, opts ...any) *MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call {
 	return &MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call{Call: _e.mock.On("GetUserGroupNamespaceAssignments",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call) Run(run func(ctx context.Context, in *cloudservice.GetUserGroupNamespaceAssignmentsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetUserGroupNamespaceAssignments_Call {
@@ -5145,9 +5154,9 @@ type MockCloudServiceClient_GetUserGroupProjectAssignments_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetUserGroupProjectAssignmentsRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetUserGroupProjectAssignments(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetUserGroupProjectAssignments_Call {
+func (_e *MockCloudServiceClient_Expecter) GetUserGroupProjectAssignments(ctx any, in any, opts ...any) *MockCloudServiceClient_GetUserGroupProjectAssignments_Call {
 	return &MockCloudServiceClient_GetUserGroupProjectAssignments_Call{Call: _e.mock.On("GetUserGroupProjectAssignments",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetUserGroupProjectAssignments_Call) Run(run func(ctx context.Context, in *cloudservice.GetUserGroupProjectAssignmentsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetUserGroupProjectAssignments_Call {
@@ -5228,9 +5237,9 @@ type MockCloudServiceClient_GetUserGroups_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetUserGroupsRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetUserGroups(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetUserGroups_Call {
+func (_e *MockCloudServiceClient_Expecter) GetUserGroups(ctx any, in any, opts ...any) *MockCloudServiceClient_GetUserGroups_Call {
 	return &MockCloudServiceClient_GetUserGroups_Call{Call: _e.mock.On("GetUserGroups",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetUserGroups_Call) Run(run func(ctx context.Context, in *cloudservice.GetUserGroupsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetUserGroups_Call {
@@ -5311,9 +5320,9 @@ type MockCloudServiceClient_GetUserNamespaceAssignments_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetUserNamespaceAssignmentsRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetUserNamespaceAssignments(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetUserNamespaceAssignments_Call {
+func (_e *MockCloudServiceClient_Expecter) GetUserNamespaceAssignments(ctx any, in any, opts ...any) *MockCloudServiceClient_GetUserNamespaceAssignments_Call {
 	return &MockCloudServiceClient_GetUserNamespaceAssignments_Call{Call: _e.mock.On("GetUserNamespaceAssignments",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetUserNamespaceAssignments_Call) Run(run func(ctx context.Context, in *cloudservice.GetUserNamespaceAssignmentsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetUserNamespaceAssignments_Call {
@@ -5394,9 +5403,9 @@ type MockCloudServiceClient_GetUserProjectAssignments_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetUserProjectAssignmentsRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetUserProjectAssignments(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetUserProjectAssignments_Call {
+func (_e *MockCloudServiceClient_Expecter) GetUserProjectAssignments(ctx any, in any, opts ...any) *MockCloudServiceClient_GetUserProjectAssignments_Call {
 	return &MockCloudServiceClient_GetUserProjectAssignments_Call{Call: _e.mock.On("GetUserProjectAssignments",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetUserProjectAssignments_Call) Run(run func(ctx context.Context, in *cloudservice.GetUserProjectAssignmentsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetUserProjectAssignments_Call {
@@ -5477,9 +5486,9 @@ type MockCloudServiceClient_GetUsers_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.GetUsersRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) GetUsers(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_GetUsers_Call {
+func (_e *MockCloudServiceClient_Expecter) GetUsers(ctx any, in any, opts ...any) *MockCloudServiceClient_GetUsers_Call {
 	return &MockCloudServiceClient_GetUsers_Call{Call: _e.mock.On("GetUsers",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_GetUsers_Call) Run(run func(ctx context.Context, in *cloudservice.GetUsersRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetUsers_Call {
@@ -5560,9 +5569,9 @@ type MockCloudServiceClient_MoveNamespaceToProject_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.MoveNamespaceToProjectRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) MoveNamespaceToProject(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_MoveNamespaceToProject_Call {
+func (_e *MockCloudServiceClient_Expecter) MoveNamespaceToProject(ctx any, in any, opts ...any) *MockCloudServiceClient_MoveNamespaceToProject_Call {
 	return &MockCloudServiceClient_MoveNamespaceToProject_Call{Call: _e.mock.On("MoveNamespaceToProject",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_MoveNamespaceToProject_Call) Run(run func(ctx context.Context, in *cloudservice.MoveNamespaceToProjectRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_MoveNamespaceToProject_Call {
@@ -5643,9 +5652,9 @@ type MockCloudServiceClient_MoveNexusEndpointToProject_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.MoveNexusEndpointToProjectRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) MoveNexusEndpointToProject(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_MoveNexusEndpointToProject_Call {
+func (_e *MockCloudServiceClient_Expecter) MoveNexusEndpointToProject(ctx any, in any, opts ...any) *MockCloudServiceClient_MoveNexusEndpointToProject_Call {
 	return &MockCloudServiceClient_MoveNexusEndpointToProject_Call{Call: _e.mock.On("MoveNexusEndpointToProject",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_MoveNexusEndpointToProject_Call) Run(run func(ctx context.Context, in *cloudservice.MoveNexusEndpointToProjectRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_MoveNexusEndpointToProject_Call {
@@ -5726,9 +5735,9 @@ type MockCloudServiceClient_RemoveUserGroupMember_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.RemoveUserGroupMemberRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) RemoveUserGroupMember(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_RemoveUserGroupMember_Call {
+func (_e *MockCloudServiceClient_Expecter) RemoveUserGroupMember(ctx any, in any, opts ...any) *MockCloudServiceClient_RemoveUserGroupMember_Call {
 	return &MockCloudServiceClient_RemoveUserGroupMember_Call{Call: _e.mock.On("RemoveUserGroupMember",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_RemoveUserGroupMember_Call) Run(run func(ctx context.Context, in *cloudservice.RemoveUserGroupMemberRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_RemoveUserGroupMember_Call {
@@ -5809,9 +5818,9 @@ type MockCloudServiceClient_RenameCustomSearchAttribute_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.RenameCustomSearchAttributeRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) RenameCustomSearchAttribute(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_RenameCustomSearchAttribute_Call {
+func (_e *MockCloudServiceClient_Expecter) RenameCustomSearchAttribute(ctx any, in any, opts ...any) *MockCloudServiceClient_RenameCustomSearchAttribute_Call {
 	return &MockCloudServiceClient_RenameCustomSearchAttribute_Call{Call: _e.mock.On("RenameCustomSearchAttribute",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_RenameCustomSearchAttribute_Call) Run(run func(ctx context.Context, in *cloudservice.RenameCustomSearchAttributeRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_RenameCustomSearchAttribute_Call {
@@ -5892,9 +5901,9 @@ type MockCloudServiceClient_SetServiceAccountNamespaceAccess_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.SetServiceAccountNamespaceAccessRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) SetServiceAccountNamespaceAccess(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_SetServiceAccountNamespaceAccess_Call {
+func (_e *MockCloudServiceClient_Expecter) SetServiceAccountNamespaceAccess(ctx any, in any, opts ...any) *MockCloudServiceClient_SetServiceAccountNamespaceAccess_Call {
 	return &MockCloudServiceClient_SetServiceAccountNamespaceAccess_Call{Call: _e.mock.On("SetServiceAccountNamespaceAccess",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_SetServiceAccountNamespaceAccess_Call) Run(run func(ctx context.Context, in *cloudservice.SetServiceAccountNamespaceAccessRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_SetServiceAccountNamespaceAccess_Call {
@@ -5975,9 +5984,9 @@ type MockCloudServiceClient_SetServiceAccountProjectAccess_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.SetServiceAccountProjectAccessRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) SetServiceAccountProjectAccess(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_SetServiceAccountProjectAccess_Call {
+func (_e *MockCloudServiceClient_Expecter) SetServiceAccountProjectAccess(ctx any, in any, opts ...any) *MockCloudServiceClient_SetServiceAccountProjectAccess_Call {
 	return &MockCloudServiceClient_SetServiceAccountProjectAccess_Call{Call: _e.mock.On("SetServiceAccountProjectAccess",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_SetServiceAccountProjectAccess_Call) Run(run func(ctx context.Context, in *cloudservice.SetServiceAccountProjectAccessRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_SetServiceAccountProjectAccess_Call {
@@ -6058,9 +6067,9 @@ type MockCloudServiceClient_SetUserGroupNamespaceAccess_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.SetUserGroupNamespaceAccessRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) SetUserGroupNamespaceAccess(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_SetUserGroupNamespaceAccess_Call {
+func (_e *MockCloudServiceClient_Expecter) SetUserGroupNamespaceAccess(ctx any, in any, opts ...any) *MockCloudServiceClient_SetUserGroupNamespaceAccess_Call {
 	return &MockCloudServiceClient_SetUserGroupNamespaceAccess_Call{Call: _e.mock.On("SetUserGroupNamespaceAccess",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_SetUserGroupNamespaceAccess_Call) Run(run func(ctx context.Context, in *cloudservice.SetUserGroupNamespaceAccessRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_SetUserGroupNamespaceAccess_Call {
@@ -6141,9 +6150,9 @@ type MockCloudServiceClient_SetUserGroupProjectAccess_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.SetUserGroupProjectAccessRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) SetUserGroupProjectAccess(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_SetUserGroupProjectAccess_Call {
+func (_e *MockCloudServiceClient_Expecter) SetUserGroupProjectAccess(ctx any, in any, opts ...any) *MockCloudServiceClient_SetUserGroupProjectAccess_Call {
 	return &MockCloudServiceClient_SetUserGroupProjectAccess_Call{Call: _e.mock.On("SetUserGroupProjectAccess",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_SetUserGroupProjectAccess_Call) Run(run func(ctx context.Context, in *cloudservice.SetUserGroupProjectAccessRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_SetUserGroupProjectAccess_Call {
@@ -6224,9 +6233,9 @@ type MockCloudServiceClient_SetUserNamespaceAccess_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.SetUserNamespaceAccessRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) SetUserNamespaceAccess(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_SetUserNamespaceAccess_Call {
+func (_e *MockCloudServiceClient_Expecter) SetUserNamespaceAccess(ctx any, in any, opts ...any) *MockCloudServiceClient_SetUserNamespaceAccess_Call {
 	return &MockCloudServiceClient_SetUserNamespaceAccess_Call{Call: _e.mock.On("SetUserNamespaceAccess",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_SetUserNamespaceAccess_Call) Run(run func(ctx context.Context, in *cloudservice.SetUserNamespaceAccessRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_SetUserNamespaceAccess_Call {
@@ -6307,9 +6316,9 @@ type MockCloudServiceClient_SetUserProjectAccess_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.SetUserProjectAccessRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) SetUserProjectAccess(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_SetUserProjectAccess_Call {
+func (_e *MockCloudServiceClient_Expecter) SetUserProjectAccess(ctx any, in any, opts ...any) *MockCloudServiceClient_SetUserProjectAccess_Call {
 	return &MockCloudServiceClient_SetUserProjectAccess_Call{Call: _e.mock.On("SetUserProjectAccess",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_SetUserProjectAccess_Call) Run(run func(ctx context.Context, in *cloudservice.SetUserProjectAccessRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_SetUserProjectAccess_Call {
@@ -6390,9 +6399,9 @@ type MockCloudServiceClient_UpdateAccount_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.UpdateAccountRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) UpdateAccount(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_UpdateAccount_Call {
+func (_e *MockCloudServiceClient_Expecter) UpdateAccount(ctx any, in any, opts ...any) *MockCloudServiceClient_UpdateAccount_Call {
 	return &MockCloudServiceClient_UpdateAccount_Call{Call: _e.mock.On("UpdateAccount",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_UpdateAccount_Call) Run(run func(ctx context.Context, in *cloudservice.UpdateAccountRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_UpdateAccount_Call {
@@ -6473,9 +6482,9 @@ type MockCloudServiceClient_UpdateAccountAuditLogSink_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.UpdateAccountAuditLogSinkRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) UpdateAccountAuditLogSink(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_UpdateAccountAuditLogSink_Call {
+func (_e *MockCloudServiceClient_Expecter) UpdateAccountAuditLogSink(ctx any, in any, opts ...any) *MockCloudServiceClient_UpdateAccountAuditLogSink_Call {
 	return &MockCloudServiceClient_UpdateAccountAuditLogSink_Call{Call: _e.mock.On("UpdateAccountAuditLogSink",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_UpdateAccountAuditLogSink_Call) Run(run func(ctx context.Context, in *cloudservice.UpdateAccountAuditLogSinkRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_UpdateAccountAuditLogSink_Call {
@@ -6556,9 +6565,9 @@ type MockCloudServiceClient_UpdateApiKey_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.UpdateApiKeyRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) UpdateApiKey(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_UpdateApiKey_Call {
+func (_e *MockCloudServiceClient_Expecter) UpdateApiKey(ctx any, in any, opts ...any) *MockCloudServiceClient_UpdateApiKey_Call {
 	return &MockCloudServiceClient_UpdateApiKey_Call{Call: _e.mock.On("UpdateApiKey",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_UpdateApiKey_Call) Run(run func(ctx context.Context, in *cloudservice.UpdateApiKeyRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_UpdateApiKey_Call {
@@ -6639,9 +6648,9 @@ type MockCloudServiceClient_UpdateCustomRole_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.UpdateCustomRoleRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) UpdateCustomRole(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_UpdateCustomRole_Call {
+func (_e *MockCloudServiceClient_Expecter) UpdateCustomRole(ctx any, in any, opts ...any) *MockCloudServiceClient_UpdateCustomRole_Call {
 	return &MockCloudServiceClient_UpdateCustomRole_Call{Call: _e.mock.On("UpdateCustomRole",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_UpdateCustomRole_Call) Run(run func(ctx context.Context, in *cloudservice.UpdateCustomRoleRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_UpdateCustomRole_Call {
@@ -6722,9 +6731,9 @@ type MockCloudServiceClient_UpdateNamespace_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.UpdateNamespaceRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) UpdateNamespace(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_UpdateNamespace_Call {
+func (_e *MockCloudServiceClient_Expecter) UpdateNamespace(ctx any, in any, opts ...any) *MockCloudServiceClient_UpdateNamespace_Call {
 	return &MockCloudServiceClient_UpdateNamespace_Call{Call: _e.mock.On("UpdateNamespace",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_UpdateNamespace_Call) Run(run func(ctx context.Context, in *cloudservice.UpdateNamespaceRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_UpdateNamespace_Call {
@@ -6805,9 +6814,9 @@ type MockCloudServiceClient_UpdateNamespaceExportSink_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.UpdateNamespaceExportSinkRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) UpdateNamespaceExportSink(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_UpdateNamespaceExportSink_Call {
+func (_e *MockCloudServiceClient_Expecter) UpdateNamespaceExportSink(ctx any, in any, opts ...any) *MockCloudServiceClient_UpdateNamespaceExportSink_Call {
 	return &MockCloudServiceClient_UpdateNamespaceExportSink_Call{Call: _e.mock.On("UpdateNamespaceExportSink",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_UpdateNamespaceExportSink_Call) Run(run func(ctx context.Context, in *cloudservice.UpdateNamespaceExportSinkRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_UpdateNamespaceExportSink_Call {
@@ -6888,9 +6897,9 @@ type MockCloudServiceClient_UpdateNamespaceTags_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.UpdateNamespaceTagsRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) UpdateNamespaceTags(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_UpdateNamespaceTags_Call {
+func (_e *MockCloudServiceClient_Expecter) UpdateNamespaceTags(ctx any, in any, opts ...any) *MockCloudServiceClient_UpdateNamespaceTags_Call {
 	return &MockCloudServiceClient_UpdateNamespaceTags_Call{Call: _e.mock.On("UpdateNamespaceTags",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_UpdateNamespaceTags_Call) Run(run func(ctx context.Context, in *cloudservice.UpdateNamespaceTagsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_UpdateNamespaceTags_Call {
@@ -6971,9 +6980,9 @@ type MockCloudServiceClient_UpdateNexusEndpoint_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.UpdateNexusEndpointRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) UpdateNexusEndpoint(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_UpdateNexusEndpoint_Call {
+func (_e *MockCloudServiceClient_Expecter) UpdateNexusEndpoint(ctx any, in any, opts ...any) *MockCloudServiceClient_UpdateNexusEndpoint_Call {
 	return &MockCloudServiceClient_UpdateNexusEndpoint_Call{Call: _e.mock.On("UpdateNexusEndpoint",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_UpdateNexusEndpoint_Call) Run(run func(ctx context.Context, in *cloudservice.UpdateNexusEndpointRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_UpdateNexusEndpoint_Call {
@@ -7054,9 +7063,9 @@ type MockCloudServiceClient_UpdateProject_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.UpdateProjectRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) UpdateProject(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_UpdateProject_Call {
+func (_e *MockCloudServiceClient_Expecter) UpdateProject(ctx any, in any, opts ...any) *MockCloudServiceClient_UpdateProject_Call {
 	return &MockCloudServiceClient_UpdateProject_Call{Call: _e.mock.On("UpdateProject",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_UpdateProject_Call) Run(run func(ctx context.Context, in *cloudservice.UpdateProjectRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_UpdateProject_Call {
@@ -7137,9 +7146,9 @@ type MockCloudServiceClient_UpdateServiceAccount_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.UpdateServiceAccountRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) UpdateServiceAccount(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_UpdateServiceAccount_Call {
+func (_e *MockCloudServiceClient_Expecter) UpdateServiceAccount(ctx any, in any, opts ...any) *MockCloudServiceClient_UpdateServiceAccount_Call {
 	return &MockCloudServiceClient_UpdateServiceAccount_Call{Call: _e.mock.On("UpdateServiceAccount",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_UpdateServiceAccount_Call) Run(run func(ctx context.Context, in *cloudservice.UpdateServiceAccountRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_UpdateServiceAccount_Call {
@@ -7220,9 +7229,9 @@ type MockCloudServiceClient_UpdateUser_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.UpdateUserRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) UpdateUser(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_UpdateUser_Call {
+func (_e *MockCloudServiceClient_Expecter) UpdateUser(ctx any, in any, opts ...any) *MockCloudServiceClient_UpdateUser_Call {
 	return &MockCloudServiceClient_UpdateUser_Call{Call: _e.mock.On("UpdateUser",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_UpdateUser_Call) Run(run func(ctx context.Context, in *cloudservice.UpdateUserRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_UpdateUser_Call {
@@ -7303,9 +7312,9 @@ type MockCloudServiceClient_UpdateUserGroup_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.UpdateUserGroupRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) UpdateUserGroup(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_UpdateUserGroup_Call {
+func (_e *MockCloudServiceClient_Expecter) UpdateUserGroup(ctx any, in any, opts ...any) *MockCloudServiceClient_UpdateUserGroup_Call {
 	return &MockCloudServiceClient_UpdateUserGroup_Call{Call: _e.mock.On("UpdateUserGroup",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_UpdateUserGroup_Call) Run(run func(ctx context.Context, in *cloudservice.UpdateUserGroupRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_UpdateUserGroup_Call {
@@ -7386,9 +7395,9 @@ type MockCloudServiceClient_ValidateAccountAuditLogSink_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.ValidateAccountAuditLogSinkRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) ValidateAccountAuditLogSink(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_ValidateAccountAuditLogSink_Call {
+func (_e *MockCloudServiceClient_Expecter) ValidateAccountAuditLogSink(ctx any, in any, opts ...any) *MockCloudServiceClient_ValidateAccountAuditLogSink_Call {
 	return &MockCloudServiceClient_ValidateAccountAuditLogSink_Call{Call: _e.mock.On("ValidateAccountAuditLogSink",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_ValidateAccountAuditLogSink_Call) Run(run func(ctx context.Context, in *cloudservice.ValidateAccountAuditLogSinkRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_ValidateAccountAuditLogSink_Call {
@@ -7469,9 +7478,9 @@ type MockCloudServiceClient_ValidateNamespaceExportSink_Call struct {
 //   - ctx context.Context
 //   - in *cloudservice.ValidateNamespaceExportSinkRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudServiceClient_Expecter) ValidateNamespaceExportSink(ctx interface{}, in interface{}, opts ...interface{}) *MockCloudServiceClient_ValidateNamespaceExportSink_Call {
+func (_e *MockCloudServiceClient_Expecter) ValidateNamespaceExportSink(ctx any, in any, opts ...any) *MockCloudServiceClient_ValidateNamespaceExportSink_Call {
 	return &MockCloudServiceClient_ValidateNamespaceExportSink_Call{Call: _e.mock.On("ValidateNamespaceExportSink",
-		append([]interface{}{ctx, in}, opts...)...)}
+		append([]any{ctx, in}, opts...)...)}
 }
 
 func (_c *MockCloudServiceClient_ValidateNamespaceExportSink_Call) Run(run func(ctx context.Context, in *cloudservice.ValidateNamespaceExportSinkRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_ValidateNamespaceExportSink_Call {
