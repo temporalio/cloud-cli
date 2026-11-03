@@ -463,6 +463,89 @@ func (_c *MockCloudServiceClient_CreateBillingReport_Call) RunAndReturn(run func
 	return _c
 }
 
+// CreateCallerRateLimit provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) CreateCallerRateLimit(ctx context.Context, in *cloudservice.CreateCallerRateLimitRequest, opts ...grpc.CallOption) (*cloudservice.CreateCallerRateLimitResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateCallerRateLimit")
+	}
+
+	var r0 *cloudservice.CreateCallerRateLimitResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.CreateCallerRateLimitRequest, ...grpc.CallOption) (*cloudservice.CreateCallerRateLimitResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.CreateCallerRateLimitRequest, ...grpc.CallOption) *cloudservice.CreateCallerRateLimitResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.CreateCallerRateLimitResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.CreateCallerRateLimitRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_CreateCallerRateLimit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateCallerRateLimit'
+type MockCloudServiceClient_CreateCallerRateLimit_Call struct {
+	*mock.Call
+}
+
+// CreateCallerRateLimit is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.CreateCallerRateLimitRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) CreateCallerRateLimit(ctx any, in any, opts ...any) *MockCloudServiceClient_CreateCallerRateLimit_Call {
+	return &MockCloudServiceClient_CreateCallerRateLimit_Call{Call: _e.mock.On("CreateCallerRateLimit",
+		append([]any{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_CreateCallerRateLimit_Call) Run(run func(ctx context.Context, in *cloudservice.CreateCallerRateLimitRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_CreateCallerRateLimit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.CreateCallerRateLimitRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.CreateCallerRateLimitRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_CreateCallerRateLimit_Call) Return(createCallerRateLimitResponse *cloudservice.CreateCallerRateLimitResponse, err error) *MockCloudServiceClient_CreateCallerRateLimit_Call {
+	_c.Call.Return(createCallerRateLimitResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_CreateCallerRateLimit_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.CreateCallerRateLimitRequest, opts ...grpc.CallOption) (*cloudservice.CreateCallerRateLimitResponse, error)) *MockCloudServiceClient_CreateCallerRateLimit_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateConnectivityRule provides a mock function for the type MockCloudServiceClient
 func (_mock *MockCloudServiceClient) CreateConnectivityRule(ctx context.Context, in *cloudservice.CreateConnectivityRuleRequest, opts ...grpc.CallOption) (*cloudservice.CreateConnectivityRuleResponse, error) {
 	var tmpRet mock.Arguments
@@ -1372,6 +1455,89 @@ func (_c *MockCloudServiceClient_DeleteApiKey_Call) Return(deleteApiKeyResponse 
 }
 
 func (_c *MockCloudServiceClient_DeleteApiKey_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.DeleteApiKeyRequest, opts ...grpc.CallOption) (*cloudservice.DeleteApiKeyResponse, error)) *MockCloudServiceClient_DeleteApiKey_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteCallerRateLimit provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) DeleteCallerRateLimit(ctx context.Context, in *cloudservice.DeleteCallerRateLimitRequest, opts ...grpc.CallOption) (*cloudservice.DeleteCallerRateLimitResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteCallerRateLimit")
+	}
+
+	var r0 *cloudservice.DeleteCallerRateLimitResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.DeleteCallerRateLimitRequest, ...grpc.CallOption) (*cloudservice.DeleteCallerRateLimitResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.DeleteCallerRateLimitRequest, ...grpc.CallOption) *cloudservice.DeleteCallerRateLimitResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.DeleteCallerRateLimitResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.DeleteCallerRateLimitRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_DeleteCallerRateLimit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteCallerRateLimit'
+type MockCloudServiceClient_DeleteCallerRateLimit_Call struct {
+	*mock.Call
+}
+
+// DeleteCallerRateLimit is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.DeleteCallerRateLimitRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) DeleteCallerRateLimit(ctx any, in any, opts ...any) *MockCloudServiceClient_DeleteCallerRateLimit_Call {
+	return &MockCloudServiceClient_DeleteCallerRateLimit_Call{Call: _e.mock.On("DeleteCallerRateLimit",
+		append([]any{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_DeleteCallerRateLimit_Call) Run(run func(ctx context.Context, in *cloudservice.DeleteCallerRateLimitRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_DeleteCallerRateLimit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.DeleteCallerRateLimitRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.DeleteCallerRateLimitRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_DeleteCallerRateLimit_Call) Return(deleteCallerRateLimitResponse *cloudservice.DeleteCallerRateLimitResponse, err error) *MockCloudServiceClient_DeleteCallerRateLimit_Call {
+	_c.Call.Return(deleteCallerRateLimitResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_DeleteCallerRateLimit_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.DeleteCallerRateLimitRequest, opts ...grpc.CallOption) (*cloudservice.DeleteCallerRateLimitResponse, error)) *MockCloudServiceClient_DeleteCallerRateLimit_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2949,6 +3115,172 @@ func (_c *MockCloudServiceClient_GetBillingReport_Call) Return(getBillingReportR
 }
 
 func (_c *MockCloudServiceClient_GetBillingReport_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetBillingReportRequest, opts ...grpc.CallOption) (*cloudservice.GetBillingReportResponse, error)) *MockCloudServiceClient_GetBillingReport_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetCallerRateLimit provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) GetCallerRateLimit(ctx context.Context, in *cloudservice.GetCallerRateLimitRequest, opts ...grpc.CallOption) (*cloudservice.GetCallerRateLimitResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetCallerRateLimit")
+	}
+
+	var r0 *cloudservice.GetCallerRateLimitResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetCallerRateLimitRequest, ...grpc.CallOption) (*cloudservice.GetCallerRateLimitResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetCallerRateLimitRequest, ...grpc.CallOption) *cloudservice.GetCallerRateLimitResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.GetCallerRateLimitResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.GetCallerRateLimitRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_GetCallerRateLimit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetCallerRateLimit'
+type MockCloudServiceClient_GetCallerRateLimit_Call struct {
+	*mock.Call
+}
+
+// GetCallerRateLimit is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.GetCallerRateLimitRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) GetCallerRateLimit(ctx any, in any, opts ...any) *MockCloudServiceClient_GetCallerRateLimit_Call {
+	return &MockCloudServiceClient_GetCallerRateLimit_Call{Call: _e.mock.On("GetCallerRateLimit",
+		append([]any{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_GetCallerRateLimit_Call) Run(run func(ctx context.Context, in *cloudservice.GetCallerRateLimitRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetCallerRateLimit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.GetCallerRateLimitRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.GetCallerRateLimitRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetCallerRateLimit_Call) Return(getCallerRateLimitResponse *cloudservice.GetCallerRateLimitResponse, err error) *MockCloudServiceClient_GetCallerRateLimit_Call {
+	_c.Call.Return(getCallerRateLimitResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetCallerRateLimit_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetCallerRateLimitRequest, opts ...grpc.CallOption) (*cloudservice.GetCallerRateLimitResponse, error)) *MockCloudServiceClient_GetCallerRateLimit_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetCallerRateLimits provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) GetCallerRateLimits(ctx context.Context, in *cloudservice.GetCallerRateLimitsRequest, opts ...grpc.CallOption) (*cloudservice.GetCallerRateLimitsResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetCallerRateLimits")
+	}
+
+	var r0 *cloudservice.GetCallerRateLimitsResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetCallerRateLimitsRequest, ...grpc.CallOption) (*cloudservice.GetCallerRateLimitsResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.GetCallerRateLimitsRequest, ...grpc.CallOption) *cloudservice.GetCallerRateLimitsResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.GetCallerRateLimitsResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.GetCallerRateLimitsRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_GetCallerRateLimits_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetCallerRateLimits'
+type MockCloudServiceClient_GetCallerRateLimits_Call struct {
+	*mock.Call
+}
+
+// GetCallerRateLimits is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.GetCallerRateLimitsRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) GetCallerRateLimits(ctx any, in any, opts ...any) *MockCloudServiceClient_GetCallerRateLimits_Call {
+	return &MockCloudServiceClient_GetCallerRateLimits_Call{Call: _e.mock.On("GetCallerRateLimits",
+		append([]any{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_GetCallerRateLimits_Call) Run(run func(ctx context.Context, in *cloudservice.GetCallerRateLimitsRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_GetCallerRateLimits_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.GetCallerRateLimitsRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.GetCallerRateLimitsRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetCallerRateLimits_Call) Return(getCallerRateLimitsResponse *cloudservice.GetCallerRateLimitsResponse, err error) *MockCloudServiceClient_GetCallerRateLimits_Call {
+	_c.Call.Return(getCallerRateLimitsResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_GetCallerRateLimits_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.GetCallerRateLimitsRequest, opts ...grpc.CallOption) (*cloudservice.GetCallerRateLimitsResponse, error)) *MockCloudServiceClient_GetCallerRateLimits_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -6601,6 +6933,89 @@ func (_c *MockCloudServiceClient_UpdateApiKey_Call) Return(updateApiKeyResponse 
 }
 
 func (_c *MockCloudServiceClient_UpdateApiKey_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.UpdateApiKeyRequest, opts ...grpc.CallOption) (*cloudservice.UpdateApiKeyResponse, error)) *MockCloudServiceClient_UpdateApiKey_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateCallerRateLimit provides a mock function for the type MockCloudServiceClient
+func (_mock *MockCloudServiceClient) UpdateCallerRateLimit(ctx context.Context, in *cloudservice.UpdateCallerRateLimitRequest, opts ...grpc.CallOption) (*cloudservice.UpdateCallerRateLimitResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateCallerRateLimit")
+	}
+
+	var r0 *cloudservice.UpdateCallerRateLimitResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.UpdateCallerRateLimitRequest, ...grpc.CallOption) (*cloudservice.UpdateCallerRateLimitResponse, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudservice.UpdateCallerRateLimitRequest, ...grpc.CallOption) *cloudservice.UpdateCallerRateLimitResponse); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudservice.UpdateCallerRateLimitResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudservice.UpdateCallerRateLimitRequest, ...grpc.CallOption) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudServiceClient_UpdateCallerRateLimit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateCallerRateLimit'
+type MockCloudServiceClient_UpdateCallerRateLimit_Call struct {
+	*mock.Call
+}
+
+// UpdateCallerRateLimit is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudservice.UpdateCallerRateLimitRequest
+//   - opts ...grpc.CallOption
+func (_e *MockCloudServiceClient_Expecter) UpdateCallerRateLimit(ctx any, in any, opts ...any) *MockCloudServiceClient_UpdateCallerRateLimit_Call {
+	return &MockCloudServiceClient_UpdateCallerRateLimit_Call{Call: _e.mock.On("UpdateCallerRateLimit",
+		append([]any{ctx, in}, opts...)...)}
+}
+
+func (_c *MockCloudServiceClient_UpdateCallerRateLimit_Call) Run(run func(ctx context.Context, in *cloudservice.UpdateCallerRateLimitRequest, opts ...grpc.CallOption)) *MockCloudServiceClient_UpdateCallerRateLimit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudservice.UpdateCallerRateLimitRequest
+		if args[1] != nil {
+			arg1 = args[1].(*cloudservice.UpdateCallerRateLimitRequest)
+		}
+		var arg2 []grpc.CallOption
+		var variadicArgs []grpc.CallOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]grpc.CallOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCloudServiceClient_UpdateCallerRateLimit_Call) Return(updateCallerRateLimitResponse *cloudservice.UpdateCallerRateLimitResponse, err error) *MockCloudServiceClient_UpdateCallerRateLimit_Call {
+	_c.Call.Return(updateCallerRateLimitResponse, err)
+	return _c
+}
+
+func (_c *MockCloudServiceClient_UpdateCallerRateLimit_Call) RunAndReturn(run func(ctx context.Context, in *cloudservice.UpdateCallerRateLimitRequest, opts ...grpc.CallOption) (*cloudservice.UpdateCallerRateLimitResponse, error)) *MockCloudServiceClient_UpdateCallerRateLimit_Call {
 	_c.Call.Return(run)
 	return _c
 }
