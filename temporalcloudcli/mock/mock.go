@@ -22,10 +22,19 @@ func NewMockNamespaceClient(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockNamespaceClient {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockNamespaceClient{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -79,7 +88,7 @@ type MockNamespaceClient_AddCACerts_Call struct {
 // AddCACerts is a helper method to define mock.On call
 //   - context1 context.Context
 //   - addCACertsParams namespace.AddCACertsParams
-func (_e *MockNamespaceClient_Expecter) AddCACerts(context1 interface{}, addCACertsParams interface{}) *MockNamespaceClient_AddCACerts_Call {
+func (_e *MockNamespaceClient_Expecter) AddCACerts(context1 any, addCACertsParams any) *MockNamespaceClient_AddCACerts_Call {
 	return &MockNamespaceClient_AddCACerts_Call{Call: _e.mock.On("AddCACerts", context1, addCACertsParams)}
 }
 
@@ -147,7 +156,7 @@ type MockNamespaceClient_AddCertFilters_Call struct {
 // AddCertFilters is a helper method to define mock.On call
 //   - context1 context.Context
 //   - addCertFiltersParams namespace.AddCertFiltersParams
-func (_e *MockNamespaceClient_Expecter) AddCertFilters(context1 interface{}, addCertFiltersParams interface{}) *MockNamespaceClient_AddCertFilters_Call {
+func (_e *MockNamespaceClient_Expecter) AddCertFilters(context1 any, addCertFiltersParams any) *MockNamespaceClient_AddCertFilters_Call {
 	return &MockNamespaceClient_AddCertFilters_Call{Call: _e.mock.On("AddCertFilters", context1, addCertFiltersParams)}
 }
 
@@ -215,7 +224,7 @@ type MockNamespaceClient_CreateSearchAttribute_Call struct {
 // CreateSearchAttribute is a helper method to define mock.On call
 //   - context1 context.Context
 //   - createSearchAttributeParams namespace.CreateSearchAttributeParams
-func (_e *MockNamespaceClient_Expecter) CreateSearchAttribute(context1 interface{}, createSearchAttributeParams interface{}) *MockNamespaceClient_CreateSearchAttribute_Call {
+func (_e *MockNamespaceClient_Expecter) CreateSearchAttribute(context1 any, createSearchAttributeParams any) *MockNamespaceClient_CreateSearchAttribute_Call {
 	return &MockNamespaceClient_CreateSearchAttribute_Call{Call: _e.mock.On("CreateSearchAttribute", context1, createSearchAttributeParams)}
 }
 
@@ -283,7 +292,7 @@ type MockNamespaceClient_DeleteCACerts_Call struct {
 // DeleteCACerts is a helper method to define mock.On call
 //   - context1 context.Context
 //   - deleteCACertsParams namespace.DeleteCACertsParams
-func (_e *MockNamespaceClient_Expecter) DeleteCACerts(context1 interface{}, deleteCACertsParams interface{}) *MockNamespaceClient_DeleteCACerts_Call {
+func (_e *MockNamespaceClient_Expecter) DeleteCACerts(context1 any, deleteCACertsParams any) *MockNamespaceClient_DeleteCACerts_Call {
 	return &MockNamespaceClient_DeleteCACerts_Call{Call: _e.mock.On("DeleteCACerts", context1, deleteCACertsParams)}
 }
 
@@ -351,7 +360,7 @@ type MockNamespaceClient_DeleteCertFilters_Call struct {
 // DeleteCertFilters is a helper method to define mock.On call
 //   - context1 context.Context
 //   - deleteCertFiltersParams namespace.DeleteCertFiltersParams
-func (_e *MockNamespaceClient_Expecter) DeleteCertFilters(context1 interface{}, deleteCertFiltersParams interface{}) *MockNamespaceClient_DeleteCertFilters_Call {
+func (_e *MockNamespaceClient_Expecter) DeleteCertFilters(context1 any, deleteCertFiltersParams any) *MockNamespaceClient_DeleteCertFilters_Call {
 	return &MockNamespaceClient_DeleteCertFilters_Call{Call: _e.mock.On("DeleteCertFilters", context1, deleteCertFiltersParams)}
 }
 
@@ -419,7 +428,7 @@ type MockNamespaceClient_DeleteCodec_Call struct {
 // DeleteCodec is a helper method to define mock.On call
 //   - context1 context.Context
 //   - deleteCodecParams namespace.DeleteCodecParams
-func (_e *MockNamespaceClient_Expecter) DeleteCodec(context1 interface{}, deleteCodecParams interface{}) *MockNamespaceClient_DeleteCodec_Call {
+func (_e *MockNamespaceClient_Expecter) DeleteCodec(context1 any, deleteCodecParams any) *MockNamespaceClient_DeleteCodec_Call {
 	return &MockNamespaceClient_DeleteCodec_Call{Call: _e.mock.On("DeleteCodec", context1, deleteCodecParams)}
 }
 
@@ -487,7 +496,7 @@ type MockNamespaceClient_GetCodecServer_Call struct {
 // GetCodecServer is a helper method to define mock.On call
 //   - context1 context.Context
 //   - s string
-func (_e *MockNamespaceClient_Expecter) GetCodecServer(context1 interface{}, s interface{}) *MockNamespaceClient_GetCodecServer_Call {
+func (_e *MockNamespaceClient_Expecter) GetCodecServer(context1 any, s any) *MockNamespaceClient_GetCodecServer_Call {
 	return &MockNamespaceClient_GetCodecServer_Call{Call: _e.mock.On("GetCodecServer", context1, s)}
 }
 
@@ -555,7 +564,7 @@ type MockNamespaceClient_GetNamespace_Call struct {
 // GetNamespace is a helper method to define mock.On call
 //   - context1 context.Context
 //   - s string
-func (_e *MockNamespaceClient_Expecter) GetNamespace(context1 interface{}, s interface{}) *MockNamespaceClient_GetNamespace_Call {
+func (_e *MockNamespaceClient_Expecter) GetNamespace(context1 any, s any) *MockNamespaceClient_GetNamespace_Call {
 	return &MockNamespaceClient_GetNamespace_Call{Call: _e.mock.On("GetNamespace", context1, s)}
 }
 
@@ -623,7 +632,7 @@ type MockNamespaceClient_ListCACerts_Call struct {
 // ListCACerts is a helper method to define mock.On call
 //   - context1 context.Context
 //   - s string
-func (_e *MockNamespaceClient_Expecter) ListCACerts(context1 interface{}, s interface{}) *MockNamespaceClient_ListCACerts_Call {
+func (_e *MockNamespaceClient_Expecter) ListCACerts(context1 any, s any) *MockNamespaceClient_ListCACerts_Call {
 	return &MockNamespaceClient_ListCACerts_Call{Call: _e.mock.On("ListCACerts", context1, s)}
 }
 
@@ -691,7 +700,7 @@ type MockNamespaceClient_ListCertFilters_Call struct {
 // ListCertFilters is a helper method to define mock.On call
 //   - context1 context.Context
 //   - s string
-func (_e *MockNamespaceClient_Expecter) ListCertFilters(context1 interface{}, s interface{}) *MockNamespaceClient_ListCertFilters_Call {
+func (_e *MockNamespaceClient_Expecter) ListCertFilters(context1 any, s any) *MockNamespaceClient_ListCertFilters_Call {
 	return &MockNamespaceClient_ListCertFilters_Call{Call: _e.mock.On("ListCertFilters", context1, s)}
 }
 
@@ -759,7 +768,7 @@ type MockNamespaceClient_ListSearchAttributes_Call struct {
 // ListSearchAttributes is a helper method to define mock.On call
 //   - context1 context.Context
 //   - s string
-func (_e *MockNamespaceClient_Expecter) ListSearchAttributes(context1 interface{}, s interface{}) *MockNamespaceClient_ListSearchAttributes_Call {
+func (_e *MockNamespaceClient_Expecter) ListSearchAttributes(context1 any, s any) *MockNamespaceClient_ListSearchAttributes_Call {
 	return &MockNamespaceClient_ListSearchAttributes_Call{Call: _e.mock.On("ListSearchAttributes", context1, s)}
 }
 
@@ -827,7 +836,7 @@ type MockNamespaceClient_RenameSearchAttribute_Call struct {
 // RenameSearchAttribute is a helper method to define mock.On call
 //   - context1 context.Context
 //   - renameSearchAttributeParams namespace.RenameSearchAttributeParams
-func (_e *MockNamespaceClient_Expecter) RenameSearchAttribute(context1 interface{}, renameSearchAttributeParams interface{}) *MockNamespaceClient_RenameSearchAttribute_Call {
+func (_e *MockNamespaceClient_Expecter) RenameSearchAttribute(context1 any, renameSearchAttributeParams any) *MockNamespaceClient_RenameSearchAttribute_Call {
 	return &MockNamespaceClient_RenameSearchAttribute_Call{Call: _e.mock.On("RenameSearchAttribute", context1, renameSearchAttributeParams)}
 }
 
@@ -895,7 +904,7 @@ type MockNamespaceClient_SetCodec_Call struct {
 // SetCodec is a helper method to define mock.On call
 //   - context1 context.Context
 //   - setCodecParams namespace.SetCodecParams
-func (_e *MockNamespaceClient_Expecter) SetCodec(context1 interface{}, setCodecParams interface{}) *MockNamespaceClient_SetCodec_Call {
+func (_e *MockNamespaceClient_Expecter) SetCodec(context1 any, setCodecParams any) *MockNamespaceClient_SetCodec_Call {
 	return &MockNamespaceClient_SetCodec_Call{Call: _e.mock.On("SetCodec", context1, setCodecParams)}
 }
 
@@ -963,7 +972,7 @@ type MockNamespaceClient_UpdateNamespace_Call struct {
 // UpdateNamespace is a helper method to define mock.On call
 //   - context1 context.Context
 //   - updateNamespaceParams namespace.UpdateNamespaceParams
-func (_e *MockNamespaceClient_Expecter) UpdateNamespace(context1 interface{}, updateNamespaceParams interface{}) *MockNamespaceClient_UpdateNamespace_Call {
+func (_e *MockNamespaceClient_Expecter) UpdateNamespace(context1 any, updateNamespaceParams any) *MockNamespaceClient_UpdateNamespace_Call {
 	return &MockNamespaceClient_UpdateNamespace_Call{Call: _e.mock.On("UpdateNamespace", context1, updateNamespaceParams)}
 }
 
@@ -1001,10 +1010,19 @@ func NewMockPoller(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockPoller {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockPoller{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -1048,7 +1066,7 @@ type MockPoller_PollAsyncOperation_Call struct {
 //   - commandContext *temporalcloudcli.CommandContext
 //   - s string
 //   - s1 string
-func (_e *MockPoller_Expecter) PollAsyncOperation(commandContext interface{}, s interface{}, s1 interface{}) *MockPoller_PollAsyncOperation_Call {
+func (_e *MockPoller_Expecter) PollAsyncOperation(commandContext any, s any, s1 any) *MockPoller_PollAsyncOperation_Call {
 	return &MockPoller_PollAsyncOperation_Call{Call: _e.mock.On("PollAsyncOperation", commandContext, s, s1)}
 }
 
@@ -1091,10 +1109,19 @@ func NewMockAsyncOperationHandler(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockAsyncOperationHandler {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockAsyncOperationHandler{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -1136,7 +1163,7 @@ type MockAsyncOperationHandler_HandleCreateErr_Call struct {
 
 // HandleCreateErr is a helper method to define mock.On call
 //   - err error
-func (_e *MockAsyncOperationHandler_Expecter) HandleCreateErr(err interface{}) *MockAsyncOperationHandler_HandleCreateErr_Call {
+func (_e *MockAsyncOperationHandler_Expecter) HandleCreateErr(err any) *MockAsyncOperationHandler_HandleCreateErr_Call {
 	return &MockAsyncOperationHandler_HandleCreateErr_Call{Call: _e.mock.On("HandleCreateErr", err)}
 }
 
@@ -1187,7 +1214,7 @@ type MockAsyncOperationHandler_HandleDeleteErr_Call struct {
 
 // HandleDeleteErr is a helper method to define mock.On call
 //   - err error
-func (_e *MockAsyncOperationHandler_Expecter) HandleDeleteErr(err interface{}) *MockAsyncOperationHandler_HandleDeleteErr_Call {
+func (_e *MockAsyncOperationHandler_Expecter) HandleDeleteErr(err any) *MockAsyncOperationHandler_HandleDeleteErr_Call {
 	return &MockAsyncOperationHandler_HandleDeleteErr_Call{Call: _e.mock.On("HandleDeleteErr", err)}
 }
 
@@ -1239,7 +1266,7 @@ type MockAsyncOperationHandler_HandleOperation_Call struct {
 // HandleOperation is a helper method to define mock.On call
 //   - op *operation.AsyncOperation
 //   - id string
-func (_e *MockAsyncOperationHandler_Expecter) HandleOperation(op interface{}, id interface{}) *MockAsyncOperationHandler_HandleOperation_Call {
+func (_e *MockAsyncOperationHandler_Expecter) HandleOperation(op any, id any) *MockAsyncOperationHandler_HandleOperation_Call {
 	return &MockAsyncOperationHandler_HandleOperation_Call{Call: _e.mock.On("HandleOperation", op, id)}
 }
 
@@ -1295,7 +1322,7 @@ type MockAsyncOperationHandler_HandleUpdateErr_Call struct {
 
 // HandleUpdateErr is a helper method to define mock.On call
 //   - err error
-func (_e *MockAsyncOperationHandler_Expecter) HandleUpdateErr(err interface{}) *MockAsyncOperationHandler_HandleUpdateErr_Call {
+func (_e *MockAsyncOperationHandler_Expecter) HandleUpdateErr(err any) *MockAsyncOperationHandler_HandleUpdateErr_Call {
 	return &MockAsyncOperationHandler_HandleUpdateErr_Call{Call: _e.mock.On("HandleUpdateErr", err)}
 }
 
@@ -1328,10 +1355,19 @@ func NewMockPrompter(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockPrompter {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockPrompter{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -1375,7 +1411,7 @@ type MockPrompter_PromptApply_Call struct {
 //   - old proto.Message
 //   - new proto.Message
 //   - verbose bool
-func (_e *MockPrompter_Expecter) PromptApply(old interface{}, new interface{}, verbose interface{}) *MockPrompter_PromptApply_Call {
+func (_e *MockPrompter_Expecter) PromptApply(old any, new any, verbose any) *MockPrompter_PromptApply_Call {
 	return &MockPrompter_PromptApply_Call{Call: _e.mock.On("PromptApply", old, new, verbose)}
 }
 

@@ -18,10 +18,19 @@ func NewMockCloudService(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockCloudService {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockCloudService{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -82,9 +91,9 @@ type MockCloudService_GetNamespace_Call struct {
 //   - ctx context.Context
 //   - req *cloudservice.GetNamespaceRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudService_Expecter) GetNamespace(ctx interface{}, req interface{}, opts ...interface{}) *MockCloudService_GetNamespace_Call {
+func (_e *MockCloudService_Expecter) GetNamespace(ctx any, req any, opts ...any) *MockCloudService_GetNamespace_Call {
 	return &MockCloudService_GetNamespace_Call{Call: _e.mock.On("GetNamespace",
-		append([]interface{}{ctx, req}, opts...)...)}
+		append([]any{ctx, req}, opts...)...)}
 }
 
 func (_c *MockCloudService_GetNamespace_Call) Run(run func(ctx context.Context, req *cloudservice.GetNamespaceRequest, opts ...grpc.CallOption)) *MockCloudService_GetNamespace_Call {
@@ -165,9 +174,9 @@ type MockCloudService_GetNamespaces_Call struct {
 //   - ctx context.Context
 //   - req *cloudservice.GetNamespacesRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudService_Expecter) GetNamespaces(ctx interface{}, req interface{}, opts ...interface{}) *MockCloudService_GetNamespaces_Call {
+func (_e *MockCloudService_Expecter) GetNamespaces(ctx any, req any, opts ...any) *MockCloudService_GetNamespaces_Call {
 	return &MockCloudService_GetNamespaces_Call{Call: _e.mock.On("GetNamespaces",
-		append([]interface{}{ctx, req}, opts...)...)}
+		append([]any{ctx, req}, opts...)...)}
 }
 
 func (_c *MockCloudService_GetNamespaces_Call) Run(run func(ctx context.Context, req *cloudservice.GetNamespacesRequest, opts ...grpc.CallOption)) *MockCloudService_GetNamespaces_Call {
@@ -248,9 +257,9 @@ type MockCloudService_RenameCustomSearchAttribute_Call struct {
 //   - ctx context.Context
 //   - req *cloudservice.RenameCustomSearchAttributeRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudService_Expecter) RenameCustomSearchAttribute(ctx interface{}, req interface{}, opts ...interface{}) *MockCloudService_RenameCustomSearchAttribute_Call {
+func (_e *MockCloudService_Expecter) RenameCustomSearchAttribute(ctx any, req any, opts ...any) *MockCloudService_RenameCustomSearchAttribute_Call {
 	return &MockCloudService_RenameCustomSearchAttribute_Call{Call: _e.mock.On("RenameCustomSearchAttribute",
-		append([]interface{}{ctx, req}, opts...)...)}
+		append([]any{ctx, req}, opts...)...)}
 }
 
 func (_c *MockCloudService_RenameCustomSearchAttribute_Call) Run(run func(ctx context.Context, req *cloudservice.RenameCustomSearchAttributeRequest, opts ...grpc.CallOption)) *MockCloudService_RenameCustomSearchAttribute_Call {
@@ -331,9 +340,9 @@ type MockCloudService_UpdateNamespace_Call struct {
 //   - ctx context.Context
 //   - req *cloudservice.UpdateNamespaceRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudService_Expecter) UpdateNamespace(ctx interface{}, req interface{}, opts ...interface{}) *MockCloudService_UpdateNamespace_Call {
+func (_e *MockCloudService_Expecter) UpdateNamespace(ctx any, req any, opts ...any) *MockCloudService_UpdateNamespace_Call {
 	return &MockCloudService_UpdateNamespace_Call{Call: _e.mock.On("UpdateNamespace",
-		append([]interface{}{ctx, req}, opts...)...)}
+		append([]any{ctx, req}, opts...)...)}
 }
 
 func (_c *MockCloudService_UpdateNamespace_Call) Run(run func(ctx context.Context, req *cloudservice.UpdateNamespaceRequest, opts ...grpc.CallOption)) *MockCloudService_UpdateNamespace_Call {
@@ -414,9 +423,9 @@ type MockCloudService_UpdateNamespaceTags_Call struct {
 //   - ctx context.Context
 //   - req *cloudservice.UpdateNamespaceTagsRequest
 //   - opts ...grpc.CallOption
-func (_e *MockCloudService_Expecter) UpdateNamespaceTags(ctx interface{}, req interface{}, opts ...interface{}) *MockCloudService_UpdateNamespaceTags_Call {
+func (_e *MockCloudService_Expecter) UpdateNamespaceTags(ctx any, req any, opts ...any) *MockCloudService_UpdateNamespaceTags_Call {
 	return &MockCloudService_UpdateNamespaceTags_Call{Call: _e.mock.On("UpdateNamespaceTags",
-		append([]interface{}{ctx, req}, opts...)...)}
+		append([]any{ctx, req}, opts...)...)}
 }
 
 func (_c *MockCloudService_UpdateNamespaceTags_Call) Run(run func(ctx context.Context, req *cloudservice.UpdateNamespaceTagsRequest, opts ...grpc.CallOption)) *MockCloudService_UpdateNamespaceTags_Call {

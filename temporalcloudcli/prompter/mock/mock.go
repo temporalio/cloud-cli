@@ -15,10 +15,19 @@ func NewMockPrompter(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockPrompter {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockPrompter{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -71,7 +80,7 @@ type MockPrompter_PromptApply_Call struct {
 //   - existing proto.Message
 //   - modified proto.Message
 //   - verbose bool
-func (_e *MockPrompter_Expecter) PromptApply(existing interface{}, modified interface{}, verbose interface{}) *MockPrompter_PromptApply_Call {
+func (_e *MockPrompter_Expecter) PromptApply(existing any, modified any, verbose any) *MockPrompter_PromptApply_Call {
 	return &MockPrompter_PromptApply_Call{Call: _e.mock.On("PromptApply", existing, modified, verbose)}
 }
 
@@ -141,7 +150,7 @@ type MockPrompter_PromptYes_Call struct {
 
 // PromptYes is a helper method to define mock.On call
 //   - message string
-func (_e *MockPrompter_Expecter) PromptYes(message interface{}) *MockPrompter_PromptYes_Call {
+func (_e *MockPrompter_Expecter) PromptYes(message any) *MockPrompter_PromptYes_Call {
 	return &MockPrompter_PromptYes_Call{Call: _e.mock.On("PromptYes", message)}
 }
 
