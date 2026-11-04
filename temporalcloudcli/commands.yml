@@ -2006,8 +2006,10 @@ commands:
   - name: cloud namespace caller-rate-limit get
     summary: Get a namespace caller rate limit
     description: |
-      Retrieve the caller rate limit rule on a Temporal Cloud namespace for either
-      the default caller namespace rule or a specific caller namespace.
+      Retrieve a caller rate limit rule on a Temporal Cloud namespace: either the
+      default rule for caller namespaces or the rule for a specific caller namespace.
+
+      Exactly one of --caller-namespace-default or --caller-namespace is required.
 
       Example (default rule for caller namespaces):
 
@@ -2027,6 +2029,60 @@ commands:
       - client
       - namespace
       - caller-rate-limit-caller
+  - name: cloud namespace caller-rate-limit list
+    summary: List namespace caller rate limits
+    description: |
+      List the caller rate limit rules on a Temporal Cloud namespace. With no
+      filter flags, all rules are listed (paginated). Use --type,
+      --caller-namespace-default, or --caller-namespace to filter the results.
+
+      Example (all rules):
+
+      ```
+      temporal cloud namespace caller-rate-limit list --namespace my-namespace.my-account
+      ```
+
+      Example (default rule for caller namespaces):
+
+      ```
+      temporal cloud namespace caller-rate-limit list --namespace my-namespace.my-account \
+          --caller-namespace-default
+      ```
+
+      Example (rule for a specific caller namespace):
+
+      ```
+      temporal cloud namespace caller-rate-limit list --namespace my-namespace.my-account \
+          --caller-namespace caller-ns.my-account
+      ```
+
+      Example (default rule and a specific caller's rule, for comparison):
+
+      ```
+      temporal cloud namespace caller-rate-limit list --namespace my-namespace.my-account \
+          --caller-namespace-default --caller-namespace caller-ns.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - caller-rate-limit-caller
+    options:
+      - name: type
+        type: string-enum
+        enum-values: [namespace]
+        description: |
+          Only list rules for this caller type. More caller types may be
+          added in the future. Defaults to 'namespace' when
+          --caller-namespace-default or --caller-namespace is set.
+      - name: page-size
+        type: int
+        description: |
+          Number of caller rate limits to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
 
   # Namespace access commands (who has access to a namespace)
   - name: cloud namespace user
@@ -5408,14 +5464,13 @@ option-sets:
       - name: caller-namespace-default
         type: bool
         description: |
-          Target the default rate limit applied to caller namespaces without a
-          specific rule. Mutually exclusive with --caller-namespace.
+          Target the default rule, which applies to caller namespaces without a
+          specific rule.
       - name: caller-namespace
         type: string
         description: |
           The fully qualified caller namespace name in the format 'namespace.account'
-          (e.g., 'caller-ns.my-account'). Mutually exclusive with
-          --caller-namespace-default.
+          (e.g., 'caller-ns.my-account').
   - name: export-sink
     options:
       - name: sink-name
