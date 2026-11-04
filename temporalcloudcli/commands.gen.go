@@ -167,8 +167,8 @@ type CallerRateLimitCallerOptions struct {
 
 func (v *CallerRateLimitCallerOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.BoolVar(&v.CallerNamespaceDefault, "caller-namespace-default", false, "Target the default rate limit applied to caller namespaces without a specific rule. Mutually exclusive with --caller-namespace.")
-	f.StringVar(&v.CallerNamespace, "caller-namespace", "", "The fully qualified caller namespace name in the format 'namespace.account' (e.g., 'caller-ns.my-account'). Mutually exclusive with --caller-namespace-default.")
+	f.BoolVar(&v.CallerNamespaceDefault, "caller-namespace-default", false, "Target the default rule, which applies to caller namespaces without a specific rule.")
+	f.StringVar(&v.CallerNamespace, "caller-namespace", "", "The fully qualified caller namespace name in the format 'namespace.account' (e.g., 'caller-ns.my-account').")
 }
 
 type ExportSinkOptions struct {
@@ -2089,6 +2089,7 @@ func NewCloudNamespaceCallerRateLimitCommand(cctx *CommandContext, parent *Cloud
 	s.Command.Long = "Commands for managing caller rate limits on Temporal Cloud namespaces.\n\nA caller rate limit caps the requests per second that callers, such as\nother namespaces, can send to a target namespace. A namespace can have a\ndefault rule for caller namespaces and rules for specific caller namespaces."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudNamespaceCallerRateLimitGetCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCallerRateLimitListCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -2107,11 +2108,49 @@ func NewCloudNamespaceCallerRateLimitGetCommand(cctx *CommandContext, parent *Cl
 	s.Command.Use = "get [flags]"
 	s.Command.Short = "Get a namespace caller rate limit"
 	if hasHighlighting {
-		s.Command.Long = "Retrieve the caller rate limit rule on a Temporal Cloud namespace for either\nthe default caller namespace rule or a specific caller namespace.\n\nExample (default rule for caller namespaces):\n\n\x1b[1mtemporal cloud namespace caller-rate-limit get --namespace my-namespace.my-account \\\n    --caller-namespace-default\x1b[0m\n\nExample (rule for a specific caller namespace):\n\n\x1b[1mtemporal cloud namespace caller-rate-limit get --namespace my-namespace.my-account \\\n    --caller-namespace caller-ns.my-account\x1b[0m"
+		s.Command.Long = "Retrieve a caller rate limit rule on a Temporal Cloud namespace: either the\ndefault rule for caller namespaces or the rule for a specific caller namespace.\n\nExactly one of --caller-namespace-default or --caller-namespace is required.\n\nExample (default rule for caller namespaces):\n\n\x1b[1mtemporal cloud namespace caller-rate-limit get --namespace my-namespace.my-account \\\n    --caller-namespace-default\x1b[0m\n\nExample (rule for a specific caller namespace):\n\n\x1b[1mtemporal cloud namespace caller-rate-limit get --namespace my-namespace.my-account \\\n    --caller-namespace caller-ns.my-account\x1b[0m"
 	} else {
-		s.Command.Long = "Retrieve the caller rate limit rule on a Temporal Cloud namespace for either\nthe default caller namespace rule or a specific caller namespace.\n\nExample (default rule for caller namespaces):\n\n```\ntemporal cloud namespace caller-rate-limit get --namespace my-namespace.my-account \\\n    --caller-namespace-default\n```\n\nExample (rule for a specific caller namespace):\n\n```\ntemporal cloud namespace caller-rate-limit get --namespace my-namespace.my-account \\\n    --caller-namespace caller-ns.my-account\n```"
+		s.Command.Long = "Retrieve a caller rate limit rule on a Temporal Cloud namespace: either the\ndefault rule for caller namespaces or the rule for a specific caller namespace.\n\nExactly one of --caller-namespace-default or --caller-namespace is required.\n\nExample (default rule for caller namespaces):\n\n```\ntemporal cloud namespace caller-rate-limit get --namespace my-namespace.my-account \\\n    --caller-namespace-default\n```\n\nExample (rule for a specific caller namespace):\n\n```\ntemporal cloud namespace caller-rate-limit get --namespace my-namespace.my-account \\\n    --caller-namespace caller-ns.my-account\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.CallerRateLimitCallerOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCallerRateLimitListCommand struct {
+	Parent  *CloudNamespaceCallerRateLimitCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	CallerRateLimitCallerOptions
+	Type      cliext.FlagStringEnum
+	PageSize  int
+	PageToken string
+}
+
+func NewCloudNamespaceCallerRateLimitListCommand(cctx *CommandContext, parent *CloudNamespaceCallerRateLimitCommand) *CloudNamespaceCallerRateLimitListCommand {
+	var s CloudNamespaceCallerRateLimitListCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "list [flags]"
+	s.Command.Short = "List namespace caller rate limits"
+	if hasHighlighting {
+		s.Command.Long = "List the caller rate limit rules on a Temporal Cloud namespace. With no\nfilter flags, all rules are listed (paginated). Use --type,\n--caller-namespace-default, or --caller-namespace to filter the results.\n\nExample (all rules):\n\n\x1b[1mtemporal cloud namespace caller-rate-limit list --namespace my-namespace.my-account\x1b[0m\n\nExample (default rule for caller namespaces):\n\n\x1b[1mtemporal cloud namespace caller-rate-limit list --namespace my-namespace.my-account \\\n    --caller-namespace-default\x1b[0m\n\nExample (rule for a specific caller namespace):\n\n\x1b[1mtemporal cloud namespace caller-rate-limit list --namespace my-namespace.my-account \\\n    --caller-namespace caller-ns.my-account\x1b[0m\n\nExample (default rule and a specific caller's rule, for comparison):\n\n\x1b[1mtemporal cloud namespace caller-rate-limit list --namespace my-namespace.my-account \\\n    --caller-namespace-default --caller-namespace caller-ns.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "List the caller rate limit rules on a Temporal Cloud namespace. With no\nfilter flags, all rules are listed (paginated). Use --type,\n--caller-namespace-default, or --caller-namespace to filter the results.\n\nExample (all rules):\n\n```\ntemporal cloud namespace caller-rate-limit list --namespace my-namespace.my-account\n```\n\nExample (default rule for caller namespaces):\n\n```\ntemporal cloud namespace caller-rate-limit list --namespace my-namespace.my-account \\\n    --caller-namespace-default\n```\n\nExample (rule for a specific caller namespace):\n\n```\ntemporal cloud namespace caller-rate-limit list --namespace my-namespace.my-account \\\n    --caller-namespace caller-ns.my-account\n```\n\nExample (default rule and a specific caller's rule, for comparison):\n\n```\ntemporal cloud namespace caller-rate-limit list --namespace my-namespace.my-account \\\n    --caller-namespace-default --caller-namespace caller-ns.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Type = cliext.NewFlagStringEnum([]string{"namespace"}, "")
+	s.Command.Flags().Var(&s.Type, "type", "Only list rules for this caller type. More caller types may be added in the future. Defaults to 'namespace' when --caller-namespace-default or --caller-namespace is set. Accepted values: namespace.")
+	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of caller rate limits to return per page. Use for paginated results.")
+	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results in a paginated list.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.CallerRateLimitCallerOptions.BuildFlags(s.Command.Flags())

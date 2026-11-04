@@ -37,6 +37,46 @@ func (c *CloudNamespaceCallerRateLimitGetCommand) run(cctx *CommandContext, _ []
 	return cctx.Printer.PrintResource(rl, printer.PrintResourceOptions{EmitDefaultValues: true})
 }
 
+func (c *CloudNamespaceCallerRateLimitListCommand) run(cctx *CommandContext, _ []string) error {
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	// AIDEV-NOTE: default + caller in one CallerFilter is a server-side union
+	// (returns the default rule and the caller's rule). Intentionally allowed.
+	var filter *cloudservice.GetCallerRateLimitsRequest_CallerFilter
+	if c.Type.Value != "" || c.CallerNamespaceDefault || c.CallerNamespace != "" {
+		// --type is validated by its FlagStringEnum; "namespace" is the only caller type today.
+		callerType := c.Type.Value
+		if callerType == "" {
+			callerType = callerTypeNamespace
+		}
+		filter = &cloudservice.GetCallerRateLimitsRequest_CallerFilter{
+			CallerType: callerType,
+			Default:    c.CallerNamespaceDefault,
+			Caller:     c.CallerNamespace,
+		}
+	}
+	res, err := client.GetCallerRateLimits(cctx, &cloudservice.GetCallerRateLimitsRequest{
+		Namespace:    c.Namespace,
+		PageSize:     int32(c.PageSize),
+		PageToken:    c.PageToken,
+		CallerFilter: filter,
+	})
+	if err != nil {
+		return err
+	}
+	return cctx.Printer.PrintResourceList(
+		struct {
+			CallerRateLimits []*namespacev1.CallerRateLimit
+			NextPageToken    string
+		}{CallerRateLimits: res.CallerRateLimits, NextPageToken: res.NextPageToken},
+		// EmitDefaultValues so a rule with rps 0 (blocks all) still shows its rps.
+		printer.PrintResourceOptions{Fields: []string{"Id", "State"}, EmitDefaultValues: true},
+		printer.TableOptions{},
+	)
+}
+
 // callerFilterFromFlags builds the server-side caller filter from the mutually
 // exclusive --caller-namespace-default and --caller-namespace flags.
 func callerFilterFromFlags(
