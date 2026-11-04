@@ -2168,6 +2168,67 @@ commands:
         description: |
           The maximum requests per second allowed from the matched callers.
           0 blocks all traffic from the matched callers.
+  - name: cloud namespace caller-rate-limit apply
+    summary: Create or update namespace caller rate limits from a specification
+    description: |
+      Apply a list of caller rate limit rules to a Temporal Cloud namespace.
+      Each rule in the specification is created if it doesn't exist, or updated
+      if it differs from the existing rule. Rules that already match and are
+      active are skipped. Shows a diff of the changed rules and asks for
+      confirmation before applying.
+
+      Apply is additive: existing rules that are not in the specification are left
+      untouched. Use 'temporal cloud namespace caller-rate-limit delete' to remove
+      a rule.
+
+      The specification is a JSON array of caller rate limit specs. It can be
+      provided as inline JSON or loaded from a file by prefixing the path with '@'.
+      An rps of 0 blocks all traffic from the matched callers.
+
+      Example file (limits.json) with the default rule for caller namespaces and
+      a rule for a specific caller namespace:
+
+      ```
+      [
+        {"namespaceDefault": {"rps": 100}},
+        {"namespaceLimit": {"namespaceId": "caller-ns.my-account", "rps": 50}}
+      ]
+      ```
+
+      Example:
+
+      ```
+      temporal cloud namespace caller-rate-limit apply --namespace my-namespace.my-account \
+          --spec @limits.json
+      ```
+
+      Changed rules are applied one at a time. Apply stops at the first failure
+      and reports which rules were already applied. Rerunning is safe: rules that
+      were already applied are skipped, and rules whose last update failed are
+      retried.
+
+      Unchanged, active rules are skipped, so apply succeeds when nothing changes.
+
+      --async-operation-id and --resource-version can only be used when apply
+      changes a single rule.
+
+      With --async, operations are submitted without waiting; fail-fast then only
+      covers submission errors, so check each printed operation. With -o json, each
+      operation prints its own JSON document.
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - diff
+      - async-operation
+      - resource-version
+    options:
+      - name: spec
+        type: string
+        required: true
+        description: |
+          Caller rate limit specifications as a JSON array. Provide inline JSON
+          directly, or use '@path/to/file.json' to load from a file.
 
   # Namespace access commands (who has access to a namespace)
   - name: cloud namespace user
