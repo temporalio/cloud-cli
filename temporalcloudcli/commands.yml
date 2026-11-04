@@ -4796,6 +4796,8 @@ commands:
       Create a new API key owned by the specified service account.
       The token is printed once on creation and cannot be retrieved again.
 
+      Successful completion of this command does not guarantee that the new API key is immediately usable against a Namespace endpoint. API keys propagate asynchronously, and authentication requests may temporarily fail with `Request unauthorized`, including when the command waits for completion. See https://docs.temporal.io/cloud/api-keys#api-key-propagation.
+
       Example:
 
       ```
@@ -4837,6 +4839,8 @@ commands:
     description: |
       Create a new API key owned by the currently authenticated user.
       The token is printed once on creation and cannot be retrieved again.
+
+      Successful completion of this command does not guarantee that the new API key is immediately usable against a Namespace endpoint. API keys propagate asynchronously, and authentication requests may temporarily fail with `Request unauthorized`, including when the command waits for completion. See https://docs.temporal.io/cloud/api-keys#api-key-propagation.
 
       Example:
 
@@ -5038,6 +5042,8 @@ commands:
     description: |
       Wait for a Temporal Cloud async operation to reach a terminal state.
       Polls the operation status until it completes, fails, or is cancelled.
+
+      For API key create, enable, disable, and delete, `STATE_FULFILLED` confirms that the control plane operation completed. It does not confirm that the Namespace endpoint has applied the change. Waiting for the operation to finish does not replace checking that the key behaves as expected against the intended Namespace. See https://docs.temporal.io/cloud/api-keys#api-key-propagation.
 
       Example:
 
