@@ -2088,8 +2088,44 @@ func NewCloudNamespaceCallerRateLimitCommand(cctx *CommandContext, parent *Cloud
 	s.Command.Short = "Manage namespace caller rate limits"
 	s.Command.Long = "Commands for managing caller rate limits on Temporal Cloud namespaces.\n\nA caller rate limit caps the requests per second that callers, such as\nother namespaces, can send to a target namespace. A namespace can have a\ndefault rule for caller namespaces and rules for specific caller namespaces."
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceCallerRateLimitDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCallerRateLimitGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCallerRateLimitListCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceCallerRateLimitDeleteCommand struct {
+	Parent  *CloudNamespaceCallerRateLimitCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	CallerRateLimitCallerOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+}
+
+func NewCloudNamespaceCallerRateLimitDeleteCommand(cctx *CommandContext, parent *CloudNamespaceCallerRateLimitCommand) *CloudNamespaceCallerRateLimitDeleteCommand {
+	var s CloudNamespaceCallerRateLimitDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a namespace caller rate limit"
+	if hasHighlighting {
+		s.Command.Long = "Delete a caller rate limit rule on a Temporal Cloud namespace: either the\ndefault rule for caller namespaces or the rule for a specific caller namespace.\n\nExactly one of --caller-namespace-default or --caller-namespace is required.\n\nExample (default rule for caller namespaces):\n\n\x1b[1mtemporal cloud namespace caller-rate-limit delete --namespace my-namespace.my-account \\\n    --caller-namespace-default\x1b[0m\n\nExample (rule for a specific caller namespace):\n\n\x1b[1mtemporal cloud namespace caller-rate-limit delete --namespace my-namespace.my-account \\\n    --caller-namespace caller-ns.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Delete a caller rate limit rule on a Temporal Cloud namespace: either the\ndefault rule for caller namespaces or the rule for a specific caller namespace.\n\nExactly one of --caller-namespace-default or --caller-namespace is required.\n\nExample (default rule for caller namespaces):\n\n```\ntemporal cloud namespace caller-rate-limit delete --namespace my-namespace.my-account \\\n    --caller-namespace-default\n```\n\nExample (rule for a specific caller namespace):\n\n```\ntemporal cloud namespace caller-rate-limit delete --namespace my-namespace.my-account \\\n    --caller-namespace caller-ns.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.CallerRateLimitCallerOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
