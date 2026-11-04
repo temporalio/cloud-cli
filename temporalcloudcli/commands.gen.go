@@ -2088,10 +2088,49 @@ func NewCloudNamespaceCallerRateLimitCommand(cctx *CommandContext, parent *Cloud
 	s.Command.Short = "Manage namespace caller rate limits"
 	s.Command.Long = "Commands for managing caller rate limits on Temporal Cloud namespaces.\n\nA caller rate limit caps the requests per second that callers, such as\nother namespaces, can send to a target namespace. A namespace can have a\ndefault rule for caller namespaces and rules for specific caller namespaces."
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceCallerRateLimitApplyCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCallerRateLimitDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCallerRateLimitGetCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCallerRateLimitListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCallerRateLimitSetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceCallerRateLimitApplyCommand struct {
+	Parent  *CloudNamespaceCallerRateLimitCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	DiffOptions
+	AsyncOperationOptions
+	ResourceVersionOptions
+	Spec string
+}
+
+func NewCloudNamespaceCallerRateLimitApplyCommand(cctx *CommandContext, parent *CloudNamespaceCallerRateLimitCommand) *CloudNamespaceCallerRateLimitApplyCommand {
+	var s CloudNamespaceCallerRateLimitApplyCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "apply [flags]"
+	s.Command.Short = "Create or update namespace caller rate limits from a specification"
+	if hasHighlighting {
+		s.Command.Long = "Apply a list of caller rate limit rules to a Temporal Cloud namespace.\nEach rule in the specification is created if it doesn't exist, or updated\nif it differs from the existing rule. Rules that already match and are\nactive are skipped. Shows a diff of the changed rules and asks for\nconfirmation before applying.\n\nApply is additive: existing rules that are not in the specification are left\nuntouched. Use 'temporal cloud namespace caller-rate-limit delete' to remove\na rule.\n\nThe specification is a JSON array of caller rate limit specs. It can be\nprovided as inline JSON or loaded from a file by prefixing the path with '@'.\nAn rps of 0 blocks all traffic from the matched callers.\n\nExample file (limits.json) with the default rule for caller namespaces and\na rule for a specific caller namespace:\n\n\x1b[1m[\n  {\"namespaceDefault\": {\"rps\": 100}},\n  {\"namespaceLimit\": {\"namespaceId\": \"caller-ns.my-account\", \"rps\": 50}}\n]\x1b[0m\n\nExample:\n\n\x1b[1mtemporal cloud namespace caller-rate-limit apply --namespace my-namespace.my-account \\\n    --spec @limits.json\x1b[0m\n\nChanged rules are applied one at a time. Apply stops at the first failure\nand reports which rules were already applied. Rerunning is safe: rules that\nwere already applied are skipped, and rules whose last update failed are\nretried.\n\nUnchanged, active rules are skipped, so apply succeeds when nothing changes.\n\n--async-operation-id and --resource-version can only be used when apply\nchanges a single rule.\n\nWith --async, operations are submitted without waiting; fail-fast then only\ncovers submission errors, so check each printed operation. With -o json, each\noperation prints its own JSON document."
+	} else {
+		s.Command.Long = "Apply a list of caller rate limit rules to a Temporal Cloud namespace.\nEach rule in the specification is created if it doesn't exist, or updated\nif it differs from the existing rule. Rules that already match and are\nactive are skipped. Shows a diff of the changed rules and asks for\nconfirmation before applying.\n\nApply is additive: existing rules that are not in the specification are left\nuntouched. Use 'temporal cloud namespace caller-rate-limit delete' to remove\na rule.\n\nThe specification is a JSON array of caller rate limit specs. It can be\nprovided as inline JSON or loaded from a file by prefixing the path with '@'.\nAn rps of 0 blocks all traffic from the matched callers.\n\nExample file (limits.json) with the default rule for caller namespaces and\na rule for a specific caller namespace:\n\n```\n[\n  {\"namespaceDefault\": {\"rps\": 100}},\n  {\"namespaceLimit\": {\"namespaceId\": \"caller-ns.my-account\", \"rps\": 50}}\n]\n```\n\nExample:\n\n```\ntemporal cloud namespace caller-rate-limit apply --namespace my-namespace.my-account \\\n    --spec @limits.json\n```\n\nChanged rules are applied one at a time. Apply stops at the first failure\nand reports which rules were already applied. Rerunning is safe: rules that\nwere already applied are skipped, and rules whose last update failed are\nretried.\n\nUnchanged, active rules are skipped, so apply succeeds when nothing changes.\n\n--async-operation-id and --resource-version can only be used when apply\nchanges a single rule.\n\nWith --async, operations are submitted without waiting; fail-fast then only\ncovers submission errors, so check each printed operation. With -o json, each\noperation prints its own JSON document."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Spec, "spec", "", "Caller rate limit specifications as a JSON array. Provide inline JSON directly, or use '@path/to/file.json' to load from a file. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "spec")
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
+	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
