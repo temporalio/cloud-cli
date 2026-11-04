@@ -1993,6 +1993,41 @@ commands:
           must be greater than 0 when --capacity-mode is 'provisioned'. Ignored
           when --capacity-mode is 'on_demand'.
 
+  # Namespace caller rate limit commands
+  - name: cloud namespace caller-rate-limit
+    summary: Manage namespace caller rate limits
+    description: |
+      Commands for managing caller rate limits on Temporal Cloud namespaces.
+
+      A caller rate limit caps the requests per second that callers, such as
+      other namespaces, can send to a target namespace. A namespace can have a
+      default rule for caller namespaces and rules for specific caller namespaces.
+    has-init: false
+  - name: cloud namespace caller-rate-limit get
+    summary: Get a namespace caller rate limit
+    description: |
+      Retrieve the caller rate limit rule on a Temporal Cloud namespace for either
+      the default caller namespace rule or a specific caller namespace.
+
+      Example (default rule for caller namespaces):
+
+      ```
+      temporal cloud namespace caller-rate-limit get --namespace my-namespace.my-account \
+          --caller-namespace-default
+      ```
+
+      Example (rule for a specific caller namespace):
+
+      ```
+      temporal cloud namespace caller-rate-limit get --namespace my-namespace.my-account \
+          --caller-namespace caller-ns.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - caller-rate-limit-caller
+
   # Namespace access commands (who has access to a namespace)
   - name: cloud namespace user
     summary: Inspect users with access to a namespace
@@ -5368,6 +5403,19 @@ option-sets:
         description: |
           Custom role ID to assign. Repeat to assign multiple. When provided,
           replaces the existing custom role list.
+  - name: caller-rate-limit-caller
+    options:
+      - name: caller-namespace-default
+        type: bool
+        description: |
+          Target the default rate limit applied to caller namespaces without a
+          specific rule. Mutually exclusive with --caller-namespace.
+      - name: caller-namespace
+        type: string
+        description: |
+          The fully qualified caller namespace name in the format 'namespace.account'
+          (e.g., 'caller-ns.my-account'). Mutually exclusive with
+          --caller-namespace-default.
   - name: export-sink
     options:
       - name: sink-name

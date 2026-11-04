@@ -159,6 +159,18 @@ func (v *CustomRoleOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringArrayVar(&v.CustomRole, "custom-role", nil, "Custom role ID to assign. Repeat to assign multiple. When provided, replaces the existing custom role list.")
 }
 
+type CallerRateLimitCallerOptions struct {
+	CallerNamespaceDefault bool
+	CallerNamespace        string
+	FlagSet                *pflag.FlagSet
+}
+
+func (v *CallerRateLimitCallerOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.BoolVar(&v.CallerNamespaceDefault, "caller-namespace-default", false, "Target the default rate limit applied to caller namespaces without a specific rule. Mutually exclusive with --caller-namespace.")
+	f.StringVar(&v.CallerNamespace, "caller-namespace", "", "The fully qualified caller namespace name in the format 'namespace.account' (e.g., 'caller-ns.my-account'). Mutually exclusive with --caller-namespace-default.")
+}
+
 type ExportSinkOptions struct {
 	SinkName string
 	FlagSet  *pflag.FlagSet
@@ -1883,6 +1895,7 @@ func NewCloudNamespaceCommand(cctx *CommandContext, parent *CloudCommand) *Cloud
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewCloudNamespaceApiKeyCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceApplyCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudNamespaceCallerRateLimitCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCapacityCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceCodecCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudNamespaceConnectivityCommand(cctx, &s).Command)
@@ -2055,6 +2068,53 @@ func NewCloudNamespaceApplyCommand(cctx *CommandContext, parent *CloudNamespaceC
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.DiffOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type CloudNamespaceCallerRateLimitCommand struct {
+	Parent  *CloudNamespaceCommand
+	Command cobra.Command
+}
+
+func NewCloudNamespaceCallerRateLimitCommand(cctx *CommandContext, parent *CloudNamespaceCommand) *CloudNamespaceCallerRateLimitCommand {
+	var s CloudNamespaceCallerRateLimitCommand
+	s.Parent = parent
+	s.Command.Use = "caller-rate-limit"
+	s.Command.Short = "Manage namespace caller rate limits"
+	s.Command.Long = "Commands for managing caller rate limits on Temporal Cloud namespaces.\n\nA caller rate limit caps the requests per second that callers, such as\nother namespaces, can send to a target namespace. A namespace can have a\ndefault rule for caller namespaces and rules for specific caller namespaces."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewCloudNamespaceCallerRateLimitGetCommand(cctx, &s).Command)
+	return &s
+}
+
+type CloudNamespaceCallerRateLimitGetCommand struct {
+	Parent  *CloudNamespaceCallerRateLimitCommand
+	Command cobra.Command
+	ClientOptions
+	NamespaceOptions
+	CallerRateLimitCallerOptions
+}
+
+func NewCloudNamespaceCallerRateLimitGetCommand(cctx *CommandContext, parent *CloudNamespaceCallerRateLimitCommand) *CloudNamespaceCallerRateLimitGetCommand {
+	var s CloudNamespaceCallerRateLimitGetCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "get [flags]"
+	s.Command.Short = "Get a namespace caller rate limit"
+	if hasHighlighting {
+		s.Command.Long = "Retrieve the caller rate limit rule on a Temporal Cloud namespace for either\nthe default caller namespace rule or a specific caller namespace.\n\nExample (default rule for caller namespaces):\n\n\x1b[1mtemporal cloud namespace caller-rate-limit get --namespace my-namespace.my-account \\\n    --caller-namespace-default\x1b[0m\n\nExample (rule for a specific caller namespace):\n\n\x1b[1mtemporal cloud namespace caller-rate-limit get --namespace my-namespace.my-account \\\n    --caller-namespace caller-ns.my-account\x1b[0m"
+	} else {
+		s.Command.Long = "Retrieve the caller rate limit rule on a Temporal Cloud namespace for either\nthe default caller namespace rule or a specific caller namespace.\n\nExample (default rule for caller namespaces):\n\n```\ntemporal cloud namespace caller-rate-limit get --namespace my-namespace.my-account \\\n    --caller-namespace-default\n```\n\nExample (rule for a specific caller namespace):\n\n```\ntemporal cloud namespace caller-rate-limit get --namespace my-namespace.my-account \\\n    --caller-namespace caller-ns.my-account\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ClientOptions.BuildFlags(s.Command.Flags())
+	s.NamespaceOptions.BuildFlags(s.Command.Flags())
+	s.CallerRateLimitCallerOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
