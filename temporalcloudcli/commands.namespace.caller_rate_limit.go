@@ -3,6 +3,7 @@ package temporalcloudcli
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
@@ -11,7 +12,19 @@ import (
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
-const callerTypeNamespace = "namespace"
+const (
+	callerTypeNamespace = "namespace"
+	// callerRateLimitBlocksAllWarning is the rps 0 warning shared by set and apply. Both print it
+	// with Println, a no-op in JSON mode, matching PromptApply skipping the diff there.
+	callerRateLimitBlocksAllWarning = "rps 0 blocks all traffic from the matched callers"
+)
+
+// callerRateLimitChange is one rule to create (existing == nil) or update. key orders apply's changes.
+type callerRateLimitChange struct {
+	key      string
+	existing *namespacev1.CallerRateLimit
+	spec     *namespacev1.CallerRateLimitSpec
+}
 
 func (c *CloudNamespaceCallerRateLimitGetCommand) run(cctx *CommandContext, _ []string) error {
 	filter, err := callerFilterFromFlags(c.CallerNamespaceDefault, c.CallerNamespace)
@@ -110,6 +123,118 @@ func (c *CloudNamespaceCallerRateLimitDeleteCommand) run(cctx *CommandContext, _
 		AsyncOperationId:  c.AsyncOperationId,
 	})
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleDeleteOperation(cctx, resp, err)
+}
+
+// AIDEV-NOTE: set is an upsert. PromptApply is always called; existing is a typed nil
+// when the rule doesn't exist (an untyped nil makes PrintDiff fail silently).
+func (c *CloudNamespaceCallerRateLimitSetCommand) run(cctx *CommandContext, _ []string) error {
+	filter, err := callerFilterFromFlags(c.CallerNamespaceDefault, c.CallerNamespace)
+	if err != nil {
+		return err
+	}
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	rl, err := findCallerRateLimit(cctx, client, c.Namespace, filter)
+	if err != nil {
+		return err
+	}
+	rps := float32FlagToFloat64(c.Rps)
+	spec := callerRateLimitSpec(filter, rps)
+	var existingSpec *namespacev1.CallerRateLimitSpec
+	if rl != nil {
+		existingSpec = rl.Spec
+	}
+	if callerRateLimitBlocksAll(spec) {
+		cctx.Printer.Println("Warning: " + callerRateLimitBlocksAllWarning + ".")
+	}
+	yes, err := cctx.GetPrompter().PromptApply(existingSpec, spec, false)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting set.")
+	}
+	ch := callerRateLimitChange{existing: rl, spec: spec}
+	return upsertCallerRateLimit(cctx, client, c.Namespace, ch, c.AsyncOperationOptions, c.ResourceVersion)
+}
+
+// upsertCallerRateLimit creates ch.spec when ch.existing is nil, otherwise updates ch.existing,
+// and, unless --async, waits for the async operation. resourceVersion overrides the existing
+// rule's resource version when set.
+// AIDEV-NOTE: --resource-version is ignored on create, as custom-role apply does.
+func upsertCallerRateLimit(
+	cctx *CommandContext,
+	client cloudservice.CloudServiceClient,
+	namespace string,
+	ch callerRateLimitChange,
+	asyncOpts AsyncOperationOptions,
+	resourceVersion string,
+) error {
+	poller := cctx.GetPoller(client, asyncOpts)
+	if ch.existing == nil {
+		resp, err := client.CreateCallerRateLimit(cctx, &cloudservice.CreateCallerRateLimitRequest{
+			Namespace:        namespace,
+			Spec:             ch.spec,
+			AsyncOperationId: asyncOpts.AsyncOperationId,
+		})
+		return poller.HandleCreateAsyncOperationResponse(cctx, resp, err)
+	}
+	rv := ch.existing.ResourceVersion
+	if resourceVersion != "" {
+		rv = resourceVersion
+	}
+	resp, err := client.UpdateCallerRateLimit(cctx, &cloudservice.UpdateCallerRateLimitRequest{
+		Namespace:         namespace,
+		CallerRateLimitId: ch.existing.Id,
+		Spec:              ch.spec,
+		ResourceVersion:   rv,
+		AsyncOperationId:  asyncOpts.AsyncOperationId,
+	})
+	return poller.HandleUpdateOperation(cctx, resp, err)
+}
+
+// callerRateLimitBlocksAll reports whether spec has a rule whose rps is 0, which blocks all traffic
+// from the matched callers.
+// AIDEV-TODO: PrintDiff omits proto default values, so rps 0 is invisible in set's and apply's
+// diffs; add EmitDefaultValues to printer.DiffOptions (and thread through the prompter) as a
+// follow-up, then drop the warning.
+// AIDEV-NOTE: The warning is not covered by unit tests; text output includes poller timestamps.
+func callerRateLimitBlocksAll(spec *namespacev1.CallerRateLimitSpec) bool {
+	switch rule := spec.GetRule().(type) {
+	case *namespacev1.CallerRateLimitSpec_NamespaceDefault:
+		return rule.NamespaceDefault.GetRps() == 0
+	case *namespacev1.CallerRateLimitSpec_NamespaceLimit:
+		return rule.NamespaceLimit.GetRps() == 0
+	}
+	return false
+}
+
+// callerRateLimitSpec builds the rule for the caller selected by filter.
+func callerRateLimitSpec(
+	filter *cloudservice.GetCallerRateLimitsRequest_CallerFilter,
+	rps float64,
+) *namespacev1.CallerRateLimitSpec {
+	if filter.Default {
+		return &namespacev1.CallerRateLimitSpec{
+			Rule: &namespacev1.CallerRateLimitSpec_NamespaceDefault{
+				NamespaceDefault: &namespacev1.NamespaceDefaultCallerRateLimit{Rps: rps},
+			},
+		}
+	}
+	return &namespacev1.CallerRateLimitSpec{
+		Rule: &namespacev1.CallerRateLimitSpec_NamespaceLimit{
+			NamespaceLimit: &namespacev1.NamespaceCallerRateLimit{NamespaceId: filter.Caller, Rps: rps},
+		},
+	}
+}
+
+// AIDEV-NOTE: gen-commands only emits float32 flags; round-trip through the
+// shortest float32 decimal so --rps 0.1 is sent as 0.1, not 0.10000000149.
+func float32FlagToFloat64(f float32) float64 {
+	v, _ := strconv.ParseFloat(strconv.FormatFloat(float64(f), 'g', -1, 32), 64)
+	return v
 }
 
 // callerFilterFromFlags builds the server-side caller filter from the mutually
