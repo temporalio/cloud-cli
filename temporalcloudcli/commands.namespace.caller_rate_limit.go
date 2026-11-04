@@ -27,11 +27,7 @@ func (c *CloudNamespaceCallerRateLimitGetCommand) run(cctx *CommandContext, _ []
 		return err
 	}
 	if rl == nil {
-		if filter.Default {
-			return fmt.Errorf("default caller rate limit not found on namespace %q", c.Namespace)
-		}
-		return fmt.Errorf("caller rate limit for caller namespace %q not found on namespace %q",
-			filter.Caller, c.Namespace)
+		return callerRateLimitNotFoundErr(c.Namespace, filter)
 	}
 	// EmitDefaultValues so a rule with rps 0 (blocks all) still shows its rps.
 	return cctx.Printer.PrintResource(rl, printer.PrintResourceOptions{EmitDefaultValues: true})
@@ -75,6 +71,45 @@ func (c *CloudNamespaceCallerRateLimitListCommand) run(cctx *CommandContext, _ [
 		printer.PrintResourceOptions{Fields: []string{"Id", "State"}, EmitDefaultValues: true},
 		printer.TableOptions{},
 	)
+}
+
+// AIDEV-NOTE: A missing rule is an error even with --idempotent, matching the
+// custom-role and nexus endpoint deletes. --idempotent only covers the Delete RPC
+// itself returning NotFound (e.g. a concurrent delete), via the poller.
+func (c *CloudNamespaceCallerRateLimitDeleteCommand) run(cctx *CommandContext, _ []string) error {
+	filter, err := callerFilterFromFlags(c.CallerNamespaceDefault, c.CallerNamespace)
+	if err != nil {
+		return err
+	}
+	client, err := cctx.GetCloudClient(c.ClientOptions)
+	if err != nil {
+		return err
+	}
+	rl, err := findCallerRateLimit(cctx, client, c.Namespace, filter)
+	if err != nil {
+		return err
+	}
+	if rl == nil {
+		return callerRateLimitNotFoundErr(c.Namespace, filter)
+	}
+	yes, err := cctx.GetPrompter().PromptYes("Delete")
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("Aborting delete.")
+	}
+	rv := rl.ResourceVersion
+	if c.ResourceVersion != "" {
+		rv = c.ResourceVersion
+	}
+	resp, err := client.DeleteCallerRateLimit(cctx, &cloudservice.DeleteCallerRateLimitRequest{
+		Namespace:         c.Namespace,
+		CallerRateLimitId: rl.Id,
+		ResourceVersion:   rv,
+		AsyncOperationId:  c.AsyncOperationId,
+	})
+	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleDeleteOperation(cctx, resp, err)
 }
 
 // callerFilterFromFlags builds the server-side caller filter from the mutually
@@ -125,4 +160,16 @@ func findCallerRateLimit(
 	}
 	return nil, fmt.Errorf("expected at most one caller rate limit on namespace %q, found %d (ids: %s)",
 		namespace, len(ids), strings.Join(ids, ", "))
+}
+
+// callerRateLimitNotFoundErr describes a missing rule in terms of the flag the user passed.
+func callerRateLimitNotFoundErr(
+	namespace string,
+	filter *cloudservice.GetCallerRateLimitsRequest_CallerFilter,
+) error {
+	if filter.Default {
+		return fmt.Errorf("default caller rate limit not found on namespace %q", namespace)
+	}
+	return fmt.Errorf("caller rate limit for caller namespace %q not found on namespace %q",
+		filter.Caller, namespace)
 }

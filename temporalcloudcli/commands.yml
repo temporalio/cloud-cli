@@ -2103,6 +2103,34 @@ commands:
         type: string
         description: |
           Token for retrieving the next page of results in a paginated list.
+  - name: cloud namespace caller-rate-limit delete
+    summary: Delete a namespace caller rate limit
+    description: |
+      Delete a caller rate limit rule on a Temporal Cloud namespace: either the
+      default rule for caller namespaces or the rule for a specific caller namespace.
+
+      Exactly one of --caller-namespace-default or --caller-namespace is required.
+
+      Example (default rule for caller namespaces):
+
+      ```
+      temporal cloud namespace caller-rate-limit delete --namespace my-namespace.my-account \
+          --caller-namespace-default
+      ```
+
+      Example (rule for a specific caller namespace):
+
+      ```
+      temporal cloud namespace caller-rate-limit delete --namespace my-namespace.my-account \
+          --caller-namespace caller-ns.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - caller-rate-limit-caller
+      - async-operation
+      - resource-version
 
   # Namespace access commands (who has access to a namespace)
   - name: cloud namespace user
