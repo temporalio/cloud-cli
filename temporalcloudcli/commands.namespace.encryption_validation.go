@@ -3,24 +3,25 @@ package temporalcloudcli
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	namespacev1 "go.temporal.io/cloud-sdk/api/namespace/v1"
-	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 )
 
 const (
-	defaultEncryptionValidationMetadataKey   = converter.MetadataEncoding
-	defaultEncryptionValidationMetadataValue = "binary/encrypted"
-
 	encryptionValidationModeDisabled = "disabled"
 	encryptionValidationModeWarn     = "warn"
 	encryptionValidationModeDeny     = "deny"
+
+	alreadyInDesiredStateMessage = "Resource already in desired state"
 )
+
+var encryptionValidationSetFlags = []string{"mode", "metadata-key", "metadata-value", "inspect-header", "inspect-failure"}
 
 func (c *CloudNamespaceEncryptionValidationGetCommand) run(cctx *CommandContext, _ []string) error {
 	client, err := cctx.GetCloudClient(c.ClientOptions)
@@ -47,6 +48,10 @@ func (c *CloudNamespaceEncryptionValidationGetCommand) run(cctx *CommandContext,
 
 func (c *CloudNamespaceEncryptionValidationSetCommand) run(cctx *CommandContext, _ []string) error {
 	flags := c.Command.Flags()
+	if !slices.ContainsFunc(encryptionValidationSetFlags, flags.Changed) {
+		return errors.New("at least one of --mode, --metadata-key, --metadata-value, --inspect-header, " +
+			"or --inspect-failure must be set")
+	}
 	var mode namespacev1.EncryptionValidationSpec_EncryptionValidationMode
 	if flags.Changed("mode") {
 		var err error
@@ -88,6 +93,10 @@ func (c *CloudNamespaceEncryptionValidationSetCommand) run(cctx *CommandContext,
 	if flags.Changed("inspect-failure") {
 		newSpec.EncryptionValidation.InspectFailure = c.InspectFailure
 	}
+	if proto.Equal(ns.Spec, newSpec) {
+		cctx.Printer.Println(alreadyInDesiredStateMessage)
+		return nil
+	}
 
 	yes, err := cctx.GetPrompter().PromptApply(ns.Spec, newSpec, false)
 	if err != nil {
@@ -122,7 +131,21 @@ func (c *CloudNamespaceEncryptionValidationEnableCommand) run(cctx *CommandConte
 
 	ns := res.Namespace
 	newSpec := proto.Clone(ns.Spec).(*namespacev1.NamespaceSpec)
-	newSpec.EncryptionValidation = enableEncryptionValidation(newSpec.EncryptionValidation, c.Deny)
+	if newSpec.EncryptionValidation == nil {
+		newSpec.EncryptionValidation = &namespacev1.EncryptionValidationSpec{}
+	}
+	ev := newSpec.EncryptionValidation
+	// --deny always results in deny mode. Without it, an existing warn/deny mode is kept.
+	if c.Deny {
+		ev.Mode = namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_DENY
+	} else if ev.Mode == namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_UNSPECIFIED ||
+		ev.Mode == namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_DISABLED {
+		ev.Mode = namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_WARN
+	}
+	if proto.Equal(ns.Spec, newSpec) {
+		cctx.Printer.Println(alreadyInDesiredStateMessage)
+		return nil
+	}
 
 	yes, err := cctx.GetPrompter().PromptApply(ns.Spec, newSpec, false)
 	if err != nil {
@@ -156,13 +179,16 @@ func (c *CloudNamespaceEncryptionValidationDisableCommand) run(cctx *CommandCont
 	}
 
 	ns := res.Namespace
-	newSpec := proto.Clone(ns.Spec).(*namespacev1.NamespaceSpec)
-	if newSpec.EncryptionValidation == nil {
-		newSpec.EncryptionValidation = &namespacev1.EncryptionValidationSpec{}
-	} else {
-		newSpec.EncryptionValidation = proto.Clone(newSpec.EncryptionValidation).(*namespacev1.EncryptionValidationSpec)
+	if ns.Spec.EncryptionValidation == nil {
+		cctx.Printer.Println(alreadyInDesiredStateMessage)
+		return nil
 	}
+	newSpec := proto.Clone(ns.Spec).(*namespacev1.NamespaceSpec)
 	newSpec.EncryptionValidation.Mode = namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_DISABLED
+	if proto.Equal(ns.Spec, newSpec) {
+		cctx.Printer.Println(alreadyInDesiredStateMessage)
+		return nil
+	}
 
 	yes, err := cctx.GetPrompter().PromptApply(ns.Spec, newSpec, false)
 	if err != nil {
@@ -183,27 +209,6 @@ func (c *CloudNamespaceEncryptionValidationDisableCommand) run(cctx *CommandCont
 		AsyncOperationId: c.AsyncOperationId,
 	})
 	return cctx.GetPoller(client, c.AsyncOperationOptions).HandleUpdateOperation(cctx, resp, err)
-}
-
-func enableEncryptionValidation(existing *namespacev1.EncryptionValidationSpec, deny bool) *namespacev1.EncryptionValidationSpec {
-	mode := namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_WARN
-	if deny {
-		mode = namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_DENY
-	}
-
-	if existing == nil {
-		return &namespacev1.EncryptionValidationSpec{
-			Mode:           mode,
-			MetadataKey:    defaultEncryptionValidationMetadataKey,
-			MetadataValues: []string{defaultEncryptionValidationMetadataValue},
-		}
-	}
-
-	spec := proto.Clone(existing).(*namespacev1.EncryptionValidationSpec)
-	if spec.Mode == namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_DISABLED {
-		spec.Mode = mode
-	}
-	return spec
 }
 
 func parseEncryptionValidationMode(value string) (namespacev1.EncryptionValidationSpec_EncryptionValidationMode, error) {

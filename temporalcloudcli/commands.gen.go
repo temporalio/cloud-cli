@@ -2443,8 +2443,8 @@ func NewCloudNamespaceCreateCommand(cctx *CommandContext, parent *CloudNamespace
 	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "The ID of the project to create the namespace in. If omitted, the namespace is created in the account's default project.")
 	s.Command.Flags().StringVar(&s.Description, "description", "", "The description is a human-readable description of the namespace. Must be at most 255 printable ASCII characters plus whitespace. Optional, default is empty.")
 	s.Command.Flags().StringVar(&s.EncryptionValidationMode, "encryption-validation-mode", "", "[Experimental] Payload encryption validation mode. Valid values: disabled, warn, deny. When any encryption-validation flag is set, this field is required.")
-	s.Command.Flags().StringVar(&s.EncryptionValidationMetadataKey, "encryption-validation-metadata-key", "", "[Experimental] Payload metadata key used to identify encrypted payloads. If omitted, an empty key is sent.")
-	s.Command.Flags().StringArrayVar(&s.EncryptionValidationMetadataValue, "encryption-validation-metadata-value", nil, "[Experimental] Payload metadata value used to identify encrypted payloads. Repeat to add additional values. If omitted, no values are sent.")
+	s.Command.Flags().StringVar(&s.EncryptionValidationMetadataKey, "encryption-validation-metadata-key", "", "[Experimental] Payload metadata key used to identify encrypted payloads. If omitted, the server default (encoding) applies.")
+	s.Command.Flags().StringArrayVar(&s.EncryptionValidationMetadataValue, "encryption-validation-metadata-value", nil, "[Experimental] Payload metadata value used to identify encrypted payloads. Repeat to add additional values. If omitted, the server default (binary/encrypted) applies.")
 	s.Command.Flags().BoolVar(&s.EncryptionValidationInspectHeader, "encryption-validation-inspect-header", false, "[Experimental] Inspect workflow headers for encryption validation. Default is false.")
 	s.Command.Flags().BoolVar(&s.EncryptionValidationInspectFailure, "encryption-validation-inspect-failure", false, "[Experimental] Inspect Failure payloads for encryption validation. Default is false.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -2655,9 +2655,9 @@ func NewCloudNamespaceEncryptionValidationDisableCommand(cctx *CommandContext, p
 	s.Command.Use = "disable [flags]"
 	s.Command.Short = "[Experimental] Disable payload encryption validation for a namespace"
 	if hasHighlighting {
-		s.Command.Long = "Disable payload encryption validation for a Temporal Cloud namespace.\nExisting metadata and inspect settings are kept.\n\nExample:\n\n\x1b[1mtemporal cloud namespace encryption-validation disable --namespace my-namespace.my-account\x1b[0m"
+		s.Command.Long = "Disable payload encryption validation for a Temporal Cloud namespace.\nExisting metadata and inspect settings are kept. If validation is not\nconfigured or is already disabled, nothing is changed.\n\nExample:\n\n\x1b[1mtemporal cloud namespace encryption-validation disable --namespace my-namespace.my-account\x1b[0m"
 	} else {
-		s.Command.Long = "Disable payload encryption validation for a Temporal Cloud namespace.\nExisting metadata and inspect settings are kept.\n\nExample:\n\n```\ntemporal cloud namespace encryption-validation disable --namespace my-namespace.my-account\n```"
+		s.Command.Long = "Disable payload encryption validation for a Temporal Cloud namespace.\nExisting metadata and inspect settings are kept. If validation is not\nconfigured or is already disabled, nothing is changed.\n\nExample:\n\n```\ntemporal cloud namespace encryption-validation disable --namespace my-namespace.my-account\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -2689,12 +2689,12 @@ func NewCloudNamespaceEncryptionValidationEnableCommand(cctx *CommandContext, pa
 	s.Command.Use = "enable [flags]"
 	s.Command.Short = "[Experimental] Enable payload encryption validation for a namespace"
 	if hasHighlighting {
-		s.Command.Long = "Enable payload encryption validation for a Temporal Cloud namespace.\nIf validation has not been configured, default values are applied\n(mode=warn, metadata-key=encoding, metadata-values=[binary/encrypted]).\nIf validation is disabled, the existing configuration is re-enabled.\nIf validation is already warn or deny, the existing configuration is kept.\nUse --deny to enable in deny mode.\n\nExample:\n\n\x1b[1mtemporal cloud namespace encryption-validation enable --namespace my-namespace.my-account\x1b[0m"
+		s.Command.Long = "Enable payload encryption validation for a Temporal Cloud namespace.\nIf validation has not been configured, it is enabled in warn mode with\nno metadata key or values, so the defaults apply\n(metadata-key=encoding, metadata-values=[binary/encrypted]).\nIf validation is disabled, the existing configuration is re-enabled.\nUse --deny to enable in deny mode; this also switches a namespace that\nis already in warn mode to deny. Without --deny, a namespace that is\nalready in warn or deny mode is left unchanged.\n\nExample:\n\n\x1b[1mtemporal cloud namespace encryption-validation enable --namespace my-namespace.my-account\x1b[0m"
 	} else {
-		s.Command.Long = "Enable payload encryption validation for a Temporal Cloud namespace.\nIf validation has not been configured, default values are applied\n(mode=warn, metadata-key=encoding, metadata-values=[binary/encrypted]).\nIf validation is disabled, the existing configuration is re-enabled.\nIf validation is already warn or deny, the existing configuration is kept.\nUse --deny to enable in deny mode.\n\nExample:\n\n```\ntemporal cloud namespace encryption-validation enable --namespace my-namespace.my-account\n```"
+		s.Command.Long = "Enable payload encryption validation for a Temporal Cloud namespace.\nIf validation has not been configured, it is enabled in warn mode with\nno metadata key or values, so the defaults apply\n(metadata-key=encoding, metadata-values=[binary/encrypted]).\nIf validation is disabled, the existing configuration is re-enabled.\nUse --deny to enable in deny mode; this also switches a namespace that\nis already in warn mode to deny. Without --deny, a namespace that is\nalready in warn or deny mode is left unchanged.\n\nExample:\n\n```\ntemporal cloud namespace encryption-validation enable --namespace my-namespace.my-account\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().BoolVar(&s.Deny, "deny", false, "Enable validation in deny mode instead of warn.")
+	s.Command.Flags().BoolVar(&s.Deny, "deny", false, "Enable validation in deny mode instead of warn. Switches warn mode to deny.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
@@ -2757,9 +2757,9 @@ func NewCloudNamespaceEncryptionValidationSetCommand(cctx *CommandContext, paren
 	s.Command.Use = "set [flags]"
 	s.Command.Short = "[Experimental] Set namespace payload encryption validation configuration"
 	if hasHighlighting {
-		s.Command.Long = "Update the payload encryption validation configuration for a Temporal Cloud\nnamespace. Omitted optional flags keep the existing values.\n\nExample:\n\n\x1b[1mtemporal cloud namespace encryption-validation set --namespace my-namespace.my-account --mode warn --metadata-key encoding --metadata-value binary/encrypted\x1b[0m"
+		s.Command.Long = "Update the payload encryption validation configuration for a Temporal Cloud\nnamespace. At least one flag must be set. Omitted flags keep the\nexisting values. An empty metadata key or values means the server\ndefaults apply (metadata-key=encoding, metadata-values=[binary/encrypted]).\n\nExample:\n\n\x1b[1mtemporal cloud namespace encryption-validation set --namespace my-namespace.my-account --mode warn --metadata-key encoding --metadata-value binary/encrypted\x1b[0m"
 	} else {
-		s.Command.Long = "Update the payload encryption validation configuration for a Temporal Cloud\nnamespace. Omitted optional flags keep the existing values.\n\nExample:\n\n```\ntemporal cloud namespace encryption-validation set --namespace my-namespace.my-account --mode warn --metadata-key encoding --metadata-value binary/encrypted\n```"
+		s.Command.Long = "Update the payload encryption validation configuration for a Temporal Cloud\nnamespace. At least one flag must be set. Omitted flags keep the\nexisting values. An empty metadata key or values means the server\ndefaults apply (metadata-key=encoding, metadata-values=[binary/encrypted]).\n\nExample:\n\n```\ntemporal cloud namespace encryption-validation set --namespace my-namespace.my-account --mode warn --metadata-key encoding --metadata-value binary/encrypted\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Mode, "mode", "", "Payload encryption validation mode. Valid values: disabled, warn, deny. If omitted, the existing mode is kept. Required when encryption validation is not configured yet.")
