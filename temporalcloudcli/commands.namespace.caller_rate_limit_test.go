@@ -56,6 +56,7 @@ type (
 		resourceVersion  string
 		asyncOperationID string
 		verboseDiff      bool
+		async            bool
 	}
 
 	// mutationExpectation sets one Create or Update expectation and returns it for ordering.
@@ -743,7 +744,10 @@ func TestSetCallerRateLimit_NeitherFlagSet(t *testing.T) {
 func (f callerRateLimitApplyFlags) command() temporalcloudcli.CloudNamespaceCallerRateLimitApplyCommand {
 	return temporalcloudcli.CloudNamespaceCallerRateLimitApplyCommand{
 		NamespaceOptions:       temporalcloudcli.NamespaceOptions{Namespace: "my-ns.acct"},
-		AsyncOperationOptions:  temporalcloudcli.AsyncOperationOptions{AsyncOperationId: f.asyncOperationID},
+		AsyncOperationOptions: temporalcloudcli.AsyncOperationOptions{
+			AsyncOperationId: f.asyncOperationID,
+			Async:            f.async,
+		},
 		ResourceVersionOptions: temporalcloudcli.ResourceVersionOptions{ResourceVersion: f.resourceVersion},
 		DiffOptions:            temporalcloudcli.DiffOptions{VerboseDiff: f.verboseDiff},
 		Spec:                   f.spec,
@@ -881,6 +885,25 @@ func TestApplyCallerRateLimits(t *testing.T) {
 			pollID: "op-1",
 			expectedErr: `failed to apply caller rate limit for caller namespace "caller-ns.acct": ` +
 				`update operation failed: api error (already applied: default caller rate limit)`,
+		},
+		{
+			// With --async, earlier rules were only submitted, so the error says so.
+			// The harness poller always waits, so the first op is still polled.
+			name: "FailFastAsyncReportsSubmitted",
+			flags: callerRateLimitApplyFlags{
+				spec:  `[{"namespaceLimit":{"namespaceId":"caller-ns.acct","rps":20}},{"namespaceDefault":{"rps":200}}]`,
+				async: true,
+			},
+			pages:          [][]*namespacev1.CallerRateLimit{existingPage},
+			expectedBefore: callerRateLimitDiffList(testCallerRateLimitDefault.Spec, testCallerRateLimitCaller.Spec),
+			expectedAfter:  callerRateLimitDiffList(defaultRuleSpec(200), callerUpdated),
+			ops: []mutationExpectation{
+				updateOp(testCallerRateLimitDefault, defaultRuleSpec(200), "rv-default", "", "op-1", nil),
+				updateOp(testCallerRateLimitCaller, callerUpdated, "rv-caller", "", "op-2", errors.New("api error")),
+			},
+			pollID: "op-1",
+			expectedErr: `failed to apply caller rate limit for caller namespace "caller-ns.acct": ` +
+				`update operation failed: api error (already submitted: default caller rate limit)`,
 		},
 		{
 			// An entry with no rule is not checked client-side: it is planned as a create.
