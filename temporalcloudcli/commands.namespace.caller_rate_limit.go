@@ -170,6 +170,8 @@ func (c *CloudNamespaceCallerRateLimitSetCommand) run(cctx *CommandContext, _ []
 // rules not in --spec are left untouched. Changed rules are applied one at a time in
 // key order (the same order as the diff), failing fast. A rule is skipped only when its
 // spec matches and it is active, so a rerun skips applied rules and retries failed ones.
+// It also re-sends rules whose operation is still in progress (user decision: documented
+// in the help text rather than skipped).
 func (c *CloudNamespaceCallerRateLimitApplyCommand) run(cctx *CommandContext, _ []string) error {
 	specs, err := parseCallerRateLimitSpecs(cctx, c.Spec)
 	if err != nil {
@@ -195,6 +197,11 @@ func (c *CloudNamespaceCallerRateLimitApplyCommand) run(cctx *CommandContext, _ 
 	if err := c.confirmChanges(cctx, changes); err != nil {
 		return err
 	}
+	// With --async, earlier rules were only submitted, not applied.
+	doneVerb := "applied"
+	if c.Async {
+		doneVerb = "submitted"
+	}
 	var applied []string
 	for _, ch := range changes {
 		err := upsertCallerRateLimit(cctx, client, c.Namespace, ch, c.AsyncOperationOptions, c.ResourceVersion)
@@ -203,8 +210,8 @@ func (c *CloudNamespaceCallerRateLimitApplyCommand) run(cctx *CommandContext, _ 
 			if len(applied) > 0 {
 				done = strings.Join(applied, ", ")
 			}
-			return fmt.Errorf("failed to apply %s: %w (already applied: %s)",
-				describeCallerRateLimit(ch.spec), err, done)
+			return fmt.Errorf("failed to apply %s: %w (already %s: %s)",
+				describeCallerRateLimit(ch.spec), err, doneVerb, done)
 		}
 		applied = append(applied, describeCallerRateLimit(ch.spec))
 	}
@@ -232,6 +239,12 @@ func (c *CloudNamespaceCallerRateLimitApplyCommand) confirmChanges(
 		after.CallerRateLimits = append(after.CallerRateLimits, &namespacev1.CallerRateLimit{Spec: ch.spec})
 		// The diff doesn't name the rule, so the plan line does.
 		line := action + " " + describeCallerRateLimit(ch.spec)
+		// An unchanged spec is planned only for a rule that isn't active, and its diff is empty,
+		// so the plan line says why it is sent.
+		if ch.existing != nil && proto.Equal(ch.existing.Spec, ch.spec) {
+			line += " (retrying: state " +
+				strings.TrimPrefix(ch.existing.GetState().String(), "RESOURCE_STATE_") + ")"
+		}
 		if callerRateLimitBlocksAll(ch.spec) {
 			line += " (warning: " + callerRateLimitBlocksAllWarning + ")"
 		}
@@ -400,7 +413,8 @@ func describeCallerRateLimit(spec *namespacev1.CallerRateLimitSpec) string {
 // AIDEV-TODO: PrintDiff omits proto default values, so rps 0 is invisible in set's and apply's
 // diffs; add EmitDefaultValues to printer.DiffOptions (and thread through the prompter) as a
 // follow-up, then drop the warning.
-// AIDEV-NOTE: The warning is not covered by unit tests; text output includes poller timestamps.
+// AIDEV-NOTE: The warning and apply's retry plan-line suffix are not covered by unit tests;
+// text output includes poller timestamps.
 func callerRateLimitBlocksAll(spec *namespacev1.CallerRateLimitSpec) bool {
 	switch rule := spec.GetRule().(type) {
 	case *namespacev1.CallerRateLimitSpec_NamespaceDefault:

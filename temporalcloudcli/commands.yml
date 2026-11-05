@@ -2203,11 +2203,11 @@ commands:
       ```
 
       Changed rules are applied one at a time. Apply stops at the first failure
-      and reports which rules were already applied. Rerunning is safe: rules that
-      were already applied are skipped, and rules whose last update failed are
-      retried.
-
-      Unchanged, active rules are skipped, so apply succeeds when nothing changes.
+      and reports which rules were already applied. Rerunning skips rules that
+      were already applied and retries rules whose last update failed. A rule
+      that matches but is not active, including one whose operation is still in
+      progress, is updated again, so wait for in-progress operations (for example
+      after --async) to finish before rerunning.
 
       --async-operation-id and --resource-version can only be used when apply
       changes a single rule.
