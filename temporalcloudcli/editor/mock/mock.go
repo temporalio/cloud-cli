@@ -15,10 +15,19 @@ func NewMockEditor(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockEditor {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockEditor{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -71,7 +80,7 @@ type MockEditor_EditProto_Call struct {
 
 // EditProto is a helper method to define mock.On call
 //   - existing proto.Message
-func (_e *MockEditor_Expecter) EditProto(existing interface{}) *MockEditor_EditProto_Call {
+func (_e *MockEditor_Expecter) EditProto(existing any) *MockEditor_EditProto_Call {
 	return &MockEditor_EditProto_Call{Call: _e.mock.On("EditProto", existing)}
 }
 
@@ -88,8 +97,8 @@ func (_c *MockEditor_EditProto_Call) Run(run func(existing proto.Message)) *Mock
 	return _c
 }
 
-func (_c *MockEditor_EditProto_Call) Return(v proto.Message, err error) *MockEditor_EditProto_Call {
-	_c.Call.Return(v, err)
+func (_c *MockEditor_EditProto_Call) Return(message proto.Message, err error) *MockEditor_EditProto_Call {
+	_c.Call.Return(message, err)
 	return _c
 }
 
