@@ -38,6 +38,7 @@ type (
 
 	callerRateLimitDeleteFlags struct {
 		isDefault        bool
+		caller           string
 		resourceVersion  string
 		asyncOperationID string
 		idempotent       bool
@@ -174,6 +175,11 @@ func TestGetCallerRateLimit(t *testing.T) {
 			expectedErr: `default caller rate limit not found on namespace "my-ns.acct"`,
 		},
 		{
+			name:        "CallerNotFound",
+			flags:       callerRateLimitGetFlags{caller: "caller-ns.acct"},
+			expectedErr: `caller rate limit for caller namespace "caller-ns.acct" not found on namespace "my-ns.acct"`,
+		},
+		{
 			name:        "LookupError",
 			flags:       callerRateLimitGetFlags{isDefault: true},
 			lookupErr:   errors.New("api error"),
@@ -185,10 +191,7 @@ func TestGetCallerRateLimit(t *testing.T) {
 			cmd := tt.flags.command()
 			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-					c.EXPECT().
-						GetCallerRateLimits(mock.Anything, callerRateLimitsRequest(tt.flags.isDefault, tt.flags.caller),
-							mock.Anything).
-						Return(&cloudservice.GetCallerRateLimitsResponse{CallerRateLimits: tt.found}, tt.lookupErr)
+					expectFindCallerRateLimit(c, tt.flags.isDefault, tt.flags.caller, tt.found, tt.lookupErr)
 				},
 				JSONOutput:                     true,
 				ExpectedError:                  tt.expectedErr,
@@ -199,15 +202,44 @@ func TestGetCallerRateLimit(t *testing.T) {
 	}
 }
 
-func TestGetCallerRateLimit_FlagValidation(t *testing.T) {
+// Every command that targets one rule validates its caller flags before any RPC or prompt.
+func TestCallerRateLimit_FlagValidation(t *testing.T) {
+	commands := []struct {
+		name  string
+		build func(isDefault bool, caller string) temporalcloudcli.CommandIfc
+	}{
+		{
+			name: "Get",
+			build: func(isDefault bool, caller string) temporalcloudcli.CommandIfc {
+				cmd := callerRateLimitGetFlags{isDefault: isDefault, caller: caller}.command()
+				return &cmd
+			},
+		},
+		{
+			name: "Delete",
+			build: func(isDefault bool, caller string) temporalcloudcli.CommandIfc {
+				cmd := callerRateLimitDeleteFlags{isDefault: isDefault, caller: caller}.command()
+				return &cmd
+			},
+		},
+		{
+			name: "Set",
+			build: func(isDefault bool, caller string) temporalcloudcli.CommandIfc {
+				cmd := callerRateLimitSetFlags{isDefault: isDefault, caller: caller, rps: 200}.command()
+				return &cmd
+			},
+		},
+	}
 	tests := []struct {
 		name        string
-		flags       callerRateLimitGetFlags
+		isDefault   bool
+		caller      string
 		expectedErr string
 	}{
 		{
 			name:        "BothFlagsSet",
-			flags:       callerRateLimitGetFlags{isDefault: true, caller: "caller-ns.acct"},
+			isDefault:   true,
+			caller:      "caller-ns.acct",
 			expectedErr: "--caller-namespace-default and --caller-namespace are mutually exclusive",
 		},
 		{
@@ -215,14 +247,15 @@ func TestGetCallerRateLimit_FlagValidation(t *testing.T) {
 			expectedErr: "either --caller-namespace-default or --caller-namespace is required",
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cmd := tt.flags.command()
-			// No CloudClientExpectations: any RPC fails the test, proving validation runs first.
-			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
-				ExpectedError: tt.expectedErr,
+	for _, cmd := range commands {
+		for _, tt := range tests {
+			t.Run(cmd.name+tt.name, func(t *testing.T) {
+				// No CloudClientExpectations or PromptOptions: any RPC or prompt fails the test.
+				temporalcloudcli.TestCommand(t, cmd.build(tt.isDefault, tt.caller), temporalcloudcli.TestCommandOptions{
+					ExpectedError: tt.expectedErr,
+				})
 			})
-		})
+		}
 	}
 }
 
@@ -332,6 +365,7 @@ func (f callerRateLimitDeleteFlags) command() temporalcloudcli.CloudNamespaceCal
 		NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.acct"},
 		CallerRateLimitCallerOptions: temporalcloudcli.CallerRateLimitCallerOptions{
 			CallerNamespaceDefault: f.isDefault,
+			CallerNamespace:        f.caller,
 		},
 		AsyncOperationOptions: temporalcloudcli.AsyncOperationOptions{
 			Idempotent:       f.idempotent,
@@ -341,20 +375,23 @@ func (f callerRateLimitDeleteFlags) command() temporalcloudcli.CloudNamespaceCal
 	}
 }
 
-func expectFindDefaultCallerRateLimit(
+// expectFindCallerRateLimit expects the filtered lookup for the caller selected by isDefault and caller.
+func expectFindCallerRateLimit(
 	c *cloudmock.MockCloudServiceClient,
+	isDefault bool,
+	caller string,
 	found []*namespacev1.CallerRateLimit,
 	err error,
 ) {
 	c.EXPECT().
-		GetCallerRateLimits(mock.Anything, callerRateLimitsRequest(true, ""), mock.Anything).
+		GetCallerRateLimits(mock.Anything, callerRateLimitsRequest(isDefault, caller), mock.Anything).
 		Return(&cloudservice.GetCallerRateLimitsResponse{CallerRateLimits: found}, err)
 }
 
-func deleteCallerRateLimitRequest(rv, asyncOpID string) *cloudservice.DeleteCallerRateLimitRequest {
+func deleteCallerRateLimitRequest(id, rv, asyncOpID string) *cloudservice.DeleteCallerRateLimitRequest {
 	return &cloudservice.DeleteCallerRateLimitRequest{
 		Namespace:         "my-ns.acct",
-		CallerRateLimitId: "crl-default",
+		CallerRateLimitId: id,
 		ResourceVersion:   rv,
 		AsyncOperationId:  asyncOpID,
 	}
@@ -365,15 +402,24 @@ func TestDeleteCallerRateLimit(t *testing.T) {
 	tests := []struct {
 		name            string
 		flags           callerRateLimitDeleteFlags
+		found           *namespacev1.CallerRateLimit
 		expectedRequest *cloudservice.DeleteCallerRateLimitRequest
 		deleteErr       error
 		pollerOptions   temporalcloudcli.TestAsyncPollerOptions
 		expectedErr     string
 	}{
 		{
-			name:            "Success",
+			name:            "DefaultRule",
 			flags:           callerRateLimitDeleteFlags{isDefault: true},
-			expectedRequest: deleteCallerRateLimitRequest("rv-default", ""),
+			found:           testCallerRateLimitDefault,
+			expectedRequest: deleteCallerRateLimitRequest("crl-default", "rv-default", ""),
+			pollerOptions:   temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-del"},
+		},
+		{
+			name:            "CallerRule",
+			flags:           callerRateLimitDeleteFlags{caller: "caller-ns.acct"},
+			found:           testCallerRateLimitCaller,
+			expectedRequest: deleteCallerRateLimitRequest("crl-caller", "rv-caller", ""),
 			pollerOptions:   temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-del"},
 		},
 		{
@@ -383,13 +429,15 @@ func TestDeleteCallerRateLimit(t *testing.T) {
 				resourceVersion:  "rv-override",
 				asyncOperationID: "op-custom",
 			},
-			expectedRequest: deleteCallerRateLimitRequest("rv-override", "op-custom"),
+			found:           testCallerRateLimitDefault,
+			expectedRequest: deleteCallerRateLimitRequest("crl-default", "rv-override", "op-custom"),
 			pollerOptions:   temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-del"},
 		},
 		{
 			name:            "DeleteError",
 			flags:           callerRateLimitDeleteFlags{isDefault: true},
-			expectedRequest: deleteCallerRateLimitRequest("rv-default", ""),
+			found:           testCallerRateLimitDefault,
+			expectedRequest: deleteCallerRateLimitRequest("crl-default", "rv-default", ""),
 			deleteErr:       errors.New("api error"),
 			expectedErr:     "delete operation failed: api error",
 		},
@@ -399,7 +447,8 @@ func TestDeleteCallerRateLimit(t *testing.T) {
 			cmd := tt.flags.command()
 			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-					expectFindDefaultCallerRateLimit(c, []*namespacev1.CallerRateLimit{testCallerRateLimitDefault}, nil)
+					expectFindCallerRateLimit(c, tt.flags.isDefault, tt.flags.caller,
+						[]*namespacev1.CallerRateLimit{tt.found}, nil)
 					c.EXPECT().
 						DeleteCallerRateLimit(mock.Anything, tt.expectedRequest, mock.Anything).
 						Return(&cloudservice.DeleteCallerRateLimitResponse{
@@ -423,7 +472,7 @@ func TestDeleteCallerRateLimit_Declined(t *testing.T) {
 	// No DeleteCallerRateLimit expectation: the RPC must not be sent.
 	temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
 		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-			expectFindDefaultCallerRateLimit(c, []*namespacev1.CallerRateLimit{testCallerRateLimitDefault}, nil)
+			expectFindCallerRateLimit(c, true, "", []*namespacev1.CallerRateLimit{testCallerRateLimitDefault}, nil)
 		},
 		PromptOptions: temporalcloudcli.TestPromptOptions{
 			ExpectPromptYes:        true,
@@ -454,6 +503,11 @@ func TestDeleteCallerRateLimit_LookupFails(t *testing.T) {
 			expectedErr: `default caller rate limit not found on namespace "my-ns.acct"`,
 		},
 		{
+			name:        "CallerNotFound",
+			flags:       callerRateLimitDeleteFlags{caller: "caller-ns.acct"},
+			expectedErr: `caller rate limit for caller namespace "caller-ns.acct" not found on namespace "my-ns.acct"`,
+		},
+		{
 			name:        "LookupError",
 			flags:       callerRateLimitDeleteFlags{isDefault: true},
 			lookupErr:   errors.New("api error"),
@@ -465,20 +519,12 @@ func TestDeleteCallerRateLimit_LookupFails(t *testing.T) {
 			cmd := tt.flags.command()
 			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-					expectFindDefaultCallerRateLimit(c, nil, tt.lookupErr)
+					expectFindCallerRateLimit(c, tt.flags.isDefault, tt.flags.caller, nil, tt.lookupErr)
 				},
 				ExpectedError: tt.expectedErr,
 			})
 		})
 	}
-}
-
-func TestDeleteCallerRateLimit_NeitherFlagSet(t *testing.T) {
-	cmd := callerRateLimitDeleteFlags{}.command()
-	// No CloudClientExpectations or PromptOptions: any RPC or prompt fails the test.
-	temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
-		ExpectedError: "either --caller-namespace-default or --caller-namespace is required",
-	})
 }
 
 // createOp expects one Create RPC for spec that returns async operation pollID.
@@ -542,31 +588,22 @@ func TestSetCallerRateLimit_Create(t *testing.T) {
 		flags        callerRateLimitSetFlags
 		expectedSpec *namespacev1.CallerRateLimitSpec
 		mutationErr  error
-		pollID       string
 		expectedErr  string
 	}{
 		{
 			name:         "DefaultRuleRpsTenth",
 			flags:        callerRateLimitSetFlags{isDefault: true, rps: 0.1},
 			expectedSpec: defaultRuleSpec(0.1),
-			pollID:       "op-create",
 		},
 		{
 			name:         "CallerRule",
 			flags:        callerRateLimitSetFlags{caller: "caller-ns.acct", rps: 10},
 			expectedSpec: callerRuleSpec("caller-ns.acct", 10),
-			pollID:       "op-create",
 		},
 		{
-			name: "AsyncOperationIDSetResourceVersionIgnored",
-			flags: callerRateLimitSetFlags{
-				isDefault:        true,
-				rps:              100,
-				resourceVersion:  "rv-ignored",
-				asyncOperationID: "op-custom",
-			},
+			name:         "AsyncOperationID",
+			flags:        callerRateLimitSetFlags{isDefault: true, rps: 100, asyncOperationID: "op-custom"},
 			expectedSpec: defaultRuleSpec(100),
-			pollID:       "op-create",
 		},
 		{
 			name:         "CreateError",
@@ -578,17 +615,19 @@ func TestSetCallerRateLimit_Create(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			pollerOptions := temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-create"}
+			if tt.mutationErr != nil {
+				// A failed Create is never polled.
+				pollerOptions = temporalcloudcli.TestAsyncPollerOptions{}
+			}
 			cmd := tt.flags.command()
 			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-					c.EXPECT().
-						GetCallerRateLimits(mock.Anything, callerRateLimitsRequest(tt.flags.isDefault, tt.flags.caller),
-							mock.Anything).
-						Return(&cloudservice.GetCallerRateLimitsResponse{}, nil)
+					expectFindCallerRateLimit(c, tt.flags.isDefault, tt.flags.caller, nil, nil)
 					createOp(tt.expectedSpec, tt.flags.asyncOperationID, "op-create", tt.mutationErr)(c)
 				},
 				PromptOptions:      promptApply(noRule, tt.expectedSpec, false, true),
-				AsyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: tt.pollID},
+				AsyncPollerOptions: pollerOptions,
 				ExpectedError:      tt.expectedErr,
 			})
 		})
@@ -604,7 +643,6 @@ func TestSetCallerRateLimit_Update(t *testing.T) {
 		expectedSpec *namespacev1.CallerRateLimitSpec
 		expectedRV   string
 		mutationErr  error
-		pollID       string
 		expectedErr  string
 	}{
 		{
@@ -613,7 +651,6 @@ func TestSetCallerRateLimit_Update(t *testing.T) {
 			found:        testCallerRateLimitDefault,
 			expectedSpec: defaultRuleSpec(200),
 			expectedRV:   "rv-default",
-			pollID:       "op-update",
 		},
 		{
 			name: "CallerRuleFlagOverrides",
@@ -626,7 +663,6 @@ func TestSetCallerRateLimit_Update(t *testing.T) {
 			found:        testCallerRateLimitCaller,
 			expectedSpec: callerRuleSpec("caller-ns.acct", 20),
 			expectedRV:   "rv-override",
-			pollID:       "op-update",
 		},
 		{
 			name:         "UpdateError",
@@ -640,20 +676,21 @@ func TestSetCallerRateLimit_Update(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			pollerOptions := temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-update"}
+			if tt.mutationErr != nil {
+				// A failed Update is never polled.
+				pollerOptions = temporalcloudcli.TestAsyncPollerOptions{}
+			}
 			cmd := tt.flags.command()
 			temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
 				CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-					c.EXPECT().
-						GetCallerRateLimits(mock.Anything, callerRateLimitsRequest(tt.flags.isDefault, tt.flags.caller),
-							mock.Anything).
-						Return(&cloudservice.GetCallerRateLimitsResponse{
-							CallerRateLimits: []*namespacev1.CallerRateLimit{tt.found},
-						}, nil)
+					expectFindCallerRateLimit(c, tt.flags.isDefault, tt.flags.caller,
+						[]*namespacev1.CallerRateLimit{tt.found}, nil)
 					updateOp(tt.found, tt.expectedSpec, tt.expectedRV, tt.flags.asyncOperationID, "op-update",
 						tt.mutationErr)(c)
 				},
 				PromptOptions:      promptApply(tt.found.Spec, tt.expectedSpec, false, true),
-				AsyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: tt.pollID},
+				AsyncPollerOptions: pollerOptions,
 				ExpectedError:      tt.expectedErr,
 			})
 		})
@@ -665,7 +702,7 @@ func TestSetCallerRateLimit_Declined(t *testing.T) {
 	// No Create/Update expectation: neither RPC may be sent.
 	temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
 		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-			expectFindDefaultCallerRateLimit(c, []*namespacev1.CallerRateLimit{testCallerRateLimitDefault}, nil)
+			expectFindCallerRateLimit(c, true, "", []*namespacev1.CallerRateLimit{testCallerRateLimitDefault}, nil)
 		},
 		PromptOptions: promptApply(testCallerRateLimitDefault.Spec, defaultRuleSpec(200), false, false),
 		ExpectedError: "Aborting set.",
@@ -677,17 +714,9 @@ func TestSetCallerRateLimit_LookupFails(t *testing.T) {
 	// No PromptOptions: a prompt fails the test.
 	temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
 		CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-			expectFindDefaultCallerRateLimit(c, nil, errors.New("api error"))
+			expectFindCallerRateLimit(c, true, "", nil, errors.New("api error"))
 		},
 		ExpectedError: "api error",
-	})
-}
-
-func TestSetCallerRateLimit_NeitherFlagSet(t *testing.T) {
-	cmd := callerRateLimitSetFlags{rps: 200}.command()
-	// No CloudClientExpectations or PromptOptions: any RPC or prompt fails the test.
-	temporalcloudcli.TestCommand(t, &cmd, temporalcloudcli.TestCommandOptions{
-		ExpectedError: "either --caller-namespace-default or --caller-namespace is required",
 	})
 }
 
@@ -732,6 +761,7 @@ func callerRateLimitDiffList(specs ...*namespacev1.CallerRateLimitSpec) *cloudse
 
 // Cases where the user confirms the diff, so the changed rules are sent in key order.
 // Ops after a failing op have no expectation, so sending them fails the test.
+// Every case's first op succeeds as "op-1", the only op polled.
 func TestApplyCallerRateLimits(t *testing.T) {
 	existingPage := []*namespacev1.CallerRateLimit{testCallerRateLimitDefault, testCallerRateLimitCaller}
 	newCaller := callerRuleSpec("new-ns.acct", 5)
@@ -745,7 +775,6 @@ func TestApplyCallerRateLimits(t *testing.T) {
 		expectedBefore *cloudservice.GetCallerRateLimitsResponse
 		expectedAfter  *cloudservice.GetCallerRateLimitsResponse
 		ops            []mutationExpectation
-		pollID         string
 		expectedErr    string
 	}{
 		{
@@ -757,7 +786,6 @@ func TestApplyCallerRateLimits(t *testing.T) {
 			ops: []mutationExpectation{
 				updateOp(testCallerRateLimitDefault, defaultRuleSpec(200), "rv-default", "", "op-1", nil),
 			},
-			pollID: "op-1",
 		},
 		{
 			// The unchanged caller rule is on the second page, so it is only skipped if lookup pages.
@@ -774,7 +802,6 @@ func TestApplyCallerRateLimits(t *testing.T) {
 			ops: []mutationExpectation{
 				updateOp(testCallerRateLimitDefault, defaultRuleSpec(200), "rv-default", "", "op-1", nil),
 			},
-			pollID: "op-1",
 		},
 		{
 			name: "SingleUpdateFlagOverrides",
@@ -789,20 +816,17 @@ func TestApplyCallerRateLimits(t *testing.T) {
 			ops: []mutationExpectation{
 				updateOp(testCallerRateLimitCaller, callerUpdated, "rv-override", "op-custom", "op-1", nil),
 			},
-			pollID: "op-1",
 		},
 		{
-			name: "SingleCreateAsyncOperationIDSetResourceVersionIgnored",
+			name: "SingleCreateAsyncOperationID",
 			flags: callerRateLimitApplyFlags{
 				spec:             `[{"namespaceLimit":{"namespaceId":"new-ns.acct","rps":5}}]`,
-				resourceVersion:  "rv-ignored",
 				asyncOperationID: "op-custom",
 			},
 			pages:          [][]*namespacev1.CallerRateLimit{existingPage},
 			expectedBefore: callerRateLimitDiffList(),
 			expectedAfter:  callerRateLimitDiffList(newCaller),
 			ops:            []mutationExpectation{createOp(newCaller, "op-custom", "op-1", nil)},
-			pollID:         "op-1",
 		},
 		{
 			// The existing rule matches the file but its last update failed, so it is updated again.
@@ -814,7 +838,6 @@ func TestApplyCallerRateLimits(t *testing.T) {
 			ops: []mutationExpectation{
 				updateOp(updateFailedDefault, defaultRuleSpec(100), "rv-default", "", "op-1", nil),
 			},
-			pollID: "op-1",
 		},
 		{
 			// Existing rules with no rule (a caller type this CLI doesn't recognize) are skipped,
@@ -831,7 +854,6 @@ func TestApplyCallerRateLimits(t *testing.T) {
 			ops: []mutationExpectation{
 				updateOp(testCallerRateLimitDefault, defaultRuleSpec(200), "rv-default", "", "op-1", nil),
 			},
-			pollID: "op-1",
 		},
 		{
 			// File order is the reverse of key order, so ops run default, caller, new-ns.
@@ -849,7 +871,6 @@ func TestApplyCallerRateLimits(t *testing.T) {
 				updateOp(testCallerRateLimitDefault, defaultRuleSpec(200), "rv-default", "", "op-1", nil),
 				updateOp(testCallerRateLimitCaller, callerUpdated, "rv-caller", "", "op-2", errors.New("api error")),
 			},
-			pollID: "op-1",
 			expectedErr: `failed to apply caller rate limit for caller namespace "caller-ns.acct": ` +
 				`update operation failed: api error (already applied: default caller rate limit)`,
 		},
@@ -868,7 +889,6 @@ func TestApplyCallerRateLimits(t *testing.T) {
 				updateOp(testCallerRateLimitDefault, defaultRuleSpec(200), "rv-default", "", "op-1", nil),
 				updateOp(testCallerRateLimitCaller, callerUpdated, "rv-caller", "", "op-2", errors.New("api error")),
 			},
-			pollID: "op-1",
 			expectedErr: `failed to apply caller rate limit for caller namespace "caller-ns.acct": ` +
 				`update operation failed: api error (already submitted: default caller rate limit)`,
 		},
@@ -886,7 +906,7 @@ func TestApplyCallerRateLimits(t *testing.T) {
 					mock.InOrder(calls...)
 				},
 				PromptOptions:      promptApply(tt.expectedBefore, tt.expectedAfter, tt.flags.verboseDiff, true),
-				AsyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: tt.pollID},
+				AsyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-1"},
 				ExpectedError:      tt.expectedErr,
 			})
 		})
@@ -941,6 +961,14 @@ func TestApplyCallerRateLimits_InvalidSpec(t *testing.T) {
 			spec: `[{"namespaceDefault":{"rps":1}},{"namespaceLimit":{"namespaceId":"caller-ns.acct","rps":1}},` +
 				`{"namespaceDefault":{"rps":2}}]`,
 			expectedErr: "duplicate default caller rate limit in spec (entries 1 and 3)",
+		},
+		{
+			// Rules for different caller namespaces are not duplicates; only the repeated caller is.
+			name: "DuplicateCaller",
+			spec: `[{"namespaceLimit":{"namespaceId":"caller-ns.acct","rps":1}},` +
+				`{"namespaceLimit":{"namespaceId":"other-ns.acct","rps":1}},` +
+				`{"namespaceLimit":{"namespaceId":"caller-ns.acct","rps":2}}]`,
+			expectedErr: `duplicate caller rate limit for caller namespace "caller-ns.acct" in spec (entries 1 and 3)`,
 		},
 	}
 	for _, tt := range tests {
