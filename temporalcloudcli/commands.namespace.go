@@ -330,6 +330,7 @@ type (
 		ConnectionRuleIDs                  []string
 		ProjectID                          string
 		Description                        string
+		EncryptionValidation               *namespacev1.EncryptionValidationSpec
 
 		Cloud              cloudservice.CloudServiceClient
 		Printer            *printer.Printer
@@ -419,6 +420,7 @@ func CreateNamespace(ctx context.Context, params CreateNamespaceParams) error {
 	}
 
 	spec.SearchAttributes = searchAttrs
+	spec.EncryptionValidation = params.EncryptionValidation
 
 	if err := params.Prompter.PromptApply(&namespacev1.NamespaceSpec{}, spec, false); err != nil {
 		return err
@@ -450,6 +452,11 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 	}
 	projectID := c.ProjectId
 
+	encryptionValidation, err := encryptionValidationFromCreateFlags(c)
+	if err != nil {
+		return err
+	}
+
 	return CreateNamespace(cctx.Context, CreateNamespaceParams{
 		Name:                               c.Name,
 		Regions:                            c.Region,
@@ -473,6 +480,7 @@ func (c *CloudNamespaceCreateCommand) run(cctx *CommandContext, _ []string) erro
 		Prompter:                           newPrompter(cctx),
 		UnmarshalProtoJSON:                 cctx.UnmarshalProtoJSON,
 		OperationHandler:                   NewOperationHandler(cctx, c.AsyncOperationOptions, c.ClientOptions),
+		EncryptionValidation:               encryptionValidation,
 	})
 }
 
