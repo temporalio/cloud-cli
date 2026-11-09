@@ -61,6 +61,51 @@ func TestNamespaceEncryptionValidationGet(t *testing.T) {
 			},
 		},
 		{
+			// The server applies defaults for an empty key or values; get shows them.
+			name: "DefaultsShownWhenUnset",
+			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationGetCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: "my-ns.my-acct"}, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: namespaceWithEncryptionValidation(&namespacev1.EncryptionValidationSpec{
+						Mode: namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_DENY,
+					})}, nil)
+			},
+			expectedJsonOutput: map[string]any{
+				"namespace": "my-ns.my-acct",
+				"spec": map[string]any{
+					"mode":           "ENCRYPTION_VALIDATION_MODE_DENY",
+					"metadataKey":    "encoding",
+					"metadataValues": []any{"binary/encrypted"},
+				},
+			},
+		},
+		{
+			// Only the missing key is defaulted; configured values are shown as-is.
+			name: "DefaultKeyWithCustomValues",
+			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationGetCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: "my-ns.my-acct"}, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: namespaceWithEncryptionValidation(&namespacev1.EncryptionValidationSpec{
+						Mode:           namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_DENY,
+						MetadataValues: []string{"binary/custom", "json/plain"},
+					})}, nil)
+			},
+			expectedJsonOutput: map[string]any{
+				"namespace": "my-ns.my-acct",
+				"spec": map[string]any{
+					"mode":           "ENCRYPTION_VALIDATION_MODE_DENY",
+					"metadataKey":    "encoding",
+					"metadataValues": []any{"binary/custom", "json/plain"},
+				},
+			},
+		},
+		{
 			name: "NilSpec",
 			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationGetCommand{
 				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
@@ -109,6 +154,7 @@ func TestNamespaceEncryptionValidationSet(t *testing.T) {
 		promptOptions           temporalcloudcli.TestPromptOptions
 		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
 		expectedErr             string
+		expectedJsonOutput      any
 	}{
 		{
 			name: "AllFlags",
@@ -235,6 +281,41 @@ func TestNamespaceEncryptionValidationSet(t *testing.T) {
 						Mode: namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_WARN,
 					})}, nil)
 			},
+			expectedErr: "nothing to change: encryption validation is already in the requested state " +
+				"(use --idempotent to succeed without changes)",
+		},
+		{
+			name: "NoChangeIdempotent",
+			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationSetCommand{
+				NamespaceOptions:      temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
+				AsyncOperationOptions: temporalcloudcli.AsyncOperationOptions{Idempotent: true},
+			},
+			args: []string{"--mode=warn"},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: namespaceWithEncryptionValidation(&namespacev1.EncryptionValidationSpec{
+						Mode: namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_WARN,
+					})}, nil)
+			},
+			expectedJsonOutput: map[string]any{"status": "unchanged"},
+		},
+		{
+			// Rejected before any API call.
+			name: "BlankMetadataValue",
+			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationSetCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
+			},
+			args:        []string{"--metadata-value=binary/encrypted", "--metadata-value= "},
+			expectedErr: "--metadata-value cannot be blank",
+		},
+		{
+			name: "EmptyMetadataValue",
+			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationSetCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
+			},
+			args:        []string{"--metadata-value="},
+			expectedErr: "--metadata-value cannot be blank",
 		},
 		{
 			name: "ModeRequiredWhenUnconfigured",
@@ -357,190 +438,7 @@ func TestNamespaceEncryptionValidationSet(t *testing.T) {
 				AsyncPollerOptions:      tt.asyncPollerOptions,
 				JSONOutput:              true,
 				ExpectedError:           tt.expectedErr,
-			})
-		})
-	}
-}
-
-func TestNamespaceEncryptionValidationEnable(t *testing.T) {
-	disabledWithCustomMetadata := &namespacev1.EncryptionValidationSpec{
-		Mode:           namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_DISABLED,
-		MetadataKey:    "custom-key",
-		MetadataValues: []string{"custom-value"},
-		InspectHeader:  true,
-	}
-	warn := &namespacev1.EncryptionValidationSpec{
-		Mode:           namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_WARN,
-		MetadataKey:    "encoding",
-		MetadataValues: []string{"binary/encrypted"},
-	}
-	deny := &namespacev1.EncryptionValidationSpec{
-		Mode:           namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_DENY,
-		MetadataKey:    "encoding",
-		MetadataValues: []string{"binary/encrypted"},
-	}
-
-	tests := []struct {
-		name                    string
-		cmd                     temporalcloudcli.CloudNamespaceEncryptionValidationEnableCommand
-		cloudClientExpectations func(*cloudmock.MockCloudServiceClient)
-		promptOptions           temporalcloudcli.TestPromptOptions
-		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
-		expectedErr             string
-	}{
-		{
-			name: "NilToWarn",
-			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationEnableCommand{
-				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-			},
-			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-				c.EXPECT().
-					GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: "my-ns.my-acct"}, mock.Anything).
-					Return(&cloudservice.GetNamespaceResponse{Namespace: namespaceWithEncryptionValidation(nil)}, nil)
-				c.EXPECT().
-					UpdateNamespace(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
-						return req.Namespace == "my-ns.my-acct" &&
-							req.ResourceVersion == "rv-fetched" &&
-							proto.Equal(req.Spec.EncryptionValidation, &namespacev1.EncryptionValidationSpec{
-								Mode: namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_WARN,
-							})
-					}), mock.Anything).
-					Return(&cloudservice.UpdateNamespaceResponse{
-						AsyncOperation: &operation.AsyncOperation{Id: "op-enable"},
-					}, nil)
-			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
-			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-enable"},
-		},
-		{
-			name: "DisabledKeepsMetadata",
-			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationEnableCommand{
-				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-			},
-			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-				c.EXPECT().
-					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
-					Return(&cloudservice.GetNamespaceResponse{Namespace: namespaceWithEncryptionValidation(disabledWithCustomMetadata)}, nil)
-				c.EXPECT().
-					UpdateNamespace(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
-						return proto.Equal(req.Spec.EncryptionValidation, &namespacev1.EncryptionValidationSpec{
-							Mode:           namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_WARN,
-							MetadataKey:    "custom-key",
-							MetadataValues: []string{"custom-value"},
-							InspectHeader:  true,
-						})
-					}), mock.Anything).
-					Return(&cloudservice.UpdateNamespaceResponse{
-						AsyncOperation: &operation.AsyncOperation{Id: "op-enable"},
-					}, nil)
-			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
-			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-enable"},
-		},
-		{
-			name: "DenyFlag",
-			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationEnableCommand{
-				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-				Deny:             true,
-			},
-			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-				c.EXPECT().
-					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
-					Return(&cloudservice.GetNamespaceResponse{Namespace: namespaceWithEncryptionValidation(disabledWithCustomMetadata)}, nil)
-				c.EXPECT().
-					UpdateNamespace(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
-						return proto.Equal(req.Spec.EncryptionValidation, &namespacev1.EncryptionValidationSpec{
-							Mode:           namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_DENY,
-							MetadataKey:    "custom-key",
-							MetadataValues: []string{"custom-value"},
-							InspectHeader:  true,
-						})
-					}), mock.Anything).
-					Return(&cloudservice.UpdateNamespaceResponse{
-						AsyncOperation: &operation.AsyncOperation{Id: "op-enable"},
-					}, nil)
-			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
-			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-enable"},
-		},
-		{
-			name: "WarnToDenyWithDenyFlag",
-			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationEnableCommand{
-				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-				Deny:             true,
-			},
-			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-				c.EXPECT().
-					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
-					Return(&cloudservice.GetNamespaceResponse{Namespace: namespaceWithEncryptionValidation(warn)}, nil)
-				c.EXPECT().
-					UpdateNamespace(mock.Anything, mock.MatchedBy(func(req *cloudservice.UpdateNamespaceRequest) bool {
-						return proto.Equal(req.Spec.EncryptionValidation, deny)
-					}), mock.Anything).
-					Return(&cloudservice.UpdateNamespaceResponse{
-						AsyncOperation: &operation.AsyncOperation{Id: "op-enable"},
-					}, nil)
-			},
-			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
-			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-enable"},
-		},
-		{
-			// No-op cases: no prompt and no UpdateNamespace call are expected.
-			name: "AlreadyWarn",
-			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationEnableCommand{
-				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-			},
-			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-				c.EXPECT().
-					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
-					Return(&cloudservice.GetNamespaceResponse{Namespace: namespaceWithEncryptionValidation(warn)}, nil)
-			},
-		},
-		{
-			name: "AlreadyDeny",
-			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationEnableCommand{
-				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-			},
-			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-				c.EXPECT().
-					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
-					Return(&cloudservice.GetNamespaceResponse{Namespace: namespaceWithEncryptionValidation(deny)}, nil)
-			},
-		},
-		{
-			name: "GetNamespaceError",
-			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationEnableCommand{
-				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-			},
-			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-				c.EXPECT().
-					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
-					Return(nil, errors.New("namespace not found"))
-			},
-			expectedErr: "namespace not found",
-		},
-		{
-			name: "PromptDeclined",
-			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationEnableCommand{
-				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
-			},
-			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
-				c.EXPECT().
-					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
-					Return(&cloudservice.GetNamespaceResponse{Namespace: namespaceWithEncryptionValidation(nil)}, nil)
-			},
-			promptOptions: temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: false},
-			expectedErr:   "Aborting enable.",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			temporalcloudcli.TestCommand(t, &tt.cmd, temporalcloudcli.TestCommandOptions{
-				CloudClientExpectations: tt.cloudClientExpectations,
-				PromptOptions:           tt.promptOptions,
-				AsyncPollerOptions:      tt.asyncPollerOptions,
-				JSONOutput:              true,
-				ExpectedError:           tt.expectedErr,
+				ExpectedOutputJson:      tt.expectedJsonOutput,
 			})
 		})
 	}
@@ -560,6 +458,7 @@ func TestNamespaceEncryptionValidationDisable(t *testing.T) {
 		promptOptions           temporalcloudcli.TestPromptOptions
 		asyncPollerOptions      temporalcloudcli.TestAsyncPollerOptions
 		expectedErr             string
+		expectedJsonOutput      any
 	}{
 		{
 			name: "DisableFromEnabled",
@@ -599,6 +498,23 @@ func TestNamespaceEncryptionValidationDisable(t *testing.T) {
 						Mode: namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_DISABLED,
 					})}, nil)
 			},
+			expectedErr: "nothing to change: encryption validation is already in the requested state " +
+				"(use --idempotent to succeed without changes)",
+		},
+		{
+			name: "AlreadyDisabledIdempotent",
+			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationDisableCommand{
+				NamespaceOptions:      temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
+				AsyncOperationOptions: temporalcloudcli.AsyncOperationOptions{Idempotent: true},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: namespaceWithEncryptionValidation(&namespacev1.EncryptionValidationSpec{
+						Mode: namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_DISABLED,
+					})}, nil)
+			},
+			expectedJsonOutput: map[string]any{"status": "unchanged"},
 		},
 		{
 			name: "Unconfigured",
@@ -610,6 +526,21 @@ func TestNamespaceEncryptionValidationDisable(t *testing.T) {
 					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
 					Return(&cloudservice.GetNamespaceResponse{Namespace: namespaceWithEncryptionValidation(nil)}, nil)
 			},
+			expectedErr: "nothing to change: encryption validation is already in the requested state " +
+				"(use --idempotent to succeed without changes)",
+		},
+		{
+			name: "UnconfiguredIdempotent",
+			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationDisableCommand{
+				NamespaceOptions:      temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
+				AsyncOperationOptions: temporalcloudcli.AsyncOperationOptions{Idempotent: true},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, mock.Anything, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: namespaceWithEncryptionValidation(nil)}, nil)
+			},
+			expectedJsonOutput: map[string]any{"status": "unchanged"},
 		},
 		{
 			name: "UpdateNamespaceError",
@@ -636,6 +567,7 @@ func TestNamespaceEncryptionValidationDisable(t *testing.T) {
 				AsyncPollerOptions:      tt.asyncPollerOptions,
 				JSONOutput:              true,
 				ExpectedError:           tt.expectedErr,
+				ExpectedOutputJson:      tt.expectedJsonOutput,
 			})
 		})
 	}

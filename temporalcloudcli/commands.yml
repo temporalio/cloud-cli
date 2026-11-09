@@ -774,6 +774,8 @@ commands:
     summary: '[Experimental] Get namespace payload encryption validation configuration'
     description: |
       Retrieve the current payload encryption validation configuration for a Temporal Cloud namespace.
+      If the metadata key or values are not set, the server defaults that apply are shown
+      (metadata-key=encoding, metadata-values=[binary/encrypted]).
 
       Example:
 
@@ -787,15 +789,19 @@ commands:
   - name: cloud namespace encryption-validation set
     summary: '[Experimental] Set namespace payload encryption validation configuration'
     description: |
-      Update the payload encryption validation configuration for a Temporal Cloud
-      namespace. At least one flag must be set. Omitted flags keep the
-      existing values. An empty metadata key or values means the server
-      defaults apply (metadata-key=encoding, metadata-values=[binary/encrypted]).
+      Configure payload encryption validation for a Temporal Cloud namespace.
+      Use this command to turn validation on (--mode warn or --mode deny) and to
+      change its settings. At least one flag must be set. Omitted flags keep the
+      existing values. An empty metadata key means the server default applies
+      (metadata-key=encoding); omit --metadata-value to keep the existing values,
+      which default to [binary/encrypted]. If nothing would change, the command
+      errors unless --idempotent is set.
 
-      Example:
+      Examples:
 
       ```
-      temporal cloud namespace encryption-validation set --namespace my-namespace.my-account --mode warn --metadata-key encoding --metadata-value binary/encrypted
+      temporal cloud namespace encryption-validation set --namespace my-namespace.my-account --mode warn
+      temporal cloud namespace encryption-validation set --namespace my-namespace.my-account --mode deny --metadata-key encoding --metadata-value binary/encrypted
       ```
     has-init: false
     option-sets:
@@ -819,8 +825,8 @@ commands:
         type: string[]
         description: |
           Payload metadata value used to identify encrypted payloads. Repeat to
-          add additional values. Replaces the existing values. If omitted, the
-          existing values are kept.
+          add additional values. Replaces the existing values. Values cannot be
+          blank. If omitted, the existing values are kept.
       - name: inspect-header
         type: bool
         description: |
@@ -831,40 +837,14 @@ commands:
         description: |
           Inspect Failure payloads for encryption validation. If omitted, the
           existing value is kept.
-  - name: cloud namespace encryption-validation enable
-    summary: '[Experimental] Enable payload encryption validation for a namespace'
-    description: |
-      Enable payload encryption validation for a Temporal Cloud namespace.
-      If validation has not been configured, it is enabled in warn mode with
-      no metadata key or values, so the defaults apply
-      (metadata-key=encoding, metadata-values=[binary/encrypted]).
-      If validation is disabled, the existing configuration is re-enabled.
-      Use --deny to enable in deny mode; this also switches a namespace that
-      is already in warn mode to deny. Without --deny, a namespace that is
-      already in warn or deny mode is left unchanged.
-
-      Example:
-
-      ```
-      temporal cloud namespace encryption-validation enable --namespace my-namespace.my-account
-      ```
-    has-init: false
-    option-sets:
-      - client
-      - namespace
-      - async-operation
-      - resource-version
-    options:
-      - name: deny
-        type: bool
-        description: |
-          Enable validation in deny mode instead of warn. Switches warn mode to deny.
   - name: cloud namespace encryption-validation disable
     summary: '[Experimental] Disable payload encryption validation for a namespace'
     description: |
       Disable payload encryption validation for a Temporal Cloud namespace.
-      Existing metadata and inspect settings are kept. If validation is not
-      configured or is already disabled, nothing is changed.
+      Existing metadata and inspect settings are kept. To turn validation back
+      on, use `set --mode warn` or `set --mode deny`. If validation is not
+      configured or is already disabled, the command errors unless
+      --idempotent is set.
 
       Example:
 
