@@ -774,6 +774,8 @@ commands:
     summary: '[Experimental] Get namespace payload encryption validation configuration'
     description: |
       Retrieve the current payload encryption validation configuration for a Temporal Cloud namespace.
+      An unset metadata key or values are shown with the server defaults
+      (metadata-key=encoding, metadata-values=[binary/encrypted]).
 
       Example:
 

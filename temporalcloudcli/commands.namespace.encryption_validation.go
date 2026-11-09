@@ -19,9 +19,19 @@ const (
 	encryptionValidationModeDeny     = "deny"
 
 	alreadyInDesiredStateMessage = "Resource already in desired state"
+
+	// Default the server applies when the metadata key is unset, per the cloud-api
+	// EncryptionValidationSpec docs.
+	defaultEncryptionValidationMetadataKey = "encoding"
 )
 
-var encryptionValidationSetFlags = []string{"mode", "metadata-key", "metadata-value", "inspect-header", "inspect-failure"}
+var (
+	encryptionValidationSetFlags = []string{"mode", "metadata-key", "metadata-value", "inspect-header", "inspect-failure"}
+
+	// Default the server applies when the metadata values are unset, per the cloud-api
+	// EncryptionValidationSpec docs.
+	defaultEncryptionValidationMetadataValues = []string{"binary/encrypted"}
+)
 
 func (c *CloudNamespaceEncryptionValidationGetCommand) run(cctx *CommandContext, _ []string) error {
 	client, err := cctx.GetCloudClient(c.ClientOptions)
@@ -34,8 +44,15 @@ func (c *CloudNamespaceEncryptionValidationGetCommand) run(cctx *CommandContext,
 	}
 
 	var spec *namespacev1.EncryptionValidationSpec
-	if res.Namespace.Spec != nil {
-		spec = res.Namespace.Spec.EncryptionValidation
+	if res.Namespace.Spec != nil && res.Namespace.Spec.EncryptionValidation != nil {
+		// Show the metadata key and values the server enforces, not just the stored ones.
+		spec = proto.Clone(res.Namespace.Spec.EncryptionValidation).(*namespacev1.EncryptionValidationSpec)
+		if spec.MetadataKey == "" {
+			spec.MetadataKey = defaultEncryptionValidationMetadataKey
+		}
+		if len(spec.MetadataValues) == 0 {
+			spec.MetadataValues = slices.Clone(defaultEncryptionValidationMetadataValues)
+		}
 	}
 	return cctx.Printer.PrintResource(struct {
 		Namespace string                                `json:"namespace"`

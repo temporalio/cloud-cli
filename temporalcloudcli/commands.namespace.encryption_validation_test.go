@@ -61,6 +61,53 @@ func TestNamespaceEncryptionValidationGet(t *testing.T) {
 			},
 		},
 		{
+			name: "UnsetMetadataShowsDefaults",
+			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationGetCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: "my-ns.my-acct"}, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: namespaceWithEncryptionValidation(
+						&namespacev1.EncryptionValidationSpec{
+							Mode: namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_DENY,
+						},
+					)}, nil)
+			},
+			expectedJsonOutput: map[string]any{
+				"namespace": "my-ns.my-acct",
+				"spec": map[string]any{
+					"mode":           "ENCRYPTION_VALIDATION_MODE_DENY",
+					"metadataKey":    "encoding",
+					"metadataValues": []any{"binary/encrypted"},
+				},
+			},
+		},
+		{
+			name: "UnsetMetadataKeyOnly",
+			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationGetCommand{
+				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetNamespace(mock.Anything, &cloudservice.GetNamespaceRequest{Namespace: "my-ns.my-acct"}, mock.Anything).
+					Return(&cloudservice.GetNamespaceResponse{Namespace: namespaceWithEncryptionValidation(
+						&namespacev1.EncryptionValidationSpec{
+							Mode:           namespacev1.EncryptionValidationSpec_ENCRYPTION_VALIDATION_MODE_WARN,
+							MetadataValues: []string{"binary/aes256"},
+						},
+					)}, nil)
+			},
+			expectedJsonOutput: map[string]any{
+				"namespace": "my-ns.my-acct",
+				"spec": map[string]any{
+					"mode":           "ENCRYPTION_VALIDATION_MODE_WARN",
+					"metadataKey":    "encoding",
+					"metadataValues": []any{"binary/aes256"},
+				},
+			},
+		},
+		{
 			name: "NilSpec",
 			cmd: temporalcloudcli.CloudNamespaceEncryptionValidationGetCommand{
 				NamespaceOptions: temporalcloudcli.NamespaceOptions{Namespace: "my-ns.my-acct"},

@@ -2721,9 +2721,9 @@ func NewCloudNamespaceEncryptionValidationGetCommand(cctx *CommandContext, paren
 	s.Command.Use = "get [flags]"
 	s.Command.Short = "[Experimental] Get namespace payload encryption validation configuration"
 	if hasHighlighting {
-		s.Command.Long = "Retrieve the current payload encryption validation configuration for a Temporal Cloud namespace.\n\nExample:\n\n\x1b[1mtemporal cloud namespace encryption-validation get --namespace my-namespace.my-account\x1b[0m"
+		s.Command.Long = "Retrieve the current payload encryption validation configuration for a Temporal Cloud namespace.\nAn unset metadata key or values are shown with the server defaults\n(metadata-key=encoding, metadata-values=[binary/encrypted]).\n\nExample:\n\n\x1b[1mtemporal cloud namespace encryption-validation get --namespace my-namespace.my-account\x1b[0m"
 	} else {
-		s.Command.Long = "Retrieve the current payload encryption validation configuration for a Temporal Cloud namespace.\n\nExample:\n\n```\ntemporal cloud namespace encryption-validation get --namespace my-namespace.my-account\n```"
+		s.Command.Long = "Retrieve the current payload encryption validation configuration for a Temporal Cloud namespace.\nAn unset metadata key or values are shown with the server defaults\n(metadata-key=encoding, metadata-values=[binary/encrypted]).\n\nExample:\n\n```\ntemporal cloud namespace encryption-validation get --namespace my-namespace.my-account\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ClientOptions.BuildFlags(s.Command.Flags())
