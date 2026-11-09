@@ -1395,6 +1395,7 @@ commands:
       - namespace
       - async-operation
       - export-sink
+      - export-filter
       - export-s3
       - export-s3-region
   - name: cloud namespace export s3 update
@@ -1417,6 +1418,7 @@ commands:
       - async-operation
       - resource-version
       - export-sink
+      - export-filter
     options:
       - name: role-arn
         type: string
@@ -1453,6 +1455,7 @@ commands:
       - client
       - namespace
       - export-sink
+      - export-filter
       - export-s3
       - export-s3-region
   - name: cloud namespace export gcs
@@ -1479,6 +1482,7 @@ commands:
       - namespace
       - async-operation
       - export-sink
+      - export-filter
       - export-gcs
       - export-gcs-region
   - name: cloud namespace export gcs update
@@ -1501,6 +1505,7 @@ commands:
       - async-operation
       - resource-version
       - export-sink
+      - export-filter
     options:
       - name: service-account-email
         type: string
@@ -1532,6 +1537,7 @@ commands:
       - client
       - namespace
       - export-sink
+      - export-filter
       - export-gcs
       - export-gcs-region
   - name: cloud namespace export azure-blob
@@ -1560,6 +1566,7 @@ commands:
       - namespace
       - async-operation
       - export-sink
+      - export-filter
       - export-azure-blob
       - export-azure-blob-region
   - name: cloud namespace export azure-blob update
@@ -1582,6 +1589,7 @@ commands:
       - async-operation
       - resource-version
       - export-sink
+      - export-filter
     options:
       - name: tenant-id
         type: string
@@ -1629,6 +1637,7 @@ commands:
       - client
       - namespace
       - export-sink
+      - export-filter
       - export-azure-blob
       - export-azure-blob-region
 
@@ -5395,6 +5404,14 @@ option-sets:
         required: true
         description: |
           The name of the export sink.
+  - name: export-filter
+    options:
+      - name: disable-standalone-activity-export
+        type: bool
+        description: |
+          Disable export of standalone activity events. Workflow history export is unaffected.
+          On update, omitting this flag keeps the current setting. Use
+          --disable-standalone-activity-export=false to re-enable standalone activity export.
   - name: export-s3
     options:
       - name: role-arn

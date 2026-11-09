@@ -170,6 +170,16 @@ func (v *ExportSinkOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "sink-name")
 }
 
+type ExportFilterOptions struct {
+	DisableStandaloneActivityExport bool
+	FlagSet                         *pflag.FlagSet
+}
+
+func (v *ExportFilterOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.BoolVar(&v.DisableStandaloneActivityExport, "disable-standalone-activity-export", false, "Disable export of standalone activity events. Workflow history export is unaffected. On update, omitting this flag keeps the current setting. Use --disable-standalone-activity-export=false to re-enable standalone activity export.")
+}
+
 type ExportS3Options struct {
 	RoleArn    string
 	BucketName string
@@ -2827,6 +2837,7 @@ type CloudNamespaceExportAzureBlobCreateCommand struct {
 	NamespaceOptions
 	AsyncOperationOptions
 	ExportSinkOptions
+	ExportFilterOptions
 	ExportAzureBlobOptions
 	ExportAzureBlobRegionOptions
 }
@@ -2847,6 +2858,7 @@ func NewCloudNamespaceExportAzureBlobCreateCommand(cctx *CommandContext, parent 
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
+	s.ExportFilterOptions.BuildFlags(s.Command.Flags())
 	s.ExportAzureBlobOptions.BuildFlags(s.Command.Flags())
 	s.ExportAzureBlobRegionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -2865,6 +2877,7 @@ type CloudNamespaceExportAzureBlobUpdateCommand struct {
 	AsyncOperationOptions
 	ResourceVersionOptions
 	ExportSinkOptions
+	ExportFilterOptions
 	TenantId       string
 	SubscriptionId string
 	ResourceGroup  string
@@ -2894,6 +2907,7 @@ func NewCloudNamespaceExportAzureBlobUpdateCommand(cctx *CommandContext, parent 
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
+	s.ExportFilterOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2908,6 +2922,7 @@ type CloudNamespaceExportAzureBlobValidateCommand struct {
 	ClientOptions
 	NamespaceOptions
 	ExportSinkOptions
+	ExportFilterOptions
 	ExportAzureBlobOptions
 	ExportAzureBlobRegionOptions
 }
@@ -2927,6 +2942,7 @@ func NewCloudNamespaceExportAzureBlobValidateCommand(cctx *CommandContext, paren
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
+	s.ExportFilterOptions.BuildFlags(s.Command.Flags())
 	s.ExportAzureBlobOptions.BuildFlags(s.Command.Flags())
 	s.ExportAzureBlobRegionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -3067,6 +3083,7 @@ type CloudNamespaceExportGcsCreateCommand struct {
 	NamespaceOptions
 	AsyncOperationOptions
 	ExportSinkOptions
+	ExportFilterOptions
 	ExportGcsOptions
 	ExportGcsRegionOptions
 }
@@ -3087,6 +3104,7 @@ func NewCloudNamespaceExportGcsCreateCommand(cctx *CommandContext, parent *Cloud
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
+	s.ExportFilterOptions.BuildFlags(s.Command.Flags())
 	s.ExportGcsOptions.BuildFlags(s.Command.Flags())
 	s.ExportGcsRegionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -3105,6 +3123,7 @@ type CloudNamespaceExportGcsUpdateCommand struct {
 	AsyncOperationOptions
 	ResourceVersionOptions
 	ExportSinkOptions
+	ExportFilterOptions
 	ServiceAccountEmail string
 	BucketName          string
 }
@@ -3128,6 +3147,7 @@ func NewCloudNamespaceExportGcsUpdateCommand(cctx *CommandContext, parent *Cloud
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
+	s.ExportFilterOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3142,6 +3162,7 @@ type CloudNamespaceExportGcsValidateCommand struct {
 	ClientOptions
 	NamespaceOptions
 	ExportSinkOptions
+	ExportFilterOptions
 	ExportGcsOptions
 	ExportGcsRegionOptions
 }
@@ -3161,6 +3182,7 @@ func NewCloudNamespaceExportGcsValidateCommand(cctx *CommandContext, parent *Clo
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
+	s.ExportFilterOptions.BuildFlags(s.Command.Flags())
 	s.ExportGcsOptions.BuildFlags(s.Command.Flags())
 	s.ExportGcsRegionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -3256,6 +3278,7 @@ type CloudNamespaceExportS3CreateCommand struct {
 	NamespaceOptions
 	AsyncOperationOptions
 	ExportSinkOptions
+	ExportFilterOptions
 	ExportS3Options
 	ExportS3RegionOptions
 }
@@ -3276,6 +3299,7 @@ func NewCloudNamespaceExportS3CreateCommand(cctx *CommandContext, parent *CloudN
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
+	s.ExportFilterOptions.BuildFlags(s.Command.Flags())
 	s.ExportS3Options.BuildFlags(s.Command.Flags())
 	s.ExportS3RegionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -3294,6 +3318,7 @@ type CloudNamespaceExportS3UpdateCommand struct {
 	AsyncOperationOptions
 	ResourceVersionOptions
 	ExportSinkOptions
+	ExportFilterOptions
 	RoleArn    string
 	BucketName string
 	KmsArn     string
@@ -3319,6 +3344,7 @@ func NewCloudNamespaceExportS3UpdateCommand(cctx *CommandContext, parent *CloudN
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.ResourceVersionOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
+	s.ExportFilterOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -3333,6 +3359,7 @@ type CloudNamespaceExportS3ValidateCommand struct {
 	ClientOptions
 	NamespaceOptions
 	ExportSinkOptions
+	ExportFilterOptions
 	ExportS3Options
 	ExportS3RegionOptions
 }
@@ -3352,6 +3379,7 @@ func NewCloudNamespaceExportS3ValidateCommand(cctx *CommandContext, parent *Clou
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.NamespaceOptions.BuildFlags(s.Command.Flags())
 	s.ExportSinkOptions.BuildFlags(s.Command.Flags())
+	s.ExportFilterOptions.BuildFlags(s.Command.Flags())
 	s.ExportS3Options.BuildFlags(s.Command.Flags())
 	s.ExportS3RegionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
