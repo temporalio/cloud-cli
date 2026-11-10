@@ -17,10 +17,19 @@ func NewMockPoller(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockPoller {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockPoller{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -63,7 +72,7 @@ type MockPoller_AwaitAsyncOperation_Call struct {
 // AwaitAsyncOperation is a helper method to define mock.On call
 //   - ctx context.Context
 //   - asyncOpID string
-func (_e *MockPoller_Expecter) AwaitAsyncOperation(ctx interface{}, asyncOpID interface{}) *MockPoller_AwaitAsyncOperation_Call {
+func (_e *MockPoller_Expecter) AwaitAsyncOperation(ctx any, asyncOpID any) *MockPoller_AwaitAsyncOperation_Call {
 	return &MockPoller_AwaitAsyncOperation_Call{Call: _e.mock.On("AwaitAsyncOperation", ctx, asyncOpID)}
 }
 
@@ -121,7 +130,7 @@ type MockPoller_HandleCreateAsyncOperationResponse_Call struct {
 //   - ctx context.Context
 //   - response async.RespWithAsyncOp
 //   - err error
-func (_e *MockPoller_Expecter) HandleCreateAsyncOperationResponse(ctx interface{}, response interface{}, err interface{}) *MockPoller_HandleCreateAsyncOperationResponse_Call {
+func (_e *MockPoller_Expecter) HandleCreateAsyncOperationResponse(ctx any, response any, err any) *MockPoller_HandleCreateAsyncOperationResponse_Call {
 	return &MockPoller_HandleCreateAsyncOperationResponse_Call{Call: _e.mock.On("HandleCreateAsyncOperationResponse", ctx, response, err)}
 }
 
@@ -184,7 +193,7 @@ type MockPoller_HandleDeleteOperation_Call struct {
 //   - ctx context.Context
 //   - response async.RespWithAsyncOp
 //   - err error
-func (_e *MockPoller_Expecter) HandleDeleteOperation(ctx interface{}, response interface{}, err interface{}) *MockPoller_HandleDeleteOperation_Call {
+func (_e *MockPoller_Expecter) HandleDeleteOperation(ctx any, response any, err any) *MockPoller_HandleDeleteOperation_Call {
 	return &MockPoller_HandleDeleteOperation_Call{Call: _e.mock.On("HandleDeleteOperation", ctx, response, err)}
 }
 
@@ -247,7 +256,7 @@ type MockPoller_HandleIdempotentOperation_Call struct {
 //   - ctx context.Context
 //   - response async.RespWithAsyncOp
 //   - err error
-func (_e *MockPoller_Expecter) HandleIdempotentOperation(ctx interface{}, response interface{}, err interface{}) *MockPoller_HandleIdempotentOperation_Call {
+func (_e *MockPoller_Expecter) HandleIdempotentOperation(ctx any, response any, err any) *MockPoller_HandleIdempotentOperation_Call {
 	return &MockPoller_HandleIdempotentOperation_Call{Call: _e.mock.On("HandleIdempotentOperation", ctx, response, err)}
 }
 
@@ -310,7 +319,7 @@ type MockPoller_HandleUpdateOperation_Call struct {
 //   - ctx context.Context
 //   - response async.RespWithAsyncOp
 //   - err error
-func (_e *MockPoller_Expecter) HandleUpdateOperation(ctx interface{}, response interface{}, err interface{}) *MockPoller_HandleUpdateOperation_Call {
+func (_e *MockPoller_Expecter) HandleUpdateOperation(ctx any, response any, err any) *MockPoller_HandleUpdateOperation_Call {
 	return &MockPoller_HandleUpdateOperation_Call{Call: _e.mock.On("HandleUpdateOperation", ctx, response, err)}
 }
 

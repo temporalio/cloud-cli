@@ -1993,6 +1993,223 @@ commands:
           must be greater than 0 when --capacity-mode is 'provisioned'. Ignored
           when --capacity-mode is 'on_demand'.
 
+  # Namespace caller rate limit commands
+  - name: cloud namespace caller-rate-limit
+    summary: Manage namespace caller rate limits
+    description: |
+      Commands for managing caller rate limits on Temporal Cloud namespaces.
+
+      A caller rate limit caps the requests per second that callers, such as
+      other namespaces, can send to a target namespace. A namespace can have a
+      default rule for caller namespaces and rules for specific caller namespaces.
+    has-init: false
+  - name: cloud namespace caller-rate-limit get
+    summary: Get a namespace caller rate limit
+    description: |
+      Retrieve a caller rate limit rule on a Temporal Cloud namespace: either the
+      default rule for caller namespaces or the rule for a specific caller namespace.
+
+      Exactly one of --caller-namespace-default or --caller-namespace is required.
+
+      Example (default rule for caller namespaces):
+
+      ```
+      temporal cloud namespace caller-rate-limit get --namespace my-namespace.my-account \
+          --caller-namespace-default
+      ```
+
+      Example (rule for a specific caller namespace):
+
+      ```
+      temporal cloud namespace caller-rate-limit get --namespace my-namespace.my-account \
+          --caller-namespace caller-ns.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - caller-rate-limit-caller
+  - name: cloud namespace caller-rate-limit list
+    summary: List namespace caller rate limits
+    description: |
+      List the caller rate limit rules on a Temporal Cloud namespace. With no
+      filter flags, all rules are listed (paginated). Use --type,
+      --caller-namespace-default, or --caller-namespace to filter the results.
+
+      Example (all rules):
+
+      ```
+      temporal cloud namespace caller-rate-limit list --namespace my-namespace.my-account
+      ```
+
+      Example (default rule for caller namespaces):
+
+      ```
+      temporal cloud namespace caller-rate-limit list --namespace my-namespace.my-account \
+          --caller-namespace-default
+      ```
+
+      Example (rule for a specific caller namespace):
+
+      ```
+      temporal cloud namespace caller-rate-limit list --namespace my-namespace.my-account \
+          --caller-namespace caller-ns.my-account
+      ```
+
+      Example (default rule and a specific caller's rule, for comparison):
+
+      ```
+      temporal cloud namespace caller-rate-limit list --namespace my-namespace.my-account \
+          --caller-namespace-default --caller-namespace caller-ns.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - caller-rate-limit-caller
+    options:
+      - name: type
+        type: string-enum
+        enum-values: [namespace]
+        description: |
+          Only list rules for this caller type. More caller types may be
+          added in the future. Defaults to 'namespace' when
+          --caller-namespace-default or --caller-namespace is set.
+      - name: page-size
+        type: int
+        description: |
+          Number of caller rate limits to return per page. Use for paginated results.
+      - name: page-token
+        type: string
+        description: |
+          Token for retrieving the next page of results in a paginated list.
+  - name: cloud namespace caller-rate-limit delete
+    summary: Delete a namespace caller rate limit
+    description: |
+      Delete a caller rate limit rule on a Temporal Cloud namespace: either the
+      default rule for caller namespaces or the rule for a specific caller namespace.
+
+      Exactly one of --caller-namespace-default or --caller-namespace is required.
+
+      Example (default rule for caller namespaces):
+
+      ```
+      temporal cloud namespace caller-rate-limit delete --namespace my-namespace.my-account \
+          --caller-namespace-default
+      ```
+
+      Example (rule for a specific caller namespace):
+
+      ```
+      temporal cloud namespace caller-rate-limit delete --namespace my-namespace.my-account \
+          --caller-namespace caller-ns.my-account
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - caller-rate-limit-caller
+      - async-operation
+      - resource-version
+  - name: cloud namespace caller-rate-limit set
+    summary: Set a namespace caller rate limit
+    description: |
+      Set a caller rate limit rule on a Temporal Cloud namespace: either the
+      default rule for caller namespaces or the rule for a specific caller namespace.
+      Creates the rule if it doesn't exist, otherwise updates it. Shows a diff
+      and asks for confirmation before applying.
+
+      Exactly one of --caller-namespace-default or --caller-namespace is required.
+
+      Example (default rule for caller namespaces):
+
+      ```
+      temporal cloud namespace caller-rate-limit set --namespace my-namespace.my-account \
+          --caller-namespace-default --rps 100
+      ```
+
+      Example (rule for a specific caller namespace):
+
+      ```
+      temporal cloud namespace caller-rate-limit set --namespace my-namespace.my-account \
+          --caller-namespace caller-ns.my-account --rps 50
+      ```
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - caller-rate-limit-caller
+      - async-operation
+      - resource-version
+    options:
+      - name: rps
+        type: float
+        required: true
+        description: |
+          The maximum requests per second allowed from the matched callers.
+          0 blocks all traffic from the matched callers.
+  - name: cloud namespace caller-rate-limit apply
+    summary: Create or update namespace caller rate limits from a specification
+    description: |
+      Apply a list of caller rate limit rules to a Temporal Cloud namespace.
+      Each rule in the specification is created if it doesn't exist, or updated
+      if it differs from the existing rule. Rules that already match and are
+      active are skipped. Shows a diff of the changed rules and asks for
+      confirmation before applying.
+
+      Apply is additive: existing rules that are not in the specification are left
+      untouched. Use 'temporal cloud namespace caller-rate-limit delete' to remove
+      a rule.
+
+      The specification is a JSON array of caller rate limit specs. It can be
+      provided as inline JSON or loaded from a file by prefixing the path with '@'.
+      An rps of 0 blocks all traffic from the matched callers.
+
+      Example file (limits.json) with the default rule for caller namespaces and
+      a rule for a specific caller namespace:
+
+      ```
+      [
+        {"namespaceDefault": {"rps": 100}},
+        {"namespaceLimit": {"namespaceId": "caller-ns.my-account", "rps": 50}}
+      ]
+      ```
+
+      Example:
+
+      ```
+      temporal cloud namespace caller-rate-limit apply --namespace my-namespace.my-account \
+          --spec @limits.json
+      ```
+
+      Changed rules are applied one at a time. Apply stops at the first failure
+      and reports which rules were already applied. Rerunning skips rules that
+      were already applied and retries rules whose last update failed. A rule
+      that matches but is not active, including one whose operation is still in
+      progress, is updated again, so wait for in-progress operations (for example
+      after --async) to finish before rerunning.
+
+      --async-operation-id and --resource-version can only be used when apply
+      changes a single rule.
+
+      With --async, operations are submitted without waiting; fail-fast then only
+      covers submission errors, so check each printed operation. With -o json, each
+      operation prints its own JSON document.
+    has-init: false
+    option-sets:
+      - client
+      - namespace
+      - diff
+      - async-operation
+      - resource-version
+    options:
+      - name: spec
+        type: string
+        required: true
+        description: |
+          Caller rate limit specifications as a JSON array. Provide inline JSON
+          directly, or use '@path/to/file.json' to load from a file.
+
   # Namespace access commands (who has access to a namespace)
   - name: cloud namespace user
     summary: Inspect users with access to a namespace
@@ -5368,6 +5585,18 @@ option-sets:
         description: |
           Custom role ID to assign. Repeat to assign multiple. When provided,
           replaces the existing custom role list.
+  - name: caller-rate-limit-caller
+    options:
+      - name: caller-namespace-default
+        type: bool
+        description: |
+          Target the default rule, which applies to caller namespaces without a
+          specific rule.
+      - name: caller-namespace
+        type: string
+        description: |
+          The fully qualified caller namespace name in the format 'namespace.account'
+          (e.g., 'caller-ns.my-account').
   - name: export-sink
     options:
       - name: sink-name
