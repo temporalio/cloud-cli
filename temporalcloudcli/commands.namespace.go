@@ -97,7 +97,7 @@ func (c *CloudNamespaceEditCommand) run(cctx *CommandContext, _ []string) error 
 	}
 
 	// Poll for completion
-	poller, err := getPoller(cctx, c.ClientOptions)
+	poller, err := getPoller(cctx, c.ClientOptions, c.PollInterval.Duration())
 	if err != nil {
 		return err
 	}
@@ -211,7 +211,7 @@ func (c *CloudNamespaceApplyCommand) run(cctx *CommandContext, _ []string) error
 	}
 
 	// Step 7: Poll for completion
-	poller, err := getPoller(cctx, c.ClientOptions)
+	poller, err := getPoller(cctx, c.ClientOptions, c.PollInterval.Duration())
 	if err != nil {
 		return err
 	}
@@ -268,7 +268,7 @@ func (c *CloudNamespaceDeleteCommand) run(cctx *CommandContext, _ []string) erro
 	}
 
 	// Poll for completion
-	poller, err := getPoller(cctx, c.ClientOptions)
+	poller, err := getPoller(cctx, c.ClientOptions, c.PollInterval.Duration())
 	if err != nil {
 		return err
 	}

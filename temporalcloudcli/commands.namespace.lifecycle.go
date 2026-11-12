@@ -105,7 +105,7 @@ func (c *CloudNamespaceLifecycleSetCommand) run(cctx *CommandContext, _ []string
 	}
 
 	// Poll for completion
-	poller, err := getPoller(cctx, c.ClientOptions)
+	poller, err := getPoller(cctx, c.ClientOptions, c.PollInterval.Duration())
 	if err != nil {
 		return err
 	}

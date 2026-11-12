@@ -13,11 +13,14 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	cloudmock "github.com/temporalio/cloud-cli/internal/cloudservice/mock"
 	"github.com/temporalio/cloud-cli/temporalcloudcli"
 	"github.com/temporalio/cloud-cli/temporalcloudcli/internal/printer"
 	cmdmock "github.com/temporalio/cloud-cli/temporalcloudcli/mock"
 	"go.temporal.io/api/temporalproto"
+	cloudservice "go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	operation "go.temporal.io/cloud-sdk/api/operation/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -217,6 +220,58 @@ func TestAsyncOperationHandler_PollingError(t *testing.T) {
 
 	err := handler.HandleOperation(op, "my-namespace")
 	require.ErrorIs(t, err, pollingErr)
+}
+
+func TestAsyncOperationPoller_PollInterval(t *testing.T) {
+	const interval = 20 * time.Millisecond
+	states := []operation.AsyncOperation_State{
+		operation.AsyncOperation_STATE_PENDING,
+		operation.AsyncOperation_STATE_IN_PROGRESS,
+		operation.AsyncOperation_STATE_FULFILLED,
+	}
+	mockCloud := cloudmock.NewMockCloudServiceClient(t)
+	for _, state := range states {
+		mockCloud.EXPECT().
+			GetAsyncOperation(mock.Anything, &cloudservice.GetAsyncOperationRequest{AsyncOperationId: "op-1"}, mock.Anything).
+			Return(&cloudservice.GetAsyncOperationResponse{
+				AsyncOperation: &operation.AsyncOperation{Id: "op-1", State: state},
+			}, nil).
+			Once()
+	}
+	var buf bytes.Buffer
+	cctx := newTestCommandContext(t, &buf)
+	poller := temporalcloudcli.AsyncOperationPoller{CloudClient: mockCloud, PollInterval: interval}
+
+	start := time.Now()
+	require.NoError(t, poller.PollAsyncOperation(cctx, "op-1", "my-namespace"))
+	elapsed := time.Since(start)
+
+	assert.GreaterOrEqual(t, elapsed, time.Duration(len(states))*interval)
+	assert.Less(t, elapsed, 2*time.Second, "status checks did not follow the configured interval")
+}
+
+func TestAsyncOperationPoller_InvalidPollInterval(t *testing.T) {
+	tests := []struct {
+		name     string
+		interval time.Duration
+	}{
+		{name: "Zero", interval: 0},
+		{name: "Negative", interval: -time.Second},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			cctx := newTestCommandContext(t, &buf)
+			poller := temporalcloudcli.AsyncOperationPoller{
+				CloudClient:  cloudmock.NewMockCloudServiceClient(t),
+				PollInterval: tt.interval,
+			}
+
+			err := poller.PollAsyncOperation(cctx, "op-1", "my-namespace")
+			require.EqualError(t, err, "--poll-interval must be greater than 0")
+			assert.Empty(t, buf.String())
+		})
+	}
 }
 
 func TestAsyncOperationHandler_HandleUpdateErr_NothingToChange_Idempotent(t *testing.T) {
