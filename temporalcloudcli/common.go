@@ -2,6 +2,7 @@ package temporalcloudcli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -208,7 +209,7 @@ func (r *operationHandler) HandleOperation(op *operation.AsyncOperation, resourc
 	if r.asyncOpts.Async {
 		return r.cctx.Printer.PrintStructured(MutationResult{AsyncOp: op, ID: resourceID}, printer.StructuredOptions{})
 	}
-	poller, pollerErr := getPoller(r.cctx, r.clientOpts)
+	poller, pollerErr := getPoller(r.cctx, r.clientOpts, r.asyncOpts.PollInterval.Duration())
 	if pollerErr != nil {
 		return pollerErr
 	}
@@ -306,11 +307,12 @@ func wrapDeleteOperation[Req any, Res AsyncOperationResponse](
 }
 
 type AsyncOperationPoller struct {
-	CloudClient cloudservice.CloudServiceClient
+	CloudClient  cloudservice.CloudServiceClient
+	PollInterval time.Duration
 }
 
 // pollAsyncOperation polls an async operation until it reaches a terminal state.
-// It prints status updates every second and returns the final AsyncOperation.
+// It prints status updates every PollInterval and returns the final AsyncOperation.
 //
 // The cloudClient should be pre-built using cctx.BuildCloudClient().
 //
@@ -321,7 +323,10 @@ func (p *AsyncOperationPoller) PollAsyncOperation(
 	operationID string,
 	id string,
 ) error {
-	ticker := time.NewTicker(1 * time.Second)
+	if p.PollInterval <= 0 {
+		return errors.New("--poll-interval must be greater than 0")
+	}
+	ticker := time.NewTicker(p.PollInterval)
 	defer ticker.Stop()
 
 	for {
@@ -410,7 +415,7 @@ func newUnchangedResult() Result {
 	}
 }
 
-func getPoller(cctx *CommandContext, opts ClientOptions) (Poller, error) {
+func getPoller(cctx *CommandContext, opts ClientOptions, pollInterval time.Duration) (Poller, error) {
 	if cctx.Poller != nil {
 		return cctx.Poller, nil
 	}
@@ -419,7 +424,8 @@ func getPoller(cctx *CommandContext, opts ClientOptions) (Poller, error) {
 		return nil, err
 	}
 	return &AsyncOperationPoller{
-		CloudClient: cloudClient.CloudService(),
+		CloudClient:  cloudClient.CloudService(),
+		PollInterval: pollInterval,
 	}, nil
 }
 
@@ -453,7 +459,7 @@ func wrapAsyncOperation[P any](
 			}, printer.StructuredOptions{})
 		}
 
-		poller, err := getPoller(cctx, clientOpts)
+		poller, err := getPoller(cctx, clientOpts, asyncOpts.PollInterval.Duration())
 		if err != nil {
 			return err
 		}

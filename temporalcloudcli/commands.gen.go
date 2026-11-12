@@ -2044,6 +2044,7 @@ type CloudNamespaceApplyCommand struct {
 	AsyncOperationId string
 	Idempotent       bool
 	Async            bool
+	PollInterval     cliext.FlagDuration
 	ResourceVersion  string
 }
 
@@ -2065,6 +2066,8 @@ func NewCloudNamespaceApplyCommand(cctx *CommandContext, parent *CloudNamespaceC
 	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
 	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if the namespace already matches the specification. Without this flag, the command errors when no changes are needed.")
 	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
+	s.PollInterval = cliext.MustParseFlagDuration("1s")
+	s.Command.Flags().Var(&s.PollInterval, "poll-interval", "Time to wait between status checks when waiting for operation completion. Cannot be greater than 10 minutes. Supports minutes (m) and seconds (s).")
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.DiffOptions.BuildFlags(s.Command.Flags())
@@ -2680,6 +2683,7 @@ type CloudNamespaceDeleteCommand struct {
 	Namespace        string
 	AsyncOperationId string
 	Async            bool
+	PollInterval     cliext.FlagDuration
 	Idempotent       bool
 	ResourceVersion  string
 }
@@ -2700,6 +2704,8 @@ func NewCloudNamespaceDeleteCommand(cctx *CommandContext, parent *CloudNamespace
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "namespace")
 	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
 	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
+	s.PollInterval = cliext.MustParseFlagDuration("1s")
+	s.Command.Flags().Var(&s.PollInterval, "poll-interval", "Time to wait between status checks when waiting for operation completion. Cannot be greater than 10 minutes. Supports minutes (m) and seconds (s).")
 	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if the namespace does not exist. Without this flag, the command errors if the namespace is not found.")
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
@@ -2802,6 +2808,7 @@ type CloudNamespaceEditCommand struct {
 	AsyncOperationId string
 	Idempotent       bool
 	Async            bool
+	PollInterval     cliext.FlagDuration
 	ResourceVersion  string
 }
 
@@ -2822,6 +2829,8 @@ func NewCloudNamespaceEditCommand(cctx *CommandContext, parent *CloudNamespaceCo
 	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
 	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if no changes were made in the editor. Without this flag, the command errors when the configuration is unchanged.")
 	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
+	s.PollInterval = cliext.MustParseFlagDuration("1s")
+	s.Command.Flags().Var(&s.PollInterval, "poll-interval", "Time to wait between status checks when waiting for operation completion. Cannot be greater than 10 minutes. Supports minutes (m) and seconds (s).")
 	s.Command.Flags().StringVarP(&s.ResourceVersion, "resource-version", "v", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.DiffOptions.BuildFlags(s.Command.Flags())
@@ -3949,6 +3958,7 @@ type CloudNamespaceLifecycleSetCommand struct {
 	EnableDeleteProtection bool
 	AsyncOperationId       string
 	Async                  bool
+	PollInterval           cliext.FlagDuration
 	Idempotent             bool
 	ResourceVersion        string
 }
@@ -3971,6 +3981,8 @@ func NewCloudNamespaceLifecycleSetCommand(cctx *CommandContext, parent *CloudNam
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "enable-delete-protection")
 	s.Command.Flags().StringVar(&s.AsyncOperationId, "async-operation-id", "", "Custom identifier for tracking this async operation. If not provided, a unique ID is generated automatically.")
 	s.Command.Flags().BoolVar(&s.Async, "async", false, "Return immediately after initiating the operation instead of waiting for completion. Use the returned operation ID to check status later.")
+	s.PollInterval = cliext.MustParseFlagDuration("1s")
+	s.Command.Flags().Var(&s.PollInterval, "poll-interval", "Time to wait between status checks when waiting for operation completion. Cannot be greater than 10 minutes. Supports minutes (m) and seconds (s).")
 	s.Command.Flags().BoolVar(&s.Idempotent, "idempotent", false, "Succeed silently if the lifecycle configuration is already set to the specified value. Without this flag, the command errors when no change is needed.")
 	s.Command.Flags().StringVar(&s.ResourceVersion, "resource-version", "", "Resource version for optimistic concurrency control. If not provided, the current version is fetched automatically.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())

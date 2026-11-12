@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -112,7 +113,10 @@ func (s *SharedServerSuite) pollAsyncOperation(
 		},
 	}
 
-	poller := temporalcloudcli.AsyncOperationPoller{CloudClient: cloudClient.CloudService()}
+	poller := temporalcloudcli.AsyncOperationPoller{
+		CloudClient:  cloudClient.CloudService(),
+		PollInterval: time.Second,
+	}
 	return poller.PollAsyncOperation(cctx, operationID, "")
 }
 
