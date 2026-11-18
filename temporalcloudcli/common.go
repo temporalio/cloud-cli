@@ -323,6 +323,10 @@ func (p *AsyncOperationPoller) PollAsyncOperation(
 ) error {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
+	// Covers the early returns. Terminal states clear explicitly, because a deferred Clear would
+	// run only after their result has already printed on the status line.
+	status := cctx.Printer.NewStatusLine()
+	defer status.Clear()
 
 	for {
 		select {
@@ -342,21 +346,19 @@ func (p *AsyncOperationPoller) PollAsyncOperation(
 				return fmt.Errorf("async operation not found")
 			}
 
-			// Print current state
-			var progressString string
 			switch asyncOp.State {
 			case operation.AsyncOperation_STATE_PENDING:
-				progressString = fmt.Sprintf("[%s] Operation pending...\n", time.Now().Format("15:04:05"))
+				status.Progress(fmt.Sprintf("[%s] Operation pending", time.Now().Format("15:04:05")))
 			case operation.AsyncOperation_STATE_IN_PROGRESS:
-				progressString = fmt.Sprintf("[%s] Operation in progress...\n", time.Now().Format("15:04:05"))
+				status.Progress(fmt.Sprintf("[%s] Operation in progress", time.Now().Format("15:04:05")))
 			case operation.AsyncOperation_STATE_FULFILLED:
-				progressString = fmt.Sprintf("[%s] Operation completed successfully\n", time.Now().Format("15:04:05"))
+				status.Clear()
 				return cctx.Printer.PrintStructured(MutationResult{
 					ID:      id,
 					AsyncOp: asyncOp,
 				}, printer.StructuredOptions{})
 			case operation.AsyncOperation_STATE_FAILED:
-				progressString = fmt.Sprintf("[%s] Operation failed: %s\n", time.Now().Format("15:04:05"), asyncOp.FailureReason)
+				status.Clear()
 				// Print the structured output first, then return error for proper exit code
 				if err := cctx.Printer.PrintStructured(MutationResult{
 					ID:      id,
@@ -366,7 +368,7 @@ func (p *AsyncOperationPoller) PollAsyncOperation(
 				}
 				return fmt.Errorf("async operation failed: %s", asyncOp.FailureReason)
 			case operation.AsyncOperation_STATE_CANCELLED:
-				progressString = fmt.Sprintf("[%s] Operation cancelled\n", time.Now().Format("15:04:05"))
+				status.Clear()
 				// Print the structured output first, then return error for proper exit code
 				if err := cctx.Printer.PrintStructured(MutationResult{
 					ID:      id,
@@ -376,7 +378,7 @@ func (p *AsyncOperationPoller) PollAsyncOperation(
 				}
 				return fmt.Errorf("async operation cancelled")
 			case operation.AsyncOperation_STATE_REJECTED:
-				progressString = fmt.Sprintf("[%s] Operation rejected\n", time.Now().Format("15:04:05"))
+				status.Clear()
 				// Print the structured output first, then return error for proper exit code
 				if err := cctx.Printer.PrintStructured(MutationResult{
 					ID:      id,
@@ -386,10 +388,7 @@ func (p *AsyncOperationPoller) PollAsyncOperation(
 				}
 				return fmt.Errorf("async operation rejected")
 			default:
-				progressString = fmt.Sprintf("[%s] Operation pending...\n", time.Now().Format("15:04:05"))
-			}
-			if !cctx.JSONOutput {
-				cctx.Printer.Print(progressString)
+				status.Progress(fmt.Sprintf("[%s] Operation pending", time.Now().Format("15:04:05")))
 			}
 		}
 	}
