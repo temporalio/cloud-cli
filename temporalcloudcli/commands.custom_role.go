@@ -30,6 +30,7 @@ func (c *CloudCustomRoleListCommand) run(cctx *CommandContext, _ []string) error
 	res, err := client.GetCustomRoles(cctx, &cloudservice.GetCustomRolesRequest{
 		PageSize:  int32(c.PageSize),
 		PageToken: c.PageToken,
+		ProjectId: c.ProjectId,
 	})
 	if err != nil {
 		return err
@@ -41,7 +42,7 @@ func (c *CloudCustomRoleListCommand) run(cctx *CommandContext, _ []string) error
 		}{CustomRoles: res.CustomRoles, NextPageToken: res.NextPageToken},
 		printer.PrintResourceOptions{
 			Fields:     []string{"Id", "State", "CreatedTime"},
-			SpecFields: []string{"Name", "Description"},
+			SpecFields: []string{"Name", "Description", "ProjectId"},
 		},
 		printer.TableOptions{},
 	)
@@ -51,6 +52,12 @@ func (c *CloudCustomRoleCreateCommand) run(cctx *CommandContext, _ []string) err
 	spec, err := parseCustomRoleSpec(cctx, c.Spec)
 	if err != nil {
 		return err
+	}
+	if c.ProjectId != "" {
+		if spec.ProjectId != "" && spec.ProjectId != c.ProjectId {
+			return fmt.Errorf("--project-id %q conflicts with projectId %q in --spec", c.ProjectId, spec.ProjectId)
+		}
+		spec.ProjectId = c.ProjectId
 	}
 	yes, err := cctx.GetPrompter().PromptYes("Create")
 	if err != nil {
@@ -83,6 +90,11 @@ func (c *CloudCustomRoleUpdateCommand) run(cctx *CommandContext, _ []string) err
 	res, err := client.GetCustomRole(cctx, &cloudservice.GetCustomRoleRequest{RoleId: c.RoleId})
 	if err != nil {
 		return err
+	}
+	// AIDEV-NOTE: project_id is immutable and --spec replaces the whole spec. Keep the existing
+	// project when the provided spec omits it; sending it empty would be rejected by the server.
+	if spec.ProjectId == "" {
+		spec.ProjectId = res.GetCustomRole().GetSpec().GetProjectId()
 	}
 	yes, err := cctx.GetPrompter().PromptApply(res.CustomRole.Spec, spec, false)
 	if err != nil {
@@ -141,7 +153,7 @@ func (c *CloudCustomRoleApplyCommand) run(cctx *CommandContext, _ []string) erro
 	if err != nil {
 		return err
 	}
-	existing, err := findCustomRoleByName(cctx, client, spec.Name)
+	existing, err := findCustomRoleByName(cctx, client, spec.Name, spec.ProjectId)
 	if err != nil {
 		return err
 	}
@@ -230,15 +242,22 @@ func parseCustomRoleSpec(cctx *CommandContext, raw string) (*identityv1.CustomRo
 // Roles per account are typically small (tens), so paging is fine.
 // Names are not unique server-side, so we scan every page and error on
 // duplicates rather than silently picking one.
+// AIDEV-NOTE: GetCustomRoles without a project_id returns only account-scoped roles, so the
+// lookup must filter by the spec's project; otherwise applying a project role spec never finds
+// the existing role and creates a duplicate.
 func findCustomRoleByName(
 	cctx *CommandContext,
 	client cloudservice.CloudServiceClient,
 	name string,
+	projectID string,
 ) (*identityv1.CustomRole, error) {
 	var match *identityv1.CustomRole
 	var pageToken string
 	for {
-		res, err := client.GetCustomRoles(cctx, &cloudservice.GetCustomRolesRequest{PageToken: pageToken})
+		res, err := client.GetCustomRoles(cctx, &cloudservice.GetCustomRolesRequest{
+			PageToken: pageToken,
+			ProjectId: projectID,
+		})
 		if err != nil {
 			return nil, err
 		}

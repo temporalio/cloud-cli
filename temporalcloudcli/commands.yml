@@ -3538,6 +3538,11 @@ commands:
         type: string
         description: |
           Token for retrieving the next page of results in a paginated list.
+      - name: project-id
+        type: string
+        description: |
+          List only the custom roles scoped to this project. If omitted, only
+          account-scoped custom roles are listed.
   - name: cloud custom-role create
     summary: '[Experimental] Create a Temporal Cloud custom role'
     description: |
@@ -3557,6 +3562,12 @@ commands:
       ```
       temporal cloud custom-role create --spec @custom-role.json
       ```
+
+      Example scoped to a project:
+
+      ```
+      temporal cloud custom-role create --spec @custom-role.json --project-id my-project-id
+      ```
     has-init: false
     option-sets:
       - client
@@ -3568,11 +3579,18 @@ commands:
         description: |
           Custom role specification in JSON format. Provide inline JSON
           directly, or use '@path/to/file.json' to load from a file.
+      - name: project-id
+        type: string
+        description: |
+          Scope the custom role to this project. Equivalent to setting
+          "projectId" in the spec. The project cannot be changed after
+          the role is created.
   - name: cloud custom-role update
     summary: '[Experimental] Update an existing Temporal Cloud custom role'
     description: |
       Update an existing Temporal Cloud custom role from a JSON specification.
-      Replaces the role's spec with the provided one.
+      Replaces the role's spec with the provided one. If the spec omits
+      "projectId", the role's existing project is kept.
 
       Example:
 
@@ -3613,7 +3631,9 @@ commands:
     description: |
       Apply a custom role configuration to Temporal Cloud. Creates a new role
       if no role with the given name exists, or updates the existing one to
-      match the specification.
+      match the specification. If the spec sets "projectId", the name is
+      matched against roles in that project; otherwise against
+      account-scoped roles.
 
       The specification can be provided as inline JSON or loaded from a file
       by prefixing the path with '@'.
