@@ -1609,9 +1609,9 @@ func NewCloudCustomRoleApplyCommand(cctx *CommandContext, parent *CloudCustomRol
 	s.Command.Use = "apply [flags]"
 	s.Command.Short = "[Experimental] Create or update a custom role from a specification"
 	if hasHighlighting {
-		s.Command.Long = "Apply a custom role configuration to Temporal Cloud. Creates a new role\nif no role with the given name exists, or updates the existing one to\nmatch the specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role apply --spec @custom-role.json\x1b[0m"
+		s.Command.Long = "Apply a custom role configuration to Temporal Cloud. Creates a new role\nif no role with the given name exists, or updates the existing one to\nmatch the specification. If the spec sets \"projectId\", the name is\nmatched against roles in that project; otherwise against\naccount-scoped roles.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role apply --spec @custom-role.json\x1b[0m"
 	} else {
-		s.Command.Long = "Apply a custom role configuration to Temporal Cloud. Creates a new role\nif no role with the given name exists, or updates the existing one to\nmatch the specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample:\n\n```\ntemporal cloud custom-role apply --spec @custom-role.json\n```"
+		s.Command.Long = "Apply a custom role configuration to Temporal Cloud. Creates a new role\nif no role with the given name exists, or updates the existing one to\nmatch the specification. If the spec sets \"projectId\", the name is\nmatched against roles in that project; otherwise against\naccount-scoped roles.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample:\n\n```\ntemporal cloud custom-role apply --spec @custom-role.json\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Spec, "spec", "", "Custom role specification in JSON format. Provide inline JSON directly, or use '@path/to/file.json' to load from a file. Required.")
@@ -1633,7 +1633,8 @@ type CloudCustomRoleCreateCommand struct {
 	Command cobra.Command
 	ClientOptions
 	AsyncOperationOptions
-	Spec string
+	Spec      string
+	ProjectId string
 }
 
 func NewCloudCustomRoleCreateCommand(cctx *CommandContext, parent *CloudCustomRoleCommand) *CloudCustomRoleCreateCommand {
@@ -1643,13 +1644,14 @@ func NewCloudCustomRoleCreateCommand(cctx *CommandContext, parent *CloudCustomRo
 	s.Command.Use = "create [flags]"
 	s.Command.Short = "[Experimental] Create a Temporal Cloud custom role"
 	if hasHighlighting {
-		s.Command.Long = "Create a new Temporal Cloud custom role from a JSON specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample with inline JSON:\n\n\x1b[1mtemporal cloud custom-role create --spec '{\"name\":\"reader\",\"description\":\"...\",\"permissions\":[...]}'\x1b[0m\n\nExample with file path:\n\n\x1b[1mtemporal cloud custom-role create --spec @custom-role.json\x1b[0m"
+		s.Command.Long = "Create a new Temporal Cloud custom role from a JSON specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample with inline JSON:\n\n\x1b[1mtemporal cloud custom-role create --spec '{\"name\":\"reader\",\"description\":\"...\",\"permissions\":[...]}'\x1b[0m\n\nExample with file path:\n\n\x1b[1mtemporal cloud custom-role create --spec @custom-role.json\x1b[0m\n\nExample scoped to a project:\n\n\x1b[1mtemporal cloud custom-role create --spec @custom-role.json --project-id my-project-id\x1b[0m"
 	} else {
-		s.Command.Long = "Create a new Temporal Cloud custom role from a JSON specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample with inline JSON:\n\n```\ntemporal cloud custom-role create --spec '{\"name\":\"reader\",\"description\":\"...\",\"permissions\":[...]}'\n```\n\nExample with file path:\n\n```\ntemporal cloud custom-role create --spec @custom-role.json\n```"
+		s.Command.Long = "Create a new Temporal Cloud custom role from a JSON specification.\n\nThe specification can be provided as inline JSON or loaded from a file\nby prefixing the path with '@'.\n\nExample with inline JSON:\n\n```\ntemporal cloud custom-role create --spec '{\"name\":\"reader\",\"description\":\"...\",\"permissions\":[...]}'\n```\n\nExample with file path:\n\n```\ntemporal cloud custom-role create --spec @custom-role.json\n```\n\nExample scoped to a project:\n\n```\ntemporal cloud custom-role create --spec @custom-role.json --project-id my-project-id\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Spec, "spec", "", "Custom role specification in JSON format. Provide inline JSON directly, or use '@path/to/file.json' to load from a file. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "spec")
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "Scope the custom role to this project. Equivalent to setting \"projectId\" in the spec. The project cannot be changed after the role is created.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.AsyncOperationOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1763,6 +1765,7 @@ type CloudCustomRoleListCommand struct {
 	ClientOptions
 	PageSize  int
 	PageToken string
+	ProjectId string
 }
 
 func NewCloudCustomRoleListCommand(cctx *CommandContext, parent *CloudCustomRoleCommand) *CloudCustomRoleListCommand {
@@ -1779,6 +1782,7 @@ func NewCloudCustomRoleListCommand(cctx *CommandContext, parent *CloudCustomRole
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Number of custom roles to return per page. Use for paginated results.")
 	s.Command.Flags().StringVar(&s.PageToken, "page-token", "", "Token for retrieving the next page of results in a paginated list.")
+	s.Command.Flags().StringVar(&s.ProjectId, "project-id", "", "List only the custom roles scoped to this project. If omitted, only account-scoped custom roles are listed.")
 	s.ClientOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -1805,9 +1809,9 @@ func NewCloudCustomRoleUpdateCommand(cctx *CommandContext, parent *CloudCustomRo
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "[Experimental] Update an existing Temporal Cloud custom role"
 	if hasHighlighting {
-		s.Command.Long = "Update an existing Temporal Cloud custom role from a JSON specification.\nReplaces the role's spec with the provided one.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role update --role-id my-role-id --spec @custom-role.json\x1b[0m"
+		s.Command.Long = "Update an existing Temporal Cloud custom role from a JSON specification.\nReplaces the role's spec with the provided one. If the spec omits\n\"projectId\", the role's existing project is kept.\n\nExample:\n\n\x1b[1mtemporal cloud custom-role update --role-id my-role-id --spec @custom-role.json\x1b[0m"
 	} else {
-		s.Command.Long = "Update an existing Temporal Cloud custom role from a JSON specification.\nReplaces the role's spec with the provided one.\n\nExample:\n\n```\ntemporal cloud custom-role update --role-id my-role-id --spec @custom-role.json\n```"
+		s.Command.Long = "Update an existing Temporal Cloud custom role from a JSON specification.\nReplaces the role's spec with the provided one. If the spec omits\n\"projectId\", the role's existing project is kept.\n\nExample:\n\n```\ntemporal cloud custom-role update --role-id my-role-id --spec @custom-role.json\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Spec, "spec", "", "Custom role specification in JSON format. Provide inline JSON directly, or use '@path/to/file.json' to load from a file. Required.")

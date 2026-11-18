@@ -84,3 +84,5 @@ require (
 )
 
 tool github.com/vektra/mockery/v3
+
+replace go.temporal.io/cloud-sdk => ../cloud-sdk-go

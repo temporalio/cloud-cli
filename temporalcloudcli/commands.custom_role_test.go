@@ -40,6 +40,35 @@ var testRole = &identityv1.CustomRole{
 	Spec:            testRoleSpec,
 }
 
+var testProjectRoleSpec = &identityv1.CustomRoleSpec{
+	Name:        "reader",
+	Description: "read-only",
+	Permissions: []*identityv1.CustomRoleSpec_Permission{{
+		Resources: &identityv1.CustomRoleSpec_Resources{
+			ResourceType: "namespace",
+			AllowAll:     true,
+		},
+		Actions: []string{"read"},
+	}},
+	ProjectId: "proj-1",
+}
+
+const testProjectRoleSpecJSON = `{
+    "name": "reader",
+    "description": "read-only",
+    "permissions": [{
+        "resources": {"resource_type": "namespace", "allow_all": true},
+        "actions": ["read"]
+    }],
+    "projectId": "proj-1"
+}`
+
+var testProjectRole = &identityv1.CustomRole{
+	Id:              "role-p1",
+	ResourceVersion: "rv-p1",
+	Spec:            testProjectRoleSpec,
+}
+
 // ---- GetCustomRole ----
 
 func TestGetCustomRole(t *testing.T) {
@@ -116,6 +145,17 @@ func TestListCustomRoles(t *testing.T) {
 			},
 		},
 		{
+			name: "WithProjectId",
+			cmd:  temporalcloudcli.CloudCustomRoleListCommand{ProjectId: "proj-1"},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetCustomRoles(mock.Anything, &cloudservice.GetCustomRolesRequest{ProjectId: "proj-1"}, mock.Anything).
+					Return(&cloudservice.GetCustomRolesResponse{
+						CustomRoles: []*identityv1.CustomRole{testProjectRole},
+					}, nil)
+			},
+		},
+		{
 			name: "Error",
 			cmd:  temporalcloudcli.CloudCustomRoleListCommand{},
 			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
@@ -169,6 +209,43 @@ func TestCreateCustomRole(t *testing.T) {
 			},
 			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
 			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-create"},
+		},
+		{
+			name: "WithProjectIdFlag",
+			cmd:  temporalcloudcli.CloudCustomRoleCreateCommand{Spec: testRoleSpecJSON, ProjectId: "proj-1"},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					CreateCustomRole(mock.Anything, &cloudservice.CreateCustomRoleRequest{
+						Spec: testProjectRoleSpec,
+					}, mock.Anything).
+					Return(&cloudservice.CreateCustomRoleResponse{
+						RoleId:         "role-p1",
+						AsyncOperation: &operation.AsyncOperation{Id: "op-create"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-create"},
+		},
+		{
+			name: "WithProjectIdInSpec",
+			cmd:  temporalcloudcli.CloudCustomRoleCreateCommand{Spec: testProjectRoleSpecJSON},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					CreateCustomRole(mock.Anything, &cloudservice.CreateCustomRoleRequest{
+						Spec: testProjectRoleSpec,
+					}, mock.Anything).
+					Return(&cloudservice.CreateCustomRoleResponse{
+						RoleId:         "role-p1",
+						AsyncOperation: &operation.AsyncOperation{Id: "op-create"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPromptYes: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-create"},
+		},
+		{
+			name:        "ProjectIdConflict",
+			cmd:         temporalcloudcli.CloudCustomRoleCreateCommand{Spec: testProjectRoleSpecJSON, ProjectId: "proj-2"},
+			expectedErr: `--project-id "proj-2" conflicts with projectId "proj-1" in --spec`,
 		},
 		{
 			name:          "PromptDeclined",
@@ -232,6 +309,29 @@ func TestUpdateCustomRole(t *testing.T) {
 						RoleId:          "role-1",
 						Spec:            testRoleSpec,
 						ResourceVersion: "rv-1",
+					}, mock.Anything).
+					Return(&cloudservice.UpdateCustomRoleResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-update"},
+					}, nil)
+			},
+			promptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			asyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-update"},
+		},
+		{
+			name: "KeepsExistingProjectId",
+			cmd: temporalcloudcli.CloudCustomRoleUpdateCommand{
+				RoleIdOptions: temporalcloudcli.RoleIdOptions{RoleId: "role-p1"},
+				Spec:          testRoleSpecJSON,
+			},
+			cloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetCustomRole(mock.Anything, &cloudservice.GetCustomRoleRequest{RoleId: "role-p1"}, mock.Anything).
+					Return(&cloudservice.GetCustomRoleResponse{CustomRole: testProjectRole}, nil)
+				c.EXPECT().
+					UpdateCustomRole(mock.Anything, &cloudservice.UpdateCustomRoleRequest{
+						RoleId:          "role-p1",
+						Spec:            testProjectRoleSpec,
+						ResourceVersion: "rv-p1",
 					}, mock.Anything).
 					Return(&cloudservice.UpdateCustomRoleResponse{
 						AsyncOperation: &operation.AsyncOperation{Id: "op-update"},
@@ -421,6 +521,33 @@ func TestApplyCustomRole_Update(t *testing.T) {
 			},
 			PromptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
 			AsyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-apply-update"},
+			JSONOutput:         true,
+		})
+}
+
+// AIDEV-NOTE: A project role spec must be looked up within its project. An unfiltered lookup
+// returns only account-scoped roles, so apply would create a duplicate instead of updating.
+func TestApplyCustomRole_ProjectLookup(t *testing.T) {
+	temporalcloudcli.TestCommand(t, &temporalcloudcli.CloudCustomRoleApplyCommand{Spec: testProjectRoleSpecJSON},
+		temporalcloudcli.TestCommandOptions{
+			CloudClientExpectations: func(c *cloudmock.MockCloudServiceClient) {
+				c.EXPECT().
+					GetCustomRoles(mock.Anything, &cloudservice.GetCustomRolesRequest{ProjectId: "proj-1"}, mock.Anything).
+					Return(&cloudservice.GetCustomRolesResponse{
+						CustomRoles: []*identityv1.CustomRole{testProjectRole},
+					}, nil)
+				c.EXPECT().
+					UpdateCustomRole(mock.Anything, &cloudservice.UpdateCustomRoleRequest{
+						RoleId:          "role-p1",
+						Spec:            testProjectRoleSpec,
+						ResourceVersion: "rv-p1",
+					}, mock.Anything).
+					Return(&cloudservice.UpdateCustomRoleResponse{
+						AsyncOperation: &operation.AsyncOperation{Id: "op-apply-project"},
+					}, nil)
+			},
+			PromptOptions:      temporalcloudcli.TestPromptOptions{ExpectPrompApply: true, PromptResult: true},
+			AsyncPollerOptions: temporalcloudcli.TestAsyncPollerOptions{AsyncOperationID: "op-apply-project"},
 			JSONOutput:         true,
 		})
 }
