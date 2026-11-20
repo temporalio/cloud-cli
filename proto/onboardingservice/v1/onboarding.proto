@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+// Vendored subset of saas-proto proto/onboardingservice/v1/onboarding.proto.
+// saas-proto is the source of truth. Field names, numbers and types must match
+// it exactly. Fields the CLI does not need, and that would pull in private
+// saas-proto imports, are left out and reserved here; the decoder skips them as
+// unknown fields. Changes must be additive and land in saas-proto first.
+package onboardingservice.v1;
+
+option go_package = "github.com/temporalio/cloud-cli/internal/onboardingservice/v1;onboardingservice";
+
+enum StepType {
+    STEP_TYPE_UNSPECIFIED = 0;
+    STEP_TYPE_CUSTOMER_DETAILS_COLLECTION = 1;
+    STEP_TYPE_WAIT_FOR_THROTTLE = 2;
+    STEP_TYPE_WAIT_FOR_PAYMENT_PROVIDER_SETUP = 3;
+    STEP_TYPE_PAYMENT_COLLECTION = 4;
+    STEP_TYPE_WAIT_FOR_ACCOUNT_CREATION = 5;
+    STEP_TYPE_END_OF_FUNNEL = 6;
+}
+
+message OnboardingState {
+    // Omitted from this copy:
+    //   5  stripe_setup_intent_confirmation (Stripe client secret; the CLI never collects payment)
+    //   8  eligible_promotions
+    //   9  eligible_billing_plans (private services.saasapi.ui.billingplan.v1 import)
+    //   10 target_sku_type (temporal.api.cloud.account.beta import)
+    //   11 billing_provider_details (private api.uiservice.v1 import)
+    reserved 5, 8, 9, 10, 11;
+    reserved "stripe_setup_intent_confirmation", "eligible_promotions", "eligible_billing_plans",
+        "target_sku_type", "billing_provider_details";
+
+    // Indicates the current step of the funnel the user is on
+    StepType current_step = 1;
+
+    CustomerDetailsCollectionStepInformation customer_details_collection = 2;
+
+    WaitForThrottleStepInformation wait_for_throttle = 3;
+
+    WaitForStripeSetupStepInformation stripe_setup = 4;
+
+    WaitForAccountCreationStepInformation wait_for_account_creation = 6;
+
+    string user_email = 7;
+
+    // The Temporal Cloud user id of the user, if available. Empty if the user does not have one yet.
+    string user_id = 12;
+}
+
+message GetOrCreateCLIOnboardingStateRequest {
+    // Optional, as is every field in it; the CLI sends whatever its login provides.
+    CustomerDetails customer_details = 1;
+}
+
+message GetOrCreateCLIOnboardingStateResponse {
+    bool user_already_exists = 1;
+
+    // Empty if user_already_exists is true.
+    OnboardingState state = 2;
+}
+
+message WaitForStripeSetupStepInformation {
+}
+
+message WaitForAccountCreationStepInformation {
+}
+
+message WaitForThrottleStepInformation {
+}
+
+message CustomerDetailsCollectionStepInformation {
+    CustomerDetails details = 1;
+}
+
+message CustomerDetails {
+    // Omitted from this copy: 6 agree_terms_of_service and 8 purpose (both deprecated upstream).
+    // 5 was "Industry", removed upstream.
+    reserved 5, 6, 8;
+    reserved "agree_terms_of_service", "purpose";
+
+    // The first name of the customer.
+    string first_name = 1;
+
+    // The last name of the customer.
+    string last_name = 2;
+
+    // The name of the company the user is from. If empty, the server defaults to "Personal".
+    string company_name = 3;
+
+    // The country of the user.
+    string country = 4;
+
+    // Indicates whether the user is interested in receiving marketing emails from Temporal
+    bool opt_in_marketing_email = 7;
+}
