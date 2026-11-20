@@ -1,4 +1,4 @@
-.PHONY: all install gen build test mocks
+.PHONY: all install gen proto build test mocks
 
 # Load .env file if it exists (for local development)
 # In CI/CD, environment variables are provided by the environment
@@ -24,6 +24,12 @@ install:
 
 gen: install
 	gen-commands -input ./temporalcloudcli/commands.yml -pkg temporalcloudcli > ./temporalcloudcli/commands.gen.go
+
+# Regenerates the vendored onboarding service client (proto/ -> internal/).
+# Requires buf on PATH; the protoc plugins are pinned as go tools in go.mod.
+proto:
+	buf lint
+	buf generate
 
 build:
 	go build -ldflags "$(LDFLAGS)" ./cmd/temporal-cloud
