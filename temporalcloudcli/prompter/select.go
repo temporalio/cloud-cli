@@ -9,25 +9,22 @@ import (
 	"golang.org/x/term"
 )
 
-// ErrSelectCanceled is returned when the user cancels a selection (Ctrl-C,
-// Ctrl-D or q).
+// ErrSelectCanceled is returned when the user cancels a selection (Ctrl-C, Ctrl-D or q).
 var ErrSelectCanceled = errors.New("selection canceled")
 
 const (
-	keyCtrlC = 3
-	keyCtrlD = 4
-	keyEsc   = 27
+	keyCtrlC = '\x03'
+	keyCtrlD = '\x04'
+	keyEsc   = '\x1b'
 )
 
-// fdFile is satisfied by *os.File, the only kind of stream that can be a
-// terminal.
+// fdFile is satisfied by *os.File, the only kind of stream that can be a terminal.
 type fdFile interface {
 	Fd() uintptr
 }
 
 // IsTerminal reports whether in and out are both interactive terminals, so an
-// arrow-key prompt can be shown. Streams that aren't files, such as buffers in
-// tests, are never terminals.
+// arrow-key prompt can be shown.
 func IsTerminal(in io.Reader, out io.Writer) bool {
 	return isTerminal(in) && isTerminal(out)
 }

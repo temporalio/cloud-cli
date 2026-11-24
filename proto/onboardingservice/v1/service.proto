@@ -3,8 +3,7 @@ syntax = "proto3";
 // Vendored subset of saas-proto proto/onboardingservice/v1/service.proto.
 // saas-proto is the source of truth. Keep the package, service, RPC and message
 // names identical to it: they form the gRPC method path on the wire. Only the
-// RPCs the CLI calls are copied here. Changes must be additive and land in
-// saas-proto first.
+// RPCs the CLI calls are copied here.
 package onboardingservice.v1;
 
 option go_package = "github.com/temporalio/cloud-cli/internal/onboardingservice/v1;onboardingservice";

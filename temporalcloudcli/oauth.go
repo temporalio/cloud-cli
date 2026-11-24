@@ -39,7 +39,6 @@ func Login(ctx context.Context, config *oauth2.Config, openBrowser bool, options
 	// Prompts go to stderr so stdout carries only command output (e.g. -o json).
 	if openBrowser {
 		fmt.Fprintf(os.Stderr, "Opening browser to authorize. If it doesn't open, visit: %s\n", authURL)
-		// The browser launcher's own output would also land on stdout by default.
 		browser.Stdout = os.Stderr
 		_ = browser.OpenURL(authURL)
 	} else {
