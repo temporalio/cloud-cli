@@ -1,12 +1,10 @@
 package temporalcloudcli
 
 import (
-	"bufio"
 	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"io"
 
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc"
@@ -79,46 +77,15 @@ func (c *CloudSignupCommand) run(cctx *CommandContext, _ []string) error {
 	return nil
 }
 
-// login runs the browser login. A new email + password user is denied until
-// they verify their email, so in a terminal it waits for them to click the
-// emailed link and then logs in again, instead of making them rerun signup.
+// login runs the browser login. Auth0 denies a new email + password user until
+// they verify their email; signup is safe to rerun, so it asks them to do that.
 func (c *CloudSignupCommand) login(cctx *CommandContext, config *oauth2.Config, authParams []oauth2.AuthCodeOption) (*oauth2.Token, error) {
-	for {
-		token, err := Login(cctx, config, !c.Parent.DisablePopUp, authParams...)
-		var authErr *AuthorizationError
-		if !errors.As(err, &authErr) || !authErr.IsEmailNotVerified() {
-			return token, err
-		}
-		if !cliprompter.IsTerminal(cctx.Options.Stdin, cctx.Options.Stderr) {
-			return nil, errors.New("verify your email using the link we sent you, then run signup again")
-		}
-		fmt.Fprint(cctx.Options.Stderr,
-			"Verify your email using the link we sent you, then press Enter to continue.")
-		if err := waitForEnter(cctx, cctx.Options.Stdin); err != nil {
-			return nil, err
-		}
-		// The account now exists, so show the login form rather than sign-up.
-		authParams = append(authParams, oauth2.SetAuthURLParam("screen_hint", "login"))
+	token, err := Login(cctx, config, !c.Parent.DisablePopUp, authParams...)
+	var authErr *AuthorizationError
+	if errors.As(err, &authErr) && authErr.IsEmailNotVerified() {
+		return nil, errors.New("verify your email using the link we sent you, then run `temporal cloud signup` again")
 	}
-}
-
-// waitForEnter blocks until a line is read from in or ctx is canceled. Ctrl-C
-// cancels ctx rather than killing the process, so a plain read would hang.
-func waitForEnter(ctx context.Context, in io.Reader) error {
-	done := make(chan error, 1)
-	go func() {
-		_, err := bufio.NewReader(in).ReadString('\n')
-		done <- err
-	}()
-	select {
-	case err := <-done:
-		if err != nil {
-			return fmt.Errorf("failed to read from terminal: %w", err)
-		}
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+	return token, err
 }
 
 var loginMethods = []struct {
