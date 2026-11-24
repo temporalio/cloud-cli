@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"sync"
 	"time"
 
@@ -20,7 +21,9 @@ type oauthCallbackResult struct {
 	err  error
 }
 
-func Login(ctx context.Context, config *oauth2.Config, options ...oauth2.AuthCodeOption) (*oauth2.Token, error) {
+// Login runs the browser-based authorization-code (PKCE) flow. When
+// openBrowser is false, it only prints the URL for the user to open.
+func Login(ctx context.Context, config *oauth2.Config, openBrowser bool, options ...oauth2.AuthCodeOption) (*oauth2.Token, error) {
 	// Generate PKCE challenge.
 	verifier := oauth2.GenerateVerifier()
 	options = append(options, oauth2.S256ChallengeOption(verifier))
@@ -33,8 +36,15 @@ func Login(ctx context.Context, config *oauth2.Config, options ...oauth2.AuthCod
 	state := base64.RawURLEncoding.EncodeToString(stateBytes[:])
 
 	authURL := config.AuthCodeURL(state, options...)
-	fmt.Printf("Opening browser to authorize. If it doesn't open, visit: %s\n", authURL)
-	_ = browser.OpenURL(authURL)
+	// Prompts go to stderr so stdout carries only command output (e.g. -o json).
+	if openBrowser {
+		fmt.Fprintf(os.Stderr, "Opening browser to authorize. If it doesn't open, visit: %s\n", authURL)
+		// The browser launcher's own output would also land on stdout by default.
+		browser.Stdout = os.Stderr
+		_ = browser.OpenURL(authURL)
+	} else {
+		fmt.Fprintf(os.Stderr, "Open this URL in a browser to authorize: %s\n", authURL)
+	}
 
 	// Parse redirect URL to get host and path
 	url, err := url.Parse(config.RedirectURL)

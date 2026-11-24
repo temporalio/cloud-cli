@@ -309,6 +309,7 @@ func NewCloudCommand(cctx *CommandContext) *CloudCommand {
 	s.Command.AddCommand(&NewCloudProjectCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudRegionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudServiceAccountCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewCloudSignupCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudUserGroupCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewCloudWhoamiCommand(cctx, &s).Command)
@@ -6304,6 +6305,56 @@ func NewCloudServiceAccountUpdateCommand(cctx *CommandContext, parent *CloudServ
 			cctx.Options.Fail(err)
 		}
 	}
+	return &s
+}
+
+type CloudSignupCommand struct {
+	Parent             *CloudCommand
+	Command            cobra.Command
+	Domain             string
+	Audience           string
+	LoginMethod        cliext.FlagStringEnum
+	ClientId           string
+	RedirectUrl        string
+	OnboardingAddress  string
+	OnboardingInsecure bool
+	NoWait             bool
+}
+
+func NewCloudSignupCommand(cctx *CommandContext, parent *CloudCommand) *CloudSignupCommand {
+	var s CloudSignupCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "signup [flags]"
+	s.Command.Short = "Sign up for Temporal Cloud (prototype)"
+	if hasHighlighting {
+		s.Command.Long = "Sign up for Temporal Cloud from the terminal.\n\nThis command opens your default browser to authenticate, then starts or\nresumes your Temporal Cloud onboarding. The sign-up credential is kept in\nmemory only and is not written to your profile.\n\nExample:\n\n\x1b[1mtemporal cloud signup\x1b[0m"
+	} else {
+		s.Command.Long = "Sign up for Temporal Cloud from the terminal.\n\nThis command opens your default browser to authenticate, then starts or\nresumes your Temporal Cloud onboarding. The sign-up credential is kept in\nmemory only and is not written to your profile.\n\nExample:\n\n```\ntemporal cloud signup\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Domain, "domain", "login.tmprl.cloud", "Authentication domain for the OAuth provider.")
+	_ = s.Command.Flags().MarkHidden("domain")
+	s.Command.Flags().StringVar(&s.Audience, "audience", "https://onboarding.tmprl.cloud", "OAuth audience parameter for the sign-up token.")
+	_ = s.Command.Flags().MarkHidden("audience")
+	s.LoginMethod = cliext.NewFlagStringEnum([]string{"google", "microsoft", "password"}, "")
+	s.Command.Flags().Var(&s.LoginMethod, "login-method", "Login method to use, instead of choosing one interactively. Accepted values: google, microsoft, password.")
+	s.Command.Flags().StringVar(&s.ClientId, "client-id", "Cd2erICRRO9hzuGeoQyqO9iPfiCgCvMZ", "OAuth client identifier for authentication.")
+	_ = s.Command.Flags().MarkHidden("client-id")
+	s.Command.Flags().StringVar(&s.RedirectUrl, "redirect-url", "http://127.0.0.1:56628/callback", "Redirect URL for OAuth authentication flow.")
+	_ = s.Command.Flags().MarkHidden("redirect-url")
+	s.Command.Flags().StringVar(&s.OnboardingAddress, "onboarding-address", "onboarding.tmprl.cloud:443", "host:port of the Temporal Cloud onboarding service.")
+	_ = s.Command.Flags().MarkHidden("onboarding-address")
+	s.Command.Flags().BoolVar(&s.OnboardingInsecure, "onboarding-insecure", false, "Connect to the onboarding service without TLS. For local development only.")
+	_ = s.Command.Flags().MarkHidden("onboarding-insecure")
+	s.Command.Flags().BoolVar(&s.NoWait, "no-wait", false, "Return the current onboarding state without waiting. Prototype only.")
+	_ = s.Command.Flags().MarkHidden("no-wait")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	s.initCommand(cctx)
 	return &s
 }
 

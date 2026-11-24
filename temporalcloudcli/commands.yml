@@ -137,6 +137,75 @@ commands:
           Authentication domain for the OAuth provider.
         default: login.tmprl.cloud
 
+  - name: cloud signup
+    summary: Sign up for Temporal Cloud (prototype)
+    description: |
+      Sign up for Temporal Cloud from the terminal.
+
+      This command opens your default browser to authenticate, then starts or
+      resumes your Temporal Cloud onboarding. The sign-up credential is kept in
+      memory only and is not written to your profile.
+
+      Example:
+
+      ```
+      temporal cloud signup
+      ```
+    has-init: true
+    docs:
+      keywords:
+        - signup
+        - onboarding
+      description-header: Sign up
+      tags:
+        - login
+    options:
+      - name: domain
+        type: string
+        hidden: true
+        description: |
+          Authentication domain for the OAuth provider.
+        default: login.tmprl.cloud
+      - name: audience
+        type: string
+        hidden: true
+        default: https://onboarding.tmprl.cloud
+        description: |
+          OAuth audience parameter for the sign-up token.
+      - name: login-method
+        type: string-enum
+        enum-values: [google, microsoft, password]
+        description: |
+          Login method to use, instead of choosing one interactively.
+      - name: client-id
+        type: string
+        hidden: true
+        default: Cd2erICRRO9hzuGeoQyqO9iPfiCgCvMZ
+        description: |
+          OAuth client identifier for authentication.
+      - name: redirect-url
+        type: string
+        hidden: true
+        default: http://127.0.0.1:56628/callback
+        description: |
+          Redirect URL for OAuth authentication flow.
+      - name: onboarding-address
+        type: string
+        hidden: true
+        default: onboarding.tmprl.cloud:443
+        description: |
+          host:port of the Temporal Cloud onboarding service.
+      - name: onboarding-insecure
+        type: bool
+        hidden: true
+        description: |
+          Connect to the onboarding service without TLS. For local development only.
+      - name: no-wait
+        type: bool
+        hidden: true
+        description: |
+          Return the current onboarding state without waiting. Prototype only.
+
   # Namespace commands
   - name: cloud namespace
     summary: Manage Temporal Cloud namespaces
