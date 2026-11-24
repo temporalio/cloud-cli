@@ -55,3 +55,12 @@ func TestSelect_NoOptions(t *testing.T) {
 
 	require.EqualError(t, err, "no options to select from")
 }
+
+func TestIsTerminal_NonFileStreams(t *testing.T) {
+	assert.False(t, prompter.IsTerminal(strings.NewReader(""), &bytes.Buffer{}))
+}
+
+func TestSelectInTerminal_NonFileInput(t *testing.T) {
+	_, err := prompter.SelectInTerminal(strings.NewReader(""), &bytes.Buffer{}, "Pick:", []string{"a"})
+	require.Error(t, err)
+}

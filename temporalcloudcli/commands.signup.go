@@ -102,7 +102,7 @@ func (c *CloudSignupCommand) chooseLoginMethod(cctx *CommandContext) (string, er
 	if c.LoginMethod.Value != "" {
 		return c.LoginMethod.Value, nil
 	}
-	if cctx.JSONOutput || !cliprompter.IsTerminal() {
+	if cctx.JSONOutput || !cliprompter.IsTerminal(cctx.Options.Stdin, cctx.Options.Stdout) {
 		// Stderr, so JSON on stdout stays parseable and agents still see the hint.
 		fmt.Fprintln(cctx.Options.Stderr,
 			"No --login-method set: choose one in the browser, or pass --login-method google|microsoft|password.")
@@ -112,7 +112,7 @@ func (c *CloudSignupCommand) chooseLoginMethod(cctx *CommandContext) (string, er
 	for i, conn := range loginMethods {
 		labels[i] = conn.label
 	}
-	i, err := cliprompter.SelectInTerminal("Sign up with:", labels)
+	i, err := cliprompter.SelectInTerminal(cctx.Options.Stdin, cctx.Options.Stdout, "Sign up with:", labels)
 	if err != nil {
 		return "", err
 	}

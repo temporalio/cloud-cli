@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 
 	"golang.org/x/term"
 )
@@ -20,23 +19,40 @@ const (
 	keyEsc   = 27
 )
 
-// IsTerminal reports whether stdin and stdout are both interactive terminals,
-// so an arrow-key prompt can be shown.
-func IsTerminal() bool {
-	return term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd()))
+// fdFile is satisfied by *os.File, the only kind of stream that can be a
+// terminal.
+type fdFile interface {
+	Fd() uintptr
 }
 
-// SelectInTerminal shows an arrow-key menu on stdout and returns the index of
-// the chosen option. The caller must check IsTerminal first.
-func SelectInTerminal(message string, options []string) (int, error) {
-	fd := int(os.Stdin.Fd())
+// IsTerminal reports whether in and out are both interactive terminals, so an
+// arrow-key prompt can be shown. Streams that aren't files, such as buffers in
+// tests, are never terminals.
+func IsTerminal(in io.Reader, out io.Writer) bool {
+	return isTerminal(in) && isTerminal(out)
+}
+
+func isTerminal(stream any) bool {
+	f, ok := stream.(fdFile)
+	return ok && term.IsTerminal(int(f.Fd()))
+}
+
+// SelectInTerminal puts in into raw mode, shows an arrow-key menu on out and
+// returns the index of the chosen option. The caller must check IsTerminal
+// first.
+func SelectInTerminal(in io.Reader, out io.Writer, message string, options []string) (int, error) {
+	f, ok := in.(fdFile)
+	if !ok {
+		return 0, errors.New("input is not a terminal")
+	}
+	fd := int(f.Fd())
 	oldState, err := term.MakeRaw(fd)
 	if err != nil {
 		return 0, fmt.Errorf("failed to read from terminal: %w", err)
 	}
 	defer func() { _ = term.Restore(fd, oldState) }()
 
-	return Select(os.Stdin, os.Stdout, message, options)
+	return Select(in, out, message, options)
 }
 
 // Select runs an arrow-key menu over in and out, which must already be in raw
