@@ -70,12 +70,13 @@ func Login(ctx context.Context, config *oauth2.Config, openBrowser bool, options
 
 				// Check for OAuth error response.
 				if errCode := query.Get("error"); errCode != "" {
-					errDesc := query.Get("error_description")
-					if errDesc == "" {
-						errDesc = errCode
+					authErr := &AuthorizationError{Code: errCode, Description: query.Get("error_description")}
+					resultCh <- oauthCallbackResult{err: authErr}
+					if authErr.IsEmailNotVerified() {
+						http.Error(w, "Check your email for a verification link, then return to your terminal.", http.StatusForbidden)
+						return
 					}
-					resultCh <- oauthCallbackResult{err: fmt.Errorf("authorization failed: %s", errDesc)}
-					http.Error(w, fmt.Sprintf("Authorization failed: %s", errDesc), http.StatusBadRequest)
+					http.Error(w, "Authorization failed: "+authErr.reason(), http.StatusBadRequest)
 					return
 				}
 
@@ -131,6 +132,32 @@ func Login(ctx context.Context, config *oauth2.Config, openBrowser bool, options
 	}
 
 	return token, nil
+}
+
+// AuthorizationError is an OAuth error returned to the callback, such as a
+// login denied by an Auth0 action.
+type AuthorizationError struct {
+	Code        string
+	Description string
+}
+
+func (e *AuthorizationError) Error() string {
+	return "authorization failed: " + e.reason()
+}
+
+func (e *AuthorizationError) reason() string {
+	if e.Description != "" {
+		return e.Description
+	}
+	return e.Code
+}
+
+// IsEmailNotVerified reports whether the login was denied because the user's
+// email address is not verified yet.
+// AIDEV-NOTE: the post-login email-verify action denies password logins with
+// api.access.deny('verify_email'); the website checks for the same value.
+func (e *AuthorizationError) IsEmailNotVerified() bool {
+	return e.Code == "access_denied" && e.Description == "verify_email"
 }
 
 var ErrLoginRequired = errors.New("login required")
