@@ -16,16 +16,11 @@ import (
 	cliprompter "github.com/temporalio/cloud-cli/temporalcloudcli/prompter"
 )
 
-// initCommand hides the command from help while it is a prototype: the prod
-// onboarding service does not serve this RPC yet. Remove before launch.
+// initCommand hides the command from help while it is in development.
 func (c *CloudSignupCommand) initCommand(*CommandContext) {
 	c.Command.Hidden = true
 }
 
-// AIDEV-NOTE: Prototype. The sign-up token (aud=onboarding) is kept in memory
-// only and never written to the profile: storing it in [oauth] would make every
-// other command send an onboarding-audience token to saas-api. The saas-api
-// login that ends sign-up is a separate step once onboarding is complete.
 func (c *CloudSignupCommand) run(cctx *CommandContext, _ []string) error {
 	oauthConfig, err := newOAuthClientConfig(c.Domain, c.ClientId, c.RedirectUrl)
 	if err != nil {
@@ -57,8 +52,6 @@ func (c *CloudSignupCommand) run(cctx *CommandContext, _ []string) error {
 			return fmt.Errorf("failed to get onboarding state: %w", err)
 		}
 	} else {
-		// Waits until provisioning finishes or the command is canceled; the global
-		// --command-timeout, when set, also bounds this.
 		resp, err = onboarding.Wait(cctx, client, req, onboarding.DefaultPollConfig, func(step onboardingservice.StepType) {
 			if !cctx.JSONOutput {
 				cctx.Printer.Printlnf("Waiting for your account (step: %s)...", step)
@@ -85,7 +78,6 @@ func (c *CloudSignupCommand) run(cctx *CommandContext, _ []string) error {
 	return nil
 }
 
-// loginMethods are the --login-method values, in picker order.
 var loginMethods = []struct {
 	value string
 	label string
@@ -120,14 +112,13 @@ func (c *CloudSignupCommand) chooseLoginMethod(cctx *CommandContext) (string, er
 }
 
 // connectionAuthParams maps a connection value to Auth0 authorize parameters,
-// the same way the get-cloud website's sign-up buttons do. For "", Auth0 shows
-// its own provider picker.
+// the same way the /get-cloud sign-up buttons do.
 func (c *CloudSignupCommand) connectionAuthParams(connection string) []oauth2.AuthCodeOption {
 	switch connection {
 	case "google":
 		return []oauth2.AuthCodeOption{oauth2.SetAuthURLParam("connection", "google-oauth2")}
 	case "microsoft":
-		// AIDEV-NOTE: the Microsoft connection is named differently per tenant
+		// The Microsoft connection is named differently per tenant
 		// (microsoft-v2 in prod, microsoft elsewhere), mirroring the website.
 		name := "microsoft"
 		if c.Domain == "login.tmprl.cloud" {
