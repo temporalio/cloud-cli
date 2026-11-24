@@ -69,10 +69,8 @@ func (c *CloudSignupCommand) run(cctx *CommandContext, _ []string) error {
 	case resp.GetUserAlreadyExists():
 		cctx.Printer.Println("You already have a Temporal Cloud account. Run `temporal cloud login` to sign in.")
 	case onboarding.IsComplete(resp):
-		cctx.Printer.Printlnf("Your Temporal Cloud account is ready (%s). Run `temporal cloud login` to sign in.",
-			resp.GetState().GetUserEmail())
+		cctx.Printer.Println("Your Temporal Cloud account is ready. Run `temporal cloud login` to sign in.")
 	default:
-		cctx.Printer.Printlnf("Email: %s", resp.GetState().GetUserEmail())
 		cctx.Printer.Printlnf("Onboarding step: %s", resp.GetState().GetCurrentStep())
 	}
 	return nil
