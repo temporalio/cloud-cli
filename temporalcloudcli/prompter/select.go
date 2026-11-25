@@ -12,10 +12,28 @@ import (
 // ErrSelectCanceled is returned when the user cancels a selection (Ctrl-C, Ctrl-D or q).
 var ErrSelectCanceled = errors.New("selection canceled")
 
+// Input bytes. Raw mode delivers keys as bytes instead of acting on them.
 const (
 	keyCtrlC = '\x03'
 	keyCtrlD = '\x04'
 	keyEsc   = '\x1b'
+
+	// Arrow keys arrive as ESC, a prefix, then a direction: ESC [ A, or ESC O A
+	// when the terminal is in application cursor mode.
+	arrowPrefixCSI = '['
+	arrowPrefixSS3 = 'O'
+	arrowUp        = 'A'
+	arrowDown      = 'B'
+)
+
+// Output escape sequences (ANSI/VT100).
+const (
+	hideCursor = "\x1b[?25l"
+	showCursor = "\x1b[?25h"
+	cursorUp   = "\x1b[1A" // move the cursor up one line
+	clearLine  = "\x1b[2K" // erase the line the cursor is on
+	// Raw mode disables output post-processing, so lines must end in \r\n.
+	newline = "\r\n"
 )
 
 // fdFile is satisfied by *os.File, the only kind of stream that can be a terminal.
@@ -63,9 +81,8 @@ func Select(in io.Reader, out io.Writer, message string, options []string) (int,
 	r := bufio.NewReader(in)
 	selected := 0
 
-	// Raw mode disables output post-processing, so lines end in \r\n.
-	fmt.Fprintf(out, "\x1b[?25l%s\r\n", message)
-	defer fmt.Fprint(out, "\x1b[?25h")
+	fmt.Fprint(out, hideCursor, message, newline)
+	defer fmt.Fprint(out, showCursor)
 	drawOptions(out, options, selected)
 
 	for {
@@ -80,7 +97,7 @@ func Select(in io.Reader, out io.Writer, message string, options []string) (int,
 			selected = (selected + 1) % len(options)
 		case keyEnter:
 			clearOptions(out, len(options))
-			fmt.Fprintf(out, "\x1b[1A\x1b[2K%s %s\r\n", message, options[selected])
+			fmt.Fprint(out, cursorUp, clearLine, message, " ", options[selected], newline)
 			return selected, nil
 		case keyCancel:
 			clearOptions(out, len(options))
@@ -121,9 +138,8 @@ func readKey(r *bufio.Reader) (key, error) {
 	case 'j':
 		return keyDown, nil
 	case keyEsc:
-		// Arrow keys arrive as ESC [ A/B, or ESC O A/B in application cursor mode.
 		prefix, err := r.ReadByte()
-		if err != nil || (prefix != '[' && prefix != 'O') {
+		if err != nil || (prefix != arrowPrefixCSI && prefix != arrowPrefixSS3) {
 			return keyOther, nil
 		}
 		code, err := r.ReadByte()
@@ -131,9 +147,9 @@ func readKey(r *bufio.Reader) (key, error) {
 			return keyOther, nil
 		}
 		switch code {
-		case 'A':
+		case arrowUp:
 			return keyUp, nil
-		case 'B':
+		case arrowDown:
 			return keyDown, nil
 		}
 	}
@@ -146,13 +162,13 @@ func drawOptions(out io.Writer, options []string, selected int) {
 		if i == selected {
 			marker = "> "
 		}
-		fmt.Fprintf(out, "%s%s\r\n", marker, opt)
+		fmt.Fprint(out, marker, opt, newline)
 	}
 }
 
 // clearOptions moves the cursor back over the drawn options and erases them.
 func clearOptions(out io.Writer, n int) {
 	for range n {
-		fmt.Fprint(out, "\x1b[1A\x1b[2K")
+		fmt.Fprint(out, cursorUp, clearLine)
 	}
 }
