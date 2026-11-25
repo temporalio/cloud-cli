@@ -50,28 +50,39 @@ func (c *CloudSignupCommand) run(cctx *CommandContext, _ []string) error {
 	if c.NoWait {
 		resp, err = client.GetOrCreateCLIOnboardingState(cctx, req)
 		if err != nil {
-			return fmt.Errorf("failed to get onboarding state: %w", err)
+			err = fmt.Errorf("failed to get onboarding state: %w", err)
 		}
 	} else {
 		resp, err = onboarding.Wait(cctx, client, req, onboarding.DefaultPollConfig, func(step onboardingservice.StepType) {
-			if !cctx.JSONOutput {
+			// The first poll after the server starts the signup can come back without a step yet.
+			if !cctx.JSONOutput && step != onboardingservice.StepType_STEP_TYPE_UNSPECIFIED {
 				cctx.Printer.Printlnf("Waiting for your account (step: %s)...", step)
 			}
 		})
-		if err != nil {
-			return err
+	}
+	if onboarding.RejectionReason(err) == onboarding.ReasonAlreadyOnboarded {
+		// Not a failure: the user can log in to the account they already have.
+		if cctx.JSONOutput {
+			return cctx.Printer.PrintStructured(
+				&onboardingservice.GetOrCreateCLIOnboardingStateResponse{UserAlreadyExists: true},
+				printer.StructuredOptions{},
+			)
 		}
+		cctx.Printer.Println("You already have a Temporal Cloud account. Run `temporal cloud login` to sign in.")
+		return nil
+	}
+	if err != nil {
+		return signupRejectionError(err)
 	}
 
 	if cctx.JSONOutput {
 		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
 	}
-	switch {
-	case resp.GetUserAlreadyExists():
-		cctx.Printer.Println("You already have a Temporal Cloud account. Run `temporal cloud login` to sign in.")
-	case onboarding.IsComplete(resp):
+	// The server reports a finished signup as user_already_exists; a user who had an account before is
+	// refused with ALREADY_ONBOARDED instead.
+	if onboarding.IsComplete(resp) {
 		cctx.Printer.Println("Your Temporal Cloud account is ready. Run `temporal cloud login` to sign in.")
-	default:
+	} else {
 		cctx.Printer.Printlnf("Onboarding step: %s", resp.GetState().GetCurrentStep())
 	}
 	return nil
@@ -86,6 +97,23 @@ func (c *CloudSignupCommand) login(cctx *CommandContext, config *oauth2.Config, 
 		return nil, errors.New("verify your email using the link we sent you, then run `temporal cloud signup` again")
 	}
 	return token, err
+}
+
+// signupRejectionMessages are what the user should do when the onboarding
+// service refuses the signup for a known reason.
+var signupRejectionMessages = map[string]string{
+	onboarding.ReasonTrialSignupUnavailable:  "sign-up from the CLI isn't available right now; try again later",
+	onboarding.ReasonBrowserSignupInProgress: "you have a sign-up in progress in the browser; finish it there, then run `temporal cloud login`",
+	onboarding.ReasonTrialSignupCancelled:    "your sign-up was cancelled; contact Temporal support",
+}
+
+// signupRejectionError replaces a known signup refusal with a message saying
+// what to do, and returns any other error unchanged.
+func signupRejectionError(err error) error {
+	if msg, ok := signupRejectionMessages[onboarding.RejectionReason(err)]; ok {
+		return NewFriendlyError(msg, err)
+	}
+	return err
 }
 
 var loginMethods = []struct {
