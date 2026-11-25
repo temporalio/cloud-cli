@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+// The subset of the Temporal Cloud onboarding service that the CLI calls. The
+// package, service, RPC and message names form the gRPC method path on the
+// wire, so they must match the server exactly.
+package onboardingservice.v1;
+
+option go_package = "github.com/temporalio/cloud-cli/internal/onboardingservice/v1;onboardingservice";
+
+import "onboardingservice/v1/onboarding.proto";
+
+service OnboardingService {
+    // Creates or resumes the caller's onboarding and returns its current state.
+    // The signup command polls it until onboarding completes.
+    rpc GetOrCreateCLIOnboardingState(GetOrCreateCLIOnboardingStateRequest) returns (GetOrCreateCLIOnboardingStateResponse) {
+    }
+}

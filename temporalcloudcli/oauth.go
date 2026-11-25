@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"sync"
 	"time"
 
@@ -20,7 +21,9 @@ type oauthCallbackResult struct {
 	err  error
 }
 
-func Login(ctx context.Context, config *oauth2.Config, options ...oauth2.AuthCodeOption) (*oauth2.Token, error) {
+// Login runs the browser-based authorization-code (PKCE) flow. When
+// openBrowser is false, it only prints the URL for the user to open.
+func Login(ctx context.Context, config *oauth2.Config, openBrowser bool, options ...oauth2.AuthCodeOption) (*oauth2.Token, error) {
 	// Generate PKCE challenge.
 	verifier := oauth2.GenerateVerifier()
 	options = append(options, oauth2.S256ChallengeOption(verifier))
@@ -33,8 +36,14 @@ func Login(ctx context.Context, config *oauth2.Config, options ...oauth2.AuthCod
 	state := base64.RawURLEncoding.EncodeToString(stateBytes[:])
 
 	authURL := config.AuthCodeURL(state, options...)
-	fmt.Printf("Opening browser to authorize. If it doesn't open, visit: %s\n", authURL)
-	_ = browser.OpenURL(authURL)
+	// Prompts go to stderr so stdout carries only command output (e.g. -o json).
+	if openBrowser {
+		fmt.Fprintf(os.Stderr, "Opening browser to authorize. If it doesn't open, visit: %s\n", authURL)
+		browser.Stdout = os.Stderr
+		_ = browser.OpenURL(authURL)
+	} else {
+		fmt.Fprintf(os.Stderr, "Open this URL in a browser to authorize: %s\n", authURL)
+	}
 
 	// Parse redirect URL to get host and path
 	url, err := url.Parse(config.RedirectURL)
@@ -61,12 +70,13 @@ func Login(ctx context.Context, config *oauth2.Config, options ...oauth2.AuthCod
 
 				// Check for OAuth error response.
 				if errCode := query.Get("error"); errCode != "" {
-					errDesc := query.Get("error_description")
-					if errDesc == "" {
-						errDesc = errCode
+					authErr := &AuthorizationError{Code: errCode, Description: query.Get("error_description")}
+					resultCh <- oauthCallbackResult{err: authErr}
+					if authErr.IsEmailNotVerified() {
+						http.Error(w, "Check your email for a verification link, then return to your terminal.", http.StatusForbidden)
+						return
 					}
-					resultCh <- oauthCallbackResult{err: fmt.Errorf("authorization failed: %s", errDesc)}
-					http.Error(w, fmt.Sprintf("Authorization failed: %s", errDesc), http.StatusBadRequest)
+					http.Error(w, "Authorization failed: "+authErr.reason(), http.StatusBadRequest)
 					return
 				}
 
@@ -122,6 +132,32 @@ func Login(ctx context.Context, config *oauth2.Config, options ...oauth2.AuthCod
 	}
 
 	return token, nil
+}
+
+// AuthorizationError is an OAuth error returned to the callback, such as a
+// login denied by an Auth0 action.
+type AuthorizationError struct {
+	Code        string
+	Description string
+}
+
+func (e *AuthorizationError) Error() string {
+	return "authorization failed: " + e.reason()
+}
+
+func (e *AuthorizationError) reason() string {
+	if e.Description != "" {
+		return e.Description
+	}
+	return e.Code
+}
+
+// IsEmailNotVerified reports whether the login was denied because the user's
+// email address is not verified yet.
+// AIDEV-NOTE: the post-login email-verify action denies password logins with
+// api.access.deny('verify_email'); the website checks for the same value.
+func (e *AuthorizationError) IsEmailNotVerified() bool {
+	return e.Code == "access_denied" && e.Description == "verify_email"
 }
 
 var ErrLoginRequired = errors.New("login required")

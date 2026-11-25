@@ -37,7 +37,7 @@ func (c *CloudLoginCommand) run(cctx *CommandContext, _ []string) error {
 		}
 	}
 
-	oauthToken, err := Login(cctx, oauthConfig.ClientConfig, oauth2.SetAuthURLParam("audience", c.Audience))
+	oauthToken, err := Login(cctx, oauthConfig.ClientConfig, !c.Parent.DisablePopUp, oauth2.SetAuthURLParam("audience", c.Audience))
 	if err != nil {
 		return fmt.Errorf("failed to login: %w", err)
 	}
@@ -73,19 +73,25 @@ func parseURL(s string) (*url.URL, error) {
 }
 
 func (c *CloudLoginCommand) generateOauthClientConfig() (*oauth2.Config, error) {
-	domainURL, err := parseURL(c.Domain)
+	return newOAuthClientConfig(c.Domain, c.ClientId, c.RedirectUrl)
+}
+
+// newOAuthClientConfig builds the Auth0 authorization-code (PKCE) client config
+// shared by `cloud login` and `cloud signup`.
+func newOAuthClientConfig(domain, clientID, redirectURL string) (*oauth2.Config, error) {
+	domainURL, err := parseURL(domain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse domain: %w", err)
 	}
 
 	return &oauth2.Config{
-		ClientID: c.ClientId,
+		ClientID: clientID,
 		Endpoint: oauth2.Endpoint{
 			AuthURL:   domainURL.JoinPath("authorize").String(),
 			TokenURL:  domainURL.JoinPath("oauth", "token").String(),
 			AuthStyle: oauth2.AuthStyleInParams,
 		},
-		RedirectURL: c.RedirectUrl,
+		RedirectURL: redirectURL,
 		Scopes:      []string{"openid", "profile", "user", "offline_access"},
 	}, nil
 }

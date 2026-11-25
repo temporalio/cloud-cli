@@ -26,13 +26,15 @@ jobs:
         run: echo "$HOME/go/bin" >> $GITHUB_PATH
       - name: Run commands generation command
         run: make gen 
+      - name: Run proto generation command
+        run: make proto
       - name: Verify no changes were generated
         run: |
           # Check if there are any uncommitted changes in the working directory
           if [ -z "$(git status --porcelain)" ]; then
             echo "::notice::Generated files are up to date. No changes detected."
           else
-            echo "::error::Detected uncommitted changes after running the generation command. Please run the generator and commit the changes."
+            echo "::error::Detected uncommitted changes after running the generation command. Please run `make gen` and `make proto` and commit the changes."
             git status
             git diff
             exit 1
