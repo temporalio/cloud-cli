@@ -1,10 +1,8 @@
 syntax = "proto3";
 
-// Vendored subset of saas-proto proto/onboardingservice/v1/onboarding.proto.
-// saas-proto is the source of truth. Field names, numbers and types must match
-// it exactly. Fields the CLI does not need, and that would pull in private
-// saas-proto imports, are left out and reserved here; the decoder skips them as
-// unknown fields. Changes must be additive and land in saas-proto first.
+// The subset of the Temporal Cloud onboarding messages that the CLI uses. Field
+// numbers and types must match the server exactly. Fields the CLI doesn't use
+// are reserved, and the decoder skips them as unknown fields.
 package onboardingservice.v1;
 
 option go_package = "github.com/temporalio/cloud-cli/internal/onboardingservice/v1;onboardingservice";
@@ -20,20 +18,7 @@ enum StepType {
 }
 
 message OnboardingState {
-    // Omitted from this copy; the CLI polls on current_step only:
-    //   2  customer_details_collection
-    //   3  wait_for_throttle
-    //   4  stripe_setup
-    //   5  stripe_setup_intent_confirmation (Stripe client secret)
-    //   6  wait_for_account_creation
-    //   8  eligible_promotions
-    //   9  eligible_billing_plans (private services.saasapi.ui.billingplan.v1 import)
-    //   10 target_sku_type (temporal.api.cloud.account.beta import)
-    //   11 billing_provider_details (private api.uiservice.v1 import)
     reserved 2 to 6, 8 to 11;
-    reserved "customer_details_collection", "wait_for_throttle", "stripe_setup",
-        "stripe_setup_intent_confirmation", "wait_for_account_creation", "eligible_promotions",
-        "eligible_billing_plans", "target_sku_type", "billing_provider_details";
 
     // Indicates the current step of the funnel the user is on
     StepType current_step = 1;
@@ -57,10 +42,7 @@ message GetOrCreateCLIOnboardingStateResponse {
 }
 
 message CustomerDetails {
-    // Omitted from this copy: 6 agree_terms_of_service and 8 purpose (both deprecated upstream).
-    // 5 was "Industry", removed upstream.
     reserved 5, 6, 8;
-    reserved "agree_terms_of_service", "purpose";
 
     // The first name of the customer.
     string first_name = 1;
@@ -68,7 +50,7 @@ message CustomerDetails {
     // The last name of the customer.
     string last_name = 2;
 
-    // The name of the company the user is from. If empty, the server defaults to "Personal".
+    // The name of the company the user is from.
     string company_name = 3;
 
     // The country of the user.

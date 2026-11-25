@@ -4,11 +4,9 @@
 // 	protoc        (unknown)
 // source: onboardingservice/v1/onboarding.proto
 
-// Vendored subset of saas-proto proto/onboardingservice/v1/onboarding.proto.
-// saas-proto is the source of truth. Field names, numbers and types must match
-// it exactly. Fields the CLI does not need, and that would pull in private
-// saas-proto imports, are left out and reserved here; the decoder skips them as
-// unknown fields. Changes must be additive and land in saas-proto first.
+// The subset of the Temporal Cloud onboarding messages that the CLI uses. Field
+// numbers and types must match the server exactly. Fields the CLI doesn't use
+// are reserved, and the decoder skips them as unknown fields.
 
 package onboardingservice
 
@@ -254,7 +252,7 @@ type CustomerDetails struct {
 	FirstName string `protobuf:"bytes,1,opt,name=first_name,json=firstName,proto3" json:"first_name,omitempty"`
 	// The last name of the customer.
 	LastName string `protobuf:"bytes,2,opt,name=last_name,json=lastName,proto3" json:"last_name,omitempty"`
-	// The name of the company the user is from. If empty, the server defaults to "Personal".
+	// The name of the company the user is from.
 	CompanyName string `protobuf:"bytes,3,opt,name=company_name,json=companyName,proto3" json:"company_name,omitempty"`
 	// The country of the user.
 	Country string `protobuf:"bytes,4,opt,name=country,proto3" json:"country,omitempty"`
@@ -333,24 +331,24 @@ var File_onboardingservice_v1_onboarding_proto protoreflect.FileDescriptor
 
 const file_onboardingservice_v1_onboarding_proto_rawDesc = "" +
 	"\n" +
-	"%onboardingservice/v1/onboarding.proto\x12\x14onboardingservice.v1\"\xeb\x02\n" +
+	"%onboardingservice/v1/onboarding.proto\x12\x14onboardingservice.v1\"\x98\x01\n" +
 	"\x0fOnboardingState\x12A\n" +
 	"\fcurrent_step\x18\x01 \x01(\x0e2\x1e.onboardingservice.v1.StepTypeR\vcurrentStep\x12\x1d\n" +
 	"\n" +
 	"user_email\x18\a \x01(\tR\tuserEmail\x12\x17\n" +
-	"\auser_id\x18\f \x01(\tR\x06userIdJ\x04\b\x02\x10\aJ\x04\b\b\x10\fR\x1bcustomer_details_collectionR\x11wait_for_throttleR\fstripe_setupR stripe_setup_intent_confirmationR\x19wait_for_account_creationR\x13eligible_promotionsR\x16eligible_billing_plansR\x0ftarget_sku_typeR\x18billing_provider_details\"x\n" +
+	"\auser_id\x18\f \x01(\tR\x06userIdJ\x04\b\x02\x10\aJ\x04\b\b\x10\f\"x\n" +
 	"$GetOrCreateCLIOnboardingStateRequest\x12P\n" +
 	"\x10customer_details\x18\x01 \x01(\v2%.onboardingservice.v1.CustomerDetailsR\x0fcustomerDetails\"\x94\x01\n" +
 	"%GetOrCreateCLIOnboardingStateResponse\x12.\n" +
 	"\x13user_already_exists\x18\x01 \x01(\bR\x11userAlreadyExists\x12;\n" +
-	"\x05state\x18\x02 \x01(\v2%.onboardingservice.v1.OnboardingStateR\x05state\"\xf2\x01\n" +
+	"\x05state\x18\x02 \x01(\v2%.onboardingservice.v1.OnboardingStateR\x05state\"\xd1\x01\n" +
 	"\x0fCustomerDetails\x12\x1d\n" +
 	"\n" +
 	"first_name\x18\x01 \x01(\tR\tfirstName\x12\x1b\n" +
 	"\tlast_name\x18\x02 \x01(\tR\blastName\x12!\n" +
 	"\fcompany_name\x18\x03 \x01(\tR\vcompanyName\x12\x18\n" +
 	"\acountry\x18\x04 \x01(\tR\acountry\x123\n" +
-	"\x16opt_in_marketing_email\x18\a \x01(\bR\x13optInMarketingEmailJ\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\b\x10\tR\x16agree_terms_of_serviceR\apurpose*\x88\x02\n" +
+	"\x16opt_in_marketing_email\x18\a \x01(\bR\x13optInMarketingEmailJ\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\b\x10\t*\x88\x02\n" +
 	"\bStepType\x12\x19\n" +
 	"\x15STEP_TYPE_UNSPECIFIED\x10\x00\x12)\n" +
 	"%STEP_TYPE_CUSTOMER_DETAILS_COLLECTION\x10\x01\x12\x1f\n" +

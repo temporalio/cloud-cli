@@ -4,11 +4,9 @@
 // 	protoc        (unknown)
 // source: onboardingservice/v1/service.proto
 
-// Vendored subset of saas-proto proto/onboardingservice/v1/service.proto.
-// saas-proto is the source of truth. Keep the package, service, RPC and message
-// names identical to it: they form the gRPC method path on the wire. Only the
-// RPCs the CLI calls are copied here. Changes must be additive and land in
-// saas-proto first.
+// The subset of the Temporal Cloud onboarding service that the CLI calls. The
+// package, service, RPC and message names form the gRPC method path on the
+// wire, so they must match the server exactly.
 
 package onboardingservice
 

@@ -4,11 +4,9 @@
 // - protoc             (unknown)
 // source: onboardingservice/v1/service.proto
 
-// Vendored subset of saas-proto proto/onboardingservice/v1/service.proto.
-// saas-proto is the source of truth. Keep the package, service, RPC and message
-// names identical to it: they form the gRPC method path on the wire. Only the
-// RPCs the CLI calls are copied here. Changes must be additive and land in
-// saas-proto first.
+// The subset of the Temporal Cloud onboarding service that the CLI calls. The
+// package, service, RPC and message names form the gRPC method path on the
+// wire, so they must match the server exactly.
 
 package onboardingservice
 
@@ -32,8 +30,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type OnboardingServiceClient interface {
-	// The endpoint the Temporal CLI signup command polls.
-	// Same contract as GetOrCreateOnboardingState for a CLI-started session.
+	// Creates or resumes the caller's onboarding and returns its current state.
+	// The signup command polls it until onboarding completes.
 	GetOrCreateCLIOnboardingState(ctx context.Context, in *GetOrCreateCLIOnboardingStateRequest, opts ...grpc.CallOption) (*GetOrCreateCLIOnboardingStateResponse, error)
 }
 
@@ -59,8 +57,8 @@ func (c *onboardingServiceClient) GetOrCreateCLIOnboardingState(ctx context.Cont
 // All implementations must embed UnimplementedOnboardingServiceServer
 // for forward compatibility.
 type OnboardingServiceServer interface {
-	// The endpoint the Temporal CLI signup command polls.
-	// Same contract as GetOrCreateOnboardingState for a CLI-started session.
+	// Creates or resumes the caller's onboarding and returns its current state.
+	// The signup command polls it until onboarding completes.
 	GetOrCreateCLIOnboardingState(context.Context, *GetOrCreateCLIOnboardingStateRequest) (*GetOrCreateCLIOnboardingStateResponse, error)
 	mustEmbedUnimplementedOnboardingServiceServer()
 }
