@@ -25,14 +25,21 @@ type PollConfig struct {
 	Interval     time.Duration
 	MaxInterval  time.Duration
 	FastAttempts int
+	// MaxConsecutiveFailures is how many retryable errors in a row Wait
+	// tolerates before returning the last one. A successful response resets
+	// the count. Zero means no limit.
+	MaxConsecutiveFailures int
 }
 
 // DefaultPollConfig matches the website's waitForStep:
-// 1s for 10 polls, then doubling to a 30s cap.
+// 1s for 10 polls, then doubling to a 30s cap. 15 failures in a row gives up
+// after about 40s if the first polls fail, or about 7.5 minutes once polling
+// has slowed to 30s.
 var DefaultPollConfig = PollConfig{
-	Interval:     time.Second,
-	MaxInterval:  30 * time.Second,
-	FastAttempts: 10,
+	Interval:               time.Second,
+	MaxInterval:            30 * time.Second,
+	FastAttempts:           10,
+	MaxConsecutiveFailures: 15,
 }
 
 func IsComplete(resp *onboardingservice.GetOrCreateCLIOnboardingStateResponse) bool {
@@ -50,6 +57,7 @@ func Wait(
 ) (*onboardingservice.GetOrCreateCLIOnboardingStateResponse, error) {
 	interval := cfg.Interval
 	lastStep := onboardingservice.StepType(-1)
+	failures := 0
 
 	for attempt := 1; ; attempt++ {
 		resp, err := client.GetOrCreateCLIOnboardingState(ctx, req)
@@ -57,6 +65,7 @@ func Wait(
 		case ctx.Err() != nil:
 			return nil, waitError(ctx, lastStep)
 		case err == nil:
+			failures = 0
 			if IsComplete(resp) {
 				return resp, nil
 			}
@@ -68,6 +77,11 @@ func Wait(
 			}
 		case !isRetryable(err):
 			return nil, fmt.Errorf("failed to get onboarding state: %w", err)
+		default:
+			failures++
+			if cfg.MaxConsecutiveFailures > 0 && failures >= cfg.MaxConsecutiveFailures {
+				return nil, fmt.Errorf("failed to get onboarding state: %w", err)
+			}
 		}
 
 		if attempt > cfg.FastAttempts {

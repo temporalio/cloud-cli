@@ -56,6 +56,7 @@ func TestWait(t *testing.T) {
 		expectedErr   string
 		expectedCalls int
 		expectedSteps []onboardingservice.StepType
+		maxFailures   int
 	}{
 		{
 			name:          "user already exists returns immediately",
@@ -94,6 +95,28 @@ func TestWait(t *testing.T) {
 			expectedSteps: []onboardingservice.StepType{onboardingservice.StepType_STEP_TYPE_WAIT_FOR_ACCOUNT_CREATION},
 		},
 		{
+			name:          "gives up after too many failures in a row",
+			results:       []result{{err: status.Error(codes.Unavailable, "down")}},
+			maxFailures:   3,
+			expectedErr:   "failed to get onboarding state: rpc error: code = Unavailable desc = down",
+			expectedCalls: 3,
+		},
+		{
+			name: "a successful response resets the failure count",
+			results: []result{
+				{err: status.Error(codes.Unavailable, "down")},
+				{err: status.Error(codes.Unavailable, "down")},
+				creating,
+				{err: status.Error(codes.Unavailable, "down")},
+				{err: status.Error(codes.Unavailable, "down")},
+				done,
+			},
+			maxFailures:   3,
+			expectedResp:  done.resp,
+			expectedCalls: 6,
+			expectedSteps: []onboardingservice.StepType{onboardingservice.StepType_STEP_TYPE_WAIT_FOR_ACCOUNT_CREATION},
+		},
+		{
 			name:        "times out before any state",
 			results:     []result{{err: status.Error(codes.Unavailable, "down")}},
 			timeout:     20 * time.Millisecond,
@@ -112,7 +135,9 @@ func TestWait(t *testing.T) {
 			client := &fakeClient{results: tt.results}
 			var steps []onboardingservice.StepType
 
-			resp, err := onboarding.Wait(ctx, client, &onboardingservice.GetOrCreateCLIOnboardingStateRequest{}, fastPoll,
+			cfg := fastPoll
+			cfg.MaxConsecutiveFailures = tt.maxFailures
+			resp, err := onboarding.Wait(ctx, client, &onboardingservice.GetOrCreateCLIOnboardingStateRequest{}, cfg,
 				func(s onboardingservice.StepType) { steps = append(steps, s) })
 
 			if tt.expectedErr != "" {
